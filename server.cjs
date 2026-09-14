@@ -545,7 +545,7 @@ async function createCompetition(){
   }catch(e){msg(e.message,'bad')}
   finally{CREATING_COMPETITION=false;if(btn){btn.disabled=false;btn.textContent='Utwórz zawody'}}
 }
-async function joinCompasync function deleteCompetition(id){
+async function deleteCompetition(id){
   try{
     if(!confirm('Usunąć te zawody?')) return;
     await api('/api/competitions/'+id,{method:'DELETE'});
@@ -604,7 +604,7 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => console.log('CARP_MOBILE_READY port=' + PORT));
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V4_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
 }).catch(err => {
   console.error('START_FAILED', err);
   process.exit(1);
