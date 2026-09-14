@@ -397,12 +397,15 @@ async function route(req, res) {
   const path = url.pathname;
   const method = req.method;
 
-  if (path === '/health') return sendJson(res, 200, { ok:true, time:nowIso(), version:'V7_FRONT_SAFE' });
+  if (path === '/__probe_js_v8' || path === '/__probe_boot_v8') return sendJson(res, 200, { ok:true, path, version:'V8_EXTERNAL_JS', time:nowIso() });
+  if (path === '/app.js') return send(res, 200, APP_JS, {'Content-Type':'application/javascript; charset=utf-8', 'Cache-Control':'no-store, no-cache, must-revalidate'});
+
+  if (path === '/health') return sendJson(res, 200, { ok:true, time:nowIso(), version:'V8_EXTERNAL_JS' });
   if (path === '/manifest.webmanifest') return send(res, 200, JSON.stringify({
     name:'Łowcy Methodowcy', short_name:'Łowcy', start_url:'/', scope:'/', display:'standalone', background_color:'#f3f6ef', theme_color:'#114b2f', icons:[]
   }), {'Content-Type':'application/manifest+json; charset=utf-8'});
   if (path === '/sw.js') return send(res, 200, `
-const SW_VERSION='lowcy-v7-front-safe';
+const SW_VERSION='lowcy-v8-no-cache';
 self.addEventListener('install', event => self.skipWaiting());
 self.addEventListener('activate', event => event.waitUntil((async()=>{try{const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k)));}catch(e){} await self.clients.claim();})()));
 self.addEventListener('push', event => {
@@ -631,47 +634,9 @@ self.addEventListener('notificationclick', event => { event.notification.close()
   return send(res, 200, HTML);
 }
 
-const HTML = `<!doctype html>
-<html lang="pl">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#114b2f">
-<link rel="manifest" href="/manifest.webmanifest">
-<title>Łowcy Methodowcy</title>
-<style>
-:root{--green:#114b2f;--green2:#17643f;--bg:#f3f6ef;--card:#fff;--line:#cfd8cc;--txt:#18251d;--muted:#68746d;--red:#b32020;--gold:#ffc400;--blue:#1057c8;--soft:#eaf2eb}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}header{position:sticky;top:0;z-index:5;background:var(--green);color:white;padding:12px 14px;box-shadow:0 2px 8px #0002}header .row{display:flex;justify-content:space-between;gap:12px;align-items:center;max-width:1180px;margin:auto}h1{font-size:18px;margin:0}h2{font-size:18px;margin:0 0 8px}h3{font-size:16px;margin:12px 0 8px}main{max-width:1180px;margin:0 auto;padding:12px}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin:12px 0;box-shadow:0 2px 8px #0000000d}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}input,select,textarea,button{width:100%;font:inherit;border-radius:12px;border:1px solid var(--line);padding:10px 11px;background:white}textarea{min-height:70px}button{border:0;background:var(--green);color:white;font-weight:900;cursor:pointer}button.secondary{background:#e7eee7;color:var(--green);border:1px solid #bfd0c2}button.warn{background:var(--red)}button.blue{background:var(--blue)}button:disabled{opacity:.55;cursor:not-allowed}label{display:block;font-size:12px;font-weight:900;color:var(--muted);margin:8px 0 4px}.tabs{display:flex;gap:8px;overflow:auto;padding:8px 0}.tabs button{white-space:nowrap;width:auto;padding:9px 13px}.tabs button.active{background:#072e1c}.tablewrap{width:100%;overflow:auto;border-radius:12px;border:1px solid var(--line)}table{width:100%;border-collapse:collapse;background:white}th,td{border:1px solid var(--line);padding:8px 7px;text-align:left;vertical-align:middle}th{background:#e6f0e8;color:#103b28;font-size:12px;text-transform:uppercase}.nowrap{white-space:nowrap}.muted{color:var(--muted)}.ok{color:var(--green);font-weight:900}.bad{color:var(--red);font-weight:900}.pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#e6f0e8;font-weight:900}.hidden{display:none!important}.top-actions{display:flex;gap:8px;align-items:center}.top-actions button{width:auto;padding:8px 11px;background:#ffffff22;border:1px solid #ffffff55}.small{font-size:12px}.right{text-align:right}.mine{background:#fff4b8!important;outline:3px solid var(--gold);outline-offset:-3px;font-weight:900}.mine td{font-weight:900}.danger-line{border-left:6px solid var(--red)}.success-line{border-left:6px solid var(--green)}.mapbox{background:#f7faf4;border:1px solid var(--line);border-radius:14px;padding:10px;overflow:auto}.banktitle{font-size:12px;font-weight:900;color:var(--muted);margin:8px 0 5px}.bank{display:grid;grid-template-columns:repeat(auto-fit,minmax(42px,1fr));gap:5px;min-width:320px}.stand{min-height:42px;border:1px solid #a8b7aa;border-radius:9px;background:white;display:flex;align-items:center;justify-content:center;flex-direction:column;font-weight:900;font-size:12px}.stand small{font-size:9px;font-weight:800;color:#555}.stand.occ{box-shadow:inset 0 -4px 0 #cbd8cc}.stand.t1{background:#ffe1e1;border:3px solid #d00000;color:#8e0000}.stand.t2{background:#dfeaff;border:3px solid #005bd8;color:#003c91}.stand.both{background:#f0dcff;border:3px solid #7a1fc2;color:#461078}.ownbox{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.ownitem{border:2px solid var(--line);border-radius:14px;padding:12px;background:#fff}.ownitem strong{font-size:24px}.twoCols{display:grid;grid-template-columns:1fr 1fr;gap:12px}.inlineBtns{display:flex;gap:6px;flex-wrap:wrap}.inlineBtns button{width:auto}.adminbar{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.tag{font-size:11px;border-radius:999px;padding:3px 7px;background:#f0f4ee;font-weight:900}.t1tag{background:#ffe1e1;color:#8e0000}.t2tag{background:#dfeaff;color:#003c91}
-@media(max-width:760px){main{padding:8px}.grid,.grid3,.grid4,.twoCols,.ownbox,.adminbar{grid-template-columns:1fr}.card{border-radius:12px;padding:10px}th,td{padding:6px 4px;font-size:11px}h1{font-size:16px}input,select,textarea,button{padding:10px}.tabs button{font-size:12px;padding:8px 10px}.top-actions button{font-size:12px}.stand{min-height:36px;font-size:11px}.bank{grid-template-columns:repeat(auto-fit,minmax(36px,1fr))}}
-</style>
-</head>
-<body>
-<header><div class="row"><h1>🎣 Łowcy Methodowcy</h1><div class="top-actions"><button onclick="enablePush()">Push</button><button onclick="logout()" id="logoutBtn">Wyloguj</button></div></div></header>
-<main>
-<div id="msg"></div>
-<section id="auth" class="card">
-  <h2>Logowanie</h2>
-  <div class="grid"><div><label>Telefon</label><input id="loginPhone" autocomplete="username"></div><div><label>Hasło</label><input id="loginPassword" type="password" autocomplete="current-password"></div></div>
-  <button onclick="login()" style="margin-top:10px">Zaloguj</button>
-  <div class="twoCols">
-    <div class="card"><h3>Rejestracja zawodnika</h3><label>Telefon</label><input id="regPhone"><label>Hasło</label><input id="regPassword" type="password"><label>Imię</label><input id="regFirst"><label>Nazwisko</label><input id="regLast"><label>Nr Koła PZW</label><input id="regClub"><button onclick="registerPlayer()">Utwórz konto zawodnika</button></div>
-    <div class="card"><h3>Pierwsze konto admina</h3><p class="small muted">Sekcja działa tylko, gdy w bazie nie ma jeszcze admina.</p><label>Kod setupu</label><input id="setupCode"><label>Telefon admina</label><input id="setupPhone"><label>Hasło</label><input id="setupPassword" type="password"><label>Imię</label><input id="setupFirst"><label>Nazwisko</label><input id="setupLast"><label>Koło PZW</label><input id="setupClub"><button onclick="setupAdmin()">Utwórz admina</button></div>
-  </div>
-</section>
-<section id="app" class="hidden">
-  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V7 panel stabilny</span></div></div></div>
-  <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
-  <section id="tab-competitions">
-    <div id="adminCreate" class="card hidden"><h2>Utwórz zawody</h2><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" placeholder="Method Feeder"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div><div><label>Data</label><input id="cDate" type="date"></div><div><label>Limit miejsc</label><input id="cLimit" type="number" min="1" placeholder="30"></div><div><label>Status</label><select id="cStatus"><option value="OPEN">OPEN — zapisy otwarte</option><option value="CLOSED">CLOSED — zamknięte</option></select></div><div><label>Tryb mapy</label><select id="cMapMode"><option value="TWO_OPPOSITE">Dwa brzegi naprzeciwko</option><option value="ONE_BANK">Jeden brzeg</option><option value="TWO_ALONG">Dwa brzegi wzdłuż</option></select></div><div><label>Brzeg 1 — stanowiska</label><input id="cBank1" type="number" value="15"></div><div><label>Brzeg 2 — stanowiska</label><input id="cBank2" type="number" value="15"></div><div><label>Liczba sektorów</label><input id="cSectors" type="number" value="4" min="1" max="26"></div></div><label>Notatki</label><textarea id="cNotes" placeholder="Nęcenie tylko koszykiem. Zakaz procek i nęcenia ręcznego."></textarea><button onclick="createCompetition(event)">Utwórz zawody</button></div>
-    <div class="card"><h2>Lista zawodów</h2><div id="competitionsList"></div></div>
-    <div id="competitionDetail" class="hidden"></div>
-  </section>
-  <section id="tab-notifications" class="hidden"><div class="card"><h2>Powiadomienia</h2><div id="notificationsList"></div></div></section>
-  <section id="tab-players" class="hidden"><div class="card"><h2>Zawodnicy</h2><div id="playersList"></div></div></section>
-</section>
-</main>
-<script>
-let TOKEN = localStorage.getItem('carp_token') || '';
+const APP_JS = String.raw`try{fetch('/__probe_js_v8',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V8_EXTERNAL_LOADED');
+const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
+let TOKEN = STORE.get('carp_token') || '';
 let ME = null;
 let CURRENT_DETAIL = null;
 let CREATING_COMPETITION = false;
@@ -680,26 +645,42 @@ const q = id => document.getElementById(id);
 window.addEventListener('error',e=>{console.error('CLIENT_ERR',e.message);try{const m=document.getElementById('msg');if(m)m.innerHTML='<div class=\"card bad danger-line\">Błąd ekranu: '+String(e.message||'nieznany')+'</div>'}catch(_){}});
 window.addEventListener('unhandledrejection',e=>{console.error('CLIENT_REJECT',e.reason);});
 function esc(s){return String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function msg(t,type='ok'){q('msg').innerHTML='<div class="card '+(type==='bad'?'bad danger-line':'ok success-line')+'">'+esc(t)+'</div>';setTimeout(()=>q('msg').innerHTML='',3500)}
+function msg(t,type='ok'){const el=q('msg');if(!el)return;el.innerHTML='<div class="card '+(type==='bad'?'bad danger-line':'ok success-line')+'">'+esc(t)+'</div>';setTimeout(()=>{const x=q('msg');if(x)x.innerHTML=''},3500)}
 async function api(path, opts={}){const res=await fetch(path,Object.assign({cache:'no-store',headers:{'Content-Type':'application/json',...(TOKEN?{Authorization:'Bearer '+TOKEN}:{})}},opts));const data=await res.json().catch(()=>({ok:false,error:'Błąd odpowiedzi'}));if(!res.ok||data.ok===false)throw new Error(data.error||'Błąd');return data}
 function fmtDate(d){if(!d)return '—';const s=String(d);const m=s.match(/^\d{4}-\d{2}-\d{2}/);const dt=new Date(m?(m[0]+'T12:00:00'):s);return isNaN(dt.getTime())?'—':dt.toLocaleDateString('pl-PL')}
 function dateInputValue(d){if(!d)return '';const s=String(d);const m=s.match(/^\d{4}-\d{2}-\d{2}/);return m?m[0]:''}
 function fmtGram(v){v=Number(v||0);return v?String(v).replace(/\B(?=(\d{3})+(?!\d))/g,' '):'0'}
 function statusName(s){return s==='OPEN'?'OPEN':s==='CLOSED'?'CLOSED':esc(s||'')}
+function setLoggedOut(showMsg){
+  TOKEN=''; ME=null; STORE.del('carp_token');
+  const logout=q('logoutBtn'), auth=q('auth'), app=q('app');
+  if(logout)logout.classList.add('hidden');
+  if(auth)auth.classList.remove('hidden');
+  if(app)app.classList.add('hidden');
+  const who=q('who'), role=q('role'), notif=q('notifCounter');
+  if(who)who.textContent=''; if(role)role.textContent=''; if(notif)notif.textContent='';
+  if(showMsg)msg('Sesja wyczyszczona. Zaloguj się ponownie.','ok');
+}
 async function boot(){
-  q('logoutBtn').classList.toggle('hidden',!TOKEN);
-  if(!TOKEN){q('auth').classList.remove('hidden');q('app').classList.add('hidden');return}
-  try{const d=await api('/api/me');ME=d.user}catch(e){localStorage.removeItem('carp_token');TOKEN='';ME=null;q('auth').classList.remove('hidden');q('app').classList.add('hidden');return}
-  q('auth').classList.add('hidden');q('app').classList.remove('hidden');q('logoutBtn').classList.remove('hidden');
+  const logout=q('logoutBtn'), auth=q('auth'), app=q('app');
+  if(logout)logout.classList.add('hidden');
+  if(auth)auth.classList.remove('hidden');
+  if(app)app.classList.add('hidden');
+  if(!TOKEN){setLoggedOut(false);return}
+  try{const d=await api('/api/me');ME=d.user}catch(e){setLoggedOut(false);return}
+  if(auth)auth.classList.add('hidden');
+  if(app)app.classList.remove('hidden');
+  if(logout)logout.classList.remove('hidden');
   q('who').textContent=ME.first_name+' '+ME.last_name+' — Koło PZW '+(ME.pzw_club||'');q('role').textContent=ME.role==='ADMIN'?'Administrator':'Zawodnik';
   const admin=ME.role==='ADMIN';q('btn-players').classList.toggle('hidden',!admin);q('adminCreate').classList.toggle('hidden',!admin);
   showTab('competitions');
   await Promise.allSettled([loadCompetitions(),loadNotifications(),admin?loadPlayers():Promise.resolve()]);
 }
-async function login(){try{const d=await api('/api/login',{method:'POST',body:JSON.stringify({phone:q('loginPhone').value,password:q('loginPassword').value})});TOKEN=d.token;localStorage.setItem('carp_token',TOKEN);msg('Zalogowano');boot()}catch(e){msg(e.message,'bad')}}
-async function registerPlayer(){try{const d=await api('/api/register',{method:'POST',body:JSON.stringify({phone:q('regPhone').value,password:q('regPassword').value,firstName:q('regFirst').value,lastName:q('regLast').value,pzwClub:q('regClub').value})});TOKEN=d.token;localStorage.setItem('carp_token',TOKEN);msg('Konto zawodnika utworzone');boot()}catch(e){msg(e.message,'bad')}}
-async function setupAdmin(){try{const d=await api('/api/setup-admin',{method:'POST',body:JSON.stringify({setupCode:q('setupCode').value,phone:q('setupPhone').value,password:q('setupPassword').value,firstName:q('setupFirst').value,lastName:q('setupLast').value,pzwClub:q('setupClub').value})});TOKEN=d.token;localStorage.setItem('carp_token',TOKEN);msg('Admin utworzony');boot()}catch(e){msg(e.message,'bad')}}
-function logout(){localStorage.removeItem('carp_token');TOKEN='';ME=null;location.reload()}
+async function login(){try{const d=await api('/api/login',{method:'POST',body:JSON.stringify({phone:q('loginPhone').value,password:q('loginPassword').value})});TOKEN=d.token;STORE.set('carp_token',TOKEN);msg('Zalogowano');boot()}catch(e){msg(e.message,'bad')}}
+async function registerPlayer(){try{const d=await api('/api/register',{method:'POST',body:JSON.stringify({phone:q('regPhone').value,password:q('regPassword').value,firstName:q('regFirst').value,lastName:q('regLast').value,pzwClub:q('regClub').value})});TOKEN=d.token;STORE.set('carp_token',TOKEN);msg('Konto zawodnika utworzone');boot()}catch(e){msg(e.message,'bad')}}
+async function setupAdmin(){try{const d=await api('/api/setup-admin',{method:'POST',body:JSON.stringify({setupCode:q('setupCode').value,phone:q('setupPhone').value,password:q('setupPassword').value,firstName:q('setupFirst').value,lastName:q('setupLast').value,pzwClub:q('setupClub').value})});TOKEN=d.token;STORE.set('carp_token',TOKEN);msg('Admin utworzony');boot()}catch(e){msg(e.message,'bad')}}
+function logout(){STORE.del('carp_token');TOKEN='';ME=null;setLoggedOut(true)}
+function clearSession(){setLoggedOut(true)}
 function showTab(n){['competitions','notifications','players'].forEach(x=>{q('tab-'+x).classList.toggle('hidden',x!==n);q('btn-'+x)?.classList.toggle('active',x===n)});if(n==='notifications')loadNotifications();if(n==='players')loadPlayers()}
 async function loadCompetitions(){
   const d=await api('/api/competitions'); const arr=d.competitions||[]; const admin=ME&&ME.role==='ADMIN'; let html='';
@@ -743,10 +724,50 @@ async function readNotif(id){await api('/api/notifications/'+id+'/read',{method:
 async function loadPlayers(){if(!ME||ME.role!=='ADMIN')return;const d=await api('/api/admin/players');q('playersList').innerHTML='<div class="tablewrap"><table><thead><tr><th>Imię i nazwisko</th><th>Telefon</th><th>Koło PZW</th><th>Rola</th><th>Aktywne zapisy</th></tr></thead><tbody>'+d.players.map(p=>'<tr><td><b>'+esc(p.first_name+' '+p.last_name)+'</b></td><td class="nowrap">'+esc(p.phone)+'</td><td>'+esc(p.pzw_club)+'</td><td>'+esc(p.role)+'</td><td>'+esc(p.active_entries||0)+'</td></tr>').join('')+'</tbody></table></div>'}
 function urlBase64ToUint8Array(base64String){const padding='='.repeat((4-base64String.length%4)%4);const base64=(base64String+padding).replace(/-/g,'+').replace(/_/g,'/');const raw=atob(base64);const out=new Uint8Array(raw.length);for(let i=0;i<raw.length;++i)out[i]=raw.charCodeAt(i);return out}
 async function enablePush(){try{if(!('serviceWorker'in navigator)||!('PushManager'in window))throw new Error('Ten telefon/przeglądarka nie obsługuje push w PWA');if(!TOKEN)throw new Error('Najpierw się zaloguj');const cfg=await api('/api/config');if(!cfg.pushReady)throw new Error('Push nie jest jeszcze skonfigurowany na serwerze');const reg=await navigator.serviceWorker.register('/sw.js');const perm=await Notification.requestPermission();if(perm!=='granted')throw new Error('Brak zgody na powiadomienia');const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8Array(cfg.vapidPublicKey)});await api('/api/push-subscription',{method:'POST',body:JSON.stringify({subscription:sub})});msg('Push włączony na tym urządzeniu')}catch(e){msg(e.message,'bad')}}
-Object.assign(window,{login,registerPlayer,setupAdmin,logout,showTab,loadCompetitions,createCompetition,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,saveResults,notifyResults,readNotif,loadNotifications,loadPlayers,enablePush});
-function startBoot(){console.log('CLIENT_V7_BOOT');try{fetch('/health?client=v7',{cache:'no-store'}).catch(()=>{})}catch(_){};boot().catch(e=>{console.error('BOOT_FATAL',e);try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();
-</script>
+Object.assign(window,{login,registerPlayer,setupAdmin,logout,showTab,loadCompetitions,createCompetition,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,saveResults,notifyResults,readNotif,loadNotifications,loadPlayers,enablePush,clearSession});
+function startBoot(){console.log('CLIENT_V8_BOOT');try{fetch('/__probe_boot_v8',{cache:'no-store'}).catch(()=>{})}catch(_){};boot().catch(e=>{console.error('BOOT_FATAL',e);try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();`;
+
+const HTML = `<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#114b2f">
+<link rel="manifest" href="/manifest.webmanifest">
+<title>Łowcy Methodowcy</title>
+<style>
+:root{--green:#114b2f;--green2:#17643f;--bg:#f3f6ef;--card:#fff;--line:#cfd8cc;--txt:#18251d;--muted:#68746d;--red:#b32020;--gold:#ffc400;--blue:#1057c8;--soft:#eaf2eb}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}header{position:sticky;top:0;z-index:5;background:var(--green);color:white;padding:12px 14px;box-shadow:0 2px 8px #0002}header .row{display:flex;justify-content:space-between;gap:12px;align-items:center;max-width:1180px;margin:auto}h1{font-size:18px;margin:0}h2{font-size:18px;margin:0 0 8px}h3{font-size:16px;margin:12px 0 8px}main{max-width:1180px;margin:0 auto;padding:12px}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin:12px 0;box-shadow:0 2px 8px #0000000d}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}input,select,textarea,button{width:100%;font:inherit;border-radius:12px;border:1px solid var(--line);padding:10px 11px;background:white}textarea{min-height:70px}button{border:0;background:var(--green);color:white;font-weight:900;cursor:pointer}button.secondary{background:#e7eee7;color:var(--green);border:1px solid #bfd0c2}button.warn{background:var(--red)}button.blue{background:var(--blue)}button:disabled{opacity:.55;cursor:not-allowed}label{display:block;font-size:12px;font-weight:900;color:var(--muted);margin:8px 0 4px}.tabs{display:flex;gap:8px;overflow:auto;padding:8px 0}.tabs button{white-space:nowrap;width:auto;padding:9px 13px}.tabs button.active{background:#072e1c}.tablewrap{width:100%;overflow:auto;border-radius:12px;border:1px solid var(--line)}table{width:100%;border-collapse:collapse;background:white}th,td{border:1px solid var(--line);padding:8px 7px;text-align:left;vertical-align:middle}th{background:#e6f0e8;color:#103b28;font-size:12px;text-transform:uppercase}.nowrap{white-space:nowrap}.muted{color:var(--muted)}.ok{color:var(--green);font-weight:900}.bad{color:var(--red);font-weight:900}.pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#e6f0e8;font-weight:900}.hidden{display:none!important}.top-actions{display:flex;gap:8px;align-items:center}.top-actions button{width:auto;padding:8px 11px;background:#ffffff22;border:1px solid #ffffff55}.small{font-size:12px}.right{text-align:right}.mine{background:#fff4b8!important;outline:3px solid var(--gold);outline-offset:-3px;font-weight:900}.mine td{font-weight:900}.danger-line{border-left:6px solid var(--red)}.success-line{border-left:6px solid var(--green)}.mapbox{background:#f7faf4;border:1px solid var(--line);border-radius:14px;padding:10px;overflow:auto}.banktitle{font-size:12px;font-weight:900;color:var(--muted);margin:8px 0 5px}.bank{display:grid;grid-template-columns:repeat(auto-fit,minmax(42px,1fr));gap:5px;min-width:320px}.stand{min-height:42px;border:1px solid #a8b7aa;border-radius:9px;background:white;display:flex;align-items:center;justify-content:center;flex-direction:column;font-weight:900;font-size:12px}.stand small{font-size:9px;font-weight:800;color:#555}.stand.occ{box-shadow:inset 0 -4px 0 #cbd8cc}.stand.t1{background:#ffe1e1;border:3px solid #d00000;color:#8e0000}.stand.t2{background:#dfeaff;border:3px solid #005bd8;color:#003c91}.stand.both{background:#f0dcff;border:3px solid #7a1fc2;color:#461078}.ownbox{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.ownitem{border:2px solid var(--line);border-radius:14px;padding:12px;background:#fff}.ownitem strong{font-size:24px}.twoCols{display:grid;grid-template-columns:1fr 1fr;gap:12px}.inlineBtns{display:flex;gap:6px;flex-wrap:wrap}.inlineBtns button{width:auto}.adminbar{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.tag{font-size:11px;border-radius:999px;padding:3px 7px;background:#f0f4ee;font-weight:900}.t1tag{background:#ffe1e1;color:#8e0000}.t2tag{background:#dfeaff;color:#003c91}
+@media(max-width:760px){main{padding:8px}.grid,.grid3,.grid4,.twoCols,.ownbox,.adminbar{grid-template-columns:1fr}.card{border-radius:12px;padding:10px}th,td{padding:6px 4px;font-size:11px}h1{font-size:16px}input,select,textarea,button{padding:10px}.tabs button{font-size:12px;padding:8px 10px}.top-actions button{font-size:12px}.stand{min-height:36px;font-size:11px}.bank{grid-template-columns:repeat(auto-fit,minmax(36px,1fr))}}
+</style>
+</head>
+<body>
+<header><div class="row"><h1>🎣 Łowcy Methodowcy</h1><div class="top-actions"><button onclick="enablePush()">Push</button><button onclick="logout()" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
+<main>
+<div id="msg"></div>
+<section id="auth" class="card">
+  <h2>Logowanie</h2>
+  <div class="grid"><div><label>Telefon</label><input id="loginPhone" autocomplete="username"></div><div><label>Hasło</label><input id="loginPassword" type="password" autocomplete="current-password"></div></div>
+  <div class="grid" style="margin-top:10px"><button onclick="login()">Zaloguj</button><button class="secondary" onclick="clearSession()">Wyczyść sesję</button></div>
+  <div class="twoCols">
+    <div class="card"><h3>Rejestracja zawodnika</h3><label>Telefon</label><input id="regPhone"><label>Hasło</label><input id="regPassword" type="password"><label>Imię</label><input id="regFirst"><label>Nazwisko</label><input id="regLast"><label>Nr Koła PZW</label><input id="regClub"><button onclick="registerPlayer()">Utwórz konto zawodnika</button></div>
+    <div class="card"><h3>Pierwsze konto admina</h3><p class="small muted">Sekcja działa tylko, gdy w bazie nie ma jeszcze admina.</p><label>Kod setupu</label><input id="setupCode"><label>Telefon admina</label><input id="setupPhone"><label>Hasło</label><input id="setupPassword" type="password"><label>Imię</label><input id="setupFirst"><label>Nazwisko</label><input id="setupLast"><label>Koło PZW</label><input id="setupClub"><button onclick="setupAdmin()">Utwórz admina</button></div>
+  </div>
+</section>
+<section id="app" class="hidden">
+  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V8 bez cache / JS OK</span></div></div></div>
+  <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
+  <section id="tab-competitions">
+    <div id="adminCreate" class="card hidden"><h2>Utwórz zawody</h2><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" placeholder="Method Feeder"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div><div><label>Data</label><input id="cDate" type="date"></div><div><label>Limit miejsc</label><input id="cLimit" type="number" min="1" placeholder="30"></div><div><label>Status</label><select id="cStatus"><option value="OPEN">OPEN — zapisy otwarte</option><option value="CLOSED">CLOSED — zamknięte</option></select></div><div><label>Tryb mapy</label><select id="cMapMode"><option value="TWO_OPPOSITE">Dwa brzegi naprzeciwko</option><option value="ONE_BANK">Jeden brzeg</option><option value="TWO_ALONG">Dwa brzegi wzdłuż</option></select></div><div><label>Brzeg 1 — stanowiska</label><input id="cBank1" type="number" value="15"></div><div><label>Brzeg 2 — stanowiska</label><input id="cBank2" type="number" value="15"></div><div><label>Liczba sektorów</label><input id="cSectors" type="number" value="4" min="1" max="26"></div></div><label>Notatki</label><textarea id="cNotes" placeholder="Nęcenie tylko koszykiem. Zakaz procek i nęcenia ręcznego."></textarea><button onclick="createCompetition(event)">Utwórz zawody</button></div>
+    <div class="card"><h2>Lista zawodów</h2><div id="competitionsList"></div></div>
+    <div id="competitionDetail" class="hidden"></div>
+  </section>
+  <section id="tab-notifications" class="hidden"><div class="card"><h2>Powiadomienia</h2><div id="notificationsList"></div></div></section>
+  <section id="tab-players" class="hidden"><div class="card"><h2>Zawodnicy</h2><div id="playersList"></div></div></section>
+</section>
+</main>
+<script src="/app.js?v=8" defer></script>
 </body>
 </html>`;
 
@@ -757,5 +778,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V7_FRONT_SAFE_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V8_EXTERNAL_JS_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });
