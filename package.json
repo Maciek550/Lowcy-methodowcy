@@ -1,1 +1,1 @@
-{"scripts":{"start":"node server.cjs"},"dependencies":{"bcryptjs":"latest","pg":"latest","jsonwebtoken":"latest","web-push":"latest"},"engines":{"node":">=20"}}
+{"scripts":{"start":"node server.cjs"},"dependencies":{"bcryptjs":"latest","jsonwebtoken":"latest","pg":"latest","web-push":"latest"}}

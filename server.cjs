@@ -375,6 +375,192 @@ function computeClassification(comp, entries, draws, results) {
   return { round1: roundRows[1], round2: roundRows[2], general };
 }
 
+
+function decodeEntities(str) {
+  return String(str || '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&#(\d+);/g, (_, n) => { try { return String.fromCharCode(Number(n)); } catch { return ' '; } })
+    .replace(/&#x([0-9a-f]+);/gi, (_, n) => { try { return String.fromCharCode(parseInt(n, 16)); } catch { return ' '; } });
+}
+function stripTagsToLines(html) {
+  return decodeEntities(String(html || '')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<br\s*\/?\s*>/gi, '\n')
+    .replace(/<\/(tr|li|p|div|section|article|h\d|td|th)>/gi, '\n')
+    .replace(/<[^>]+>/g, ' '))
+    .split(/\r?\n/)
+    .map(s => s.replace(/\s+/g, ' ').trim())
+    .filter(Boolean);
+}
+function normalizePersonName(s) {
+  return decodeEntities(String(s || ''))
+    .replace(/[|•·]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/^[-–—\s]+|[-–—\s]+$/g, '')
+    .trim();
+}
+function nameKey(s) {
+  return normalizePersonName(s).toLocaleLowerCase('pl-PL').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+}
+function looksLikePersonName(s) {
+  s = normalizePersonName(s);
+  if (s.length < 5 || s.length > 80) return false;
+  if (/\d/.test(s)) return false;
+  if (!/[\p{L}]/u.test(s)) return false;
+  const bad = /^(lp|zawodnik|zawodnik\s*\/\s*drużyna|drużyna|tura|strefa|sektor|stanowisko|wyniki|wynik|klasyfikacja|lista|startowa|opis|harmonogram|łowisko|organizator|sponsor|partnerzy|limit|dostępne|zajęte|suma|waga|max|min|big fish|live|wczytywanie|www|zaloguj|zapisz|tabela|mapa|otwórz|regulamin|cookies|ustawienia|akceptuj|anuluj)$/iu;
+  if (bad.test(s)) return false;
+  if (/(zawody\.pro|suma pkt|suma waga|pkt|kg|^t\d\b|tura|strefa|stanowisko|zawody zakończone|miejsca|zawodników|rezerwa|dostępne|zaloguj|kliknij|poniżej|organizator udostępni|wkrótce)/iu.test(s)) return false;
+  const words = s.split(/\s+/).filter(Boolean);
+  if (words.length < 2 || words.length > 6) return false;
+  return true;
+}
+function splitFullName(fullName) {
+  const n = normalizePersonName(fullName);
+  const parts = n.split(/\s+/).filter(Boolean);
+  if (parts.length <= 1) return { firstName:n, lastName:'' };
+  return { firstName:parts[0], lastName:parts.slice(1).join(' ') };
+}
+function addParsedName(target, seen, source, rawName) {
+  const n = normalizePersonName(rawName);
+  if (!looksLikePersonName(n)) return false;
+  const key = nameKey(n);
+  if (!key || seen.has(key)) return false;
+  seen.add(key);
+  const p = splitFullName(n);
+  target.push({ fullName:n, firstName:p.firstName, lastName:p.lastName, pzwClub:'', source });
+  return true;
+}
+function parseZawodyProPlayers(html) {
+  const lines = stripTagsToLines(html);
+  const players = [];
+  const seen = new Set();
+  const text = lines.join('\n');
+
+  let listedCount = null;
+  const countText = text.match(/Zajęte miejsca \(osoby\)\s*(\d+)\s*\/\s*(\d+)/iu) || text.match(/Zajęte miejsca:\s*(\d+)\s*\/\s*(\d+)/iu);
+  if (countText) listedCount = Number(countText[1]);
+
+  const tableRowRe = /^\s*\d+\s*\|\s*([^|\n]+?)\s*\|\s*(?:-|\d|[A-ZŁŚŻŹĆŃÓĘ])/gmi;
+  let mr;
+  while ((mr = tableRowRe.exec(text))) addParsedName(players, seen, 'tabela', mr[1]);
+
+  for (let i = 0; i < lines.length; i++) {
+    if (!/Lista\s+Startowa/iu.test(lines[i])) continue;
+    const stop = Math.min(lines.length, i + 260);
+    for (let j = i + 1; j < stop; j++) {
+      if (j > i + 8 && /^(Opis|Harmonogram|Łowisko|Mapa|©|Regulamin|Wyniki Losowania)$/iu.test(lines[j])) break;
+      if (/^\d{1,4}$/.test(lines[j]) && lines[j+1]) {
+        addParsedName(players, seen, 'lista-startowa', lines[j+1]);
+      }
+      const row = lines[j].match(/^\s*\d+\s+([\p{L}][\p{L} .'-]+\s+[\p{L}][\p{L} .'-]+)\s+(?:T\d|[-–—])/u);
+      if (row) addParsedName(players, seen, 'lista-startowa', row[1]);
+    }
+  }
+
+  if (!players.length) {
+    for (let i = 0; i < lines.length; i++) {
+      if (/Klasyfikacja|Generalna|Tura|Lista/iu.test(lines[i])) {
+        const stop = Math.min(lines.length, i + 420);
+        for (let j = i + 1; j < stop; j++) {
+          if (/^\d{1,3}$/.test(lines[j]) && lines[j+1]) addParsedName(players, seen, 'klasyfikacja', lines[j+1]);
+        }
+      }
+    }
+  }
+
+  if (listedCount && players.length > listedCount) return { players: players.slice(0, listedCount), listedCount };
+  return { players, listedCount };
+}
+function normalizeZawodyProImportUrls(rawUrl) {
+  const input = String(rawUrl || '').trim();
+  if (!input) throw new Error('Wklej link do zawody.pro');
+  let u;
+  try { u = new URL(input); } catch { throw new Error('Nieprawidłowy link'); }
+  if (!/(^|\.)zawody\.pro$/i.test(u.hostname)) throw new Error('Link musi prowadzić do zawody.pro');
+  u.hash = '';
+  const urls = [u.toString()];
+  const m = u.pathname.match(/\/(?:public\/szczegoly|competitions)\/(\d+)/i);
+  if (m) {
+    const id = m[1];
+    urls.push(`https://www.zawody.pro/public/szczegoly/${id}`);
+    urls.push(`https://www.zawody.pro/competitions/${id}/details`);
+    urls.push(`https://www.zawody.pro/competitions/${id}/results`);
+  }
+  return Array.from(new Set(urls));
+}
+async function fetchText(url) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 18000);
+  try {
+    const r = await fetch(url, { redirect:'follow', signal:ctrl.signal, headers:{ 'user-agent':'Mozilla/5.0 LowcyMethodowcyImporter/1.0', 'accept':'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' } });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return await r.text();
+  } finally { clearTimeout(t); }
+}
+async function ensureCompetitionPlayer(competitionId, person, mode='IMPORT') {
+  const full = normalizePersonName(person.fullName || ((person.firstName||'') + ' ' + (person.lastName||'')));
+  if (!looksLikePersonName(full)) return { status:'skipped', reason:'Nieprawidłowe imię i nazwisko', fullName:full };
+  const p = splitFullName(full);
+  const firstName = normalizePersonName(person.firstName || p.firstName);
+  const lastName = normalizePersonName(person.lastName || p.lastName);
+  const pzwClub = String(person.pzwClub || '').trim();
+  let phone = normalizePhone(person.phone || '');
+  if (!phone) phone = `${mode}-` + crypto.createHash('sha1').update(nameKey(full) + '|' + pzwClub).digest('hex').slice(0, 18);
+  let passwordHash = null;
+  if (person.password) passwordHash = await bcrypt.hash(String(person.password), 10);
+  else passwordHash = await bcrypt.hash(crypto.randomBytes(16).toString('hex'), 10);
+  const { rows } = await pool.query(`
+    insert into users(phone,password_hash,first_name,last_name,pzw_club,role)
+    values($1,$2,$3,$4,$5,'PLAYER')
+    on conflict(phone) do update set first_name=excluded.first_name, last_name=excluded.last_name, pzw_club=excluded.pzw_club
+    returning id, first_name, last_name, phone, pzw_club
+  `, [phone, passwordHash, firstName, lastName, pzwClub]);
+  const uid = rows[0].id;
+  const ent = await pool.query(`
+    insert into entries(competition_id,user_id,status,joined_at,cancelled_at)
+    values($1,$2,'ACTIVE',now(),null)
+    on conflict(competition_id,user_id) do update set status='ACTIVE', joined_at=now(), cancelled_at=null
+    returning id
+  `, [competitionId, uid]);
+  return { status: ent.rowCount ? 'added' : 'ok', user: rows[0], fullName: firstName + ' ' + lastName };
+}
+async function importZawodyProList(competitionId, rawUrl, actor) {
+  const comp = await getCompetition(competitionId);
+  if (!comp) throw new Error('Nie znaleziono zawodów');
+  const urls = normalizeZawodyProImportUrls(rawUrl);
+  const all = [];
+  const seen = new Set();
+  const sourceReports = [];
+  for (const url of urls) {
+    try {
+      const html = await fetchText(url);
+      const parsed = parseZawodyProPlayers(html);
+      sourceReports.push({ url, count:parsed.players.length, listedCount:parsed.listedCount || null });
+      for (const p of parsed.players) {
+        const key = nameKey(p.fullName);
+        if (!key || seen.has(key)) continue;
+        seen.add(key); all.push(p);
+      }
+    } catch (e) {
+      sourceReports.push({ url, error:e.message });
+    }
+  }
+  if (!all.length) throw new Error('Nie znalazłem listy zawodników na podanej stronie zawody.pro');
+  let added = 0, skipped = 0;
+  for (const p of all) {
+    const r = await ensureCompetitionPlayer(competitionId, p, 'ZPRO');
+    if (r.status === 'skipped') skipped++; else added++;
+  }
+  await notifyAdmins('ZAWODY_PRO_IMPORT', 'Import listy zawodników', `${actor.first_name} ${actor.last_name} zaimportował ${added} zawodników do: ${comp.title}`, { competitionId, count:added });
+  return { imported:added, skipped, parsed:all.length, sources:sourceReports };
+}
+
 async function buildDetail(competitionId, user) {
   const comp = await getCompetition(competitionId);
   if (!comp) return null;
@@ -397,15 +583,15 @@ async function route(req, res) {
   const path = url.pathname;
   const method = req.method;
 
-  if (path === '/__probe_js_v8' || path === '/__probe_boot_v8') return sendJson(res, 200, { ok:true, path, version:'V8_EXTERNAL_JS', time:nowIso() });
+  if (path === '/__probe_js_v9' || path === '/__probe_boot_v9') return sendJson(res, 200, { ok:true, path, version:'V9_ZAWODY_PRO_IMPORT', time:nowIso() });
   if (path === '/app.js') return send(res, 200, APP_JS, {'Content-Type':'application/javascript; charset=utf-8', 'Cache-Control':'no-store, no-cache, must-revalidate'});
 
-  if (path === '/health') return sendJson(res, 200, { ok:true, time:nowIso(), version:'V8_EXTERNAL_JS' });
+  if (path === '/health') return sendJson(res, 200, { ok:true, time:nowIso(), version:'V9_ZAWODY_PRO_IMPORT' });
   if (path === '/manifest.webmanifest') return send(res, 200, JSON.stringify({
     name:'Łowcy Methodowcy', short_name:'Łowcy', start_url:'/', scope:'/', display:'standalone', background_color:'#f3f6ef', theme_color:'#114b2f', icons:[]
   }), {'Content-Type':'application/manifest+json; charset=utf-8'});
   if (path === '/sw.js') return send(res, 200, `
-const SW_VERSION='lowcy-v8-no-cache';
+const SW_VERSION='lowcy-v9-no-cache';
 self.addEventListener('install', event => self.skipWaiting());
 self.addEventListener('activate', event => event.waitUntil((async()=>{try{const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k)));}catch(e){} await self.clients.claim();})()));
 self.addEventListener('push', event => {
@@ -536,6 +722,33 @@ self.addEventListener('notificationclick', event => { event.notification.close()
     return sendJson(res, 200, { ok:true, deleted: deleted.rowCount });
   }
 
+
+  m = path.match(/^\/api\/admin\/competitions\/(\d+)\/players\/manual$/);
+  if (m && method === 'POST') {
+    if (!requireAdmin(user, res)) return;
+    const compId = Number(m[1]);
+    const comp = await getCompetition(compId);
+    if (!comp) return sendJson(res, 404, { ok:false, error:'Nie znaleziono zawodów' });
+    const b = await readBody(req);
+    const fullName = normalizePersonName(b.fullName || ((b.firstName || '') + ' ' + (b.lastName || '')));
+    const added = await ensureCompetitionPlayer(compId, { fullName, firstName:b.firstName, lastName:b.lastName, phone:b.phone, pzwClub:b.pzwClub, password:b.password }, 'MANUAL');
+    if (added.status === 'skipped') return sendJson(res, 400, { ok:false, error:added.reason || 'Nieprawidłowe dane zawodnika' });
+    await notifyAdmins('MANUAL_PLAYER_ADD', 'Dopisano zawodnika', `${user.first_name} ${user.last_name} dopisał zawodnika ${added.fullName} do: ${comp.title}`, { competitionId:compId });
+    return sendJson(res, 200, { ok:true, added });
+  }
+  m = path.match(/^\/api\/admin\/competitions\/(\d+)\/import-zawody-pro$/);
+  if (m && method === 'POST') {
+    if (!requireAdmin(user, res)) return;
+    const compId = Number(m[1]);
+    const b = await readBody(req);
+    try {
+      const result = await importZawodyProList(compId, b.url, user);
+      return sendJson(res, 200, { ok:true, result });
+    } catch (e) {
+      return sendJson(res, 400, { ok:false, error:e.message });
+    }
+  }
+
   m = path.match(/^\/api\/competitions\/(\d+)\/join$/);
   if (m && method === 'POST') {
     if (!requireUser(user, res)) return;
@@ -634,7 +847,7 @@ self.addEventListener('notificationclick', event => { event.notification.close()
   return send(res, 200, HTML);
 }
 
-const APP_JS = String.raw`try{fetch('/__probe_js_v8',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V8_EXTERNAL_LOADED');
+const APP_JS = String.raw`try{fetch('/__probe_js_v9',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V9_ZAWODY_PRO_IMPORT_LOADED');
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let TOKEN = STORE.get('carp_token') || '';
 let ME = null;
@@ -704,9 +917,12 @@ function renderDetail(){
   if(admin) html+=renderAdminDetail(d); else html+=renderPlayerDetail(d);
   q('competitionDetail').innerHTML=html;
 }
-function renderAdminDetail(d){const c=d.competition;return '<div class="card"><h2>Edycja zawodów</h2><div class="grid"><div><label>Nazwa</label><input id="dTitle" value="'+esc(c.title)+'"></div><div><label>Łowisko</label><input id="dFishery" value="'+esc(c.fishery||'')+'"></div><div><label>Data</label><input id="dDate" type="date" value="'+dateInputValue(c.competition_date)+'"></div><div><label>Limit</label><input id="dLimit" type="number" value="'+esc(c.limit_places||'')+'"></div><div><label>Status</label><select id="dStatus"><option value="OPEN" '+(c.status==='OPEN'?'selected':'')+'>OPEN — zapisy otwarte</option><option value="CLOSED" '+(c.status==='CLOSED'?'selected':'')+'>CLOSED — zamknięte</option></select></div><div><label>Tryb mapy</label><select id="dMapMode"><option value="TWO_OPPOSITE" '+(c.map_mode==='TWO_OPPOSITE'?'selected':'')+'>Dwa brzegi naprzeciwko</option><option value="ONE_BANK" '+(c.map_mode==='ONE_BANK'?'selected':'')+'>Jeden brzeg</option><option value="TWO_ALONG" '+(c.map_mode==='TWO_ALONG'?'selected':'')+'>Dwa brzegi wzdłuż</option></select></div><div><label>Brzeg 1</label><input id="dBank1" type="number" value="'+esc(c.bank1_count||0)+'"></div><div><label>Brzeg 2</label><input id="dBank2" type="number" value="'+esc(c.bank2_count||0)+'"></div><div><label>Sektory</label><input id="dSectors" type="number" value="'+esc(c.sectors_count||1)+'"></div></div><label>Notatki</label><textarea id="dNotes">'+esc(c.notes||'')+'</textarea><button onclick="saveCompetition('+c.id+')">Zapisz zmiany zawodów</button></div>'+renderEntries(d)+renderDrawPanel(d)+renderResultsAdmin(d)}
+function renderAdminDetail(d){const c=d.competition;return '<div class="card"><h2>Edycja zawodów</h2><div class="grid"><div><label>Nazwa</label><input id="dTitle" value="'+esc(c.title)+'"></div><div><label>Łowisko</label><input id="dFishery" value="'+esc(c.fishery||'')+'"></div><div><label>Data</label><input id="dDate" type="date" value="'+dateInputValue(c.competition_date)+'"></div><div><label>Limit</label><input id="dLimit" type="number" value="'+esc(c.limit_places||'')+'"></div><div><label>Status</label><select id="dStatus"><option value="OPEN" '+(c.status==='OPEN'?'selected':'')+'>OPEN — zapisy otwarte</option><option value="CLOSED" '+(c.status==='CLOSED'?'selected':'')+'>CLOSED — zamknięte</option></select></div><div><label>Tryb mapy</label><select id="dMapMode"><option value="TWO_OPPOSITE" '+(c.map_mode==='TWO_OPPOSITE'?'selected':'')+'>Dwa brzegi naprzeciwko</option><option value="ONE_BANK" '+(c.map_mode==='ONE_BANK'?'selected':'')+'>Jeden brzeg</option><option value="TWO_ALONG" '+(c.map_mode==='TWO_ALONG'?'selected':'')+'>Dwa brzegi wzdłuż</option></select></div><div><label>Brzeg 1</label><input id="dBank1" type="number" value="'+esc(c.bank1_count||0)+'"></div><div><label>Brzeg 2</label><input id="dBank2" type="number" value="'+esc(c.bank2_count||0)+'"></div><div><label>Sektory</label><input id="dSectors" type="number" value="'+esc(c.sectors_count||1)+'"></div></div><label>Notatki</label><textarea id="dNotes">'+esc(c.notes||'')+'</textarea><button onclick="saveCompetition('+c.id+')">Zapisz zmiany zawodów</button></div>'+renderRosterTools(d)+renderEntries(d)+renderDrawPanel(d)+renderResultsAdmin(d)}
 function renderPlayerDetail(d){const c=d.competition;const e=d.myEntry;const t1=myDraw(1), t2=myDraw(2);let html='<div class="card ownbox"><div class="ownitem"><span class="tag t1tag">T1</span><br><strong>'+(t1?esc(t1.stand):'—')+'</strong><br><span>'+(t1?'Sektor '+esc(t1.sector):'Brak losowania')+'</span></div><div class="ownitem"><span class="tag t2tag">T2</span><br><strong>'+(t2?esc(t2.stand):'—')+'</strong><br><span>'+(t2?'Sektor '+esc(t2.sector):'Brak losowania')+'</span></div></div>';html+='<div class="card"><h2>Mapa sytuacyjna — Twoje stanowiska mocnym kolorem</h2>'+renderMap(d)+'</div>';html+='<div class="card"><h2>Losowanie</h2>'+renderDrawTable(d,false)+'</div>';html+='<div class="card"><h2>Wyniki T1</h2>'+renderClassTable(d.classification.round1)+'</div><div class="card"><h2>Wyniki T2</h2>'+renderClassTable(d.classification.round2)+'</div><div class="card"><h2>Generalka</h2>'+renderGeneralTable(d.classification.general)+'</div>';return html}
 async function saveCompetition(id){try{await api('/api/competitions/'+id,{method:'PATCH',body:JSON.stringify({title:q('dTitle').value,fishery:q('dFishery').value,competitionDate:q('dDate').value,limitPlaces:q('dLimit').value,status:q('dStatus').value,mapMode:q('dMapMode').value,bank1Count:q('dBank1').value,bank2Count:q('dBank2').value,sectorsCount:q('dSectors').value,notes:q('dNotes').value})});msg('Zapisano zmiany zawodów');await loadCompetitions();await openCompetition(id)}catch(e){msg(e.message,'bad')}}
+function renderRosterTools(d){const c=d.competition;return '<div class="card"><h2>Wgranie listy zawodników</h2><p class="small muted">Wklej dowolną podstronę zawody.pro z zawodami, np. /competitions/79/details, /public/szczegoly/79 albo link z #wyniki. Import dopisuje zawodników do tych zawodów, nie kasuje obecnej listy.</p><label>Link zawody.pro</label><input id="zproUrl" placeholder="https://www.zawody.pro/competitions/79/details"><button class="blue" onclick="importZawodyPro('+c.id+',event)">Importuj listę z zawody.pro</button><hr style="border:0;border-top:1px solid var(--line);margin:14px 0"><h3>Ręcznie dopisz zawodnika</h3><div class="grid"><div><label>Imię i nazwisko</label><input id="manualFullName" placeholder="Jan Kowalski"></div><div><label>Telefon — opcjonalnie</label><input id="manualPhone" placeholder="np. 501222333"></div><div><label>Nr Koła PZW — opcjonalnie</label><input id="manualClub"></div><div><label>Hasło — opcjonalnie, jeśli ma się logować</label><input id="manualPassword" type="password"></div></div><button onclick="addManualPlayer('+c.id+',event)">Dopisz zawodnika</button></div>'}
+async function importZawodyPro(id,ev){const btn=ev?.target;if(btn){btn.disabled=true;btn.textContent='Importuję...'}try{const url=q('zproUrl').value.trim();const d=await api('/api/admin/competitions/'+id+'/import-zawody-pro',{method:'POST',body:JSON.stringify({url})});const r=d.result||{};msg('Zaimportowano zawodników: '+(r.imported||0)+' / znaleziono: '+(r.parsed||0));await openCompetition(id);await loadCompetitions();await loadPlayers();await loadNotifications()}catch(e){msg(e.message,'bad')}finally{if(btn){btn.disabled=false;btn.textContent='Importuj listę z zawody.pro'}}}
+async function addManualPlayer(id,ev){const btn=ev?.target;if(btn){btn.disabled=true;btn.textContent='Dopisuję...'}try{const fullName=q('manualFullName').value.trim();if(!fullName)throw new Error('Podaj imię i nazwisko');await api('/api/admin/competitions/'+id+'/players/manual',{method:'POST',body:JSON.stringify({fullName,phone:q('manualPhone').value,pzwClub:q('manualClub').value,password:q('manualPassword').value})});['manualFullName','manualPhone','manualClub','manualPassword'].forEach(x=>{const el=q(x);if(el)el.value='' });msg('Dopisano zawodnika');await openCompetition(id);await loadCompetitions();await loadPlayers();await loadNotifications()}catch(e){msg(e.message,'bad')}finally{if(btn){btn.disabled=false;btn.textContent='Dopisz zawodnika'}}}
 function renderEntries(d){const rows=d.entries||[];let html='<div class="card"><h2>Zapisy zawodników</h2>';if(!rows.length)return html+'<p class="muted">Brak zapisów.</p></div>';html+='<div class="tablewrap"><table><thead><tr><th>Zawodnik</th><th>Telefon</th><th>Koło</th><th>Status</th><th>Zapis</th></tr></thead><tbody>'+rows.map(e=>'<tr><td><b>'+esc(e.first_name+' '+e.last_name)+'</b></td><td class="nowrap">'+esc(e.phone)+'</td><td>'+esc(e.pzw_club)+'</td><td><span class="pill">'+esc(e.status)+'</span></td><td class="small">'+new Date(e.joined_at).toLocaleString('pl-PL')+'</td></tr>').join('')+'</tbody></table></div></div>';return html}
 function renderDrawPanel(d){const c=d.competition;return '<div class="card"><h2>Losowanie stanowisk</h2><div class="grid"><button onclick="drawRound('+c.id+',1)">Losuj T1 i powiadom zawodników</button><button class="blue" onclick="drawRound('+c.id+',2)">Losuj T2 bez powtórzeń i powiadom</button></div><p class="small muted">T2 pilnuje, żeby zawodnik nie dostał tego samego stanowiska co w T1.</p>'+renderMap(d)+'<h3>Tabela losowania</h3>'+renderDrawTable(d,true)+'</div>'}
 async function drawRound(id,round){try{if(!confirm('Wykonać losowanie T'+round+'? Poprzednie T'+round+' dla tych zawodów zostanie zastąpione.'))return;await api('/api/admin/competitions/'+id+'/draw/'+round,{method:'POST',body:'{}'});msg('Wylosowano T'+round+' i wysłano powiadomienia');await openCompetition(id);await loadNotifications()}catch(e){msg(e.message,'bad')}}
@@ -724,8 +940,8 @@ async function readNotif(id){await api('/api/notifications/'+id+'/read',{method:
 async function loadPlayers(){if(!ME||ME.role!=='ADMIN')return;const d=await api('/api/admin/players');q('playersList').innerHTML='<div class="tablewrap"><table><thead><tr><th>Imię i nazwisko</th><th>Telefon</th><th>Koło PZW</th><th>Rola</th><th>Aktywne zapisy</th></tr></thead><tbody>'+d.players.map(p=>'<tr><td><b>'+esc(p.first_name+' '+p.last_name)+'</b></td><td class="nowrap">'+esc(p.phone)+'</td><td>'+esc(p.pzw_club)+'</td><td>'+esc(p.role)+'</td><td>'+esc(p.active_entries||0)+'</td></tr>').join('')+'</tbody></table></div>'}
 function urlBase64ToUint8Array(base64String){const padding='='.repeat((4-base64String.length%4)%4);const base64=(base64String+padding).replace(/-/g,'+').replace(/_/g,'/');const raw=atob(base64);const out=new Uint8Array(raw.length);for(let i=0;i<raw.length;++i)out[i]=raw.charCodeAt(i);return out}
 async function enablePush(){try{if(!('serviceWorker'in navigator)||!('PushManager'in window))throw new Error('Ten telefon/przeglądarka nie obsługuje push w PWA');if(!TOKEN)throw new Error('Najpierw się zaloguj');const cfg=await api('/api/config');if(!cfg.pushReady)throw new Error('Push nie jest jeszcze skonfigurowany na serwerze');const reg=await navigator.serviceWorker.register('/sw.js');const perm=await Notification.requestPermission();if(perm!=='granted')throw new Error('Brak zgody na powiadomienia');const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8Array(cfg.vapidPublicKey)});await api('/api/push-subscription',{method:'POST',body:JSON.stringify({subscription:sub})});msg('Push włączony na tym urządzeniu')}catch(e){msg(e.message,'bad')}}
-Object.assign(window,{login,registerPlayer,setupAdmin,logout,showTab,loadCompetitions,createCompetition,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,saveResults,notifyResults,readNotif,loadNotifications,loadPlayers,enablePush,clearSession});
-function startBoot(){console.log('CLIENT_V8_BOOT');try{fetch('/__probe_boot_v8',{cache:'no-store'}).catch(()=>{})}catch(_){};boot().catch(e=>{console.error('BOOT_FATAL',e);try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
+Object.assign(window,{login,registerPlayer,setupAdmin,logout,showTab,loadCompetitions,createCompetition,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,saveResults,notifyResults,readNotif,loadNotifications,loadPlayers,enablePush,clearSession,importZawodyPro,addManualPlayer});
+function startBoot(){console.log('CLIENT_V9_BOOT');try{fetch('/__probe_boot_v9',{cache:'no-store'}).catch(()=>{})}catch(_){};boot().catch(e=>{console.error('BOOT_FATAL',e);try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();`;
 
 const HTML = `<!doctype html>
@@ -756,7 +972,7 @@ const HTML = `<!doctype html>
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V8 bez cache / JS OK</span></div></div></div>
+  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V9 import zawody.pro</span></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
     <div id="adminCreate" class="card hidden"><h2>Utwórz zawody</h2><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" placeholder="Method Feeder"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div><div><label>Data</label><input id="cDate" type="date"></div><div><label>Limit miejsc</label><input id="cLimit" type="number" min="1" placeholder="30"></div><div><label>Status</label><select id="cStatus"><option value="OPEN">OPEN — zapisy otwarte</option><option value="CLOSED">CLOSED — zamknięte</option></select></div><div><label>Tryb mapy</label><select id="cMapMode"><option value="TWO_OPPOSITE">Dwa brzegi naprzeciwko</option><option value="ONE_BANK">Jeden brzeg</option><option value="TWO_ALONG">Dwa brzegi wzdłuż</option></select></div><div><label>Brzeg 1 — stanowiska</label><input id="cBank1" type="number" value="15"></div><div><label>Brzeg 2 — stanowiska</label><input id="cBank2" type="number" value="15"></div><div><label>Liczba sektorów</label><input id="cSectors" type="number" value="4" min="1" max="26"></div></div><label>Notatki</label><textarea id="cNotes" placeholder="Nęcenie tylko koszykiem. Zakaz procek i nęcenia ręcznego."></textarea><button onclick="createCompetition(event)">Utwórz zawody</button></div>
@@ -767,7 +983,7 @@ const HTML = `<!doctype html>
   <section id="tab-players" class="hidden"><div class="card"><h2>Zawodnicy</h2><div id="playersList"></div></div></section>
 </section>
 </main>
-<script src="/app.js?v=8" defer></script>
+<script src="/app.js?v=9" defer></script>
 </body>
 </html>`;
 
@@ -778,5 +994,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V8_EXTERNAL_JS_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V9_ZAWODY_PRO_IMPORT_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });
