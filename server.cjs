@@ -475,7 +475,13 @@ async function api(path, opts={}){
   if(!res.ok || data.ok===false) throw new Error(data.error || 'Błąd');
   return data;
 }
-function fmtDate(d){return d?new Date(d+'T12:00:00').toLocaleDateString('pl-PL'):'—'}
+function fmtDate(d){
+  if(!d) return '—';
+  const s=String(d);
+  const m=s.match(/^\d{4}-\d{2}-\d{2}/);
+  const dt=new Date(m ? (m[0]+'T12:00:00') : s);
+  return isNaN(dt.getTime()) ? '—' : dt.toLocaleDateString('pl-PL');
+}
 async function boot(){
   if(!TOKEN){q('auth').classList.remove('hidden');q('app').classList.add('hidden');return}
   try{
@@ -604,7 +610,7 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V4_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V5_DATE_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
 }).catch(err => {
   console.error('START_FAILED', err);
   process.exit(1);
