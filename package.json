@@ -1,1 +1,1 @@
-{"name":"carp-mobile-app","version":"0.1.0","private":true,"scripts":{"start":"node server.cjs"},"dependencies":{"bcryptjs":"^2.4.3","jsonwebtoken":"^9.0.2","pg":"^8.13.1","web-push":"^3.6.7"},"engines":{"node":">=20"}}
+{"scripts":{"start":"node server.cjs"},"dependencies":{"bcryptjs":"latest","pg":"latest","jsonwebtoken":"latest","web-push":"latest"},"engines":{"node":">=20"}}
