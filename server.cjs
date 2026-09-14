@@ -279,7 +279,28 @@ self.addEventListener('notificationclick', event => {
        values($1,$2,$3,$4,$5,$6,$7) returning *`,
       [String(b.title).trim(), String(b.fishery||'').trim(), b.competitionDate || null, b.limitPlaces ? Number(b.limitPlaces) : null, b.status || 'OPEN', String(b.notes||''), user.id]
     );
+    await notifyAdmins('COMPETITION_CREATE', 'Utworzono zawody', user.first_name + ' ' + user.last_name + ' utworzył zawody: ' + rows[0].title, { competitionId: rows[0].id, userId: user.id });
     return sendJson(res, 200, { ok:true, competition:rows[0] });
+  }
+
+  if (path === '/api/admin/competitions/clear' && method === 'POST') {
+    if (!requireAdmin(user, res)) return;
+    const b = await readBody(req);
+    if (b.confirm !== 'USUN') return sendJson(res, 400, { ok:false, error:'Wymagane potwierdzenie USUN' });
+    const deleted = await pool.query('delete from competitions returning id');
+    await notifyAdmins('COMPETITIONS_CLEAR', 'Usunięto zawody testowe', user.first_name + ' ' + user.last_name + ' usunął ' + deleted.rowCount + ' zawodów', { count: deleted.rowCount, userId: user.id });
+    return sendJson(res, 200, { ok:true, deleted: deleted.rowCount });
+  }
+
+  let del = path.match(/^\/api\/competitions\/(\d+)$/);
+  if (del && method === 'DELETE') {
+    if (!requireAdmin(user, res)) return;
+    const id = Number(del[1]);
+    const old = await pool.query('select title from competitions where id=$1', [id]);
+    if (!old.rows[0]) return sendJson(res, 404, { ok:false, error:'Nie znaleziono zawodów' });
+    await pool.query('delete from competitions where id=$1', [id]);
+    await notifyAdmins('COMPETITION_DELETE', 'Usunięto zawody', user.first_name + ' ' + user.last_name + ' usunął zawody: ' + old.rows[0].title, { competitionId: id, userId: user.id });
+    return sendJson(res, 200, { ok:true });
   }
 
   let m = path.match(/^\/api\/competitions\/(\d+)\/join$/);
@@ -446,6 +467,7 @@ const HTML = `<!doctype html>
 let TOKEN = localStorage.getItem('carp_token') || '';
 let ME = null;
 const q = id => document.getElementById(id);
+function esc(s){return String(s ?? '').replace(/[&<>\"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]})}
 function msg(t, type='ok'){q('msg').innerHTML='<div class="card '+(type==='bad'?'bad':'ok')+'">'+t+'</div>';setTimeout(()=>q('msg').innerHTML='',3500)}
 async function api(path, opts={}){
   const res = await fetch(path, Object.assign({headers:{'Content-Type':'application/json',...(TOKEN?{Authorization:'Bearer '+TOKEN}:{})}}, opts));
@@ -458,14 +480,21 @@ async function boot(){
   if(!TOKEN){q('auth').classList.remove('hidden');q('app').classList.add('hidden');return}
   try{
     const d=await api('/api/me');ME=d.user;
-    q('auth').classList.add('hidden');q('app').classList.remove('hidden');
-    q('who').textContent=ME.first_name+' '+ME.last_name+' — Koło PZW '+(ME.pzw_club||'');
-    q('role').textContent=ME.role==='ADMIN'?'Administrator':'Zawodnik';
-    const admin=ME.role==='ADMIN';
-    q('adminNotifTab').classList.toggle('hidden',!admin);q('adminPlayersTab').classList.toggle('hidden',!admin);q('adminCreate').classList.toggle('hidden',!admin);
-    await loadCompetitions();
-    if(admin){await loadNotifications();await loadPlayers();}
-  }catch(e){localStorage.removeItem('carp_token');TOKEN='';boot();}
+  }catch(e){
+    localStorage.removeItem('carp_token');TOKEN='';ME=null;
+    q('auth').classList.remove('hidden');q('app').classList.add('hidden');
+    return;
+  }
+  q('auth').classList.add('hidden');q('app').classList.remove('hidden');
+  q('who').textContent=ME.first_name+' '+ME.last_name+' — Koło PZW '+(ME.pzw_club||'');
+  q('role').textContent=ME.role==='ADMIN'?'Administrator':'Zawodnik';
+  const admin=ME.role==='ADMIN';
+  q('adminNotifTab').classList.toggle('hidden',!admin);q('adminPlayersTab').classList.toggle('hidden',!admin);q('adminCreate').classList.toggle('hidden',!admin);
+  try{await loadCompetitions();}catch(e){console.warn('COMPETITIONS_LOAD_ERR', e.message);}
+  if(admin){
+    try{await loadNotifications();}catch(e){console.warn('NOTIFICATIONS_LOAD_ERR', e.message);}
+    try{await loadPlayers();}catch(e){console.warn('PLAYERS_LOAD_ERR', e.message);}
+  }
 }
 async function login(){
   try{const d=await api('/api/login',{method:'POST',body:JSON.stringify({phone:q('loginPhone').value,password:q('loginPassword').value})});TOKEN=d.token;localStorage.setItem('carp_token',TOKEN);msg('Zalogowano');boot()}catch(e){msg(e.message,'bad')}
@@ -480,14 +509,60 @@ function logout(){localStorage.removeItem('carp_token');TOKEN='';ME=null;locatio
 function showTab(n){['competitions','notifications','players'].forEach(x=>q('tab-'+x).classList.toggle('hidden',x!==n)); if(n==='notifications') loadNotifications(); if(n==='players') loadPlayers();}
 async function loadCompetitions(){
   const d=await api('/api/competitions');
-  if(!d.competitions.length){q('competitionsList').innerHTML='<p class="muted">Brak zawodów.</p>';return}
-  q('competitionsList').innerHTML='<table><thead><tr><th>Zawody</th><th>Data</th><th>Zapisy</th><th></th></tr></thead><tbody>'+d.competitions.map(c=>{
+  const arr=d.competitions||[];
+  const admin=ME&&ME.role==='ADMIN';
+  let html='';
+  if(admin){
+    html+='<div class="small muted" style="margin-bottom:8px">Liczba zawodów w bazie: <b>'+arr.length+'</b></div>';
+    if(arr.length){html+='<button class="warn" style="margin-bottom:10px" onclick="clearCompetitions()">Usuń wszystkie zawody testowe</button>';}
+  }
+  if(!arr.length){q('competitionsList').innerHTML=html+'<p class="muted">Brak zawodów.</p>';return}
+  html+='<table><thead><tr><th>Zawody</th><th>Data</th><th>Zapisy</th><th>Akcja</th></tr></thead><tbody>';
+  html+=arr.map(c=>{
     const mine=c.my_status==='ACTIVE'; const closed=c.status!=='OPEN';
-    return '<tr><td><b>'+esc(c.title)+'</b><br><span class="muted small">'+esc(c.fishery||'')+'</span></td><td class="nowrap">'+fmtDate(c.competition_date)+'</td><td class="nowrap">'+c.active_count+(c.limit_places?' / '+c.limit_places:'')+'</td><td>'+(ME.role==='ADMIN'?'<span class="pill">'+esc(c.status)+'</span>':(mine?'<button class="warn" onclick="leaveComp('+c.id+')">Wypisz</button>':('<button '+(closed?'disabled':'')+' onclick="joinComp('+c.id+')">Zapisz</button>')))+'</td></tr>'
-  }).join('')+'</tbody></table>'
+    const actions=admin
+      ? '<div style="display:grid;gap:6px"><span class="pill">'+esc(c.status)+'</span><button class="warn" onclick="deleteCompetition('+c.id+')">Usuń</button></div>'
+      : (mine?'<button class="warn" onclick="leaveComp('+c.id+')">Wypisz</button>':'<button '+(closed?'disabled':'')+' onclick="joinComp('+c.id+')">Zapisz</button>');
+    return '<tr><td><b>'+esc(c.title)+'</b><br><span class="muted small">'+esc(c.fishery||'')+'</span></td><td class="nowrap">'+fmtDate(c.competition_date)+'</td><td class="nowrap">'+c.active_count+(c.limit_places?' / '+c.limit_places:'')+'</td><td>'+actions+'</td></tr>';
+  }).join('');
+  html+='</tbody></table>';
+  q('competitionsList').innerHTML=html;
 }
+let CREATING_COMPETITION=false;
 async function createCompetition(){
-  try{await api('/api/competitions',{method:'POST',body:JSON.stringify({title:q('cTitle').value,fishery:q('cFishery').value,competitionDate:q('cDate').value,limitPlaces:q('cLimit').value,status:q('cStatus').value,notes:q('cNotes').value})});msg('Zawody utworzone');await loadCompetitions()}catch(e){msg(e.message,'bad')}
+  if(CREATING_COMPETITION) return;
+  CREATING_COMPETITION=true;
+  const btn=(window.event&&window.event.target&&window.event.target.tagName==='BUTTON')?window.event.target:null;
+  if(btn){btn.disabled=true;btn.textContent='Tworzę...'}
+  try{
+    const title=q('cTitle').value.trim();
+    if(!title) throw new Error('Podaj nazwę zawodów');
+    await api('/api/competitions',{method:'POST',body:JSON.stringify({title:title,fishery:q('cFishery').value,competitionDate:q('cDate').value,limitPlaces:q('cLimit').value,status:q('cStatus').value,notes:q('cNotes').value})});
+    q('cTitle').value='';q('cFishery').value='';q('cDate').value='';q('cLimit').value='';q('cNotes').value='';q('cStatus').value='OPEN';
+    await loadCompetitions();
+    if(ME&&ME.role==='ADMIN'){try{await loadNotifications();}catch(e){console.warn('NOTIF_REFRESH_ERR',e.message)}}
+    msg('Utworzono zawody');
+  }catch(e){msg(e.message,'bad')}
+  finally{CREATING_COMPETITION=false;if(btn){btn.disabled=false;btn.textContent='Utwórz zawody'}}
+}
+async function joinCompasync function deleteCompetition(id){
+  try{
+    if(!confirm('Usunąć te zawody?')) return;
+    await api('/api/competitions/'+id,{method:'DELETE'});
+    msg('Usunięto zawody');
+    await loadCompetitions();
+    if(ME&&ME.role==='ADMIN'){try{await loadNotifications();}catch(e){console.warn('NOTIF_REFRESH_ERR',e.message)}}
+  }catch(e){msg(e.message,'bad')}
+}
+async function clearCompetitions(){
+  try{
+    if(!confirm('Usunąć WSZYSTKIE zawody testowe z bazy?')) return;
+    if(!confirm('Na pewno? Operacji nie da się cofnąć.')) return;
+    const d=await api('/api/admin/competitions/clear',{method:'POST',body:JSON.stringify({confirm:'USUN'})});
+    msg('Usunięto zawody: '+d.deleted);
+    await loadCompetitions();
+    if(ME&&ME.role==='ADMIN'){try{await loadNotifications();}catch(e){console.warn('NOTIF_REFRESH_ERR',e.message)}}
+  }catch(e){msg(e.message,'bad')}
 }
 async function joinComp(id){try{await api('/api/competitions/'+id+'/join',{method:'POST',body:'{}'});msg('Zapisano na zawody');loadCompetitions();}catch(e){msg(e.message,'bad')}}
 async function leaveComp(id){try{await api('/api/competitions/'+id+'/leave',{method:'POST',body:'{}'});msg('Wypisano z zawodów');loadCompetitions();}catch(e){msg(e.message,'bad')}}
