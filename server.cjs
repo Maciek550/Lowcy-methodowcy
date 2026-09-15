@@ -14,6 +14,8 @@ const ADMIN_SETUP_CODE = process.env.ADMIN_SETUP_CODE || '';
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
+const APP_VERSION = '15';
+const APP_VERSION_NAME = 'V15_AUTO_VERSION_CACHE';
 
 if (webpush && VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
   webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
@@ -265,57 +267,93 @@ async function autoSyncBanksForRoster(competitionId) {
 }
 function sectorSizes(total, n, mode) {
   total = Math.max(1, Number(total || 1));
-  n = Math.max(1, Math.min(26, Number(n || 1)));
+  n = Math.max(1, Math.min(26, Number(n || 1), total));
   const base = Math.floor(total / n);
-  let rem = total % n;
-  const sizes = Array.from({ length:n }, () => base);
-  if (rem <= 0) return sizes;
-  // Jak w generatorze losowania: zwykle dokładamy nadwyżkę do końcowych sektorów,
-  // żeby A nie był automatycznie największy. Przy pojedynczej nadwyżce w układzie
-  // przeciwległym sektor A dostaje +1, bo jest wtedy sektorem brzegowym/nierównym.
-  if (mode !== 'ONE_BANK' && rem === 1) { sizes[0]++; return sizes; }
-  for (let i = n - rem; i < n; i++) if (i >= 0) sizes[i]++;
-  return sizes;
+  const rem = total % n;
+  // Reguła z projektu losowania: sektory różnią się maksymalnie o 1.
+  // Najmniej liczny jest A, potem B itd.; nadwyżka idzie na końcowe sektory.
+  return Array.from({ length:n }, (_, i) => base + (i >= n - rem ? 1 : 0));
 }
-function visualColumnCountForCompetition(comp) {
+function allocateBottomCountsForSectors(sizes, bank1, bank2, mode) {
+  bank1 = Math.max(0, Number(bank1 || 0));
+  bank2 = Math.max(0, Number(bank2 || 0));
+  const total = Math.max(1, bank1 + bank2);
+  if ((mode || 'TWO_OPPOSITE') === 'ONE_BANK') return sizes.slice();
+  const raw = sizes.map((s, i) => ({ i, size:s, val:s * bank1 / total }));
+  const bottom = raw.map(x => Math.max(0, Math.min(x.size, Math.floor(x.val))));
+  let diff = bank1 - bottom.reduce((a,b)=>a+b,0);
+  if (diff > 0) {
+    const order = raw.slice().sort((a,b)=>((b.val - Math.floor(b.val)) - (a.val - Math.floor(a.val))) || a.i - b.i);
+    let guard = 0;
+    while (diff > 0 && guard++ < 1000) {
+      let changed = false;
+      for (const x of order) {
+        if (diff <= 0) break;
+        if (bottom[x.i] < x.size) { bottom[x.i]++; diff--; changed = true; }
+      }
+      if (!changed) break;
+    }
+  } else if (diff < 0) {
+    const order = raw.slice().sort((a,b)=>((a.val - Math.floor(a.val)) - (b.val - Math.floor(b.val))) || b.i - a.i);
+    let guard = 0;
+    while (diff < 0 && guard++ < 1000) {
+      let changed = false;
+      for (const x of order) {
+        if (diff >= 0) break;
+        if (bottom[x.i] > 0) { bottom[x.i]--; diff++; changed = true; }
+      }
+      if (!changed) break;
+    }
+  }
+  return bottom;
+}
+function sectorLayoutForCompetition(comp) {
   const b1 = Math.max(0, Number(comp.bank1_count || 0));
   const b2 = Math.max(0, Number(comp.bank2_count || 0));
+  const total = Math.max(1, b1 + b2);
   const mode = comp.map_mode || 'TWO_OPPOSITE';
-  if (mode === 'ONE_BANK') return Math.max(1, b1 + b2);
-  return Math.max(1, b1, b2);
+  const sizes = sectorSizes(total, comp.sectors_count || 1, mode);
+  const bottomCounts = allocateBottomCountsForSectors(sizes, b1, b2, mode);
+  let bottomCursor = 1;
+  let topCursorAsc = b1 + 1;
+  let topCursorDesc = b1 + b2;
+  return sizes.map((size, idx) => {
+    const letter = String.fromCharCode(65 + idx);
+    const bottomCount = mode === 'ONE_BANK' ? size : Math.max(0, Math.min(size, bottomCounts[idx] || 0));
+    const topCount = mode === 'ONE_BANK' ? 0 : Math.max(0, size - bottomCount);
+    const bottom = [];
+    const top = [];
+    for (let i=0; i<bottomCount; i++) if (bottomCursor <= b1) bottom.push(bottomCursor++);
+    if (mode === 'TWO_ALONG') {
+      for (let i=0; i<topCount; i++) if (topCursorAsc <= b1 + b2) top.push(topCursorAsc++);
+    } else {
+      for (let i=0; i<topCount; i++) if (topCursorDesc > b1) top.push(topCursorDesc--);
+    }
+    return { letter, size, bottomCount, topCount, bottom, top };
+  });
+}
+function visualColumnCountForCompetition(comp) {
+  const total = Math.max(1, Number(comp.bank1_count || 0) + Number(comp.bank2_count || 0));
+  return sectorSizes(total, comp.sectors_count || 1, comp.map_mode || 'TWO_OPPOSITE').reduce((a,b)=>a+b,0);
 }
 function balancedColumnSpans(cols, sectors) {
-  cols = Math.max(1, Number(cols || 1));
-  sectors = Math.max(1, Math.min(26, Number(sectors || 1), cols));
-  const base = Math.floor(cols / sectors);
-  let rem = cols % sectors;
-  const spans = [];
+  const sizes = sectorSizes(cols, sectors, 'ONE_BANK');
   let cursor = 1;
-  for (let i = 0; i < sectors; i++) {
-    const width = base + (i < rem ? 1 : 0);
-    spans.push({ letter: String.fromCharCode(65 + i), start: cursor, end: cursor + width - 1, width });
+  return sizes.map((width, i) => {
+    const sp = { letter:String.fromCharCode(65+i), start:cursor, end:cursor+width-1, width };
     cursor += width;
-  }
-  return spans;
+    return sp;
+  });
 }
 function standColumnForCompetition(stand, comp) {
   stand = Number(stand);
-  const b1 = Math.max(0, Number(comp.bank1_count || 0));
-  const b2 = Math.max(0, Number(comp.bank2_count || 0));
-  const total = b1 + b2;
-  const mode = comp.map_mode || 'TWO_OPPOSITE';
-  if (!stand || stand < 1 || stand > total) return 1;
-  if (mode === 'ONE_BANK') return stand;
-  if (mode === 'TWO_ALONG') return stand <= b1 ? stand : (stand - b1);
-  // Dwa brzegi naprzeciwko: kolumny wizualne są wspólne dla góry i dołu.
-  // Przy nierównych brzegach krótszy brzeg dostaje puste pole po stronie początku,
-  // więc prawa strona nadal paruje np. stanowisko 15 ze stanowiskiem 16.
-  const cols = Math.max(b1, b2, 1);
-  const padBottom = Math.max(0, b2 - b1);
-  const padTop = Math.max(0, b1 - b2);
-  if (stand <= b1) return padBottom + stand;
-  const topIndexFromRight = total - stand + 1;
-  return padTop + topIndexFromRight;
+  const layout = sectorLayoutForCompetition(comp);
+  let cursor = 1;
+  for (const sec of layout) {
+    if (sec.bottom.includes(stand) || sec.top.includes(stand)) return cursor;
+    cursor += sec.size;
+  }
+  return 1;
 }
 function sectorForColumn(col, spans) {
   col = Number(col || 1);
@@ -323,15 +361,10 @@ function sectorForColumn(col, spans) {
   return spans[spans.length - 1]?.letter || 'A';
 }
 function buildSectorMap(comp) {
-  const b1 = Math.max(0, Number(comp.bank1_count || 0));
-  const b2 = Math.max(0, Number(comp.bank2_count || 0));
-  const total = Math.max(1, b1 + b2);
-  const cols = visualColumnCountForCompetition(comp);
-  const spans = balancedColumnSpans(cols, comp.sectors_count || 1);
   const map = new Map();
-  for (let stand = 1; stand <= total; stand++) {
-    const col = standColumnForCompetition(stand, comp);
-    map.set(stand, sectorForColumn(col, spans));
+  for (const sec of sectorLayoutForCompetition(comp)) {
+    for (const stand of sec.bottom) map.set(Number(stand), sec.letter);
+    for (const stand of sec.top) map.set(Number(stand), sec.letter);
   }
   return map;
 }
@@ -792,25 +825,26 @@ async function route(req, res) {
   const path = url.pathname;
   const method = req.method;
 
-  if (path === '/__probe_js_v13' || path === '/__probe_boot_v13') return sendJson(res, 200, { ok:true, path, version:'V13_VERTICAL_SECTORS', time:nowIso() });
+  if (path === '/__probe_js_v15' || path === '/__probe_boot_v15') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
+  if (path === '/api/version') return sendJson(res, 200, { ok:true, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/app.js') return send(res, 200, APP_JS, {'Content-Type':'application/javascript; charset=utf-8', 'Cache-Control':'no-store, no-cache, must-revalidate'});
 
-  if (path === '/health') return sendJson(res, 200, { ok:true, time:nowIso(), version:'V13_VERTICAL_SECTORS' });
+  if (path === '/health') return sendJson(res, 200, { ok:true, time:nowIso(), version:APP_VERSION_NAME });
   if (path === '/manifest.webmanifest') return send(res, 200, JSON.stringify({
-    name:'Łowcy Methodowcy', short_name:'Łowcy', start_url:'/', scope:'/', display:'standalone', background_color:'#f3f6ef', theme_color:'#114b2f', icons:[]
+    name:'Łowcy Methodowcy', short_name:'Łowcy', start_url:'/?v='+APP_VERSION, scope:'/', id:'/', display:'standalone', background_color:'#f3f6ef', theme_color:'#114b2f', icons:[]
   }), {'Content-Type':'application/manifest+json; charset=utf-8'});
   if (path === '/sw.js') return send(res, 200, `
-const SW_VERSION='lowcy-v11-no-cache';
+const SW_VERSION='lowcy-v15-auto-version';
 self.addEventListener('install', event => self.skipWaiting());
 self.addEventListener('activate', event => event.waitUntil((async()=>{try{const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k)));}catch(e){} await self.clients.claim();})()));
 self.addEventListener('push', event => {
   let data = {};
   try { data = event.data ? event.data.json() : {}; } catch(e) {}
-  event.waitUntil(self.registration.showNotification(data.title || 'Łowcy Methodowcy', { body: data.body || 'Nowe powiadomienie', data: { url: data.url || '/' } }));
+  event.waitUntil(self.registration.showNotification(data.title || 'Łowcy Methodowcy', { body: data.body || 'Nowe powiadomienie', data: { url: data.url || '/?v=15' } }));
 });
-self.addEventListener('notificationclick', event => { event.notification.close(); event.waitUntil(clients.openWindow((event.notification.data && event.notification.data.url) || '/')); });
+self.addEventListener('notificationclick', event => { event.notification.close(); event.waitUntil(clients.openWindow((event.notification.data && event.notification.data.url) || '/?v=15')); });
 `, {'Content-Type':'application/javascript; charset=utf-8', 'Cache-Control':'no-store, no-cache, must-revalidate'});
-  if (path === '/api/config') return sendJson(res, 200, { ok:true, vapidPublicKey: VAPID_PUBLIC_KEY, pushReady: Boolean(webpush && VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) });
+  if (path === '/api/config') return sendJson(res, 200, { ok:true, vapidPublicKey: VAPID_PUBLIC_KEY, pushReady: Boolean(webpush && VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY), appVersion:APP_VERSION, version:APP_VERSION_NAME });
 
   if (path === '/api/setup-admin' && method === 'POST') {
     const b = await readBody(req);
@@ -1125,7 +1159,7 @@ self.addEventListener('notificationclick', event => { event.notification.close()
   return send(res, 200, HTML);
 }
 
-const APP_JS = String.raw`try{fetch('/__probe_js_v13',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V13_VERTICAL_SECTORS_LOADED');
+const APP_JS = String.raw`const CLIENT_VERSION='15';const CLIENT_VERSION_NAME='V15_AUTO_VERSION_CACHE';try{fetch('/__probe_js_v15',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V15_AUTO_VERSION_CACHE_LOADED');(async()=>{try{const k='lowcy_app_version_seen';const old=localStorage.getItem(k);if(old!==CLIENT_VERSION){localStorage.setItem(k,CLIENT_VERSION);try{if('caches'in window){const keys=await caches.keys();await Promise.all(keys.map(x=>caches.delete(x)));}}catch(_){}try{if('serviceWorker'in navigator){const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.map(r=>r.update().catch(()=>{})));}}catch(_){}if(!location.search.includes('v='+CLIENT_VERSION)&&!sessionStorage.getItem('lowcy_reload_'+CLIENT_VERSION)){sessionStorage.setItem('lowcy_reload_'+CLIENT_VERSION,'1');location.replace('/?v='+CLIENT_VERSION+'&t='+Date.now());}}}catch(e){console.warn('version guard',e)}})();
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let TOKEN = STORE.get('carp_token') || '';
 let ME = null;
@@ -1167,7 +1201,7 @@ async function boot(){
   if(logout)logout.classList.remove('hidden');
   q('who').textContent=ME.first_name+' '+ME.last_name+' — Koło PZW '+(ME.pzw_club||'');q('role').textContent=ME.role==='ADMIN'?'Administrator':'Zawodnik';
   const admin=ME.role==='ADMIN';q('btn-players').classList.toggle('hidden',!admin);q('adminCreate').classList.toggle('hidden',!admin);
-  try{if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js?v=13').catch(()=>{})}catch(_){}
+  try{if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js?v=15').catch(()=>{})}catch(_){}
   renderPushStatus();
   showTab('competitions');
   await Promise.allSettled([loadCompetitions(),loadNotifications(),admin?loadPlayers():Promise.resolve()]);
@@ -1220,7 +1254,7 @@ function renderEntries(d){const c=d.competition;return '<div class="card"><h2>Pa
 function renderDrawPanel(d){const c=d.competition;const x=rosterCounts(d);return '<div class="card"><h2>Losowanie stanowisk</h2><div class="card '+(x.stands===x.draw?'success-line':'danger-line')+'"><b>Do losowania: '+x.draw+' zawodników z listy głównej.</b><br><span class="small muted">Stanowiska w strukturze: '+x.stands+'. Rezerwa nie jest losowana. Przed losowaniem system jeszcze raz dopasuje brzegi do listy głównej.</span></div><div class="grid"><button onclick="drawRound('+c.id+',1)">Losuj T1 i powiadom zawodników</button><button class="blue" onclick="drawRound('+c.id+',2)">Losuj T2 bez powtórzeń i powiadom</button></div><p class="small muted">T2 pilnuje, żeby zawodnik nie dostał tego samego stanowiska co w T1.</p>'+renderMap(d)+'<h3>Tabela losowania</h3>'+renderDrawTable(d,true)+'</div>'}
 async function drawRound(id,round){try{if(!confirm('Wykonać losowanie T'+round+' dla aktualnej listy głównej? Poprzednie T'+round+' zostanie zastąpione.'))return;await api('/api/admin/competitions/'+id+'/draw/'+round,{method:'POST',body:'{}'});msg('Wylosowano T'+round+' i wysłano powiadomienia');await openCompetition(id);await loadNotifications()}catch(e){msg(e.message,'bad')}}
 function renderDrawTable(d,admin){const entries=(d.activeEntries||[]);const dm1=drawMap(1), dm2=drawMap(2);if(!entries.length)return '<p class="muted">Brak aktywnych zawodników.</p>';return '<div class="tablewrap"><table><thead><tr><th>Zawodnik</th><th>T1 stan.</th><th>T1 sektor</th><th>T2 stan.</th><th>T2 sektor</th></tr></thead><tbody>'+entries.map(e=>{const a=dm1[Number(e.user_id)],b=dm2[Number(e.user_id)];const mine=Number(e.user_id)===Number(ME.id);return '<tr class="'+(mine?'mine':'')+'"><td><b>'+esc(e.first_name+' '+e.last_name)+'</b><br><span class="small muted">'+esc(e.pzw_club)+'</span></td><td class="nowrap">'+(a?esc(a.stand):'—')+'</td><td>'+(a?esc(a.sector):'—')+'</td><td class="nowrap">'+(b?esc(b.stand):'—')+'</td><td>'+(b?esc(b.sector):'—')+'</td></tr>'}).join('')+'</tbody></table></div>'}
-function sectorSizesClient(total,n,mode){total=Math.max(1,Number(total||1));n=Math.max(1,Math.min(26,Number(n||1)));const base=Math.floor(total/n);let rem=total%n;const sizes=Array.from({length:n},()=>base);if(rem<=0)return sizes;if(mode!=='ONE_BANK'&&rem===1){sizes[0]++;return sizes}for(let i=n-rem;i<n;i++)if(i>=0)sizes[i]++;return sizes}
+function sectorSizesClient(total,n,mode){total=Math.max(1,Number(total||1));n=Math.max(1,Math.min(26,Number(n||1),total));const base=Math.floor(total/n),rem=total%n;return Array.from({length:n},(_,i)=>base+(i>=n-rem?1:0))}
 function autoBankSplitClient(total,mode){total=Math.max(1,Number(total||1));if(mode==='ONE_BANK')return [total,0];return [Math.ceil(total/2),Math.floor(total/2)]}
 function rosterTargetForStructure(){const active=Number(CURRENT_DETAIL?.rosterCounts?.active_count||CURRENT_DETAIL?.activeEntries?.length||0),limit=Number(q('dLimit')?.value||CURRENT_DETAIL?.competition?.limit_places||0);return Math.max(1,active||limit||1)}
 function autoBankSplitClient(total,mode){total=Math.max(1,Number(total||1));if(mode==='ONE_BANK')return [total,0];return [Math.ceil(total/2),Math.floor(total/2)]}
@@ -1230,19 +1264,25 @@ function scheduleStructureSave(){if(!STRUCTURE_READY||!CURRENT_DETAIL?.competiti
 function autoFillBanksFromRoster(saveNow=false){const c=draftCompetition();const target=rosterTargetForStructure();const sp=autoBankSplitClient(target,c.map_mode);if(q('dBank1'))q('dBank1').value=sp[0];if(q('dBank2'))q('dBank2').value=sp[1];updateStructurePreview();if(saveNow===true)scheduleStructureSave();}
 function setupStructureAuto(compId){STRUCTURE_READY=false;['dMapMode','dBank1','dBank2','dSectors','dLimit'].forEach(id=>{const el=q(id);if(!el||el.dataset.autoReady)return;el.dataset.autoReady='1';el.addEventListener('input',()=>{if((id==='dBank1'||id==='dBank2')&&q('dAutoBanks'))q('dAutoBanks').checked=false;if(q('dAutoBanks')?.checked&&(id==='dMapMode'||id==='dLimit'))autoFillBanksFromRoster(false);else updateStructurePreview();});el.addEventListener('change',()=>{if((id==='dBank1'||id==='dBank2')&&q('dAutoBanks'))q('dAutoBanks').checked=false;if(q('dAutoBanks')?.checked&&(id==='dMapMode'||id==='dLimit'))autoFillBanksFromRoster(true);else {updateStructurePreview();scheduleStructureSave();}});el.addEventListener('blur',()=>{updateStructurePreview();scheduleStructureSave();});});const auto=q('dAutoBanks');if(auto&&!auto.dataset.autoReady){auto.dataset.autoReady='1';auto.addEventListener('change',()=>{if(auto.checked)autoFillBanksFromRoster(true);else {updateStructurePreview();scheduleStructureSave();}});}if(q('dAutoBanks')?.checked)autoFillBanksFromRoster(false);else updateStructurePreview();setTimeout(()=>{STRUCTURE_READY=true},120);}
 function updateStructurePreview(){if(!CURRENT_DETAIL||!q('structurePreview'))return;const d=JSON.parse(JSON.stringify(CURRENT_DETAIL));d.competition=draftCompetition();q('structurePreview').innerHTML=renderMap(d);liveCountUpdate();const x=rosterCounts({competition:d.competition,rosterCounts:CURRENT_DETAIL.rosterCounts,activeEntries:CURRENT_DETAIL.activeEntries});const hint=q('structureHint');if(hint)hint.innerHTML='Cel: <b>'+x.draw+'</b> do losowania, limit: <b>'+x.limit+'</b>, struktura: <b>'+x.stands+'</b> stanowisk. '+(x.stands===x.draw?'Zgodne.':'Różnica — kliknij Auto dopasuj albo przejdź do innego pola, żeby zapisać.');}
-function visualColumnCountClient(c){const b1=Math.max(0,Number(c.bank1_count||0)),b2=Math.max(0,Number(c.bank2_count||0)),mode=c.map_mode||'TWO_OPPOSITE';if(mode==='ONE_BANK')return Math.max(1,b1+b2);return Math.max(1,b1,b2)}
-function balancedColumnSpansClient(cols,sectors){cols=Math.max(1,Number(cols||1));sectors=Math.max(1,Math.min(26,Number(sectors||1),cols));const base=Math.floor(cols/sectors);let rem=cols%sectors,cursor=1,out=[];for(let i=0;i<sectors;i++){const w=base+(i<rem?1:0);out.push({letter:String.fromCharCode(65+i),start:cursor,end:cursor+w-1,width:w});cursor+=w;}return out}
-function standColumnClient(stand,c){stand=Number(stand);const b1=Math.max(0,Number(c.bank1_count||0)),b2=Math.max(0,Number(c.bank2_count||0)),total=b1+b2,mode=c.map_mode||'TWO_OPPOSITE';if(!stand||stand<1||stand>total)return 1;if(mode==='ONE_BANK')return stand;if(mode==='TWO_ALONG')return stand<=b1?stand:(stand-b1);const padBottom=Math.max(0,b2-b1),padTop=Math.max(0,b1-b2);if(stand<=b1)return padBottom+stand;const topIndexFromRight=total-stand+1;return padTop+topIndexFromRight;}
-function sectorSpansClient(c){return balancedColumnSpansClient(visualColumnCountClient(c),c.sectors_count||1)}
-function sectorForColumnClient(col,spans){for(const sp of spans){if(col>=sp.start&&col<=sp.end)return sp.letter}return spans[spans.length-1]?.letter||'A'}
-function sectorMapClient(c){const m={},b1=Math.max(0,Number(c.bank1_count||0)),b2=Math.max(0,Number(c.bank2_count||0)),total=Math.max(1,b1+b2),spans=sectorSpansClient(c);for(let stand=1;stand<=total;stand++){m[stand]=sectorForColumnClient(standColumnClient(stand,c),spans)}return m}
+function visualColumnCountClient(c){const b1=Math.max(0,Number(c.bank1_count||0)),b2=Math.max(0,Number(c.bank2_count||0));return Math.max(1,b1+b2)}
+function allocateBottomCountsClient(sizes,b1,b2,mode){b1=Math.max(0,Number(b1||0));b2=Math.max(0,Number(b2||0));const total=Math.max(1,b1+b2);if((mode||'TWO_OPPOSITE')==='ONE_BANK')return sizes.slice();const raw=sizes.map((s,i)=>({i,size:s,val:s*b1/total}));const bottom=raw.map(x=>Math.max(0,Math.min(x.size,Math.floor(x.val))));let diff=b1-bottom.reduce((a,b)=>a+b,0);if(diff>0){const order=raw.slice().sort((a,b)=>((b.val-Math.floor(b.val))-(a.val-Math.floor(a.val)))||a.i-b.i);let guard=0;while(diff>0&&guard++<1000){let changed=false;for(const x of order){if(diff<=0)break;if(bottom[x.i]<x.size){bottom[x.i]++;diff--;changed=true}}if(!changed)break}}else if(diff<0){const order=raw.slice().sort((a,b)=>((a.val-Math.floor(a.val))-(b.val-Math.floor(b.val)))||b.i-a.i);let guard=0;while(diff<0&&guard++<1000){let changed=false;for(const x of order){if(diff>=0)break;if(bottom[x.i]>0){bottom[x.i]--;diff++;changed=true}}if(!changed)break}}return bottom}
+function sectorLayoutClient(c){const b1=Math.max(0,Number(c.bank1_count||0)),b2=Math.max(0,Number(c.bank2_count||0)),total=Math.max(1,b1+b2),mode=c.map_mode||'TWO_OPPOSITE';const sizes=sectorSizesClient(total,c.sectors_count||1,mode);const bottomCounts=allocateBottomCountsClient(sizes,b1,b2,mode);let bottomCursor=1,topCursorAsc=b1+1,topCursorDesc=b1+b2;return sizes.map((size,idx)=>{const letter=String.fromCharCode(65+idx);const bottomCount=mode==='ONE_BANK'?size:Math.max(0,Math.min(size,bottomCounts[idx]||0));const topCount=mode==='ONE_BANK'?0:Math.max(0,size-bottomCount);const bottom=[],top=[];for(let i=0;i<bottomCount;i++)if(bottomCursor<=b1)bottom.push(bottomCursor++);if(mode==='TWO_ALONG'){for(let i=0;i<topCount;i++)if(topCursorAsc<=b1+b2)top.push(topCursorAsc++)}else{for(let i=0;i<topCount;i++)if(topCursorDesc>b1)top.push(topCursorDesc--)}return {letter,size,bottomCount,topCount,bottom,top}})}
+function balancedColumnSpansClient(cols,sectors){const sizes=sectorSizesClient(cols,sectors,'ONE_BANK');let cursor=1;return sizes.map((w,i)=>{const o={letter:String.fromCharCode(65+i),start:cursor,end:cursor+w-1,width:w};cursor+=w;return o})}
+function standColumnClient(stand,c){stand=Number(stand);let cursor=1;for(const sec of sectorLayoutClient(c)){if(sec.bottom.includes(stand)||sec.top.includes(stand))return cursor;cursor+=sec.size}return 1}
+function sectorSpansClient(c){return sectorLayoutClient(c).map((s,i)=>({letter:s.letter,start:i+1,end:i+1,width:s.size,size:s.size,bottom:s.bottom,top:s.top}))}
+function sectorForColumnClient(col,spans){return spans[Math.max(0,Math.min(spans.length-1,Number(col||1)-1))]?.letter||'A'}
+function sectorMapClient(c){const m={};for(const sec of sectorLayoutClient(c)){for(const n of sec.bottom)m[Number(n)]=sec.letter;for(const n of sec.top)m[Number(n)]=sec.letter}return m}
 function sectorForStandClient(stand,c){return sectorMapClient(c)[Number(stand)]||'A'}
-function sectorRangesData(c){const sm=sectorMapClient(c),spans=sectorSpansClient(c),b1=Math.max(0,Number(c.bank1_count||0)),b2=Math.max(0,Number(c.bank2_count||0)),total=Math.max(1,b1+b2);return spans.map(sp=>{const stands=[];for(let n=1;n<=total;n++)if(sm[n]===sp.letter)stands.push(n);stands.sort((a,b)=>a-b);return {letter:sp.letter,stands,size:stands.length,start:sp.start,end:sp.end,width:sp.width}})}
-function renderSectorRanges(c){const ranges=sectorRangesData(c);let txt='Automatyczny podział pionowy — granice sektorów są wspólne dla górnego i dolnego brzegu. ';txt+=ranges.map(r=>r.letter+' ('+r.size+' os., kol. '+r.start+'-'+r.end+'): '+(r.stands.length?r.stands.join(', '):'—')).join(' • ');return '<div class="sectorSummary">'+esc(txt)+'</div>'}
+function sectorRangesData(c){return sectorLayoutClient(c).map(sec=>{const stands=[...sec.bottom,...sec.top].sort((a,b)=>a-b);return {letter:sec.letter,stands,size:stands.length,bottom:sec.bottom,top:sec.top,width:sec.size}})}
+function compactRange(arr){arr=(arr||[]).slice();if(!arr.length)return '—';const asc=arr.slice().sort((a,b)=>a-b);if(asc.length===1)return String(asc[0]);return asc[0]+'-'+asc[asc.length-1]}
+function renderSectorRanges(c){const ranges=sectorRangesData(c);let txt='Automatyczny podział równy — sektory różnią się maksymalnie o 1; najmniejsze idą od A. ';txt+=ranges.map(r=>r.letter+' ('+r.size+' os.): dół '+compactRange(r.bottom)+' / góra '+compactRange(r.top)).join(' • ');return '<div class="sectorSummary">'+esc(txt)+'</div>'}
 function sectorColorClass(letter){return 'sectorFill-'+String(letter||'A').replace(/[^A-Z]/g,'')}
 function renderStandCell(n,c,drawStands,own1,own2,empty=false){if(empty)return '<div class="standCell empty"></div>';const sec=sectorForStandClient(n,c);let cls='standCell '+sectorColorClass(sec)+' '+(drawStands.has(Number(n))?'occ':'');const t1=own1&&Number(own1.stand)===Number(n),t2=own2&&Number(own2.stand)===Number(n);if(t1&&t2)cls+=' both';else if(t1)cls+=' t1';else if(t2)cls+=' t2';return '<div class="'+cls+'"><b>'+n+'</b><small>'+sec+'</small></div>'}
-function renderSectorBand(c){const spans=sectorSpansClient(c),ranges=sectorRangesData(c),sizeByLetter={};for(const r of ranges)sizeByLetter[r.letter]=r.size;const cols=visualColumnCountClient(c);let html='<div class="sectorBand clean" style="grid-template-columns:repeat('+cols+',minmax(42px,1fr))">';for(const sp of spans){html+='<div class="sectorBlock '+sectorColorClass(sp.letter)+'" style="grid-column:'+sp.start+' / '+(sp.end+1)+'"><span>SEKTOR '+sp.letter+'</span><small>'+(sizeByLetter[sp.letter]||0)+' os.</small></div>'}return html+'</div>'}
-function renderMap(d){const c=d.competition;const b1=Math.max(0,Number(c.bank1_count||0)),b2=Math.max(0,Number(c.bank2_count||0)),total=Math.max(1,b1+b2);const own1=myDraw(1),own2=myDraw(2);const drawStands=new Set((d.draws||[]).map(x=>Number(x.stand)));let html='<div class="sectorMap">';if(c.map_mode==='ONE_BANK'){const cols=visualColumnCountClient(c);html+='<div class="mapTitle">SEKTORY NA JEDNYM BRZEGU</div><div class="standRow" style="grid-template-columns:repeat('+cols+',minmax(42px,1fr))">';for(let i=1;i<=total;i++)html+=renderStandCell(i,c,drawStands,own1,own2);html+='</div>'+renderSectorBand(c)}else if(c.map_mode==='TWO_ALONG'){const cols=visualColumnCountClient(c);html+='<div class="bankLabel">BRZEG GÓRNY</div><div class="standRow" style="grid-template-columns:repeat('+cols+',minmax(42px,1fr))">';for(let i=b1+1;i<=b1+b2;i++)html+=renderStandCell(i,c,drawStands,own1,own2);for(let i=b2;i<cols;i++)html+=renderStandCell(0,c,drawStands,own1,own2,true);html+='</div>'+renderSectorBand(c)+'<div class="water">PAS / ŚRODEK ŁOWISKA</div><div class="bankLabel">BRZEG DOLNY</div><div class="standRow" style="grid-template-columns:repeat('+cols+',minmax(42px,1fr))">';for(let i=1;i<=b1;i++)html+=renderStandCell(i,c,drawStands,own1,own2);for(let i=b1;i<cols;i++)html+=renderStandCell(0,c,drawStands,own1,own2,true);html+='</div>'}else{const cols=visualColumnCountClient(c),padTop=Math.max(0,b1-b2),padBottom=Math.max(0,b2-b1);html+='<div class="bankLabel">BRZEG GÓRNY</div><div class="standRow" style="grid-template-columns:repeat('+cols+',minmax(42px,1fr))">';for(let i=0;i<padTop;i++)html+=renderStandCell(0,c,drawStands,own1,own2,true);for(let n=total;n>=b1+1;n--)html+=renderStandCell(n,c,drawStands,own1,own2);for(let i=0;i<padBottom;i++)html+=renderStandCell(0,c,drawStands,own1,own2,true);html+='</div>'+renderSectorBand(c)+'<div class="water">WODA / ŚRODEK ŁOWISKA</div><div class="bankLabel">BRZEG DOLNY</div><div class="standRow" style="grid-template-columns:repeat('+cols+',minmax(42px,1fr))">';for(let i=0;i<padBottom;i++)html+=renderStandCell(0,c,drawStands,own1,own2,true);for(let n=1;n<=b1;n++)html+=renderStandCell(n,c,drawStands,own1,own2);for(let i=0;i<padTop;i++)html+=renderStandCell(0,c,drawStands,own1,own2,true);html+='</div>'}html+=renderSectorRanges(c)+'<p class="small muted"><span class="tag t1tag">czerwony = Twoje T1</span> <span class="tag t2tag">niebieski = Twoje T2</span></p></div>';return html}
+function mapMinWidth(c){const total=Math.max(1,Number(c.bank1_count||0)+Number(c.bank2_count||0));return Math.max(640,total*34)}
+function renderBankGroupRow(c,which,drawStands,own1,own2){const layout=sectorLayoutClient(c),minw=mapMinWidth(c);let html='<div class="sectorFlexRow standFlex" style="min-width:'+minw+'px">';for(const sec of layout){const arr=which==='top'?sec.top:sec.bottom;const count=Math.max(1,arr.length);html+='<div class="sectorGroup" style="flex:'+sec.size+' 0 0;grid-template-columns:repeat('+count+',minmax(32px,1fr))">';if(arr.length){for(const n of arr)html+=renderStandCell(n,c,drawStands,own1,own2)}else html+=renderStandCell(0,c,drawStands,own1,own2,true);html+='</div>'}return html+'</div>'}
+function renderOneBankRow(c,drawStands,own1,own2){const layout=sectorLayoutClient(c),minw=mapMinWidth(c);let html='<div class="sectorFlexRow standFlex" style="min-width:'+minw+'px">';for(const sec of layout){const arr=sec.bottom;html+='<div class="sectorGroup" style="flex:'+sec.size+' 0 0;grid-template-columns:repeat('+Math.max(1,arr.length)+',minmax(32px,1fr))">';for(const n of arr)html+=renderStandCell(n,c,drawStands,own1,own2);html+='</div>'}return html+'</div>'}
+function renderSectorBand(c){const layout=sectorLayoutClient(c),minw=mapMinWidth(c);let html='<div class="sectorFlexRow sectorBand clean" style="min-width:'+minw+'px">';for(const sec of layout){html+='<div class="sectorBlock '+sectorColorClass(sec.letter)+'" style="flex:'+sec.size+' 0 0"><span>SEKTOR '+sec.letter+'</span><small>'+sec.size+' os.</small></div>'}return html+'</div>'}
+function renderMap(d){const c=d.competition;const b1=Math.max(0,Number(c.bank1_count||0)),b2=Math.max(0,Number(c.bank2_count||0));const own1=myDraw(1),own2=myDraw(2);const drawStands=new Set((d.draws||[]).map(x=>Number(x.stand)));let html='<div class="sectorMap">';if(c.map_mode==='ONE_BANK'){html+='<div class="mapTitle">SEKTORY NA JEDNYM BRZEGU</div>'+renderOneBankRow(c,drawStands,own1,own2)+renderSectorBand(c)}else{html+='<div class="bankLabel">BRZEG GÓRNY</div>'+renderBankGroupRow(c,'top',drawStands,own1,own2)+renderSectorBand(c)+'<div class="water" style="min-width:'+mapMinWidth(c)+'px">'+(c.map_mode==='TWO_ALONG'?'PAS / ŚRODEK ŁOWISKA':'WODA / ŚRODEK ŁOWISKA')+'</div><div class="bankLabel">BRZEG DOLNY</div>'+renderBankGroupRow(c,'bottom',drawStands,own1,own2)}html+=renderSectorRanges(c)+'<p class="small muted"><span class="tag t1tag">czerwony = Twoje T1</span> <span class="tag t2tag">niebieski = Twoje T2</span></p></div>';return html}
 function renderResultsAdmin(d){const c=d.competition;return '<div class="card"><h2>Wyniki — wpisywanie wag</h2><p class="small muted">Wpisz wagę siatki albo dużej ryby i przejdź do innego pola. Wpis zapisuje się automatycznie, pole mignie na zielono, waga wskakuje na listę powyżej i możesz wpisać kolejną. Krzyżyk usuwa pojedynczy wpis.</p><div class="twoCols"><div><h3>T1</h3>'+renderResultForm(d,1)+'</div><div><h3>T2</h3>'+renderResultForm(d,2)+'</div></div><div class="grid"><button onclick="saveResults('+c.id+',1,event)">Przelicz T1</button><button onclick="saveResults('+c.id+',2,event)">Przelicz T2</button></div><div class="grid"><button class="blue" onclick="notifyResults('+c.id+',1)">Powiadom o wynikach T1</button><button class="blue" onclick="notifyResults('+c.id+',2)">Powiadom o wynikach T2</button></div><h3>Klasyfikacja T1</h3>'+renderClassTable(d.classification.round1)+'<h3>Klasyfikacja T2</h3>'+renderClassTable(d.classification.round2)+'<h3>Generalka</h3>'+renderGeneralTable(d.classification.general)+'</div>'}
 function renderWeightItems(round,uid,kind){const arr=resultItems(round,uid,kind);if(!arr.length)return '<div class="small muted">Brak zapisanych wag.</div>';return '<div class="weightItems">'+arr.map(i=>'<span class="weightTag '+(kind==='BF'?'bfTag':'netTag')+'">'+fmtGram(i.weight)+'g <button title="Usuń" onclick="deleteWeightItem('+i.id+')">×</button></span>').join('')+'</div>'}
 function resultCellSummary(r){r=r||{};const bf=Number(r.big_fish||0);return '<b>'+fmtGram(r.weight||0)+'g</b>'+(bf?'<br><span class="bfLine">BF: '+fmtGram(bf)+'g</span>':'')}
@@ -1261,9 +1301,9 @@ function urlBase64ToUint8Array(base64String){const padding='='.repeat((4-base64S
 function pushHelpText(){if(!('Notification'in window))return 'Ta przeglądarka nie obsługuje powiadomień.';if(Notification.permission==='granted')return 'Push: zgoda udzielona. Powiadomienia systemowe mogą działać na tym urządzeniu.';if(Notification.permission==='denied')return 'Push: zablokowane w przeglądarce. Kod aplikacji nie może włączyć tego na siłę. Odblokuj: kłódka/ustawienia strony → Powiadomienia → Zezwalaj, albo wyczyść dane strony i wejdź ponownie. Powiadomienia w aplikacji dalej działają.';return 'Push: nieustawione. Kliknij Push/status i zaakceptuj zgodę.'}
 function renderPushStatus(){const el=q('pushStatus');if(!el)return;let cls='tag';if('Notification'in window){if(Notification.permission==='granted')cls+=' ok';else if(Notification.permission==='denied')cls+=' bad'}el.innerHTML='<span class="'+cls+'">'+esc(pushHelpText())+'</span>'}
 async function resetPush(){try{if('serviceWorker'in navigator){const reg=await navigator.serviceWorker.getRegistration('/');const sub=reg?await reg.pushManager.getSubscription():null;if(sub)await sub.unsubscribe();}if(TOKEN)await api('/api/push-subscription',{method:'DELETE'}).catch(()=>{});msg('Subskrypcja push wyczyszczona w aplikacji. Zgody zablokowanej w przeglądarce nie da się wyczyścić kodem.');renderPushStatus()}catch(e){msg(e.message,'bad')}}
-async function enablePush(){try{if(!('Notification'in window))throw new Error('Ta przeglądarka nie obsługuje powiadomień');if(Notification.permission==='denied')throw new Error('Push jest zablokowany w ustawieniach strony. Odblokuj ręcznie w przeglądarce: ustawienia strony/kłódka → Powiadomienia → Zezwalaj. Tego nie da się przestawić kodem.');if(!('serviceWorker'in navigator)||!('PushManager'in window))throw new Error('Ten telefon/przeglądarka nie obsługuje push w PWA');if(!TOKEN)throw new Error('Najpierw się zaloguj');const cfg=await api('/api/config');if(!cfg.pushReady)throw new Error('Push nie jest jeszcze skonfigurowany na serwerze');const reg=await navigator.serviceWorker.register('/sw.js?v=13');const perm=await Notification.requestPermission();if(perm!=='granted')throw new Error('Brak zgody na powiadomienia');let sub=await reg.pushManager.getSubscription();if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8Array(cfg.vapidPublicKey)});await api('/api/push-subscription',{method:'POST',body:JSON.stringify({subscription:sub})});msg('Push włączony na tym urządzeniu');renderPushStatus()}catch(e){msg(e.message,'bad');renderPushStatus()}}
+async function enablePush(){try{if(!('Notification'in window))throw new Error('Ta przeglądarka nie obsługuje powiadomień');if(Notification.permission==='denied')throw new Error('Push jest zablokowany w ustawieniach strony. Odblokuj ręcznie w przeglądarce: ustawienia strony/kłódka → Powiadomienia → Zezwalaj. Tego nie da się przestawić kodem.');if(!('serviceWorker'in navigator)||!('PushManager'in window))throw new Error('Ten telefon/przeglądarka nie obsługuje push w PWA');if(!TOKEN)throw new Error('Najpierw się zaloguj');const cfg=await api('/api/config');if(!cfg.pushReady)throw new Error('Push nie jest jeszcze skonfigurowany na serwerze');const reg=await navigator.serviceWorker.register('/sw.js?v=15');const perm=await Notification.requestPermission();if(perm!=='granted')throw new Error('Brak zgody na powiadomienia');let sub=await reg.pushManager.getSubscription();if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8Array(cfg.vapidPublicKey)});await api('/api/push-subscription',{method:'POST',body:JSON.stringify({subscription:sub})});msg('Push włączony na tym urządzeniu');renderPushStatus()}catch(e){msg(e.message,'bad');renderPushStatus()}}
 Object.assign(window,{login,registerPlayer,setupAdmin,logout,showTab,loadCompetitions,createCompetition,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,saveResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,loadNotifications,loadPlayers,enablePush,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview});
-function startBoot(){console.log('CLIENT_V13_BOOT');try{fetch('/__probe_boot_v13',{cache:'no-store'}).catch(()=>{})}catch(_){};boot().catch(e=>{console.error('BOOT_FATAL',e);try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
+function startBoot(){console.log('CLIENT_V15_BOOT');try{fetch('/__probe_boot_v15',{cache:'no-store'}).catch(()=>{})}catch(_){};boot().catch(e=>{console.error('BOOT_FATAL',e);try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();`;
 
 const HTML = `<!doctype html>
@@ -1276,7 +1316,7 @@ const HTML = `<!doctype html>
 <title>Łowcy Methodowcy</title>
 <style>
 :root{--green:#114b2f;--green2:#17643f;--bg:#f3f6ef;--card:#fff;--line:#cfd8cc;--txt:#18251d;--muted:#68746d;--red:#b32020;--gold:#ffc400;--blue:#1057c8;--soft:#eaf2eb}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}header{position:sticky;top:0;z-index:5;background:var(--green);color:white;padding:12px 14px;box-shadow:0 2px 8px #0002}header .row{display:flex;justify-content:space-between;gap:12px;align-items:center;max-width:1180px;margin:auto}h1{font-size:18px;margin:0}h2{font-size:18px;margin:0 0 8px}h3{font-size:16px;margin:12px 0 8px}main{max-width:1180px;margin:0 auto;padding:12px}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin:12px 0;box-shadow:0 2px 8px #0000000d}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}input,select,textarea,button{width:100%;font:inherit;border-radius:12px;border:1px solid var(--line);padding:10px 11px;background:white}textarea{min-height:70px}button{border:0;background:var(--green);color:white;font-weight:900;cursor:pointer}button.secondary{background:#e7eee7;color:var(--green);border:1px solid #bfd0c2}button.warn{background:var(--red)}button.blue{background:var(--blue)}button:disabled{opacity:.55;cursor:not-allowed}label{display:block;font-size:12px;font-weight:900;color:var(--muted);margin:8px 0 4px}.tabs{display:flex;gap:8px;overflow:auto;padding:8px 0}.tabs button{white-space:nowrap;width:auto;padding:9px 13px}.tabs button.active{background:#072e1c}.tablewrap{width:100%;overflow:auto;border-radius:12px;border:1px solid var(--line)}table{width:100%;border-collapse:collapse;background:white}th,td{border:1px solid var(--line);padding:8px 7px;text-align:left;vertical-align:middle}th{background:#e6f0e8;color:#103b28;font-size:12px;text-transform:uppercase}.nowrap{white-space:nowrap}.muted{color:var(--muted)}.ok{color:var(--green);font-weight:900}.bad{color:var(--red);font-weight:900}.pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#e6f0e8;font-weight:900}.hidden{display:none!important}.top-actions{display:flex;gap:8px;align-items:center}.top-actions button{width:auto;padding:8px 11px;background:#ffffff22;border:1px solid #ffffff55}.small{font-size:12px}.right{text-align:right}.mine{background:#fff4b8!important;outline:3px solid var(--gold);outline-offset:-3px;font-weight:900}.mine td{font-weight:900}.danger-line{border-left:6px solid var(--red)}.success-line{border-left:6px solid var(--green)}.mapbox{background:#f7faf4;border:1px solid var(--line);border-radius:14px;padding:10px;overflow:auto}.banktitle{font-size:12px;font-weight:900;color:var(--muted);margin:8px 0 5px}.bank{display:grid;grid-template-columns:repeat(auto-fit,minmax(42px,1fr));gap:5px;min-width:320px}.stand{min-height:42px;border:1px solid #a8b7aa;border-radius:9px;background:white;display:flex;align-items:center;justify-content:center;flex-direction:column;font-weight:900;font-size:12px}.stand small{font-size:9px;font-weight:800;color:#555}.stand.occ{box-shadow:inset 0 -4px 0 #cbd8cc}.stand.t1{background:#ffe1e1;border:3px solid #d00000;color:#8e0000}.stand.t2{background:#dfeaff;border:3px solid #005bd8;color:#003c91}.stand.both{background:#f0dcff;border:3px solid #7a1fc2;color:#461078}.ownbox{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.ownitem{border:2px solid var(--line);border-radius:14px;padding:12px;background:#fff}.ownitem strong{font-size:24px}.twoCols{display:grid;grid-template-columns:1fr 1fr;gap:12px}.inlineBtns{display:flex;gap:6px;flex-wrap:wrap}.inlineBtns button{width:auto}.adminbar{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.tag{font-size:11px;border-radius:999px;padding:3px 7px;background:#f0f4ee;font-weight:900}.t1tag{background:#ffe1e1;color:#8e0000}.t2tag{background:#dfeaff;color:#003c91}.sector-A{box-shadow:inset 0 0 0 2px #b32020}.sector-B{box-shadow:inset 0 0 0 2px #1057c8}.sector-C{box-shadow:inset 0 0 0 2px #14803a}.sector-D{box-shadow:inset 0 0 0 2px #7a1fc2}.sector-E{box-shadow:inset 0 0 0 2px #b36b00}.sector-F{box-shadow:inset 0 0 0 2px #006b7a}.checkline{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--txt);font-weight:800}.checkline input{width:auto}.sectorMap{background:#fbfdf9;border:1px solid var(--line);border-radius:14px;padding:12px;overflow:auto}.mapTitle,.bankLabel{font-weight:1000;color:#204b38;margin:5px 0}.standRow{display:grid;gap:0;min-width:640px}.standCell{min-height:45px;border:2px solid #446b56;display:flex;align-items:center;justify-content:center;flex-direction:column;font-weight:1000;color:#123827;margin:-1px 0 0 -1px}.standCell small{font-size:10px}.standCell.empty{border:0;background:transparent}.sectorBand{display:grid;min-width:640px;gap:0}.sectorBlock{min-height:78px;border:3px solid #38664d;display:flex;align-items:center;justify-content:center;flex-direction:column;margin:-1px 0 0 -1px;text-align:center}.sectorBlock span{font-size:22px;font-weight:1000}.sectorSummary{background:#ecf2ed;border-radius:10px;padding:10px;margin-top:10px;font-size:13px}.water{text-align:center;background:#f2f6f1;color:#6a756d;font-weight:1000;padding:12px;min-width:640px}.sectorFill-A{background:#d8f1dd}.sectorFill-B{background:#dbe8fb}.sectorFill-C{background:#ffe7bd}.sectorFill-D{background:#f6d9e3}.sectorFill-E{background:#eadffb}.sectorFill-F{background:#dff4f4}.sectorFill-G{background:#f7e8ce}.sectorFill-H{background:#e5f0d0}.standCell.t1{background:#ffb5b5!important;border:4px solid #d00000!important;color:#7c0000}.standCell.t2{background:#b9d2ff!important;border:4px solid #005bd8!important;color:#002c70}.standCell.both{background:#e1b8ff!important;border:4px solid #7a1fc2!important;color:#3c0060}.standCell.occ{box-shadow:inset 0 -5px 0 #244f36}.weightItems{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:5px}.weightTag{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:3px 6px;font-size:11px;font-weight:900;background:#edf4ec;border:1px solid #bfd0c2}.weightTag button{width:auto;padding:0 4px;border-radius:8px;background:#b91c1c;color:#fff;line-height:1.1}.bfTag{background:#fff0d6;border-color:#e5b965}.netTag{background:#e7f5e7}.bfLine{font-size:12px;font-weight:1000;color:#b91c1c}.flashSave{background:#bff7c8!important;transition:background .25s}.resultInputTable input{min-width:120px}.sectorBand.clean{margin:0}.sectorBand.clean .sectorBlock{min-height:72px}.pushBox{margin-top:6px;line-height:1.35}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}header{position:sticky;top:0;z-index:5;background:var(--green);color:white;padding:12px 14px;box-shadow:0 2px 8px #0002}header .row{display:flex;justify-content:space-between;gap:12px;align-items:center;max-width:1180px;margin:auto}h1{font-size:18px;margin:0}h2{font-size:18px;margin:0 0 8px}h3{font-size:16px;margin:12px 0 8px}main{max-width:1180px;margin:0 auto;padding:12px}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin:12px 0;box-shadow:0 2px 8px #0000000d}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}input,select,textarea,button{width:100%;font:inherit;border-radius:12px;border:1px solid var(--line);padding:10px 11px;background:white}textarea{min-height:70px}button{border:0;background:var(--green);color:white;font-weight:900;cursor:pointer}button.secondary{background:#e7eee7;color:var(--green);border:1px solid #bfd0c2}button.warn{background:var(--red)}button.blue{background:var(--blue)}button:disabled{opacity:.55;cursor:not-allowed}label{display:block;font-size:12px;font-weight:900;color:var(--muted);margin:8px 0 4px}.tabs{display:flex;gap:8px;overflow:auto;padding:8px 0}.tabs button{white-space:nowrap;width:auto;padding:9px 13px}.tabs button.active{background:#072e1c}.tablewrap{width:100%;overflow:auto;border-radius:12px;border:1px solid var(--line)}table{width:100%;border-collapse:collapse;background:white}th,td{border:1px solid var(--line);padding:8px 7px;text-align:left;vertical-align:middle}th{background:#e6f0e8;color:#103b28;font-size:12px;text-transform:uppercase}.nowrap{white-space:nowrap}.muted{color:var(--muted)}.ok{color:var(--green);font-weight:900}.bad{color:var(--red);font-weight:900}.pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#e6f0e8;font-weight:900}.hidden{display:none!important}.top-actions{display:flex;gap:8px;align-items:center}.top-actions button{width:auto;padding:8px 11px;background:#ffffff22;border:1px solid #ffffff55}.small{font-size:12px}.right{text-align:right}.mine{background:#fff4b8!important;outline:3px solid var(--gold);outline-offset:-3px;font-weight:900}.mine td{font-weight:900}.danger-line{border-left:6px solid var(--red)}.success-line{border-left:6px solid var(--green)}.mapbox{background:#f7faf4;border:1px solid var(--line);border-radius:14px;padding:10px;overflow:auto}.banktitle{font-size:12px;font-weight:900;color:var(--muted);margin:8px 0 5px}.bank{display:grid;grid-template-columns:repeat(auto-fit,minmax(42px,1fr));gap:5px;min-width:320px}.stand{min-height:42px;border:1px solid #a8b7aa;border-radius:9px;background:white;display:flex;align-items:center;justify-content:center;flex-direction:column;font-weight:900;font-size:12px}.stand small{font-size:9px;font-weight:800;color:#555}.stand.occ{box-shadow:inset 0 -4px 0 #cbd8cc}.stand.t1{background:#ffe1e1;border:3px solid #d00000;color:#8e0000}.stand.t2{background:#dfeaff;border:3px solid #005bd8;color:#003c91}.stand.both{background:#f0dcff;border:3px solid #7a1fc2;color:#461078}.ownbox{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.ownitem{border:2px solid var(--line);border-radius:14px;padding:12px;background:#fff}.ownitem strong{font-size:24px}.twoCols{display:grid;grid-template-columns:1fr 1fr;gap:12px}.inlineBtns{display:flex;gap:6px;flex-wrap:wrap}.inlineBtns button{width:auto}.adminbar{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.tag{font-size:11px;border-radius:999px;padding:3px 7px;background:#f0f4ee;font-weight:900}.t1tag{background:#ffe1e1;color:#8e0000}.t2tag{background:#dfeaff;color:#003c91}.sector-A{box-shadow:inset 0 0 0 2px #b32020}.sector-B{box-shadow:inset 0 0 0 2px #1057c8}.sector-C{box-shadow:inset 0 0 0 2px #14803a}.sector-D{box-shadow:inset 0 0 0 2px #7a1fc2}.sector-E{box-shadow:inset 0 0 0 2px #b36b00}.sector-F{box-shadow:inset 0 0 0 2px #006b7a}.checkline{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--txt);font-weight:800}.checkline input{width:auto}.sectorMap{background:#fbfdf9;border:1px solid var(--line);border-radius:14px;padding:12px;overflow:auto}.mapTitle,.bankLabel{font-weight:1000;color:#204b38;margin:5px 0}.standRow{display:grid;gap:0;min-width:640px}.standCell{min-height:45px;border:2px solid #446b56;display:flex;align-items:center;justify-content:center;flex-direction:column;font-weight:1000;color:#123827;margin:-1px 0 0 -1px}.standCell small{font-size:10px}.standCell.empty{border:0;background:transparent}.sectorBand{display:grid;min-width:640px;gap:0}.sectorBlock{min-height:78px;border:3px solid #38664d;display:flex;align-items:center;justify-content:center;flex-direction:column;margin:-1px 0 0 -1px;text-align:center}.sectorBlock span{font-size:22px;font-weight:1000}.sectorSummary{background:#ecf2ed;border-radius:10px;padding:10px;margin-top:10px;font-size:13px}.water{text-align:center;background:#f2f6f1;color:#6a756d;font-weight:1000;padding:12px;min-width:640px}.sectorFill-A{background:#d8f1dd}.sectorFill-B{background:#dbe8fb}.sectorFill-C{background:#ffe7bd}.sectorFill-D{background:#f6d9e3}.sectorFill-E{background:#eadffb}.sectorFill-F{background:#dff4f4}.sectorFill-G{background:#f7e8ce}.sectorFill-H{background:#e5f0d0}.standCell.t1{background:#ffb5b5!important;border:4px solid #d00000!important;color:#7c0000}.standCell.t2{background:#b9d2ff!important;border:4px solid #005bd8!important;color:#002c70}.standCell.both{background:#e1b8ff!important;border:4px solid #7a1fc2!important;color:#3c0060}.standCell.occ{box-shadow:inset 0 -5px 0 #244f36}.weightItems{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:5px}.weightTag{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:3px 6px;font-size:11px;font-weight:900;background:#edf4ec;border:1px solid #bfd0c2}.weightTag button{width:auto;padding:0 4px;border-radius:8px;background:#b91c1c;color:#fff;line-height:1.1}.bfTag{background:#fff0d6;border-color:#e5b965}.netTag{background:#e7f5e7}.bfLine{font-size:12px;font-weight:1000;color:#b91c1c}.flashSave{background:#bff7c8!important;transition:background .25s}.resultInputTable input{min-width:120px}.sectorBand.clean{margin:0}.sectorFlexRow{display:flex;gap:0;min-width:640px}.sectorGroup{display:grid;gap:0;margin:0}.sectorGroup .standCell{border-radius:0;margin:-1px 0 0 -1px}.sectorFlexRow .sectorBlock{border-radius:0;margin:-1px 0 0 -1px}.standFlex{align-items:stretch}.sectorBand.clean .sectorBlock{min-height:72px}.pushBox{margin-top:6px;line-height:1.35}
 @media(max-width:760px){main{padding:8px}.grid,.grid3,.grid4,.twoCols,.ownbox,.adminbar{grid-template-columns:1fr}.card{border-radius:12px;padding:10px}th,td{padding:6px 4px;font-size:11px}h1{font-size:16px}input,select,textarea,button{padding:10px}.tabs button{font-size:12px;padding:8px 10px}.top-actions button{font-size:12px}.stand{min-height:36px;font-size:11px}.bank{grid-template-columns:repeat(auto-fit,minmax(36px,1fr))}.standRow,.sectorBand,.water{min-width:520px}.sectorBlock span{font-size:17px}}
 </style>
 </head>
@@ -1294,7 +1334,7 @@ const HTML = `<!doctype html>
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V13 pionowe sektory</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
+  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V15 auto wersja</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
     <div id="adminCreate" class="card hidden"><h2>Utwórz zawody</h2><p class="small muted">Szybkie tworzenie: liczba osób, data, łowisko i opis. Brzegi, sektory i mapę ustawiasz potem w osobnym panelu struktury.</p><div class="grid"><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div></div><label>Opis</label><textarea id="cNotes" placeholder="Opis zawodów, zasady, informacje organizacyjne."></textarea><button onclick="createCompetition(event)">Utwórz zawody</button></div>
@@ -1305,7 +1345,7 @@ const HTML = `<!doctype html>
   <section id="tab-players" class="hidden"><div class="card"><h2>Zawodnicy</h2><div id="playersList"></div></div></section>
 </section>
 </main>
-<script src="/app.js?v=12" defer></script>
+<script src="/app.js?v=${APP_VERSION}" defer></script>
 </body>
 </html>`;
 
@@ -1316,5 +1356,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V13_VERTICAL_SECTORS_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V15_AUTO_VERSION_CACHE_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });
