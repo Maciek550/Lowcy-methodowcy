@@ -471,6 +471,131 @@ function makeStandList(comp, activeCount) {
   if (!Number.isFinite(total) || total < activeCount) total = Math.max(activeCount, Number(comp.limit_places || 0), 1);
   return Array.from({length:total}, (_,i)=>i+1);
 }
+function bankMetaForStand(stand, comp) {
+  stand = Number(stand);
+  const b1 = Math.max(0, Number(comp.bank1_count || 0));
+  const b2 = Math.max(0, Number(comp.bank2_count || 0));
+  if (stand >= 1 && stand <= b1) return { bank:1, start:1, end:b1, count:b1, pos:stand };
+  if (stand > b1 && stand <= b1 + b2) return { bank:2, start:b1+1, end:b1+b2, count:b2, pos:stand-b1 };
+  return null;
+}
+function t2CandidatesForStand(t1Stand, comp, allowedStands) {
+  const meta = bankMetaForStand(t1Stand, comp);
+  if (!meta || meta.count < 2) return [];
+  const n = meta.count;
+  const pos = meta.pos;
+  let fromPos, toPos;
+  if (n % 2 === 0) {
+    const half = n / 2;
+    if (pos <= half) { fromPos = half + 1; toPos = n; }
+    else { fromPos = 1; toPos = half; }
+  } else {
+    const mid = Math.ceil(n / 2);
+    if (meta.bank === 1) {
+      if (pos <= mid) { fromPos = mid; toPos = n; }
+      else { fromPos = 1; toPos = mid - 1; }
+    } else {
+      if (pos < mid) { fromPos = mid + 1; toPos = n; }
+      else { fromPos = 1; toPos = mid; }
+    }
+  }
+  const ownIsEdge = pos === 1 || pos === n;
+  const out = [];
+  for (let p=fromPos; p<=toPos; p++) {
+    const stand = meta.start + p - 1;
+    if (!allowedStands.has(stand) || stand === Number(t1Stand)) continue;
+    if (ownIsEdge && (p === 1 || p === n)) continue;
+    out.push(stand);
+  }
+  return out;
+}
+function t2Quality(matchRight, t1Map) {
+  const distances = [];
+  for (const [stand, userId] of matchRight.entries()) distances.push(Math.abs(Number(stand) - Number(t1Map.get(Number(userId)))));
+  distances.sort((a,b)=>a-b);
+  const sum = distances.reduce((a,b)=>a+b,0);
+  return { distances, sum };
+}
+function betterT2Quality(a, b) {
+  if (!b) return true;
+  const n = Math.min(a.distances.length, b.distances.length);
+  for (let i=0; i<n; i++) {
+    if (a.distances[i] !== b.distances[i]) return a.distances[i] > b.distances[i];
+  }
+  return a.sum > b.sum;
+}
+function tryT2Matching(userIds, candidates, t1Map, minDistance=0, randomize=false) {
+  const filtered = new Map();
+  for (const uid of userIds) {
+    const own = Number(t1Map.get(uid));
+    const list = candidates.get(uid).filter(stand=>Math.abs(Number(stand)-own) >= minDistance);
+    if (!list.length) return null;
+    const ranked = list.map(stand=>({stand, distance:Math.abs(Number(stand)-own), jitter:randomize?Math.random():0}));
+    ranked.sort((a,b)=>(b.distance-a.distance) || (b.jitter-a.jitter) || (a.stand-b.stand));
+    filtered.set(uid, ranked.map(x=>x.stand));
+  }
+  const order = (randomize?shuffle(userIds):userIds.slice()).sort((a,b)=>filtered.get(a).length-filtered.get(b).length);
+  const matchRight = new Map();
+  function visit(uid, seen) {
+    for (const stand of filtered.get(uid)) {
+      if (seen.has(stand)) continue;
+      seen.add(stand);
+      const other = matchRight.get(stand);
+      if (other === undefined || visit(other, seen)) { matchRight.set(stand, uid); return true; }
+    }
+    return false;
+  }
+  for (const uid of order) if (!visit(uid, new Set())) return null;
+  return matchRight.size === userIds.length ? matchRight : null;
+}
+function bestT2BankMatching(userIds, candidates, t1Map) {
+  if (!userIds.length) return new Map();
+  let maxDistance = 0;
+  for (const uid of userIds) {
+    const own = Number(t1Map.get(uid));
+    for (const stand of candidates.get(uid)) maxDistance = Math.max(maxDistance, Math.abs(Number(stand)-own));
+  }
+  let lo=0, hi=maxDistance, threshold=0;
+  while (lo<=hi) {
+    const mid=Math.floor((lo+hi)/2);
+    if (tryT2Matching(userIds,candidates,t1Map,mid,false)) { threshold=mid; lo=mid+1; }
+    else hi=mid-1;
+  }
+  let best=null, bestQuality=null;
+  for (let attempt=0; attempt<300; attempt++) {
+    const match=tryT2Matching(userIds,candidates,t1Map,threshold,true);
+    if (!match) continue;
+    const quality=t2Quality(match,t1Map);
+    if (betterT2Quality(quality,bestQuality)) { best=new Map(match); bestQuality=quality; }
+  }
+  return best || tryT2Matching(userIds,candidates,t1Map,threshold,false);
+}
+function buildT2Assignment(entries, comp, stands, t1Map) {
+  const allowed = new Set(stands.map(Number));
+  const candidates = new Map();
+  const byBank = new Map([[1,[]],[2,[]]]);
+  for (const e of entries) {
+    const uid=Number(e.user_id), own=Number(t1Map.get(uid));
+    const meta=bankMetaForStand(own,comp);
+    if (!meta) throw new Error('Losowanie T1 nie pasuje do aktualnego układu stanowisk');
+    const list=t2CandidatesForStand(own,comp,allowed);
+    if (!list.length) throw new Error('Nie da się poprawnie wylosować T2 przy aktualnym układzie stanowisk');
+    candidates.set(uid,list);
+    byBank.get(meta.bank).push(uid);
+  }
+  const matchRight=new Map();
+  for (const bank of [1,2]) {
+    const match=bestT2BankMatching(byBank.get(bank),candidates,t1Map);
+    if (!match || match.size!==byBank.get(bank).length) throw new Error('Nie da się poprawnie wylosować T2 przy aktualnym układzie stanowisk');
+    for (const [stand,uid] of match.entries()) matchRight.set(stand,uid);
+  }
+  const userToStand=new Map();
+  for (const [stand,uid] of matchRight.entries()) userToStand.set(Number(uid),Number(stand));
+  return entries.map(e=>{
+    const stand=userToStand.get(Number(e.user_id));
+    return { userId:e.user_id, stand, sector:sectorForStand(stand,comp), name:e.first_name+' '+e.last_name };
+  });
+}
 async function getCompetition(id) {
   const { rows } = await pool.query('select * from competitions where id=$1', [id]);
   return rows[0] || null;
@@ -523,25 +648,9 @@ async function generateDraw(competitionId, round, actor) {
   if (round === 2) {
     const t1 = await pool.query('select user_id, stand from draws where competition_id=$1 and round=1', [competitionId]);
     const t1Map = new Map(t1.rows.map(r => [Number(r.user_id), Number(r.stand)]));
-    let poolStands = shuffle(stands);
-    const maxTry = 600;
-    let ok = false;
-    for (let attempt=0; attempt<maxTry; attempt++) {
-      poolStands = shuffle(stands).slice(0, entries.length);
-      ok = entries.every((e, idx) => !t1Map.has(Number(e.user_id)) || Number(poolStands[idx]) !== Number(t1Map.get(Number(e.user_id))));
-      if (ok) break;
-    }
-    if (!ok) {
-      poolStands = [];
-      const used = new Set();
-      for (const e of entries) {
-        const own = t1Map.get(Number(e.user_id));
-        const cand = stands.find(s => !used.has(s) && s !== own) || stands.find(s => !used.has(s));
-        if (!cand) throw new Error('Nie da się wylosować T2 bez powtórzeń przy tej liczbie stanowisk');
-        used.add(cand); poolStands.push(cand);
-      }
-    }
-    assignment = entries.map((e, idx) => ({ userId: e.user_id, stand: poolStands[idx], sector: sectorForStand(poolStands[idx], comp), name: e.first_name + ' ' + e.last_name }));
+    const missingT1 = entries.filter(e=>!t1Map.has(Number(e.user_id)));
+    if (missingT1.length || t1Map.size !== entries.length) throw new Error('Najpierw wykonaj ponownie losowanie T1 dla aktualnej listy zawodników');
+    assignment = buildT2Assignment(entries, comp, stands, t1Map);
   } else {
     const poolStands = shuffle(stands).slice(0, entries.length);
     assignment = entries.map((e, idx) => ({ userId: e.user_id, stand: poolStands[idx], sector: sectorForStand(poolStands[idx], comp), name: e.first_name + ' ' + e.last_name }));
@@ -1536,11 +1645,11 @@ const HTML = `<!doctype html>
 <title>Łowcy Methodowcy</title>
 <style>
 :root{--green:#114b2f;--green2:#17643f;--bg:#f3f6ef;--card:#fff;--line:#cfd8cc;--txt:#18251d;--muted:#68746d;--red:#b32020;--gold:#ffc400;--blue:#1057c8;--soft:#eaf2eb}
-*{box-sizing:border-box}html,body{height:auto!important;min-height:100%!important;overflow-y:auto!important;overscroll-behavior:auto!important}body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}header{position:sticky;top:0;z-index:5;background:var(--green);color:white;padding:12px 14px;box-shadow:0 2px 8px #0002}header .row{display:flex;justify-content:space-between;gap:12px;align-items:center;max-width:1180px;margin:auto}h1{font-size:18px;margin:0}h2{font-size:18px;margin:0 0 8px}h3{font-size:16px;margin:12px 0 8px}main{max-width:1180px;margin:0 auto;padding:12px}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin:12px 0;box-shadow:0 2px 8px #0000000d}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}input,select,textarea,button{width:100%;font:inherit;border-radius:12px;border:1px solid var(--line);padding:10px 11px;background:white}textarea{min-height:70px}button{border:0;background:var(--green);color:white;font-weight:900;cursor:pointer}button.secondary{background:#e7eee7;color:var(--green);border:1px solid #bfd0c2}button.warn{background:var(--red)}button.blue{background:var(--blue)}button:disabled{opacity:.55;cursor:not-allowed}label{display:block;font-size:12px;font-weight:900;color:var(--muted);margin:8px 0 4px}.tabs{display:flex;gap:8px;overflow:auto;padding:8px 0}.tabs button{white-space:nowrap;width:auto;padding:9px 13px}.tabs button.active{background:#072e1c}.tablewrap{width:100%;overflow:auto;border-radius:12px;border:1px solid var(--line)}table{width:100%;border-collapse:collapse;background:white}th,td{border:1px solid var(--line);padding:8px 7px;text-align:left;vertical-align:middle}th{background:#e6f0e8;color:#103b28;font-size:12px;text-transform:uppercase}.nowrap{white-space:nowrap}.muted{color:var(--muted)}.ok{color:var(--green);font-weight:900}.bad{color:var(--red);font-weight:900}.pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#e6f0e8;font-weight:900}.hidden{display:none!important}.top-actions{display:flex;gap:8px;align-items:center}.top-actions button{width:auto;padding:8px 11px;background:#ffffff22;border:1px solid #ffffff55}.small{font-size:12px}.right{text-align:right}.mine{background:#fff4b8!important;outline:3px solid var(--gold);outline-offset:-3px;font-weight:900}.mine td{font-weight:900}.danger-line{border-left:6px solid var(--red)}.success-line{border-left:6px solid var(--green)}.mapbox{background:#f7faf4;border:1px solid var(--line);border-radius:14px;padding:10px;overflow:auto}.banktitle{font-size:12px;font-weight:900;color:var(--muted);margin:8px 0 5px}.bank{display:grid;grid-template-columns:repeat(auto-fit,minmax(42px,1fr));gap:5px;min-width:320px}.stand{min-height:42px;border:1px solid #a8b7aa;border-radius:9px;background:white;display:flex;align-items:center;justify-content:center;flex-direction:column;font-weight:900;font-size:12px}.stand small{font-size:9px;font-weight:800;color:#555}.stand.occ{box-shadow:inset 0 -4px 0 #cbd8cc}.stand.t1{background:#ffe1e1;border:3px solid #d00000;color:#8e0000}.stand.t2{background:#dfeaff;border:3px solid #005bd8;color:#003c91}.stand.both{background:#f0dcff;border:3px solid #7a1fc2;color:#461078}.ownbox{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.ownitem{border:2px solid var(--line);border-radius:14px;padding:12px;background:#fff}.ownitem strong{font-size:24px}.twoCols{display:grid;grid-template-columns:1fr 1fr;gap:12px}.inlineBtns{display:flex;gap:6px;flex-wrap:wrap}.inlineBtns button{width:auto}.adminbar{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.tag{font-size:11px;border-radius:999px;padding:3px 7px;background:#f0f4ee;font-weight:900}.t1tag{background:#ffe1e1;color:#8e0000}.t2tag{background:#dfeaff;color:#003c91}.sector-A{box-shadow:inset 0 0 0 2px #b32020}.sector-B{box-shadow:inset 0 0 0 2px #1057c8}.sector-C{box-shadow:inset 0 0 0 2px #14803a}.sector-D{box-shadow:inset 0 0 0 2px #7a1fc2}.sector-E{box-shadow:inset 0 0 0 2px #b36b00}.sector-F{box-shadow:inset 0 0 0 2px #006b7a}.checkline{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--txt);font-weight:800}.checkline input{width:auto}.sectorMap{background:#fbfdf9;border:1px solid var(--line);border-radius:14px;padding:12px;overflow:auto}.mapTitle,.bankLabel{font-weight:1000;color:#204b38;margin:5px 0}.standRow{display:grid;gap:0;min-width:640px}.standCell{min-height:45px;border:2px solid #446b56;display:flex;align-items:center;justify-content:center;flex-direction:column;font-weight:1000;color:#123827;margin:-1px 0 0 -1px}.standCell small{font-size:10px}.standCell.empty{border:0;background:transparent}.sectorBand{display:grid;min-width:640px;gap:0}.sectorBlock{min-height:78px;border:3px solid #38664d;display:flex;align-items:center;justify-content:center;flex-direction:column;margin:-1px 0 0 -1px;text-align:center}.sectorBlock span{font-size:22px;font-weight:1000}.sectorSummary{background:#ecf2ed;border-radius:10px;padding:10px;margin-top:10px;font-size:13px}.water{text-align:center;background:#f2f6f1;color:#6a756d;font-weight:1000;padding:12px;min-width:640px}.sectorFill-A{background:#d8f1dd}.sectorFill-B{background:#dbe8fb}.sectorFill-C{background:#ffe7bd}.sectorFill-D{background:#f6d9e3}.sectorFill-E{background:#eadffb}.sectorFill-F{background:#dff4f4}.sectorFill-G{background:#f7e8ce}.sectorFill-H{background:#e5f0d0}.standCell.t1{background:#ffb5b5!important;border:4px solid #d00000!important;color:#7c0000}.standCell.t2{background:#b9d2ff!important;border:4px solid #005bd8!important;color:#002c70}.standCell.both{background:#e1b8ff!important;border:4px solid #7a1fc2!important;color:#3c0060}.standCell.occ{box-shadow:inset 0 -5px 0 #244f36}.weightItems{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:5px}.weightTag{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:3px 6px;font-size:11px;font-weight:900;background:#edf4ec;border:1px solid #bfd0c2}.weightTag button{width:auto;padding:0 4px;border-radius:8px;background:#b91c1c;color:#fff;line-height:1.1}.bfTag{background:#fff0d6;border-color:#e5b965}.netTag{background:#e7f5e7}.bfLine{font-size:12px;font-weight:1000;color:#b91c1c}.flashSave{background:#bff7c8!important;transition:background .25s}.resultInputTable input{min-width:120px}.sectorBand.clean{margin:0}.sectorFlexRow{display:flex;gap:0;min-width:640px}.sectorGroup{display:grid;gap:0;margin:0}.sectorGroup .standCell{border-radius:0;margin:-1px 0 0 -1px}.sectorFlexRow .sectorBlock{border-radius:0;margin:-1px 0 0 -1px}.standFlex{align-items:stretch}.sectorBand.clean .sectorBlock{min-height:72px}.pushBox{margin-top:6px;line-height:1.35}.bankLabelBottom{margin-top:8px}.quickScroll{position:fixed;right:10px;bottom:14px;z-index:30;display:flex;flex-direction:column;gap:7px}.quickScroll button{width:52px;padding:9px 0;border-radius:999px;background:#123827cc;box-shadow:0 3px 10px #0003}.quickScroll button:last-child{background:#e7eee7;color:#123827;border:1px solid #bfd0c2}
+*{box-sizing:border-box}html,body{height:auto!important;min-height:100%!important;overflow-y:auto!important;overscroll-behavior:auto!important}body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}header{position:sticky;top:0;z-index:5;background:var(--green);color:white;padding:12px 14px;box-shadow:0 2px 8px #0002}header .row{display:flex;justify-content:space-between;gap:12px;align-items:center;max-width:1180px;margin:auto}h1{font-size:18px;margin:0}h2{font-size:18px;margin:0 0 8px}h3{font-size:16px;margin:12px 0 8px}main{max-width:1180px;margin:0 auto;padding:12px}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin:12px 0;box-shadow:0 2px 8px #0000000d}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}input,select,textarea,button{width:100%;font:inherit;border-radius:12px;border:1px solid var(--line);padding:10px 11px;background:white}textarea{min-height:70px}button{border:0;background:var(--green);color:white;font-weight:900;cursor:pointer}button.secondary{background:#e7eee7;color:var(--green);border:1px solid #bfd0c2}button.warn{background:var(--red)}button.blue{background:var(--blue)}button:disabled{opacity:.55;cursor:not-allowed}label{display:block;font-size:12px;font-weight:900;color:var(--muted);margin:8px 0 4px}.tabs{display:flex;gap:8px;overflow:auto;padding:8px 0}.tabs button{white-space:nowrap;width:auto;padding:9px 13px}.tabs button.active{background:#072e1c}.tablewrap{width:100%;overflow:auto;border-radius:12px;border:1px solid var(--line)}table{width:100%;border-collapse:collapse;background:white}th,td{border:1px solid var(--line);padding:8px 7px;text-align:left;vertical-align:middle}th{background:#e6f0e8;color:#103b28;font-size:12px;text-transform:uppercase}.nowrap{white-space:nowrap}.muted{color:var(--muted)}.ok{color:var(--green);font-weight:900}.bad{color:var(--red);font-weight:900}.pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#e6f0e8;font-weight:900}.hidden{display:none!important}.top-actions{display:flex;gap:8px;align-items:center}.top-actions button{width:auto;padding:8px 11px;background:#ffffff22;border:1px solid #ffffff55}.small{font-size:12px}.right{text-align:right}.mine{background:#fff4b8!important;outline:3px solid var(--gold);outline-offset:-3px;font-weight:900}.mine td{font-weight:900}.danger-line{border-left:6px solid var(--red)}.success-line{border-left:6px solid var(--green)}.mapbox{background:#f7faf4;border:1px solid var(--line);border-radius:14px;padding:10px;overflow:auto}.banktitle{font-size:12px;font-weight:900;color:var(--muted);margin:8px 0 5px}.bank{display:grid;grid-template-columns:repeat(auto-fit,minmax(42px,1fr));gap:5px;min-width:320px}.stand{min-height:42px;border:1px solid #a8b7aa;border-radius:9px;background:white;display:flex;align-items:center;justify-content:center;flex-direction:column;font-weight:900;font-size:12px}.stand small{font-size:9px;font-weight:800;color:#555}.stand.occ{box-shadow:inset 0 -4px 0 #cbd8cc}.stand.t1{background:#ffe1e1;border:3px solid #d00000;color:#8e0000}.stand.t2{background:#dfeaff;border:3px solid #005bd8;color:#003c91}.stand.both{background:#f0dcff;border:3px solid #7a1fc2;color:#461078}.ownbox{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.ownitem{border:2px solid var(--line);border-radius:14px;padding:12px;background:#fff}.ownitem strong{font-size:24px}.twoCols{display:grid;grid-template-columns:1fr 1fr;gap:12px}.inlineBtns{display:flex;gap:6px;flex-wrap:wrap}.inlineBtns button{width:auto}.competitionActions{gap:22px;align-items:center}.competitionActions button{min-width:96px}.adminbar{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.tag{font-size:11px;border-radius:999px;padding:3px 7px;background:#f0f4ee;font-weight:900}.t1tag{background:#ffe1e1;color:#8e0000}.t2tag{background:#dfeaff;color:#003c91}.sector-A{box-shadow:inset 0 0 0 2px #b32020}.sector-B{box-shadow:inset 0 0 0 2px #1057c8}.sector-C{box-shadow:inset 0 0 0 2px #14803a}.sector-D{box-shadow:inset 0 0 0 2px #7a1fc2}.sector-E{box-shadow:inset 0 0 0 2px #b36b00}.sector-F{box-shadow:inset 0 0 0 2px #006b7a}.checkline{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--txt);font-weight:800}.checkline input{width:auto}.sectorMap{background:#fbfdf9;border:1px solid var(--line);border-radius:14px;padding:12px;overflow:auto}.mapTitle,.bankLabel{font-weight:1000;color:#204b38;margin:5px 0}.standRow{display:grid;gap:0;min-width:640px}.standCell{min-height:45px;border:2px solid #446b56;display:flex;align-items:center;justify-content:center;flex-direction:column;font-weight:1000;color:#123827;margin:-1px 0 0 -1px}.standCell small{font-size:10px}.standCell.empty{border:0;background:transparent}.sectorBand{display:grid;min-width:640px;gap:0}.sectorBlock{min-height:78px;border:3px solid #38664d;display:flex;align-items:center;justify-content:center;flex-direction:column;margin:-1px 0 0 -1px;text-align:center}.sectorBlock span{font-size:22px;font-weight:1000}.sectorSummary{background:#ecf2ed;border-radius:10px;padding:10px;margin-top:10px;font-size:13px}.water{text-align:center;background:#f2f6f1;color:#6a756d;font-weight:1000;padding:12px;min-width:640px}.sectorFill-A{background:#d8f1dd}.sectorFill-B{background:#dbe8fb}.sectorFill-C{background:#ffe7bd}.sectorFill-D{background:#f6d9e3}.sectorFill-E{background:#eadffb}.sectorFill-F{background:#dff4f4}.sectorFill-G{background:#f7e8ce}.sectorFill-H{background:#e5f0d0}.standCell.t1{background:#ffb5b5!important;border:4px solid #d00000!important;color:#7c0000}.standCell.t2{background:#b9d2ff!important;border:4px solid #005bd8!important;color:#002c70}.standCell.both{background:#e1b8ff!important;border:4px solid #7a1fc2!important;color:#3c0060}.standCell.occ{box-shadow:inset 0 -5px 0 #244f36}.weightItems{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:5px}.weightTag{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:3px 6px;font-size:11px;font-weight:900;background:#edf4ec;border:1px solid #bfd0c2}.weightTag button{width:auto;padding:0 4px;border-radius:8px;background:#b91c1c;color:#fff;line-height:1.1}.bfTag{background:#fff0d6;border-color:#e5b965}.netTag{background:#e7f5e7}.bfLine{font-size:12px;font-weight:1000;color:#b91c1c}.flashSave{background:#bff7c8!important;transition:background .25s}.resultInputTable input{min-width:120px}.sectorBand.clean{margin:0}.sectorFlexRow{display:flex;gap:0;min-width:640px}.sectorGroup{display:grid;gap:0;margin:0}.sectorGroup .standCell{border-radius:0;margin:-1px 0 0 -1px}.sectorFlexRow .sectorBlock{border-radius:0;margin:-1px 0 0 -1px}.standFlex{align-items:stretch}.sectorBand.clean .sectorBlock{min-height:72px}.pushBox{margin-top:6px;line-height:1.35}.bankLabelBottom{margin-top:8px}.quickScroll{position:fixed;right:10px;bottom:14px;z-index:30;display:flex;flex-direction:column;gap:7px}.quickScroll button{width:52px;padding:9px 0;border-radius:999px;background:#123827cc;box-shadow:0 3px 10px #0003}.quickScroll button:last-child{background:#e7eee7;color:#123827;border:1px solid #bfd0c2}
 
 .sectorMap,.sectorMap .mapTitle,.sectorMap .bankLabel,.sectorMap .sectorSummary{text-align:center}.sectorBlock{min-height:118px;text-align:center;gap:4px;padding:10px 4px}.sectorWord{font-size:13px;font-weight:1000;letter-spacing:.08em;line-height:1}.sectorLetter{font-size:36px;font-weight:1000;line-height:1}.sectorPeople{font-size:13px;font-weight:1000;line-height:1.1}.standCell{text-align:center}.playerView{text-align:center}.playerView table th,.playerView table td{text-align:center}.playerView .inlineBtns{justify-content:center}.playerView .ownitem{text-align:center}.playerView .sectorSummary{text-align:center}.playerView .card{text-align:center}
 .sharpTable{border-collapse:collapse;background:#fff;color:#001b12;font-size:14px;line-height:1.18;text-rendering:geometricPrecision}.sharpTable th,.sharpTable td{border:1.5px solid #b8cbbb;padding:8px 8px}.sharpTable th{background:#e2eee5;color:#052719;font-weight:1000;letter-spacing:.02em}.generalTable{width:100%;table-layout:auto}.generalTable .center{text-align:center}.generalTable .right{text-align:right}.generalTable .colRank{width:42px}.generalTable .colRound{width:52px;min-width:44px}.generalTable .colSum{width:78px;min-width:68px}.generalTable .colWeight{width:118px;min-width:105px}.generalTable .colName{width:auto;min-width:130px;white-space:normal}.generalTable .nameCell b{font-weight:1000}.generalTable .scoreCell b,.generalTable .sumCell b,.generalTable .weightCell b{font-size:15px;font-weight:1000}.generalTable .weightCell{white-space:nowrap}.finalWrap{box-shadow:0 1px 0 #00000012}.workZoneTabs{position:sticky;top:58px;z-index:4;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;background:var(--bg);padding:10px 0 6px}.workZoneTabs button{min-height:58px;background:#dfe9e1;color:#123827;border:2px solid #a9bcae;font-size:14px;line-height:1.2}.workZoneTabs button.active{background:var(--green);color:#fff;border-color:var(--green);box-shadow:0 3px 10px #0002}.adminZone{min-height:120px}
-@media(max-width:760px){main{padding:8px}.grid,.grid3,.grid4,.twoCols,.ownbox,.adminbar{grid-template-columns:1fr}.card{border-radius:12px;padding:10px}th,td{padding:6px 4px;font-size:11px}h1{font-size:16px}input,select,textarea,button{padding:10px}.tabs button{font-size:12px;padding:8px 10px}.top-actions button{font-size:12px}.stand{min-height:36px;font-size:11px}.bank{grid-template-columns:repeat(auto-fit,minmax(36px,1fr))}.standRow,.sectorBand{min-width:520px}.sectorBlock span{font-size:17px}.sectorBlock{min-height:105px}.sectorLetter{font-size:30px}.sectorWord,.sectorPeople{font-size:11px}.finalWrap{border-radius:10px}.generalTable{min-width:360px;width:100%;table-layout:fixed}.generalTable .colRank{width:34px}.generalTable .colRound{width:36px;min-width:36px}.generalTable .colSum{width:54px;min-width:54px}.generalTable .colWeight{width:82px;min-width:82px}.generalTable .colName{width:auto;min-width:0}.generalTable th,.generalTable td{padding:7px 4px;font-size:11.5px}.generalTable th{font-size:10px}.generalTable .nameCell b{font-size:12px}.generalTable .scoreCell b,.generalTable .sumCell b,.generalTable .weightCell b{font-size:12px}.generalTable .bfLine{font-size:10px}.workZoneTabs{top:52px;grid-template-columns:1.35fr 1fr .72fr;padding-top:6px;gap:5px}.workZoneTabs button{min-height:58px;padding:7px 5px;font-size:11px}}
+@media(max-width:760px){.competitionActions{gap:16px}.competitionActions button{min-width:92px}main{padding:8px}.grid,.grid3,.grid4,.twoCols,.ownbox,.adminbar{grid-template-columns:1fr}.card{border-radius:12px;padding:10px}th,td{padding:6px 4px;font-size:11px}h1{font-size:16px}input,select,textarea,button{padding:10px}.tabs button{font-size:12px;padding:8px 10px}.top-actions button{font-size:12px}.stand{min-height:36px;font-size:11px}.bank{grid-template-columns:repeat(auto-fit,minmax(36px,1fr))}.standRow,.sectorBand{min-width:520px}.sectorBlock span{font-size:17px}.sectorBlock{min-height:105px}.sectorLetter{font-size:30px}.sectorWord,.sectorPeople{font-size:11px}.finalWrap{border-radius:10px}.generalTable{min-width:360px;width:100%;table-layout:fixed}.generalTable .colRank{width:34px}.generalTable .colRound{width:36px;min-width:36px}.generalTable .colSum{width:54px;min-width:54px}.generalTable .colWeight{width:82px;min-width:82px}.generalTable .colName{width:auto;min-width:0}.generalTable th,.generalTable td{padding:7px 4px;font-size:11.5px}.generalTable th{font-size:10px}.generalTable .nameCell b{font-size:12px}.generalTable .scoreCell b,.generalTable .sumCell b,.generalTable .weightCell b{font-size:12px}.generalTable .bfLine{font-size:10px}.workZoneTabs{top:52px;grid-template-columns:1.35fr 1fr .72fr;padding-top:6px;gap:5px}.workZoneTabs button{min-height:58px;padding:7px 5px;font-size:11px}}
 </style>
 </head>
 <body>
@@ -1557,7 +1666,7 @@ const HTML = `<!doctype html>
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V30 trzy strefy</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
+  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V31</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
     <div id="adminCreate" class="card hidden"><h2>Utwórz zawody</h2><p class="small muted">Szybkie tworzenie: liczba osób, data, łowisko i opis. Brzegi, sektory i mapę ustawiasz potem w osobnym panelu struktury.</p><div class="grid"><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div></div><label>Opis</label><textarea id="cNotes" placeholder="Opis zawodów, zasady, informacje organizacyjne."></textarea><button onclick="createCompetition(event)">Utwórz zawody</button></div>
@@ -1569,7 +1678,7 @@ const HTML = `<!doctype html>
 </section>
 </main>
 <div class="quickScroll"><button onclick="scrollAppTop()">↑</button><button onclick="scrollAppBottom()">↓</button></div>
-<script src="/app.js?v=30" defer></script>
+<script src="/app.js?v=31" defer></script>
 </body>
 </html>`;
 
