@@ -14,8 +14,8 @@ const ADMIN_SETUP_CODE = process.env.ADMIN_SETUP_CODE || '';
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
-const APP_VERSION = '24';
-const APP_VERSION_NAME = 'V24_HARD_LOGIN_RECOVERY';
+const APP_VERSION = '25';
+const APP_VERSION_NAME = 'V25_SINGLE_LOGIN_HANDLER';
 
 if (webpush && VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
   webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
@@ -876,7 +876,7 @@ async function route(req, res) {
   const path = url.pathname;
   const method = req.method;
 
-  if (path === '/__probe_js_v24' || path === '/__probe_boot_v24') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
+  if (path === '/__probe_js_v25' || path === '/__probe_boot_v25' || path === '/__probe_inline_v25') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/api/version') return sendJson(res, 200, { ok:true, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/app.js') return send(res, 200, APP_JS, {'Content-Type':'application/javascript; charset=utf-8', 'Cache-Control':'no-store, no-cache, must-revalidate'});
 
@@ -1229,7 +1229,7 @@ self.addEventListener('notificationclick', event => { event.notification.close()
   return send(res, 200, HTML);
 }
 
-const APP_JS = String.raw`const CLIENT_VERSION='24';const CLIENT_VERSION_NAME='V24_HARD_LOGIN_RECOVERY';try{fetch('/__probe_js_v24',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V24_HARD_LOGIN_RECOVERY_LOADED');
+const APP_JS = String.raw`const CLIENT_VERSION='25';const CLIENT_VERSION_NAME='V25_SINGLE_LOGIN_HANDLER';try{fetch('/__probe_js_v25',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V25_SINGLE_LOGIN_HANDLER_LOADED');
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let TOKEN = STORE.get('carp_token') || '';
 let ME = null;
@@ -1237,6 +1237,7 @@ let CURRENT_DETAIL = null;
 let CREATING_COMPETITION = false;
 let SAVING_RESULTS = false;
 let SAVING_RESULT_ITEM = false;
+let LOGIN_IN_PROGRESS = false;
 let STRUCTURE_SAVE_TIMER = null;
 let STRUCTURE_READY = false;
 const q = id => document.getElementById(id);
@@ -1276,7 +1277,7 @@ async function boot(){
   showTab('competitions');
   await Promise.allSettled([loadCompetitions(),loadNotifications(),admin?loadPlayers():Promise.resolve()]);
 }
-async function login(ev){if(ev){ev.preventDefault&&ev.preventDefault();ev.stopPropagation&&ev.stopPropagation()}const btn=ev?.target||q('loginBtn');try{const phone=q('loginPhone')?.value||'';const password=q('loginPassword')?.value||'';if(!phone.trim()||!password)throw new Error('Wpisz telefon i hasło');if(btn){btn.disabled=true;btn.textContent='Loguję...'}const d=await api('/api/login',{method:'POST',body:JSON.stringify({phone,password})});TOKEN=d.token;STORE.set('carp_token',TOKEN);msg('Zalogowano');await boot()}catch(e){msg(e.message,'bad')}finally{if(btn){btn.disabled=false;btn.textContent='Zaloguj'}}}
+async function login(ev){if(ev){ev.preventDefault&&ev.preventDefault();ev.stopPropagation&&ev.stopPropagation()}if(LOGIN_IN_PROGRESS)return;LOGIN_IN_PROGRESS=true;const btn=ev?.target||q('loginBtn');try{const phone=q('loginPhone')?.value||'';const password=q('loginPassword')?.value||'';if(!phone.trim()||!password)throw new Error('Wpisz telefon i hasło');if(btn){btn.disabled=true;btn.textContent='Loguję...'}const d=await api('/api/login',{method:'POST',body:JSON.stringify({phone,password})});if(!d.token)throw new Error('Brak tokena logowania');TOKEN=d.token;try{window.TOKEN=d.token}catch(_){}STORE.set('carp_token',TOKEN);msg('Zalogowano');await boot();if(!ME)throw new Error('Logowanie przyjęte, ale panel nie wystartował')}catch(e){msg(e.message,'bad')}finally{LOGIN_IN_PROGRESS=false;if(btn){btn.disabled=false;btn.textContent='Zaloguj'}}}
 async function registerPlayer(ev){if(ev){ev.preventDefault&&ev.preventDefault();ev.stopPropagation&&ev.stopPropagation()}try{const d=await api('/api/register',{method:'POST',body:JSON.stringify({phone:q('regPhone').value,password:q('regPassword').value,firstName:q('regFirst').value,lastName:q('regLast').value,pzwClub:q('regClub').value})});TOKEN=d.token;STORE.set('carp_token',TOKEN);msg('Konto zawodnika utworzone');await boot()}catch(e){msg(e.message,'bad')}}
 async function setupAdmin(ev){if(ev){ev.preventDefault&&ev.preventDefault();ev.stopPropagation&&ev.stopPropagation()}try{const d=await api('/api/setup-admin',{method:'POST',body:JSON.stringify({setupCode:q('setupCode').value,phone:q('setupPhone').value,password:q('setupPassword').value,firstName:q('setupFirst').value,lastName:q('setupLast').value,pzwClub:q('setupClub').value})});TOKEN=d.token;STORE.set('carp_token',TOKEN);msg('Admin utworzony');await boot()}catch(e){msg(e.message,'bad')}}
 function logout(){STORE.del('carp_token');TOKEN='';ME=null;setLoggedOut(true)}
@@ -1395,9 +1396,10 @@ function bindAuthButtons(){
   for(const [id,fn] of pairs){const el=q(id);if(el&&!el.dataset.bound){el.dataset.bound='1';el.onclick=null;el.addEventListener('click',ev=>{ev.preventDefault();ev.stopPropagation();fn(ev);});}}
   ['loginPhone','loginPassword'].forEach(id=>{const el=q(id);if(el&&!el.dataset.enterLogin){el.dataset.enterLogin='1';el.addEventListener('keydown',ev=>{if(ev.key==='Enter')login(ev);});}});
 }
+
 function scrollAppBottom(){window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})}
-Object.assign(window,{login,registerPlayer,setupAdmin,logout,showTab,loadCompetitions,createCompetition,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,saveResults,generateResults,generateResultsAll,addWeightItem,deleteWeightItem,notifyResults,readNotif,loadNotifications,loadPlayers,enablePush,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,scrollAppTop,scrollAppBottom});
-function startBoot(){console.log('CLIENT_V24_BOOT');try{fetch('/__probe_boot_v24',{cache:'no-store'}).catch(()=>{})}catch(_){};try{if('serviceWorker'in navigator){navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister().catch(()=>{}))).catch(()=>{})}if('caches'in window){caches.keys().then(ks=>ks.forEach(k=>caches.delete(k).catch(()=>{}))).catch(()=>{})}}catch(_){}bindAuthButtons();boot().catch(e=>{console.error('BOOT_FATAL',e);try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
+Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,loadCompetitions,createCompetition,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,saveResults,generateResults,generateResultsAll,addWeightItem,deleteWeightItem,notifyResults,readNotif,loadNotifications,loadPlayers,enablePush,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,scrollAppTop,scrollAppBottom});
+function startBoot(){console.log('CLIENT_V25_BOOT');try{fetch('/__probe_boot_v25',{cache:'no-store'}).catch(()=>{})}catch(_){};try{if('serviceWorker'in navigator){navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister().catch(()=>{}))).catch(()=>{})}if('caches'in window){caches.keys().then(ks=>ks.forEach(k=>caches.delete(k).catch(()=>{}))).catch(()=>{})}}catch(_){}bindAuthButtons();boot().catch(e=>{console.error('BOOT_FATAL',e);try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();`;
 
 const HTML = `<!doctype html>
@@ -1431,7 +1433,7 @@ const HTML = `<!doctype html>
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V24 login awaryjny</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
+  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V25 login stabilny</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
     <div id="adminCreate" class="card hidden"><h2>Utwórz zawody</h2><p class="small muted">Szybkie tworzenie: liczba osób, data, łowisko i opis. Brzegi, sektory i mapę ustawiasz potem w osobnym panelu struktury.</p><div class="grid"><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div></div><label>Opis</label><textarea id="cNotes" placeholder="Opis zawodów, zasady, informacje organizacyjne."></textarea><button onclick="createCompetition(event)">Utwórz zawody</button></div>
@@ -1443,7 +1445,7 @@ const HTML = `<!doctype html>
 </section>
 </main>
 <div class="quickScroll"><button onclick="scrollAppTop()">↑</button><button onclick="scrollAppBottom()">↓</button></div>
-<script>(function(){function g(i){return document.getElementById(i)}async function hardLogin(e){if(e){e.preventDefault&&e.preventDefault();e.stopPropagation&&e.stopPropagation()}var b=g('loginBtn');try{if(b){b.disabled=true;b.textContent='Loguję...'}var phone=(g('loginPhone')||{}).value||'';var password=(g('loginPassword')||{}).value||'';if(!phone.trim()||!password)throw new Error('Wpisz telefon i hasło');var r=await fetch('/api/login',{method:'POST',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:phone,password:password})});var d=await r.json().catch(function(){return {ok:false,error:'Błąd odpowiedzi'}});if(!r.ok||d.ok===false)throw new Error(d.error||'Błąd logowania');localStorage.setItem('carp_token',d.token);if(window.TOKEN!==undefined)window.TOKEN=d.token;if(window.boot){try{await window.boot();return}catch(_){}}location.replace('/?hard=24&t='+Date.now())}catch(err){var m=g('msg');if(m)m.innerHTML='<div class="card bad danger-line">'+String(err.message||err)+'</div>'}finally{if(b){b.disabled=false;b.textContent='Zaloguj'}}}window.hardLogin=hardLogin;function bindHard(){var b=g('loginBtn');if(b&&!b.dataset.hard){b.dataset.hard='1';b.addEventListener('click',hardLogin,true)}['loginPhone','loginPassword'].forEach(function(id){var el=g(id);if(el&&!el.dataset.hard){el.dataset.hard='1';el.addEventListener('keydown',function(e){if(e.key==='Enter')hardLogin(e)},true)}})}try{if('serviceWorker'in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister()})}).catch(function(){})}if('caches'in window){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k)})}).catch(function(){})}}catch(e){}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bindHard);else bindHard();})();</script>
+<script>(function(){function g(i){return document.getElementById(i)}async function hardLogin(e){if(e){e.preventDefault&&e.preventDefault();e.stopPropagation&&e.stopPropagation()}var b=g('loginBtn');if(b&&b.dataset.hardRunning==='1')return;try{if(b){b.dataset.hardRunning='1';b.disabled=true;b.textContent='Loguję...'}var phone=(g('loginPhone')||{}).value||'';var password=(g('loginPassword')||{}).value||'';if(!phone.trim()||!password)throw new Error('Wpisz telefon i hasło');var ctrl=(typeof AbortController!=='undefined')?new AbortController():null;var to=ctrl?setTimeout(function(){ctrl.abort()},12000):null;var r=await fetch('/api/login',{method:'POST',cache:'no-store',signal:ctrl?ctrl.signal:undefined,headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:phone,password:password})});if(to)clearTimeout(to);var d=await r.json().catch(function(){return {ok:false,error:'Błąd odpowiedzi'}});if(!r.ok||d.ok===false)throw new Error(d.error||'Błąd logowania');if(!d.token)throw new Error('Brak tokena logowania');localStorage.setItem('carp_token',d.token);location.replace('/?login=v25&t='+Date.now())}catch(err){var m=g('msg');if(m)m.innerHTML='<div class="card bad danger-line">'+String(err.message||err)+'</div>';if(b){b.disabled=false;b.textContent='Zaloguj'}}finally{if(b)b.dataset.hardRunning='0'}}window.hardLogin=hardLogin;try{fetch('/__probe_inline_v25',{cache:'no-store'}).catch(function(){})}catch(e){}})();</script>
 <script src="/app.js?v=${APP_VERSION}" defer></script>
 </body>
 </html>`;
@@ -1455,5 +1457,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V24_HARD_LOGIN_RECOVERY_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V25_SINGLE_LOGIN_HANDLER_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });
