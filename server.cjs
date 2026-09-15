@@ -16,8 +16,8 @@ const ADMIN_SETUP_CODE = process.env.ADMIN_SETUP_CODE || '';
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
-const APP_VERSION = '30';
-const APP_VERSION_NAME = 'V30_THREE_WORK_ZONES_DRAW_RESET';
+const APP_VERSION = '32';
+const APP_VERSION_NAME = 'V32_DRAW_MAPS_AUTO_RESULTS_STATS_PDF';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 
 if (webpush && VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
@@ -492,9 +492,11 @@ function t2CandidatesForStand(t1Stand, comp, allowedStands) {
   } else {
     const mid = Math.ceil(n / 2);
     if (meta.bank === 1) {
+      // Brzeg 1: 1..mid przechodzi do mid..n, a mid+1..n do 1..mid-1.
       if (pos <= mid) { fromPos = mid; toPos = n; }
       else { fromPos = 1; toPos = mid - 1; }
     } else {
+      // Brzeg 2 jest lustrzanym odbiciem: środkowe stanowisko należy do drugiej grupy.
       if (pos < mid) { fromPos = mid + 1; toPos = n; }
       else { fromPos = 1; toPos = mid; }
     }
@@ -504,40 +506,24 @@ function t2CandidatesForStand(t1Stand, comp, allowedStands) {
   for (let p=fromPos; p<=toPos; p++) {
     const stand = meta.start + p - 1;
     if (!allowedStands.has(stand) || stand === Number(t1Stand)) continue;
+    if (Math.abs(Number(stand) - Number(t1Stand)) < 2) continue;
     if (ownIsEdge && (p === 1 || p === n)) continue;
     out.push(stand);
   }
   return out;
 }
-function t2Quality(matchRight, t1Map) {
-  const distances = [];
-  for (const [stand, userId] of matchRight.entries()) distances.push(Math.abs(Number(stand) - Number(t1Map.get(Number(userId)))));
-  distances.sort((a,b)=>a-b);
-  const sum = distances.reduce((a,b)=>a+b,0);
-  return { distances, sum };
-}
-function betterT2Quality(a, b) {
-  if (!b) return true;
-  const n = Math.min(a.distances.length, b.distances.length);
-  for (let i=0; i<n; i++) {
-    if (a.distances[i] !== b.distances[i]) return a.distances[i] > b.distances[i];
-  }
-  return a.sum > b.sum;
-}
-function tryT2Matching(userIds, candidates, t1Map, minDistance=0, randomize=false) {
-  const filtered = new Map();
+function tryT2Matching(userIds, candidates, randomize=false) {
+  const lists = new Map();
   for (const uid of userIds) {
-    const own = Number(t1Map.get(uid));
-    const list = candidates.get(uid).filter(stand=>Math.abs(Number(stand)-own) >= minDistance);
+    const src = (candidates.get(uid) || []).slice();
+    const list = randomize ? shuffle(src) : src.sort((a,b)=>a-b);
     if (!list.length) return null;
-    const ranked = list.map(stand=>({stand, distance:Math.abs(Number(stand)-own), jitter:randomize?Math.random():0}));
-    ranked.sort((a,b)=>(b.distance-a.distance) || (b.jitter-a.jitter) || (a.stand-b.stand));
-    filtered.set(uid, ranked.map(x=>x.stand));
+    lists.set(uid, list);
   }
-  const order = (randomize?shuffle(userIds):userIds.slice()).sort((a,b)=>filtered.get(a).length-filtered.get(b).length);
+  const order = (randomize ? shuffle(userIds) : userIds.slice()).sort((a,b)=>lists.get(a).length-lists.get(b).length);
   const matchRight = new Map();
   function visit(uid, seen) {
-    for (const stand of filtered.get(uid)) {
+    for (const stand of lists.get(uid)) {
       if (seen.has(stand)) continue;
       seen.add(stand);
       const other = matchRight.get(stand);
@@ -548,27 +534,13 @@ function tryT2Matching(userIds, candidates, t1Map, minDistance=0, randomize=fals
   for (const uid of order) if (!visit(uid, new Set())) return null;
   return matchRight.size === userIds.length ? matchRight : null;
 }
-function bestT2BankMatching(userIds, candidates, t1Map) {
+function randomT2BankMatching(userIds, candidates) {
   if (!userIds.length) return new Map();
-  let maxDistance = 0;
-  for (const uid of userIds) {
-    const own = Number(t1Map.get(uid));
-    for (const stand of candidates.get(uid)) maxDistance = Math.max(maxDistance, Math.abs(Number(stand)-own));
+  for (let attempt=0; attempt<250; attempt++) {
+    const match = tryT2Matching(userIds, candidates, true);
+    if (match) return match;
   }
-  let lo=0, hi=maxDistance, threshold=0;
-  while (lo<=hi) {
-    const mid=Math.floor((lo+hi)/2);
-    if (tryT2Matching(userIds,candidates,t1Map,mid,false)) { threshold=mid; lo=mid+1; }
-    else hi=mid-1;
-  }
-  let best=null, bestQuality=null;
-  for (let attempt=0; attempt<300; attempt++) {
-    const match=tryT2Matching(userIds,candidates,t1Map,threshold,true);
-    if (!match) continue;
-    const quality=t2Quality(match,t1Map);
-    if (betterT2Quality(quality,bestQuality)) { best=new Map(match); bestQuality=quality; }
-  }
-  return best || tryT2Matching(userIds,candidates,t1Map,threshold,false);
+  return tryT2Matching(userIds, candidates, false);
 }
 function buildT2Assignment(entries, comp, stands, t1Map) {
   const allowed = new Set(stands.map(Number));
@@ -585,7 +557,7 @@ function buildT2Assignment(entries, comp, stands, t1Map) {
   }
   const matchRight=new Map();
   for (const bank of [1,2]) {
-    const match=bestT2BankMatching(byBank.get(bank),candidates,t1Map);
+    const match=randomT2BankMatching(byBank.get(bank),candidates);
     if (!match || match.size!==byBank.get(bank).length) throw new Error('Nie da się poprawnie wylosować T2 przy aktualnym układzie stanowisk');
     for (const [stand,uid] of match.entries()) matchRight.set(stand,uid);
   }
@@ -1074,13 +1046,13 @@ async function route(req, res) {
   const path = url.pathname;
   const method = req.method;
 
-  if (path === '/__probe_js_v30' || path === '/__probe_boot_v30' || path === '/__probe_js_v29' || path === '/__probe_boot_v29' || path === '/__probe_js_v27' || path === '/__probe_boot_v27' || path === '/__probe_inline_v26') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
+  if (path === '/__probe_js_v32' || path === '/__probe_boot_v32' || path === '/__probe_js_v30' || path === '/__probe_boot_v30' || path === '/__probe_js_v29' || path === '/__probe_boot_v29' || path === '/__probe_js_v27' || path === '/__probe_boot_v27' || path === '/__probe_inline_v26') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/api/version') return sendJson(res, 200, { ok:true, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/app.js') return send(res, 200, APP_JS, {'Content-Type':'application/javascript; charset=utf-8', 'Cache-Control':'no-store, no-cache, must-revalidate'});
 
   if (path === '/health') return sendJson(res, 200, { ok:true, time:nowIso(), version:APP_VERSION_NAME });
 
-  if (path === '/reset-cache') return send(res, 200, `<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Reset aplikacji</title><style>body{font-family:system-ui;margin:20px;background:#f3f6ef;color:#18251d}.card{background:#fff;border:1px solid #cfd8cc;border-radius:16px;padding:16px;max-width:520px;margin:auto}button{width:100%;padding:12px;border:0;border-radius:12px;background:#114b2f;color:white;font-weight:900}</style></head><body><div class="card"><h2>Reset pamięci aplikacji</h2><p>Usuwam cache i starego service workera. Przekierowanie jest natychmiastowe, bez czekania na zawieszone obietnice przeglądarki.</p><button onclick="go()">Wyczyść teraz</button></div><script>function go(){try{localStorage.removeItem('carp_token');localStorage.removeItem('lowcy_app_version_seen');sessionStorage.clear();if('serviceWorker'in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister()})}).catch(function(){})}if('caches'in window){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k)})}).catch(function(){})}}catch(e){}setTimeout(function(){location.replace('/?hard=29&t='+Date.now())},50)}go();</script></body></html>`, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate'});
+  if (path === '/reset-cache') return send(res, 200, `<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Reset aplikacji</title><style>body{font-family:system-ui;margin:20px;background:#f3f6ef;color:#18251d}.card{background:#fff;border:1px solid #cfd8cc;border-radius:16px;padding:16px;max-width:520px;margin:auto}button{width:100%;padding:12px;border:0;border-radius:12px;background:#114b2f;color:white;font-weight:900}</style></head><body><div class="card"><h2>Reset pamięci aplikacji</h2><p>Usuwam cache i starego service workera. Przekierowanie jest natychmiastowe, bez czekania na zawieszone obietnice przeglądarki.</p><button onclick="go()">Wyczyść teraz</button></div><script>function go(){try{localStorage.removeItem('carp_token');localStorage.removeItem('lowcy_app_version_seen');sessionStorage.clear();if('serviceWorker'in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister()})}).catch(function(){})}if('caches'in window){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k)})}).catch(function(){})}}catch(e){}setTimeout(function(){location.replace('/?hard=32&t='+Date.now())},50)}go();</script></body></html>`, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate'});
 
   if (path === '/manifest.webmanifest') return send(res, 200, JSON.stringify({
     name:'Łowcy Methodowcy', short_name:'Łowcy', start_url:'/', scope:'/', id:'/', display:'standalone', background_color:'#f3f6ef', theme_color:'#114b2f', icons:[]
@@ -1649,7 +1621,13 @@ const HTML = `<!doctype html>
 
 .sectorMap,.sectorMap .mapTitle,.sectorMap .bankLabel,.sectorMap .sectorSummary{text-align:center}.sectorBlock{min-height:118px;text-align:center;gap:4px;padding:10px 4px}.sectorWord{font-size:13px;font-weight:1000;letter-spacing:.08em;line-height:1}.sectorLetter{font-size:36px;font-weight:1000;line-height:1}.sectorPeople{font-size:13px;font-weight:1000;line-height:1.1}.standCell{text-align:center}.playerView{text-align:center}.playerView table th,.playerView table td{text-align:center}.playerView .inlineBtns{justify-content:center}.playerView .ownitem{text-align:center}.playerView .sectorSummary{text-align:center}.playerView .card{text-align:center}
 .sharpTable{border-collapse:collapse;background:#fff;color:#001b12;font-size:14px;line-height:1.18;text-rendering:geometricPrecision}.sharpTable th,.sharpTable td{border:1.5px solid #b8cbbb;padding:8px 8px}.sharpTable th{background:#e2eee5;color:#052719;font-weight:1000;letter-spacing:.02em}.generalTable{width:100%;table-layout:auto}.generalTable .center{text-align:center}.generalTable .right{text-align:right}.generalTable .colRank{width:42px}.generalTable .colRound{width:52px;min-width:44px}.generalTable .colSum{width:78px;min-width:68px}.generalTable .colWeight{width:118px;min-width:105px}.generalTable .colName{width:auto;min-width:130px;white-space:normal}.generalTable .nameCell b{font-weight:1000}.generalTable .scoreCell b,.generalTable .sumCell b,.generalTable .weightCell b{font-size:15px;font-weight:1000}.generalTable .weightCell{white-space:nowrap}.finalWrap{box-shadow:0 1px 0 #00000012}.workZoneTabs{position:sticky;top:58px;z-index:4;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;background:var(--bg);padding:10px 0 6px}.workZoneTabs button{min-height:58px;background:#dfe9e1;color:#123827;border:2px solid #a9bcae;font-size:14px;line-height:1.2}.workZoneTabs button.active{background:var(--green);color:#fff;border-color:var(--green);box-shadow:0 3px 10px #0002}.adminZone{min-height:120px}
-@media(max-width:760px){.competitionActions{gap:16px}.competitionActions button{min-width:92px}main{padding:8px}.grid,.grid3,.grid4,.twoCols,.ownbox,.adminbar{grid-template-columns:1fr}.card{border-radius:12px;padding:10px}th,td{padding:6px 4px;font-size:11px}h1{font-size:16px}input,select,textarea,button{padding:10px}.tabs button{font-size:12px;padding:8px 10px}.top-actions button{font-size:12px}.stand{min-height:36px;font-size:11px}.bank{grid-template-columns:repeat(auto-fit,minmax(36px,1fr))}.standRow,.sectorBand{min-width:520px}.sectorBlock span{font-size:17px}.sectorBlock{min-height:105px}.sectorLetter{font-size:30px}.sectorWord,.sectorPeople{font-size:11px}.finalWrap{border-radius:10px}.generalTable{min-width:360px;width:100%;table-layout:fixed}.generalTable .colRank{width:34px}.generalTable .colRound{width:36px;min-width:36px}.generalTable .colSum{width:54px;min-width:54px}.generalTable .colWeight{width:82px;min-width:82px}.generalTable .colName{width:auto;min-width:0}.generalTable th,.generalTable td{padding:7px 4px;font-size:11.5px}.generalTable th{font-size:10px}.generalTable .nameCell b{font-size:12px}.generalTable .scoreCell b,.generalTable .sumCell b,.generalTable .weightCell b{font-size:12px}.generalTable .bfLine{font-size:10px}.workZoneTabs{top:52px;grid-template-columns:1.35fr 1fr .72fr;padding-top:6px;gap:5px}.workZoneTabs button{min-height:58px;padding:7px 5px;font-size:11px}}
+
+.place1 td{background:#fdeaea!important}.place2 td{background:#e8edf7!important}.place3 td{background:#e8f4eb!important}
+.place1 td:first-child{background:#c62828!important;color:#fff!important}.place2 td:first-child{background:#173b70!important;color:#fff!important}.place3 td:first-child{background:#2e7d32!important;color:#fff!important}
+.playerDrawTabs{display:grid;grid-template-columns:1fr 1fr;gap:14px}.playerDrawTabs button{background:#dfe9e1;color:#123827;border:2px solid #a9bcae}.playerDrawTabs button.active{background:var(--green);color:#fff;border-color:var(--green)}
+.roundDrawSection{margin-top:12px}.roundMapHeading{font-weight:1000;font-size:20px;color:#204b38;margin-bottom:10px}.roundDrawRow{align-items:stretch}.roundDrawCell{min-height:132px;border:1.5px solid #9aafa2;margin:-1px 0 0 -1px;padding:5px 3px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;position:relative;overflow:hidden}.roundDrawCell.empty{border:0;background:transparent}.roundStandNo{font-size:15px;align-self:flex-start}.roundDrawName{font-size:12px;font-weight:800;writing-mode:vertical-rl;transform:rotate(180deg);line-height:1.05;margin-top:5px;white-space:nowrap}.ownRoundDraw{outline:4px solid var(--gold);outline-offset:-4px}.fisheryWater{font-size:20px;color:#315b48}.drawSectorGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-top:12px}.drawSectorBox{margin:0;padding:8px}.drawSectorBox h4{text-align:center;margin:2px 0 8px;color:#204b38}.center{text-align:center!important}.workZoneTabs{grid-template-columns:repeat(4,minmax(0,1fr))}
+
+@media(max-width:760px){.competitionActions{gap:16px}.competitionActions button{min-width:92px}main{padding:8px}.grid,.grid3,.grid4,.twoCols,.ownbox,.adminbar{grid-template-columns:1fr}.card{border-radius:12px;padding:10px}th,td{padding:6px 4px;font-size:11px}h1{font-size:16px}input,select,textarea,button{padding:10px}.tabs button{font-size:12px;padding:8px 10px}.top-actions button{font-size:12px}.stand{min-height:36px;font-size:11px}.bank{grid-template-columns:repeat(auto-fit,minmax(36px,1fr))}.standRow,.sectorBand{min-width:520px}.sectorBlock span{font-size:17px}.sectorBlock{min-height:105px}.sectorLetter{font-size:30px}.sectorWord,.sectorPeople{font-size:11px}.finalWrap{border-radius:10px}.generalTable{min-width:360px;width:100%;table-layout:fixed}.generalTable .colRank{width:34px}.generalTable .colRound{width:36px;min-width:36px}.generalTable .colSum{width:54px;min-width:54px}.generalTable .colWeight{width:82px;min-width:82px}.generalTable .colName{width:auto;min-width:0}.generalTable th,.generalTable td{padding:7px 4px;font-size:11.5px}.generalTable th{font-size:10px}.generalTable .nameCell b{font-size:12px}.generalTable .scoreCell b,.generalTable .sumCell b,.generalTable .weightCell b{font-size:12px}.generalTable .bfLine{font-size:10px}.workZoneTabs{top:52px;grid-template-columns:repeat(2,minmax(0,1fr));padding-top:6px;gap:5px}.workZoneTabs button{min-height:58px;padding:7px 5px;font-size:11px}}
 </style>
 </head>
 <body>
@@ -1666,10 +1644,10 @@ const HTML = `<!doctype html>
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V31</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
+  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V32</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
-    <div id="adminCreate" class="card hidden"><h2>Utwórz zawody</h2><p class="small muted">Szybkie tworzenie: liczba osób, data, łowisko i opis. Brzegi, sektory i mapę ustawiasz potem w osobnym panelu struktury.</p><div class="grid"><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div></div><label>Opis</label><textarea id="cNotes" placeholder="Opis zawodów, zasady, informacje organizacyjne."></textarea><button onclick="createCompetition(event)">Utwórz zawody</button></div>
+    <div id="adminCreate" class="card hidden"><h2>Utwórz zawody</h2><p class="small muted">Nazwa zawodów jest używana także w nagłówkach PDF.</p><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div></div><label>Opis</label><textarea id="cNotes" placeholder="Opis zawodów, zasady, informacje organizacyjne."></textarea><button onclick="createCompetition(event)">Utwórz zawody</button></div>
     <div class="card"><h2>Lista zawodów</h2><div id="competitionsList"></div></div>
     <div id="competitionDetail" class="hidden"></div>
   </section>
@@ -1678,7 +1656,7 @@ const HTML = `<!doctype html>
 </section>
 </main>
 <div class="quickScroll"><button onclick="scrollAppTop()">↑</button><button onclick="scrollAppBottom()">↓</button></div>
-<script src="/app.js?v=31" defer></script>
+<script src="/app.js?v=32" defer></script>
 </body>
 </html>`;
 
@@ -1689,5 +1667,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V30_THREE_WORK_ZONES_DRAW_RESET_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V32_DRAW_MAPS_AUTO_RESULTS_STATS_PDF_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });
