@@ -14,8 +14,8 @@ const ADMIN_SETUP_CODE = process.env.ADMIN_SETUP_CODE || '';
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
-const APP_VERSION = '22';
-const APP_VERSION_NAME = 'V22_NO_RELOAD_SAFE_SCROLL';
+const APP_VERSION = '23';
+const APP_VERSION_NAME = 'V23_LOGIN_RECOVERY_NO_SW';
 
 if (webpush && VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
   webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
@@ -876,18 +876,21 @@ async function route(req, res) {
   const path = url.pathname;
   const method = req.method;
 
-  if (path === '/__probe_js_v22' || path === '/__probe_boot_v22') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
+  if (path === '/__probe_js_v23' || path === '/__probe_boot_v23') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/api/version') return sendJson(res, 200, { ok:true, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/app.js') return send(res, 200, APP_JS, {'Content-Type':'application/javascript; charset=utf-8', 'Cache-Control':'no-store, no-cache, must-revalidate'});
 
   if (path === '/health') return sendJson(res, 200, { ok:true, time:nowIso(), version:APP_VERSION_NAME });
+
+  if (path === '/reset-cache') return send(res, 200, `<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Reset aplikacji</title><style>body{font-family:system-ui;margin:20px;background:#f3f6ef;color:#18251d}.card{background:#fff;border:1px solid #cfd8cc;border-radius:16px;padding:16px;max-width:520px;margin:auto}button{width:100%;padding:12px;border:0;border-radius:12px;background:#114b2f;color:white;font-weight:900}</style></head><body><div class="card"><h2>Reset pamięci aplikacji</h2><p>Czyszczę service worker, cache i starą sesję. Po chwili wrócisz do logowania.</p><button onclick="go()">Wyczyść teraz</button></div><script>async function go(){try{localStorage.removeItem('carp_token');localStorage.removeItem('lowcy_app_version_seen');sessionStorage.clear();if('serviceWorker'in navigator){const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.map(r=>r.unregister().catch(()=>{})));}if('caches'in window){const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k).catch(()=>{})));}}catch(e){} location.href='/?fresh=23&t='+Date.now()}go();</script></body></html>`, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate'});
+
   if (path === '/manifest.webmanifest') return send(res, 200, JSON.stringify({
     name:'Łowcy Methodowcy', short_name:'Łowcy', start_url:'/', scope:'/', id:'/', display:'standalone', background_color:'#f3f6ef', theme_color:'#114b2f', icons:[]
   }), {'Content-Type':'application/manifest+json; charset=utf-8'});
   if (path === '/sw.js') return send(res, 200, `
-const SW_VERSION='lowcy-v22-no-reload-safe-scroll';
+const SW_VERSION='lowcy-v23-unregister';
 self.addEventListener('install', event => self.skipWaiting());
-self.addEventListener('activate', event => event.waitUntil((async()=>{try{const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k)));}catch(e){} await self.clients.claim();})()));
+self.addEventListener('activate', event => event.waitUntil((async()=>{try{const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k)));}catch(e){} try{await self.registration.unregister();}catch(e){} await self.clients.claim();})()));
 self.addEventListener('push', event => {
   let data = {};
   try { data = event.data ? event.data.json() : {}; } catch(e) {}
@@ -1226,7 +1229,7 @@ self.addEventListener('notificationclick', event => { event.notification.close()
   return send(res, 200, HTML);
 }
 
-const APP_JS = String.raw`const CLIENT_VERSION='22';const CLIENT_VERSION_NAME='V22_NO_RELOAD_SAFE_SCROLL';try{fetch('/__probe_js_v22',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V22_NO_RELOAD_SAFE_SCROLL_LOADED');(async()=>{try{const k='lowcy_app_version_seen';const old=localStorage.getItem(k);if(old!==CLIENT_VERSION){localStorage.setItem(k,CLIENT_VERSION);try{if('caches'in window){const keys=await caches.keys();await Promise.all(keys.map(x=>caches.delete(x)));}}catch(_){}/* Bez wymuszonego location.replace — koniec pętli odświeżania. */}}catch(e){console.warn('version guard',e)}})();
+const APP_JS = String.raw`const CLIENT_VERSION='23';const CLIENT_VERSION_NAME='V23_LOGIN_RECOVERY_NO_SW';try{fetch('/__probe_js_v23',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V23_LOGIN_RECOVERY_NO_SW_LOADED');
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let TOKEN = STORE.get('carp_token') || '';
 let ME = null;
@@ -1268,16 +1271,16 @@ async function boot(){
   if(logout)logout.classList.remove('hidden');
   q('who').textContent=ME.first_name+' '+ME.last_name+' — Koło PZW '+(ME.pzw_club||'');q('role').textContent=ME.role==='ADMIN'?'Administrator':'Zawodnik';
   const admin=ME.role==='ADMIN';q('btn-players').classList.toggle('hidden',!admin);q('adminCreate').classList.toggle('hidden',!admin);
-  try{if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js?v='+CLIENT_VERSION).catch(()=>{})}catch(_){}
+  // Service worker wyłączony w V23, żeby nie blokował logowania ani nie robił pętli cache.
   renderPushStatus();
   showTab('competitions');
   await Promise.allSettled([loadCompetitions(),loadNotifications(),admin?loadPlayers():Promise.resolve()]);
 }
-async function login(){try{const d=await api('/api/login',{method:'POST',body:JSON.stringify({phone:q('loginPhone').value,password:q('loginPassword').value})});TOKEN=d.token;STORE.set('carp_token',TOKEN);msg('Zalogowano');boot()}catch(e){msg(e.message,'bad')}}
-async function registerPlayer(){try{const d=await api('/api/register',{method:'POST',body:JSON.stringify({phone:q('regPhone').value,password:q('regPassword').value,firstName:q('regFirst').value,lastName:q('regLast').value,pzwClub:q('regClub').value})});TOKEN=d.token;STORE.set('carp_token',TOKEN);msg('Konto zawodnika utworzone');boot()}catch(e){msg(e.message,'bad')}}
-async function setupAdmin(){try{const d=await api('/api/setup-admin',{method:'POST',body:JSON.stringify({setupCode:q('setupCode').value,phone:q('setupPhone').value,password:q('setupPassword').value,firstName:q('setupFirst').value,lastName:q('setupLast').value,pzwClub:q('setupClub').value})});TOKEN=d.token;STORE.set('carp_token',TOKEN);msg('Admin utworzony');boot()}catch(e){msg(e.message,'bad')}}
+async function login(ev){if(ev){ev.preventDefault&&ev.preventDefault();ev.stopPropagation&&ev.stopPropagation()}const btn=ev?.target||q('loginBtn');try{const phone=q('loginPhone')?.value||'';const password=q('loginPassword')?.value||'';if(!phone.trim()||!password)throw new Error('Wpisz telefon i hasło');if(btn){btn.disabled=true;btn.textContent='Loguję...'}const d=await api('/api/login',{method:'POST',body:JSON.stringify({phone,password})});TOKEN=d.token;STORE.set('carp_token',TOKEN);msg('Zalogowano');await boot()}catch(e){msg(e.message,'bad')}finally{if(btn){btn.disabled=false;btn.textContent='Zaloguj'}}}
+async function registerPlayer(ev){if(ev){ev.preventDefault&&ev.preventDefault();ev.stopPropagation&&ev.stopPropagation()}try{const d=await api('/api/register',{method:'POST',body:JSON.stringify({phone:q('regPhone').value,password:q('regPassword').value,firstName:q('regFirst').value,lastName:q('regLast').value,pzwClub:q('regClub').value})});TOKEN=d.token;STORE.set('carp_token',TOKEN);msg('Konto zawodnika utworzone');await boot()}catch(e){msg(e.message,'bad')}}
+async function setupAdmin(ev){if(ev){ev.preventDefault&&ev.preventDefault();ev.stopPropagation&&ev.stopPropagation()}try{const d=await api('/api/setup-admin',{method:'POST',body:JSON.stringify({setupCode:q('setupCode').value,phone:q('setupPhone').value,password:q('setupPassword').value,firstName:q('setupFirst').value,lastName:q('setupLast').value,pzwClub:q('setupClub').value})});TOKEN=d.token;STORE.set('carp_token',TOKEN);msg('Admin utworzony');await boot()}catch(e){msg(e.message,'bad')}}
 function logout(){STORE.del('carp_token');TOKEN='';ME=null;setLoggedOut(true)}
-function clearSession(){setLoggedOut(true)}
+async function clearSession(){try{if('serviceWorker'in navigator){const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.map(r=>r.unregister().catch(()=>{})));}if('caches'in window){const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k).catch(()=>{})));}}catch(_){}setLoggedOut(true)}
 function showTab(n){['competitions','notifications','players'].forEach(x=>{q('tab-'+x).classList.toggle('hidden',x!==n);q('btn-'+x)?.classList.toggle('active',x===n)});if(n==='notifications')loadNotifications();if(n==='players')loadPlayers()}
 async function loadCompetitions(){
   const d=await api('/api/competitions'); const arr=d.competitions||[]; const admin=ME&&ME.role==='ADMIN'; let html='';
@@ -1384,11 +1387,17 @@ function urlBase64ToUint8Array(base64String){const padding='='.repeat((4-base64S
 function pushHelpText(){if(!('Notification'in window))return 'Ta przeglądarka nie obsługuje powiadomień.';if(Notification.permission==='granted')return 'Push: zgoda udzielona. Powiadomienia systemowe mogą działać na tym urządzeniu.';if(Notification.permission==='denied')return 'Push: zablokowane w przeglądarce. Kod aplikacji nie może włączyć tego na siłę. Odblokuj: kłódka/ustawienia strony → Powiadomienia → Zezwalaj, albo wyczyść dane strony i wejdź ponownie. Powiadomienia w aplikacji dalej działają.';return 'Push: nieustawione. Kliknij Push/status i zaakceptuj zgodę.'}
 function renderPushStatus(){const el=q('pushStatus');if(!el)return;let cls='tag';if('Notification'in window){if(Notification.permission==='granted')cls+=' ok';else if(Notification.permission==='denied')cls+=' bad'}el.innerHTML='<span class="'+cls+'">'+esc(pushHelpText())+'</span>'}
 async function resetPush(){try{if('serviceWorker'in navigator){const reg=await navigator.serviceWorker.getRegistration('/');const sub=reg?await reg.pushManager.getSubscription():null;if(sub)await sub.unsubscribe();}if(TOKEN)await api('/api/push-subscription',{method:'DELETE'}).catch(()=>{});msg('Subskrypcja push wyczyszczona w aplikacji. Zgody zablokowanej w przeglądarce nie da się wyczyścić kodem.');renderPushStatus()}catch(e){msg(e.message,'bad')}}
-async function enablePush(){try{if(!('Notification'in window))throw new Error('Ta przeglądarka nie obsługuje powiadomień');if(Notification.permission==='denied')throw new Error('Push jest zablokowany w ustawieniach strony. Odblokuj ręcznie w przeglądarce: ustawienia strony/kłódka → Powiadomienia → Zezwalaj. Tego nie da się przestawić kodem.');if(!('serviceWorker'in navigator)||!('PushManager'in window))throw new Error('Ten telefon/przeglądarka nie obsługuje push w PWA');if(!TOKEN)throw new Error('Najpierw się zaloguj');const cfg=await api('/api/config');if(!cfg.pushReady)throw new Error('Push nie jest jeszcze skonfigurowany na serwerze');const reg=await navigator.serviceWorker.register('/sw.js?v='+CLIENT_VERSION);const perm=await Notification.requestPermission();if(perm!=='granted')throw new Error('Brak zgody na powiadomienia');let sub=await reg.pushManager.getSubscription();if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8Array(cfg.vapidPublicKey)});await api('/api/push-subscription',{method:'POST',body:JSON.stringify({subscription:sub})});msg('Push włączony na tym urządzeniu');renderPushStatus()}catch(e){msg(e.message,'bad');renderPushStatus()}}
+async function enablePush(){msg('Push chwilowo wyłączony w V23, żeby odciąć problem cache/logowania. Powiadomienia w aplikacji dalej działają.','bad');renderPushStatus()}
 function scrollAppTop(){window.scrollTo({top:0,behavior:'smooth'})}
+
+function bindAuthButtons(){
+  const pairs=[['loginBtn',login],['clearSessionBtn',clearSession],['regBtn',registerPlayer],['setupAdminBtn',setupAdmin],['pushBtn',enablePush],['logoutBtn',logout]];
+  for(const [id,fn] of pairs){const el=q(id);if(el&&!el.dataset.bound){el.dataset.bound='1';el.onclick=null;el.addEventListener('click',ev=>{ev.preventDefault();ev.stopPropagation();fn(ev);});}}
+  ['loginPhone','loginPassword'].forEach(id=>{const el=q(id);if(el&&!el.dataset.enterLogin){el.dataset.enterLogin='1';el.addEventListener('keydown',ev=>{if(ev.key==='Enter')login(ev);});}});
+}
 function scrollAppBottom(){window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})}
 Object.assign(window,{login,registerPlayer,setupAdmin,logout,showTab,loadCompetitions,createCompetition,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,saveResults,generateResults,generateResultsAll,addWeightItem,deleteWeightItem,notifyResults,readNotif,loadNotifications,loadPlayers,enablePush,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,scrollAppTop,scrollAppBottom});
-function startBoot(){console.log('CLIENT_V21_BOOT');try{fetch('/__probe_boot_v21',{cache:'no-store'}).catch(()=>{})}catch(_){};boot().catch(e=>{console.error('BOOT_FATAL',e);try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
+function startBoot(){console.log('CLIENT_V23_BOOT');try{fetch('/__probe_boot_v23',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().catch(e=>{console.error('BOOT_FATAL',e);try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();`;
 
 const HTML = `<!doctype html>
@@ -1409,20 +1418,20 @@ const HTML = `<!doctype html>
 </style>
 </head>
 <body>
-<header><div class="row"><h1>🎣 Łowcy Methodowcy</h1><div class="top-actions"><button onclick="enablePush()">Push/status</button><button onclick="logout()" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
+<header><div class="row"><h1>🎣 Łowcy Methodowcy</h1><div class="top-actions"><button type="button" id="pushBtn">Push/status</button><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
 <main>
 <div id="msg"></div>
 <section id="auth" class="card">
   <h2>Logowanie</h2>
   <div class="grid"><div><label>Telefon</label><input id="loginPhone" autocomplete="username"></div><div><label>Hasło</label><input id="loginPassword" type="password" autocomplete="current-password"></div></div>
-  <div class="grid" style="margin-top:10px"><button onclick="login()">Zaloguj</button><button class="secondary" onclick="clearSession()">Wyczyść sesję</button></div>
+  <div class="grid" style="margin-top:10px"><button type="button" id="loginBtn">Zaloguj</button><button type="button" id="clearSessionBtn" class="secondary">Wyczyść sesję</button></div>
   <div class="twoCols">
-    <div class="card"><h3>Rejestracja zawodnika</h3><label>Telefon</label><input id="regPhone"><label>Hasło</label><input id="regPassword" type="password"><label>Imię</label><input id="regFirst"><label>Nazwisko</label><input id="regLast"><label>Nr Koła PZW</label><input id="regClub"><button onclick="registerPlayer()">Utwórz konto zawodnika</button></div>
-    <div class="card"><h3>Pierwsze konto admina</h3><p class="small muted">Sekcja działa tylko, gdy w bazie nie ma jeszcze admina.</p><label>Kod setupu</label><input id="setupCode"><label>Telefon admina</label><input id="setupPhone"><label>Hasło</label><input id="setupPassword" type="password"><label>Imię</label><input id="setupFirst"><label>Nazwisko</label><input id="setupLast"><label>Koło PZW</label><input id="setupClub"><button onclick="setupAdmin()">Utwórz admina</button></div>
+    <div class="card"><h3>Rejestracja zawodnika</h3><label>Telefon</label><input id="regPhone"><label>Hasło</label><input id="regPassword" type="password"><label>Imię</label><input id="regFirst"><label>Nazwisko</label><input id="regLast"><label>Nr Koła PZW</label><input id="regClub"><button type="button" id="regBtn">Utwórz konto zawodnika</button></div>
+    <div class="card"><h3>Pierwsze konto admina</h3><p class="small muted">Sekcja działa tylko, gdy w bazie nie ma jeszcze admina.</p><label>Kod setupu</label><input id="setupCode"><label>Telefon admina</label><input id="setupPhone"><label>Hasło</label><input id="setupPassword" type="password"><label>Imię</label><input id="setupFirst"><label>Nazwisko</label><input id="setupLast"><label>Koło PZW</label><input id="setupClub"><button type="button" id="setupAdminBtn">Utwórz admina</button></div>
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V22 bez pętli cache</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
+  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V23 logowanie naprawione</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
     <div id="adminCreate" class="card hidden"><h2>Utwórz zawody</h2><p class="small muted">Szybkie tworzenie: liczba osób, data, łowisko i opis. Brzegi, sektory i mapę ustawiasz potem w osobnym panelu struktury.</p><div class="grid"><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div></div><label>Opis</label><textarea id="cNotes" placeholder="Opis zawodów, zasady, informacje organizacyjne."></textarea><button onclick="createCompetition(event)">Utwórz zawody</button></div>
@@ -1445,5 +1454,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V22_NO_RELOAD_SAFE_SCROLL_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V23_LOGIN_RECOVERY_NO_SW_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });
