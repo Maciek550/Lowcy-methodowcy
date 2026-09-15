@@ -1,5 +1,7 @@
 
 const http = require('http');
+const fs = require('fs');
+const pathModule = require('path');
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 let jwt = null;
@@ -14,8 +16,9 @@ const ADMIN_SETUP_CODE = process.env.ADMIN_SETUP_CODE || '';
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
-const APP_VERSION = '27';
-const APP_VERSION_NAME = 'V27_LOGIN_DIRECT_SCROLL_FREE';
+const APP_VERSION = '29';
+const APP_VERSION_NAME = 'V29_MANUAL_SECTORS_ALONG_CLEAR_RESULTS';
+const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 
 if (webpush && VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
   webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
@@ -152,6 +155,7 @@ async function initDb() {
     alter table competitions add column if not exists bank2_count integer not null default 15;
     alter table competitions add column if not exists sectors_count integer not null default 4;
     alter table competitions add column if not exists signup_open boolean not null default true;
+    alter table competitions add column if not exists sector_layout jsonb;
   `);
   await pool.query(`
     create table if not exists draws (
@@ -262,7 +266,7 @@ async function autoSyncBanksForRoster(competitionId) {
   const cnt = await getRosterCounts(competitionId);
   const target = Math.max(1, Number(cnt.active_count || 0) || Number(comp.limit_places || 0) || competitionStandTotal(comp));
   const split = autoBankSplit(target, comp.map_mode || 'TWO_OPPOSITE');
-  const { rows } = await pool.query('update competitions set bank1_count=$1, bank2_count=$2 where id=$3 returning *', [split.bank1, split.bank2, competitionId]);
+  const { rows } = await pool.query('update competitions set bank1_count=$1, bank2_count=$2, sector_layout=case when bank1_count+bank2_count=$4 then sector_layout else null end where id=$3 returning *', [split.bank1, split.bank2, competitionId, split.bank1+split.bank2]);
   return rows[0] || null;
 }
 function sectorSizes(total, n, mode) {
@@ -307,11 +311,96 @@ function allocateBottomCountsForSectors(sizes, bank1, bank2, mode) {
   }
   return bottom;
 }
+function parseStandSpec(value) {
+  if (Array.isArray(value)) return value.map(Number);
+  const out = [];
+  for (const token of String(value || '').split(/[;,]+/).map(x => x.trim()).filter(Boolean)) {
+    const m = token.match(/^(\d+)\s*[-–—]\s*(\d+)$/);
+    if (m) {
+      const a = Number(m[1]); const b = Number(m[2]);
+      const step = a <= b ? 1 : -1;
+      for (let n=a; ; n+=step) { out.push(n); if (n === b) break; }
+    } else if (/^\d+$/.test(token)) out.push(Number(token));
+    else throw new Error('Nieprawidłowy zapis stanowisk: "' + token + '"');
+  }
+  return out;
+}
+function validateSectorLayout(raw, total, sectorsCount) {
+  if (raw === undefined) return undefined;
+  if (raw === null || raw === '') return null;
+  if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch (_) { throw new Error('Nieprawidłowe dane sektorów'); } }
+  if (!Array.isArray(raw) || raw.length !== Number(sectorsCount)) throw new Error('Liczba paneli sektorów musi zgadzać się z polem „Liczba sektorów”');
+  const seenStands = new Map(); const seenNames = new Set(); const normalized = [];
+  raw.forEach((item, idx) => {
+    const name = String(item?.name ?? item?.letter ?? '').trim() || String.fromCharCode(65 + idx);
+    if (name.length > 12) throw new Error('Nazwa sektora ' + (idx + 1) + ' jest za długa');
+    const nameKey = name.toLocaleUpperCase('pl');
+    if (seenNames.has(nameKey)) throw new Error('Nazwa sektora „' + name + '” jest powtórzona');
+    seenNames.add(nameKey);
+    const stands = parseStandSpec(item?.stands ?? item?.range);
+    if (!stands.length) throw new Error('Sektor ' + name + ' nie ma stanowisk');
+    const own = new Set();
+    for (const stand of stands) {
+      if (!Number.isInteger(stand) || stand < 1 || stand > total) throw new Error('Stanowisko ' + stand + ' jest poza zakresem 1–' + total);
+      if (own.has(stand)) throw new Error('Stanowisko ' + stand + ' powtarza się w sektorze ' + name);
+      if (seenStands.has(stand)) throw new Error('Stanowisko ' + stand + ' występuje w sektorach ' + seenStands.get(stand) + ' i ' + name);
+      own.add(stand); seenStands.set(stand, name);
+    }
+    normalized.push({ name, stands:Array.from(own).sort((a,b)=>a-b) });
+  });
+  const missing = [];
+  for (let n=1; n<=total; n++) if (!seenStands.has(n)) missing.push(n);
+  if (missing.length) throw new Error('Brakuje stanowisk: ' + missing.join(', '));
+  return normalized;
+}
+function customSectorLayout(comp) {
+  const total = Math.max(1, Number(comp.bank1_count || 0) + Number(comp.bank2_count || 0));
+  let normalized;
+  try { normalized = validateSectorLayout(comp.sector_layout, total, comp.sectors_count || 1); } catch (_) { return null; }
+  if (!Array.isArray(normalized)) return null;
+  const b1 = Math.max(0, Number(comp.bank1_count || 0));
+  const mode = comp.map_mode || 'TWO_OPPOSITE';
+  return normalized.map((item, idx) => {
+    const bottom = item.stands.filter(n => n <= b1).sort((a,b)=>a-b);
+    const top = item.stands.filter(n => n > b1).sort((a,b)=>mode === 'TWO_OPPOSITE' ? b-a : a-b);
+    return { letter:item.name || String.fromCharCode(65+idx), size:item.stands.length, bottomCount:bottom.length, topCount:top.length, bottom, top };
+  });
+}
+function alongSectorCounts(sectors, bank1, bank2) {
+  sectors = Math.max(1, Number(sectors || 1)); bank1 = Math.max(0, Number(bank1 || 0)); bank2 = Math.max(0, Number(bank2 || 0));
+  if (!bank2) return [sectors, 0];
+  if (!bank1) return [0, sectors];
+  if (sectors === 1) return [1, 0];
+  let best = null;
+  for (let first=1; first<sectors; first++) {
+    const second = sectors-first;
+    if (first>bank1 || second>bank2) continue;
+    const sizes = sectorSizes(bank1, first, 'ONE_BANK').concat(sectorSizes(bank2, second, 'ONE_BANK'));
+    const spread = Math.max(...sizes)-Math.min(...sizes);
+    const proportional = Math.abs(first/sectors-bank1/(bank1+bank2));
+    const score = spread*100+proportional;
+    if (!best || score<best.score) best={first,second,score};
+  }
+  if (best) return [best.first,best.second];
+  const first = Math.max(1, Math.min(sectors-1, Math.round(sectors*bank1/(bank1+bank2))));
+  return [first,sectors-first];
+}
 function sectorLayoutForCompetition(comp) {
   const b1 = Math.max(0, Number(comp.bank1_count || 0));
   const b2 = Math.max(0, Number(comp.bank2_count || 0));
   const total = Math.max(1, b1 + b2);
   const mode = comp.map_mode || 'TWO_OPPOSITE';
+  const custom = customSectorLayout(comp);
+  if (custom) return custom;
+  if (mode === 'TWO_ALONG' && Number(comp.sectors_count || 1) > 1 && b1 > 0 && b2 > 0) {
+    const counts = alongSectorCounts(Math.min(Number(comp.sectors_count || 1), total), b1, b2);
+    const bottomSizes = sectorSizes(b1, counts[0], 'ONE_BANK');
+    const topSizes = sectorSizes(b2, counts[1], 'ONE_BANK');
+    let bottomCursor=1, topCursor=b1+1, idx=0; const out=[];
+    for (const size of bottomSizes) { const bottom=[]; for(let i=0;i<size;i++)bottom.push(bottomCursor++); out.push({letter:String.fromCharCode(65+idx++),size,bottomCount:size,topCount:0,bottom,top:[]}); }
+    for (const size of topSizes) { const top=[]; for(let i=0;i<size;i++)top.push(topCursor++); out.push({letter:String.fromCharCode(65+idx++),size,bottomCount:0,topCount:size,bottom:[],top}); }
+    return out;
+  }
   const sizes = sectorSizes(total, comp.sectors_count || 1, mode);
   const bottomCounts = allocateBottomCountsForSectors(sizes, b1, b2, mode);
   let bottomCursor = 1;
@@ -423,8 +512,8 @@ function rosterStatusLabel(s) {
 }
 
 async function generateDraw(competitionId, round, actor) {
-  await autoSyncBanksForRoster(competitionId);
-  const comp = await getCompetition(competitionId);
+  let comp = await getCompetition(competitionId);
+  if (!customSectorLayout(comp)) { await autoSyncBanksForRoster(competitionId); comp = await getCompetition(competitionId); }
   if (!comp) throw new Error('Nie znaleziono zawodów');
   const entries = await getActiveEntries(competitionId);
   if (!entries.length) throw new Error('Brak aktywnych zawodników do losowania');
@@ -876,13 +965,13 @@ async function route(req, res) {
   const path = url.pathname;
   const method = req.method;
 
-  if (path === '/__probe_js_v27' || path === '/__probe_boot_v27' || path === '/__probe_inline_v26') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
+  if (path === '/__probe_js_v29' || path === '/__probe_boot_v29' || path === '/__probe_js_v27' || path === '/__probe_boot_v27' || path === '/__probe_inline_v26') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/api/version') return sendJson(res, 200, { ok:true, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/app.js') return send(res, 200, APP_JS, {'Content-Type':'application/javascript; charset=utf-8', 'Cache-Control':'no-store, no-cache, must-revalidate'});
 
   if (path === '/health') return sendJson(res, 200, { ok:true, time:nowIso(), version:APP_VERSION_NAME });
 
-  if (path === '/reset-cache') return send(res, 200, `<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Reset aplikacji</title><style>body{font-family:system-ui;margin:20px;background:#f3f6ef;color:#18251d}.card{background:#fff;border:1px solid #cfd8cc;border-radius:16px;padding:16px;max-width:520px;margin:auto}button{width:100%;padding:12px;border:0;border-radius:12px;background:#114b2f;color:white;font-weight:900}</style></head><body><div class="card"><h2>Reset pamięci aplikacji</h2><p>Usuwam cache i starego service workera. Przekierowanie jest natychmiastowe, bez czekania na zawieszone obietnice przeglądarki.</p><button onclick="go()">Wyczyść teraz</button></div><script>function go(){try{localStorage.removeItem('carp_token');localStorage.removeItem('lowcy_app_version_seen');sessionStorage.clear();if('serviceWorker'in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister()})}).catch(function(){})}if('caches'in window){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k)})}).catch(function(){})}}catch(e){}setTimeout(function(){location.replace('/?hard=28&t='+Date.now())},50)}go();</script></body></html>`, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate'});
+  if (path === '/reset-cache') return send(res, 200, `<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Reset aplikacji</title><style>body{font-family:system-ui;margin:20px;background:#f3f6ef;color:#18251d}.card{background:#fff;border:1px solid #cfd8cc;border-radius:16px;padding:16px;max-width:520px;margin:auto}button{width:100%;padding:12px;border:0;border-radius:12px;background:#114b2f;color:white;font-weight:900}</style></head><body><div class="card"><h2>Reset pamięci aplikacji</h2><p>Usuwam cache i starego service workera. Przekierowanie jest natychmiastowe, bez czekania na zawieszone obietnice przeglądarki.</p><button onclick="go()">Wyczyść teraz</button></div><script>function go(){try{localStorage.removeItem('carp_token');localStorage.removeItem('lowcy_app_version_seen');sessionStorage.clear();if('serviceWorker'in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister()})}).catch(function(){})}if('caches'in window){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k)})}).catch(function(){})}}catch(e){}setTimeout(function(){location.replace('/?hard=29&t='+Date.now())},50)}go();</script></body></html>`, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate'});
 
   if (path === '/manifest.webmanifest') return send(res, 200, JSON.stringify({
     name:'Łowcy Methodowcy', short_name:'Łowcy', start_url:'/', scope:'/', id:'/', display:'standalone', background_color:'#f3f6ef', theme_color:'#114b2f', icons:[]
@@ -1012,10 +1101,14 @@ self.addEventListener('notificationclick', event => { event.notification.close()
       bank1 = clampInt(b.bank1Count, 0, 300, old.bank1_count || 15);
       bank2 = clampInt(b.bank2Count, 0, 300, old.bank2_count || 15);
     }
+    const total = Math.max(1, bank1 + bank2);
+    let sectorLayout;
+    try { sectorLayout = b.sectorLayout === undefined ? old.sector_layout : validateSectorLayout(b.sectorLayout, total, sectors); }
+    catch (e) { return sendJson(res, 400, { ok:false, error:e.message }); }
     const { rows } = await pool.query(`
-      update competitions set title=$1, fishery=$2, competition_date=$3, limit_places=$4, status=$5, notes=$6, map_mode=$7, bank1_count=$8, bank2_count=$9, sectors_count=$10, signup_open=$11
-      where id=$12 returning *
-    `, [String(b.title||old.title).trim(), String(b.fishery||'').trim(), b.competitionDate || null, limit, b.status || old.status || 'OPEN', String(b.notes||''), mapMode, bank1, bank2, sectors, b.signupOpen !== false, id]);
+      update competitions set title=$1, fishery=$2, competition_date=$3, limit_places=$4, status=$5, notes=$6, map_mode=$7, bank1_count=$8, bank2_count=$9, sectors_count=$10, sector_layout=$11, signup_open=$12
+      where id=$13 returning *
+    `, [String(b.title||old.title).trim(), String(b.fishery||'').trim(), b.competitionDate || null, limit, b.status || old.status || 'OPEN', String(b.notes||''), mapMode, bank1, bank2, sectors, sectorLayout === undefined ? old.sector_layout : sectorLayout, b.signupOpen !== false, id]);
     await notifyAdmins('COMPETITION_UPDATE', 'Edytowano zawody', `${user.first_name} ${user.last_name} edytował zawody: ${rows[0].title}`, { competitionId:id });
     return sendJson(res, 200, { ok:true, competition:rows[0] });
   }
@@ -1140,6 +1233,25 @@ self.addEventListener('notificationclick', event => { event.notification.close()
       return sendJson(res, 200, { ok:true, count:out.count });
     } catch (e) { return sendJson(res, 400, { ok:false, error:e.message }); }
   }
+  m = path.match(/^\/api\/admin\/competitions\/(\d+)\/results$/);
+  if (m && method === 'DELETE') {
+    if (!requireAdmin(user, res)) return;
+    const compId = Number(m[1]);
+    const comp = await getCompetition(compId);
+    if (!comp) return sendJson(res, 404, { ok:false, error:'Nie znaleziono zawodów' });
+    const b = await readBody(req);
+    if (b.confirm !== 'WYCZYSC_WYNIKI') return sendJson(res, 400, { ok:false, error:'Brak potwierdzenia czyszczenia wyników' });
+    const client = await pool.connect();
+    try {
+      await client.query('begin');
+      const items = await client.query('delete from result_items where competition_id=$1 returning id', [compId]);
+      const aggregates = await client.query('delete from results where competition_id=$1 returning id', [compId]);
+      await client.query('commit');
+      await notifyAdmins('RESULTS_CLEAR', 'Wyczyszczono wyniki', `${user.first_name} ${user.last_name} wyczyścił wyniki T1 i T2: ${comp.title}`, { competitionId:compId, items:items.rowCount, results:aggregates.rowCount });
+      return sendJson(res, 200, { ok:true, deletedItems:items.rowCount, deletedResults:aggregates.rowCount });
+    } catch (e) { await client.query('rollback'); throw e; }
+    finally { client.release(); }
+  }
   m = path.match(/^\/api\/admin\/competitions\/(\d+)\/results\/(1|2)$/);
   if (m && method === 'POST') {
     if (!requireAdmin(user, res)) return;
@@ -1229,7 +1341,7 @@ self.addEventListener('notificationclick', event => { event.notification.close()
   return send(res, 200, HTML);
 }
 
-const APP_JS = String.raw`const CLIENT_VERSION='28';const CLIENT_VERSION_NAME='V28_EXTERNAL_JS_STABLE_LOGIN';try{fetch('/__probe_js_v28',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V28_EXTERNAL_JS_STABLE_LOGIN_LOADED');
+const LEGACY_APP_JS = String.raw`const CLIENT_VERSION='28';const CLIENT_VERSION_NAME='V28_EXTERNAL_JS_STABLE_LOGIN';try{fetch('/__probe_js_v28',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V28_EXTERNAL_JS_STABLE_LOGIN_LOADED');
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let TOKEN = STORE.get('carp_token') || '';
 let ME = null;
@@ -1433,7 +1545,7 @@ const HTML = `<!doctype html>
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V28 stabilne logowanie</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
+  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V29 sektory i wyniki</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
     <div id="adminCreate" class="card hidden"><h2>Utwórz zawody</h2><p class="small muted">Szybkie tworzenie: liczba osób, data, łowisko i opis. Brzegi, sektory i mapę ustawiasz potem w osobnym panelu struktury.</p><div class="grid"><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div></div><label>Opis</label><textarea id="cNotes" placeholder="Opis zawodów, zasady, informacje organizacyjne."></textarea><button onclick="createCompetition(event)">Utwórz zawody</button></div>
@@ -1445,7 +1557,7 @@ const HTML = `<!doctype html>
 </section>
 </main>
 <div class="quickScroll"><button onclick="scrollAppTop()">↑</button><button onclick="scrollAppBottom()">↓</button></div>
-<script src="/app.js?v=28" defer></script>
+<script src="/app.js?v=29" defer></script>
 </body>
 </html>`;
 
@@ -1456,5 +1568,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V28_EXTERNAL_JS_STABLE_LOGIN_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V29_MANUAL_SECTORS_ALONG_CLEAR_RESULTS_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });
