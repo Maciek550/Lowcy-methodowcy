@@ -14,8 +14,8 @@ const ADMIN_SETUP_CODE = process.env.ADMIN_SETUP_CODE || '';
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
-const APP_VERSION = '23';
-const APP_VERSION_NAME = 'V23_LOGIN_RECOVERY_NO_SW';
+const APP_VERSION = '24';
+const APP_VERSION_NAME = 'V24_HARD_LOGIN_RECOVERY';
 
 if (webpush && VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
   webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
@@ -876,13 +876,13 @@ async function route(req, res) {
   const path = url.pathname;
   const method = req.method;
 
-  if (path === '/__probe_js_v23' || path === '/__probe_boot_v23') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
+  if (path === '/__probe_js_v24' || path === '/__probe_boot_v24') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/api/version') return sendJson(res, 200, { ok:true, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/app.js') return send(res, 200, APP_JS, {'Content-Type':'application/javascript; charset=utf-8', 'Cache-Control':'no-store, no-cache, must-revalidate'});
 
   if (path === '/health') return sendJson(res, 200, { ok:true, time:nowIso(), version:APP_VERSION_NAME });
 
-  if (path === '/reset-cache') return send(res, 200, `<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Reset aplikacji</title><style>body{font-family:system-ui;margin:20px;background:#f3f6ef;color:#18251d}.card{background:#fff;border:1px solid #cfd8cc;border-radius:16px;padding:16px;max-width:520px;margin:auto}button{width:100%;padding:12px;border:0;border-radius:12px;background:#114b2f;color:white;font-weight:900}</style></head><body><div class="card"><h2>Reset pamięci aplikacji</h2><p>Czyszczę service worker, cache i starą sesję. Po chwili wrócisz do logowania.</p><button onclick="go()">Wyczyść teraz</button></div><script>async function go(){try{localStorage.removeItem('carp_token');localStorage.removeItem('lowcy_app_version_seen');sessionStorage.clear();if('serviceWorker'in navigator){const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.map(r=>r.unregister().catch(()=>{})));}if('caches'in window){const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k).catch(()=>{})));}}catch(e){} location.href='/?fresh=23&t='+Date.now()}go();</script></body></html>`, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate'});
+  if (path === '/reset-cache') return send(res, 200, `<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Reset aplikacji</title><style>body{font-family:system-ui;margin:20px;background:#f3f6ef;color:#18251d}.card{background:#fff;border:1px solid #cfd8cc;border-radius:16px;padding:16px;max-width:520px;margin:auto}button{width:100%;padding:12px;border:0;border-radius:12px;background:#114b2f;color:white;font-weight:900}</style></head><body><div class="card"><h2>Reset pamięci aplikacji</h2><p>Usuwam cache i starego service workera. Przekierowanie jest natychmiastowe, bez czekania na zawieszone obietnice przeglądarki.</p><button onclick="go()">Wyczyść teraz</button></div><script>function go(){try{localStorage.removeItem('carp_token');localStorage.removeItem('lowcy_app_version_seen');sessionStorage.clear();if('serviceWorker'in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister()})}).catch(function(){})}if('caches'in window){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k)})}).catch(function(){})}}catch(e){}setTimeout(function(){location.replace('/?hard=24&t='+Date.now())},50)}go();</script></body></html>`, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate'});
 
   if (path === '/manifest.webmanifest') return send(res, 200, JSON.stringify({
     name:'Łowcy Methodowcy', short_name:'Łowcy', start_url:'/', scope:'/', id:'/', display:'standalone', background_color:'#f3f6ef', theme_color:'#114b2f', icons:[]
@@ -1229,7 +1229,7 @@ self.addEventListener('notificationclick', event => { event.notification.close()
   return send(res, 200, HTML);
 }
 
-const APP_JS = String.raw`const CLIENT_VERSION='23';const CLIENT_VERSION_NAME='V23_LOGIN_RECOVERY_NO_SW';try{fetch('/__probe_js_v23',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V23_LOGIN_RECOVERY_NO_SW_LOADED');
+const APP_JS = String.raw`const CLIENT_VERSION='24';const CLIENT_VERSION_NAME='V24_HARD_LOGIN_RECOVERY';try{fetch('/__probe_js_v24',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V24_HARD_LOGIN_RECOVERY_LOADED');
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let TOKEN = STORE.get('carp_token') || '';
 let ME = null;
@@ -1244,7 +1244,7 @@ window.addEventListener('error',e=>{console.error('CLIENT_ERR',e.message);try{co
 window.addEventListener('unhandledrejection',e=>{console.error('CLIENT_REJECT',e.reason);});
 function esc(s){return String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function msg(t,type='ok'){const el=q('msg');if(!el)return;el.innerHTML='<div class="card '+(type==='bad'?'bad danger-line':'ok success-line')+'">'+esc(t)+'</div>';setTimeout(()=>{const x=q('msg');if(x)x.innerHTML=''},3500)}
-async function api(path, opts={}){const res=await fetch(path,Object.assign({cache:'no-store',headers:{'Content-Type':'application/json',...(TOKEN?{Authorization:'Bearer '+TOKEN}:{})}},opts));const data=await res.json().catch(()=>({ok:false,error:'Błąd odpowiedzi'}));if(!res.ok||data.ok===false)throw new Error(data.error||'Błąd');return data}
+async function api(path, opts={}){const ctrl=typeof AbortController!=='undefined'?new AbortController():null;const to=ctrl?setTimeout(()=>ctrl.abort(),15000):null;try{const res=await fetch(path,Object.assign({cache:'no-store',signal:ctrl?ctrl.signal:undefined,headers:{'Content-Type':'application/json',...(TOKEN?{Authorization:'Bearer '+TOKEN}:{})}},opts));const data=await res.json().catch(()=>({ok:false,error:'Błąd odpowiedzi'}));if(!res.ok||data.ok===false)throw new Error(data.error||'Błąd');return data}catch(e){if(e&&e.name==='AbortError')throw new Error('Brak odpowiedzi serwera po 15 s');throw e}finally{if(to)clearTimeout(to)}}
 function fmtDate(d){if(!d)return '—';const s=String(d);const m=s.match(/^\\d{4}-\\d{2}-\\d{2}/);const dt=new Date(m?(m[0]+'T12:00:00'):s);return isNaN(dt.getTime())?'—':dt.toLocaleDateString('pl-PL')}
 function dateInputValue(d){if(!d)return '';const s=String(d);const m=s.match(/^\\d{4}-\\d{2}-\\d{2}/);return m?m[0]:''}
 function fmtGram(v){v=Number(v||0);return v?String(v).replace(/\\B(?=(\\d{3})+(?!\\d))/g,' '):'0'}
@@ -1397,7 +1397,7 @@ function bindAuthButtons(){
 }
 function scrollAppBottom(){window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})}
 Object.assign(window,{login,registerPlayer,setupAdmin,logout,showTab,loadCompetitions,createCompetition,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,saveResults,generateResults,generateResultsAll,addWeightItem,deleteWeightItem,notifyResults,readNotif,loadNotifications,loadPlayers,enablePush,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,scrollAppTop,scrollAppBottom});
-function startBoot(){console.log('CLIENT_V23_BOOT');try{fetch('/__probe_boot_v23',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().catch(e=>{console.error('BOOT_FATAL',e);try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
+function startBoot(){console.log('CLIENT_V24_BOOT');try{fetch('/__probe_boot_v24',{cache:'no-store'}).catch(()=>{})}catch(_){};try{if('serviceWorker'in navigator){navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister().catch(()=>{}))).catch(()=>{})}if('caches'in window){caches.keys().then(ks=>ks.forEach(k=>caches.delete(k).catch(()=>{}))).catch(()=>{})}}catch(_){}bindAuthButtons();boot().catch(e=>{console.error('BOOT_FATAL',e);try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();`;
 
 const HTML = `<!doctype html>
@@ -1424,14 +1424,14 @@ const HTML = `<!doctype html>
 <section id="auth" class="card">
   <h2>Logowanie</h2>
   <div class="grid"><div><label>Telefon</label><input id="loginPhone" autocomplete="username"></div><div><label>Hasło</label><input id="loginPassword" type="password" autocomplete="current-password"></div></div>
-  <div class="grid" style="margin-top:10px"><button type="button" id="loginBtn">Zaloguj</button><button type="button" id="clearSessionBtn" class="secondary">Wyczyść sesję</button></div>
+  <div class="grid" style="margin-top:10px"><button type="button" id="loginBtn" onclick="hardLogin(event)">Zaloguj</button><button type="button" id="clearSessionBtn" class="secondary">Wyczyść sesję</button></div>
   <div class="twoCols">
     <div class="card"><h3>Rejestracja zawodnika</h3><label>Telefon</label><input id="regPhone"><label>Hasło</label><input id="regPassword" type="password"><label>Imię</label><input id="regFirst"><label>Nazwisko</label><input id="regLast"><label>Nr Koła PZW</label><input id="regClub"><button type="button" id="regBtn">Utwórz konto zawodnika</button></div>
     <div class="card"><h3>Pierwsze konto admina</h3><p class="small muted">Sekcja działa tylko, gdy w bazie nie ma jeszcze admina.</p><label>Kod setupu</label><input id="setupCode"><label>Telefon admina</label><input id="setupPhone"><label>Hasło</label><input id="setupPassword" type="password"><label>Imię</label><input id="setupFirst"><label>Nazwisko</label><input id="setupLast"><label>Koło PZW</label><input id="setupClub"><button type="button" id="setupAdminBtn">Utwórz admina</button></div>
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V23 logowanie naprawione</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
+  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V24 login awaryjny</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
     <div id="adminCreate" class="card hidden"><h2>Utwórz zawody</h2><p class="small muted">Szybkie tworzenie: liczba osób, data, łowisko i opis. Brzegi, sektory i mapę ustawiasz potem w osobnym panelu struktury.</p><div class="grid"><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div></div><label>Opis</label><textarea id="cNotes" placeholder="Opis zawodów, zasady, informacje organizacyjne."></textarea><button onclick="createCompetition(event)">Utwórz zawody</button></div>
@@ -1443,6 +1443,7 @@ const HTML = `<!doctype html>
 </section>
 </main>
 <div class="quickScroll"><button onclick="scrollAppTop()">↑</button><button onclick="scrollAppBottom()">↓</button></div>
+<script>(function(){function g(i){return document.getElementById(i)}async function hardLogin(e){if(e){e.preventDefault&&e.preventDefault();e.stopPropagation&&e.stopPropagation()}var b=g('loginBtn');try{if(b){b.disabled=true;b.textContent='Loguję...'}var phone=(g('loginPhone')||{}).value||'';var password=(g('loginPassword')||{}).value||'';if(!phone.trim()||!password)throw new Error('Wpisz telefon i hasło');var r=await fetch('/api/login',{method:'POST',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:phone,password:password})});var d=await r.json().catch(function(){return {ok:false,error:'Błąd odpowiedzi'}});if(!r.ok||d.ok===false)throw new Error(d.error||'Błąd logowania');localStorage.setItem('carp_token',d.token);if(window.TOKEN!==undefined)window.TOKEN=d.token;if(window.boot){try{await window.boot();return}catch(_){}}location.replace('/?hard=24&t='+Date.now())}catch(err){var m=g('msg');if(m)m.innerHTML='<div class="card bad danger-line">'+String(err.message||err)+'</div>'}finally{if(b){b.disabled=false;b.textContent='Zaloguj'}}}window.hardLogin=hardLogin;function bindHard(){var b=g('loginBtn');if(b&&!b.dataset.hard){b.dataset.hard='1';b.addEventListener('click',hardLogin,true)}['loginPhone','loginPassword'].forEach(function(id){var el=g(id);if(el&&!el.dataset.hard){el.dataset.hard='1';el.addEventListener('keydown',function(e){if(e.key==='Enter')hardLogin(e)},true)}})}try{if('serviceWorker'in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister()})}).catch(function(){})}if('caches'in window){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k)})}).catch(function(){})}}catch(e){}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bindHard);else bindHard();})();</script>
 <script src="/app.js?v=${APP_VERSION}" defer></script>
 </body>
 </html>`;
@@ -1454,5 +1455,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V23_LOGIN_RECOVERY_NO_SW_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V24_HARD_LOGIN_RECOVERY_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });
