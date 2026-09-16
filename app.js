@@ -171,10 +171,13 @@ function renderPlayerOwnRound(d,round){
   return '<div class="playerSelectedOwn"><span class="tag '+(round===1?'t1tag':'t2tag')+'">T'+round+'</span><strong>'+(x?esc(x.stand):'—')+'</strong><b>'+(x?'Sektor '+esc(x.sector):'Brak losowania')+'</b></div>';
 }
 function renderPlayerMobilePanelContent(d,panel){
-  if(!panel)return '';
   if(panel==='draw1'||panel==='draw2'){
     const round=panel==='draw2'?2:1;
-    return '<div class="playerMobileSelectedPanel playerMobileDrawSelected">'+renderPlayerOwnRound(d,round)+renderMobileRoundDrawMap(d,round)+'</div>';
+    return '<div class="playerMobileSelectedPanel playerMobileDrawSelected">'
+      +renderPlayerOwnRound(d,round)
+      +renderMobileRoundDrawMap(d,round)
+      +'<div class="playerMobileSectorTables">'+renderDrawSectorTables(d,round)+'</div>'
+      +'</div>';
   }
   if(panel==='t1')return '<div class="playerMobileSelectedPanel"><div class="card playerResultCard"><h2>Wyniki sektorowe — Tura 1</h2>'+renderSectorResultsColumn(d.classification.round1,'1 tura')+'<h2 class="playerWholeRoundTitle">Cała Tura 1</h2>'+renderPlayerRoundCompact(d.classification.round1,1)+'</div></div>';
   if(panel==='t2')return '<div class="playerMobileSelectedPanel"><div class="card playerResultCard"><h2>Wyniki sektorowe — Tura 2</h2>'+renderSectorResultsColumn(d.classification.round2,'2 tura')+'<h2 class="playerWholeRoundTitle">Cała Tura 2</h2>'+renderPlayerRoundCompact(d.classification.round2,2)+'</div></div>';
@@ -313,7 +316,7 @@ function renderMobileStructureStand(n,c){const sec=sectorForStandClient(n,c);ret
 function renderMobileStructureBank(label,arr,c){if(!arr||!arr.length)return '';return '<div class="mobileStructureBank"><div class="mobileBankName">'+esc(label)+'</div><div class="mobileStructureGrid">'+arr.map(n=>renderMobileStructureStand(n,c)).join('')+'</div></div>'}
 function renderMobileStructureMap(c){const layout=sectorLayoutClient(c);let html='<div class="mobileStructureMap"><div class="mobileMapMeta"><b>Podgląd sektorów</b><span>'+esc(c.fishery||'Łowisko')+'</span></div><div class="mobileSectorStack compactAdminSectors">';for(const sec of layout){const total=(sec.top||[]).length+(sec.bottom||[]).length;html+='<section class="mobileSectorCard compactAdminSector '+sectorColorClass(sec.letter,c)+'"><div class="mobileSectorHeader"><span>SEKTOR <b>'+esc(sec.letter)+'</b></span><small>'+total+' '+(total===1?'osoba':total>=2&&total<=4?'osoby':'osób')+'</small></div>';if((c.map_mode||'TWO_OPPOSITE')==='ONE_BANK')html+=renderMobileStructureBank('JEDEN BRZEG',sec.bottom,c);else if((c.map_mode||'TWO_OPPOSITE')==='TWO_ALONG'){if(sec.top?.length)html+=renderMobileStructureBank('BRZEG 2',sec.top,c);if(sec.bottom?.length)html+=renderMobileStructureBank('BRZEG 1',sec.bottom,c)}else{if(sec.top?.length)html+=renderMobileStructureBank('BRZEG GÓRNY',sec.top,c);if(sec.bottom?.length)html+=renderMobileStructureBank('BRZEG DOLNY',sec.bottom,c)}html+='</section>'}html+='</div></div>';return html}
 function roundDrawStandMap(d,round){const entryByUser={};for(const e of (d.activeEntries||[]))entryByUser[Number(e.user_id)]=e;const byStand={};for(const dr of (d.draws||[])){if(Number(dr.round)!==Number(round))continue;const e=entryByUser[Number(dr.user_id)];byStand[Number(dr.stand)]={draw:dr,entry:e,name:e?(e.first_name+' '+e.last_name):''}}return byStand}
-function renderRoundDrawCell(n,c,byStand,empty=false){if(empty)return '<div class="roundDrawCell empty"></div>';const sec=sectorForStandClient(n,c),x=byStand[Number(n)],mine=x&&Number(x.draw.user_id)===Number(ME.id);return '<div class="roundDrawCell '+sectorColorClass(sec,c)+(mine?' ownRoundDraw':'')+'"><b class="roundStandNo">'+n+'</b><span class="roundDrawName">'+(x?esc(x.name):'—')+'</span></div>'}
+function renderRoundDrawCell(n,c,byStand,empty=false){if(empty)return '<div class="roundDrawCell empty"></div>';const sec=sectorForStandClient(n,c),x=byStand[Number(n)],mine=x&&Number(x.draw.user_id)===Number(ME.id),label=x?shortPlayerName(x.name):'—';return '<div class="roundDrawCell '+sectorColorClass(sec,c)+(mine?' ownRoundDraw':'')+'"><b class="roundStandNo">'+n+'</b><span class="roundDrawName">'+esc(label)+'</span></div>'}
 function renderRoundBankGroup(c,which,byStand){const layout=sectorLayoutClient(c),minw=Math.max(680,mapMinWidth(c));let html='<div class="sectorFlexRow roundDrawRow" style="min-width:'+minw+'px">';for(const sec of layout){const arr=which==='top'?sec.top:sec.bottom;const count=Math.max(1,arr.length);html+='<div class="sectorGroup" style="flex:'+sec.size+' 0 0;grid-template-columns:repeat('+count+',minmax(50px,1fr))">';if(arr.length){for(const n of arr)html+=renderRoundDrawCell(n,c,byStand)}else html+=renderRoundDrawCell(0,c,byStand,true);html+='</div>'}return html+'</div>'}
 function renderRoundOneBank(c,byStand){const layout=sectorLayoutClient(c),minw=Math.max(680,mapMinWidth(c));let html='<div class="sectorFlexRow roundDrawRow" style="min-width:'+minw+'px">';for(const sec of layout){const arr=sec.bottom;html+='<div class="sectorGroup" style="flex:'+sec.size+' 0 0;grid-template-columns:repeat('+Math.max(1,arr.length)+',minmax(50px,1fr))">';for(const n of arr)html+=renderRoundDrawCell(n,c,byStand);html+='</div>'}return html+'</div>'}
 function renderRoundAlongBank(c,which,byStand){const layout=sectorLayoutClient(c).filter(sec=>(which==='top'?sec.top:sec.bottom).length),bankCount=which==='top'?Number(c.bank2_count||0):Number(c.bank1_count||0),minw=Math.max(640,bankCount*60);let html='<div class="sectorFlexRow roundDrawRow" style="min-width:'+minw+'px">';for(const sec of layout){const arr=which==='top'?sec.top:sec.bottom;html+='<div class="sectorGroup" style="flex:'+arr.length+' 0 0;grid-template-columns:repeat('+arr.length+',minmax(50px,1fr))">';for(const n of arr)html+=renderRoundDrawCell(n,c,byStand);html+='</div>'}return html+'</div>'}
@@ -334,16 +337,16 @@ function renderMobileRoundStand(n,c,byStand){
 function renderMobileBankStands(label,arr,c,byStand){
   if(!arr||!arr.length)return '';
   const txt=String(label||'').toUpperCase(),bankClass=(txt.includes('GÓRNY')||txt.includes('BRZEG 2'))?'mobileBankUpper':(txt.includes('DOLNY')||txt.includes('BRZEG 1'))?'mobileBankLower':'mobileBankSingle';
-  const cols=Math.max(1,Math.min(3,arr.length));
-  return '<div class="mobileBankBlock '+bankClass+'"><div class="mobileBankName">'+esc(label)+'</div><div class="mobileStandGrid" style="grid-template-columns:repeat('+cols+',minmax(0,1fr))">'+arr.map(n=>renderMobileRoundStand(n,c,byStand)).join('')+'</div></div>';
+  const cols=arr.length<=2?2:arr.length===4?2:3;
+  return '<div class="mobileBankBlock '+bankClass+'"><div class="mobileBankName">'+esc(label)+'</div><div class="mobileStandGrid mobileStandGridReadable" style="grid-template-columns:repeat('+cols+',minmax(0,1fr))">'+arr.map(n=>renderMobileRoundStand(n,c,byStand)).join('')+'</div></div>';
 }
 function renderMobileRoundDrawMap(d,round){
   const c=d.competition,byStand=roundDrawStandMap(d,round),layout=sectorLayoutClient(c);
   if(!Object.keys(byStand).length)return '<div class="card"><p class="muted">Brak losowania T'+round+'.</p></div>';
-  let html='<div class="mobileDrawMap compactPlayerDrawMap"><div class="mobileMapMeta"><b>T'+round+' — '+esc(c.fishery||'Łowisko')+'</b><span>'+layout.length+' sektorów</span></div><div class="mobileSectorStack">';
+  let html='<div class="mobileDrawMap compactPlayerDrawMap"><div class="mobileMapMeta"><b>MAPA ŁOWISKA — TURA '+round+'</b><span>'+esc(c.fishery||'Łowisko')+'</span></div><div class="mobileSectorStack">';
   for(const sec of layout){
     const total=(sec.top||[]).length+(sec.bottom||[]).length;
-    html+='<section class="mobileSectorCard compactPlayerSector '+sectorColorClass(sec.letter,c)+'"><div class="mobileSectorHeader"><span>SEKTOR <b>'+esc(sec.letter)+'</b></span><small>'+total+' os.</small></div>';
+    html+='<section class="mobileSectorCard compactPlayerSector '+sectorColorClass(sec.letter,c)+'"><div class="mobileSectorHeader"><span>Sektor <b>'+esc(sec.letter)+'</b></span><small>'+total+' os.</small></div>';
     if(c.map_mode==='ONE_BANK')html+=renderMobileBankStands('JEDEN BRZEG',sec.bottom,c,byStand);
     else if(c.map_mode==='TWO_ALONG'){
       if(sec.top?.length)html+=renderMobileBankStands('BRZEG 2',sec.top,c,byStand);
@@ -494,10 +497,10 @@ function syncPlayerStickyBars(){
     const mobile=window.matchMedia&&window.matchMedia('(max-width:760px)').matches;
     const player=ME&&ME.role!=='ADMIN';
     const detail=q('competitionDetail');
-    const drawSlot=document.querySelector('.playerDrawStickySlot');
-    const drawBar=document.querySelector('.playerDrawHeaderCard');
-    const drawBoundary=document.querySelector('.playerView');
-    if(!mobile||!player||!detail||detail.classList.contains('hidden')){
+    const drawSlot=document.querySelector('.playerMobileDashboard .playerDrawStickySlot');
+    const drawBar=document.querySelector('.playerMobileDashboard .playerUnifiedNav');
+    const drawBoundary=document.querySelector('.playerMobileDashboard');
+    if(!mobile||!player||!detail||detail.classList.contains('hidden')||!drawSlot||!drawBar||!drawBoundary){
       clearPlayerFixed(drawBar,drawSlot);
       return;
     }

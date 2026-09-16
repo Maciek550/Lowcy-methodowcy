@@ -2310,6 +2310,43 @@ header{z-index:100!important}
   .playerMobileSelectedPanel h2{font-size:14px!important;margin:2px 0 5px!important}
 }
 
+
+
+/* V48 — mobilny zawodnik: sticky kafelki, czytelniejsze losowanie i tabelki sektorowe pod mapą */
+@media(max-width:760px){
+  .playerMobileDashboard .playerDrawStickySlot{position:relative!important;overflow:visible!important}
+  .playerMobileDashboard .playerUnifiedNav{position:relative!important;z-index:20!important}
+  .playerMobileDashboard .playerUnifiedNav.fixedPlayerBar{position:fixed!important;top:0!important;left:0!important;z-index:5400!important}
+  .playerMobileDashboard .playerMobileSelectedPanel{padding-top:0!important}
+  .playerMobileDashboard .compactPlayerDrawMap{margin-top:2px!important}
+  .playerMobileDashboard .mobileSectorStack{gap:7px!important}
+  .playerMobileDashboard .compactPlayerSector{border:1px solid #b5c7ba!important;border-radius:11px!important;overflow:hidden!important;background:#fff!important}
+  .playerMobileDashboard .compactPlayerSector .mobileSectorHeader{padding:6px 9px!important;min-height:34px!important;background:#ffffffd9!important;border-bottom:1px solid #c2d2c6!important}
+  .playerMobileDashboard .compactPlayerSector .mobileSectorHeader span{font-size:15px!important;font-weight:1000!important;color:#183b2d!important}
+  .playerMobileDashboard .compactPlayerSector .mobileSectorHeader span b{font-size:25px!important}
+  .playerMobileDashboard .compactPlayerSector .mobileSectorHeader small{font-size:11px!important;font-weight:900!important}
+  .playerMobileDashboard .compactPlayerSector .mobileBankBlock{padding:6px!important}
+  .playerMobileDashboard .compactPlayerSector .mobileBankName{font-size:10px!important;margin:0 0 5px!important;letter-spacing:.04em!important;color:#335646!important;font-weight:1000!important}
+  .playerMobileDashboard .compactPlayerSector .mobileStandGridReadable{display:grid!important;gap:6px!important}
+  .playerMobileDashboard .compactPlayerSector .mobileStandCardInner{display:grid!important;grid-template-columns:38px minmax(0,1fr)!important;align-items:center!important;min-height:48px!important;padding:0!important;border:1px solid #97ac9d!important;border-radius:10px!important;background:#ffffffe6!important;overflow:hidden!important}
+  .playerMobileDashboard .compactPlayerSector .mobileStandNo{display:flex!important;align-items:center!important;justify-content:center!important;height:100%!important;font-size:23px!important;line-height:1!important;font-weight:1000!important;border-right:1px solid #a7b8ad!important;background:#ffffffb5!important;padding:0!important}
+  .playerMobileDashboard .compactPlayerSector .mobileStandInfo{padding:5px 5px 4px!important;text-align:left!important;font-size:10px!important;line-height:1.08!important;color:#173126!important}
+  .playerMobileDashboard .compactPlayerSector .mobileStandInfo b{display:block!important;font-size:11.5px!important;font-weight:1000!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+  .playerMobileDashboard .compactPlayerSector .mobileMineBadge{display:inline-block!important;margin-top:2px!important;padding:1px 4px!important;font-size:7px!important;font-weight:1000!important;border-radius:999px!important;background:#f4b500!important;color:#4a3200!important}
+  .playerMobileDashboard .compactPlayerSector .ownMobileStand .mobileStandCardInner{border:2px solid #e0aa00!important;background:#fff7c3!important;box-shadow:0 0 0 1px #fff inset!important}
+  .playerMobileDashboard .playerMobileSectorTables{margin-top:8px!important}
+  .playerMobileDashboard .playerMobileSectorTables .drawSectorGrid{display:grid!important;grid-template-columns:1fr!important;gap:7px!important;margin-top:8px!important}
+  .playerMobileDashboard .playerMobileSectorTables .drawSectorBox{padding:7px!important;margin:0!important;border-radius:10px!important}
+  .playerMobileDashboard .playerMobileSectorTables .drawSectorBox h4{font-size:15px!important;margin:1px 0 6px!important}
+  .playerMobileDashboard .playerMobileSectorTables .sharpTable{table-layout:fixed!important;width:100%!important;min-width:0!important}
+  .playerMobileDashboard .playerMobileSectorTables .sharpTable th,.playerMobileDashboard .playerMobileSectorTables .sharpTable td{font-size:11.5px!important;padding:6px 4px!important;line-height:1.15!important}
+  .playerMobileDashboard .playerMobileSectorTables .sharpTable th:nth-child(1),.playerMobileDashboard .playerMobileSectorTables .sharpTable td:nth-child(1){width:34px!important}
+  .playerMobileDashboard .playerMobileSectorTables .sharpTable th:nth-child(2),.playerMobileDashboard .playerMobileSectorTables .sharpTable td:nth-child(2){width:44px!important}
+}
+.roundDrawCell{padding:6px 4px!important}
+.roundDrawName{font-size:14px!important;font-weight:1000!important;letter-spacing:.01em!important;text-rendering:geometricPrecision!important;-webkit-font-smoothing:antialiased!important}
+.roundStandNo{font-size:24px!important}
+
 </style>
 </head>
 <body>
@@ -2326,7 +2363,7 @@ header{z-index:100!important}
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V47</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
+  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V48</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
     <div id="adminCreate" class="card hidden"><h2>Utwórz zawody</h2><p class="small muted">Nazwa zawodów jest używana także w nagłówkach PDF.</p><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div></div><label>Opis</label><textarea id="cNotes" placeholder="Opis zawodów, zasady, informacje organizacyjne."></textarea><button onclick="createCompetition(event)">Utwórz zawody</button></div>
@@ -2338,7 +2375,7 @@ header{z-index:100!important}
 </section>
 </main>
 <div class="quickScroll"><button onclick="scrollAppTop()">↑</button><button onclick="scrollAppBottom()">↓</button></div>
-<script src="/app.js?v=47" defer></script>
+<script src="/app.js?v=48" defer></script>
 </body>
 </html>`;
 
