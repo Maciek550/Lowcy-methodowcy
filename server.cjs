@@ -17,7 +17,7 @@ let VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 let VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const APP_VERSION = '63';
-const APP_VERSION_NAME = 'V63_DELETE_DRAW_AND_RESULTS';
+const APP_VERSION_NAME = 'V64_COMPETITION_NUMBERING_AND_COMPACT_COUNT';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 
 
@@ -2885,7 +2885,7 @@ header{z-index:100!important}
 
 
 
-/* V63 — kafel admina: usuń całe losowanie razem z wynikami */
+/* V64 — kafel admina: usuń całe losowanie razem z wynikami */
 .adminDeleteDrawTile{margin-top:12px;padding:10px;border:2px solid #c62828;border-radius:14px;background:#fff3f3}
 .adminDeleteDrawBtn{min-height:48px;font-size:14px;letter-spacing:.02em}
 .adminDeleteDrawTile .small{margin-top:6px;color:#8a2020;line-height:1.35}
@@ -2893,6 +2893,27 @@ header{z-index:100!important}
   .adminDeleteDrawTile{padding:8px;margin-top:9px;border-radius:11px}
   .adminDeleteDrawBtn{min-height:44px;font-size:12px;padding:8px 6px}
   .adminDeleteDrawTile .small{font-size:10px}
+}
+
+
+
+/* V64 — numeracja zawodów od 1 + czytelniejszy stan zapisów */
+.playerCompCountBadge{display:inline-flex;align-items:center;gap:5px;min-height:25px;padding:3px 7px;border:1px solid #9eb7a7;border-radius:7px;background:#fff;color:#173d2e;white-space:nowrap}
+.playerCompCountBadge small{font-size:7.5px;line-height:1;font-weight:1000;color:#6a7b70;letter-spacing:.04em}
+.playerCompCountBadge b{font-size:11.5px;line-height:1;font-weight:1000;color:#102f23}
+.playerCompReserveBadge{display:inline-flex;align-items:center;min-height:25px;padding:3px 6px;border-radius:7px;background:#fff4d1;color:#755000;font-size:9px;font-weight:1000;white-space:nowrap}
+.playerCompMiniInfo{display:flex!important;align-items:center!important;gap:6px!important;min-width:0!important;flex-wrap:wrap!important}
+.playerCompDesktopCount{display:flex;align-items:center;gap:5px;min-width:0}
+@media(max-width:760px){
+  .playerCompCompactBottom{grid-template-columns:minmax(128px,.9fr) minmax(155px,1.1fr)!important;align-items:center!important}
+  .playerCompMiniInfo{gap:4px!important;flex-wrap:nowrap!important}
+  .playerCompCountBadge{min-height:24px;padding:3px 6px;gap:4px}
+  .playerCompCountBadge small{font-size:7px}.playerCompCountBadge b{font-size:10.5px}
+  .playerCompMineBadge{margin-left:1px!important;flex:0 0 auto!important}
+}
+@media(max-width:390px){
+  .playerCompCompactBottom{grid-template-columns:1fr!important}
+  .playerCompMiniInfo{justify-content:flex-start!important;min-height:26px!important}
 }
 
 </style>
@@ -2911,7 +2932,7 @@ header{z-index:100!important}
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V63</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
+  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V64</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
     <div id="adminCreate" class="card hidden"><h2>Utwórz zawody</h2><p class="small muted">Nazwa zawodów jest używana także w nagłówkach PDF.</p><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div></div><label>Opis</label><textarea id="cNotes" placeholder="Opis zawodów, zasady, informacje organizacyjne."></textarea><button onclick="createCompetition(event)">Utwórz zawody</button></div>
@@ -2934,5 +2955,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V63_DELETE_DRAW_AND_RESULTS_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V64_DELETE_DRAW_AND_RESULTS_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });
