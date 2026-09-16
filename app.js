@@ -1,4 +1,4 @@
-const CLIENT_VERSION='56';const CLIENT_VERSION_NAME='V56_PLAYER_STICKY_NAV';try{fetch('/__probe_js_v56',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V56_PLAYER_STICKY_NAV_LOADED');
+const CLIENT_VERSION='57';const CLIENT_VERSION_NAME='V57_PLAYER_STICKY_TOP_FIX';try{fetch('/__probe_js_v57',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V57_PLAYER_STICKY_TOP_FIX_LOADED');
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let TOKEN = STORE.get('carp_token') || '';
 let ME = null;
@@ -671,7 +671,8 @@ function syncPlayerStickyBars(){
       syncOnePlayerBar(mobileSlot,mobileBar,mobileBoundary,top);
     }else{
       clearPlayerFixed(mobileBar,mobileSlot);
-      syncOnePlayerBar(desktopSlot,desktopBar,desktopBoundary,top);
+      clearPlayerFixed(desktopBar,desktopSlot);
+      if(desktopSlot)desktopSlot.style.height='';
     }
   });
 }
@@ -686,5 +687,5 @@ function bindAuthButtons(){
 
 function scrollAppBottom(){window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})}
 Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,showAdminZone,loadCompetitions,createCompetition,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,editPlayerName,deletePlayer,enablePush,sendPushTest,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,openPlayerNotifications,fitPlayerMobileFullMaps,togglePlayerSectorAccordion,toggleFinalClub,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
-function startBoot(){console.log('CLIENT_V56_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v56',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().catch(e=>{console.error('BOOT_FATAL',e);try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
+function startBoot(){console.log('CLIENT_V57_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v57',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().catch(e=>{console.error('BOOT_FATAL',e);try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();
