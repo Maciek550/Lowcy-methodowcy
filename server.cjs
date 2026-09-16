@@ -16,8 +16,8 @@ const ADMIN_SETUP_CODE = process.env.ADMIN_SETUP_CODE || '';
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
-const APP_VERSION = '32';
-const APP_VERSION_NAME = 'V32_DRAW_MAPS_AUTO_RESULTS_STATS_PDF';
+const APP_VERSION = '33';
+const APP_VERSION_NAME = 'V33_MOBILE_READABLE_ROSTER_DRAW_SORT_PDF';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 
 if (webpush && VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
@@ -739,7 +739,7 @@ function computeClassification(comp, entries, draws, results) {
       });
       rows.filter(r => r.weight <= 0).forEach(r => { r.sector_place = maxSectorSize; r.points = maxSectorSize; });
     }
-    roundRows[round] = Array.from(grouped.values()).flat().sort((a,b)=>String(a.sector).localeCompare(String(b.sector),'pl') || (a.points-b.points) || (b.weight-a.weight) || (a.stand||9999)-(b.stand||9999));
+    roundRows[round] = Array.from(grouped.values()).flat().sort((a,b)=>(a.points-b.points) || (b.weight-a.weight) || String(a.sector).localeCompare(String(b.sector),'pl') || (a.stand||9999)-(b.stand||9999) || a.name.localeCompare(b.name,'pl'));
   }
 
   const r1 = new Map(roundRows[1].map(r => [r.user_id, r]));
@@ -1046,13 +1046,15 @@ async function route(req, res) {
   const path = url.pathname;
   const method = req.method;
 
-  if (path === '/__probe_js_v32' || path === '/__probe_boot_v32' || path === '/__probe_js_v30' || path === '/__probe_boot_v30' || path === '/__probe_js_v29' || path === '/__probe_boot_v29' || path === '/__probe_js_v27' || path === '/__probe_boot_v27' || path === '/__probe_inline_v26') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
+  if (path === '/__probe_js_v33' || path === '/__probe_boot_v33' || path === '/__probe_js_v32' || path === '/__probe_boot_v32' || path === '/__probe_js_v30' || path === '/__probe_boot_v30' || path === '/__probe_js_v29' || path === '/__probe_boot_v29' || path === '/__probe_js_v27' || path === '/__probe_boot_v27' || path === '/__probe_inline_v26') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/api/version') return sendJson(res, 200, { ok:true, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/app.js') return send(res, 200, APP_JS, {'Content-Type':'application/javascript; charset=utf-8', 'Cache-Control':'no-store, no-cache, must-revalidate'});
 
   if (path === '/health') return sendJson(res, 200, { ok:true, time:nowIso(), version:APP_VERSION_NAME });
 
-  if (path === '/reset-cache') return send(res, 200, `<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Reset aplikacji</title><style>body{font-family:system-ui;margin:20px;background:#f3f6ef;color:#18251d}.card{background:#fff;border:1px solid #cfd8cc;border-radius:16px;padding:16px;max-width:520px;margin:auto}button{width:100%;padding:12px;border:0;border-radius:12px;background:#114b2f;color:white;font-weight:900}</style></head><body><div class="card"><h2>Reset pamięci aplikacji</h2><p>Usuwam cache i starego service workera. Przekierowanie jest natychmiastowe, bez czekania na zawieszone obietnice przeglądarki.</p><button onclick="go()">Wyczyść teraz</button></div><script>function go(){try{localStorage.removeItem('carp_token');localStorage.removeItem('lowcy_app_version_seen');sessionStorage.clear();if('serviceWorker'in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister()})}).catch(function(){})}if('caches'in window){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k)})}).catch(function(){})}}catch(e){}setTimeout(function(){location.replace('/?hard=32&t='+Date.now())},50)}go();</script></body></html>`, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate'});
+  if (path === '/reset-cache') return send(res, 200, `<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Reset aplikacji</title><style>body{font-family:system-ui;margin:20px;background:#f3f6ef;color:#18251d}.card{background:#fff;border:1px solid #cfd8cc;border-radius:16px;padding:16px;max-width:520px;margin:auto}button{width:100%;padding:12px;border:0;border-radius:12px;background:#114b2f;color:white;font-weight:900}
+
+</style></head><body><div class="card"><h2>Reset pamięci aplikacji</h2><p>Usuwam cache i starego service workera. Przekierowanie jest natychmiastowe, bez czekania na zawieszone obietnice przeglądarki.</p><button onclick="go()">Wyczyść teraz</button></div><script>function go(){try{localStorage.removeItem('carp_token');localStorage.removeItem('lowcy_app_version_seen');sessionStorage.clear();if('serviceWorker'in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister()})}).catch(function(){})}if('caches'in window){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k)})}).catch(function(){})}}catch(e){}setTimeout(function(){location.replace('/?hard=33&t='+Date.now())},50)}go();</script></body></html>`, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate'});
 
   if (path === '/manifest.webmanifest') return send(res, 200, JSON.stringify({
     name:'Łowcy Methodowcy', short_name:'Łowcy', start_url:'/', scope:'/', id:'/', display:'standalone', background_color:'#f3f6ef', theme_color:'#114b2f', icons:[]
@@ -1628,6 +1630,10 @@ const HTML = `<!doctype html>
 .roundDrawSection{margin-top:12px}.roundMapHeading{font-weight:1000;font-size:20px;color:#204b38;margin-bottom:10px}.roundDrawRow{align-items:stretch}.roundDrawCell{min-height:132px;border:1.5px solid #9aafa2;margin:-1px 0 0 -1px;padding:5px 3px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;position:relative;overflow:hidden}.roundDrawCell.empty{border:0;background:transparent}.roundStandNo{font-size:15px;align-self:flex-start}.roundDrawName{font-size:12px;font-weight:800;writing-mode:vertical-rl;transform:rotate(180deg);line-height:1.05;margin-top:5px;white-space:nowrap}.ownRoundDraw{outline:4px solid var(--gold);outline-offset:-4px}.fisheryWater{font-size:20px;color:#315b48}.drawSectorGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-top:12px}.drawSectorBox{margin:0;padding:8px}.drawSectorBox h4{text-align:center;margin:2px 0 8px;color:#204b38}.center{text-align:center!important}.workZoneTabs{grid-template-columns:repeat(4,minmax(0,1fr))}
 
 @media(max-width:760px){.competitionActions{gap:16px}.competitionActions button{min-width:92px}main{padding:8px}.grid,.grid3,.grid4,.twoCols,.ownbox,.adminbar{grid-template-columns:1fr}.card{border-radius:12px;padding:10px}th,td{padding:6px 4px;font-size:11px}h1{font-size:16px}input,select,textarea,button{padding:10px}.tabs button{font-size:12px;padding:8px 10px}.top-actions button{font-size:12px}.stand{min-height:36px;font-size:11px}.bank{grid-template-columns:repeat(auto-fit,minmax(36px,1fr))}.standRow,.sectorBand{min-width:520px}.sectorBlock span{font-size:17px}.sectorBlock{min-height:105px}.sectorLetter{font-size:30px}.sectorWord,.sectorPeople{font-size:11px}.finalWrap{border-radius:10px}.generalTable{min-width:360px;width:100%;table-layout:fixed}.generalTable .colRank{width:34px}.generalTable .colRound{width:36px;min-width:36px}.generalTable .colSum{width:54px;min-width:54px}.generalTable .colWeight{width:82px;min-width:82px}.generalTable .colName{width:auto;min-width:0}.generalTable th,.generalTable td{padding:7px 4px;font-size:11.5px}.generalTable th{font-size:10px}.generalTable .nameCell b{font-size:12px}.generalTable .scoreCell b,.generalTable .sumCell b,.generalTable .weightCell b{font-size:12px}.generalTable .bfLine{font-size:10px}.workZoneTabs{top:52px;grid-template-columns:repeat(2,minmax(0,1fr));padding-top:6px;gap:5px}.workZoneTabs button{min-height:58px;padding:7px 5px;font-size:11px}}
+/* V33 — czytelność, mobilność i stabilny układ */
+html,body{max-width:100%;overflow-x:hidden!important}body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;font-size:15px}main,.card,.adminZone,.grid>*,.grid3>*,.grid4>*,.twoCols>*,.resultEntryRounds>*,.workZoneTabs>*{min-width:0}.tablewrap{max-width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-inline:contain}.sectorMap{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-inline:contain}.workZoneTabs{grid-template-columns:repeat(5,minmax(0,1fr))}.resultEntryRounds{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;margin-top:14px}.resultRoundPanel{min-width:0}.resultInputTable{min-width:760px}.resultInputTable input{min-width:108px;font-size:14px}.roundDrawCell{min-height:138px;padding:6px 4px}.roundStandNo{font-size:22px!important;line-height:1;font-weight:1000;align-self:flex-start}.roundDrawName{font-size:13px;font-weight:900}.standCell>b{font-size:18px;line-height:1}.sectorBlock{min-height:104px}.sectorLetter{font-size:34px}.sharpTable{font-size:14px}.stationStandBest{background:#c9ecd2!important;color:#0b4927!important;font-size:18px!important;font-weight:1000}.stationStandWorst{background:#ffd8a6!important;color:#7a3700!important;font-size:18px!important;font-weight:1000}.finalClub{display:inline!important;margin-left:5px;font-size:12px!important;font-weight:700}.finalClub.hidden{display:none!important}.finalClubToggle{margin:8px 0 10px}.roundClassTable td,.roundClassTable th{text-rendering:geometricPrecision}
+@media(max-width:760px){body{font-size:14px}main{padding:7px}.card{padding:10px}.workZoneTabs{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;top:52px}.workZoneTabs button{font-size:12px;min-height:54px;padding:8px 6px}.workZoneTabs button:last-child{grid-column:1/-1}th,td{font-size:12.5px;padding:7px 5px}.sharpTable{font-size:12.5px}.sharpTable th,.sharpTable td{padding:7px 5px}.small{font-size:11.5px}.roundStandNo{font-size:20px!important}.roundDrawName{font-size:12px}.standCell>b{font-size:17px}.sectorMap{padding:8px}.sectorBlock{min-height:92px;padding:6px 3px}.sectorLetter{font-size:29px}.sectorWord,.sectorPeople{font-size:11.5px}.resultInputTable{min-width:720px}.resultInputTable input{min-width:104px;font-size:13px}.generalTable{min-width:0;width:100%;table-layout:fixed}.generalTable th,.generalTable td{font-size:12px;padding:7px 4px}.generalTable th{font-size:10.5px}.generalTable .nameCell b{font-size:12.5px}.generalTable .scoreCell b,.generalTable .sumCell b,.generalTable .weightCell b{font-size:12.5px}.generalTable .colRank{width:34px}.generalTable .colRound{width:38px;min-width:38px}.generalTable .colSum{width:58px;min-width:58px}.generalTable .colWeight{width:88px;min-width:88px}.finalClub{font-size:10.5px!important;margin-left:3px}.twoCols{grid-template-columns:1fr}.drawSectorGrid{grid-template-columns:1fr}.competitionActions{gap:18px}}
+
 </style>
 </head>
 <body>
@@ -1644,7 +1650,7 @@ const HTML = `<!doctype html>
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V32</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
+  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V33</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
     <div id="adminCreate" class="card hidden"><h2>Utwórz zawody</h2><p class="small muted">Nazwa zawodów jest używana także w nagłówkach PDF.</p><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div></div><label>Opis</label><textarea id="cNotes" placeholder="Opis zawodów, zasady, informacje organizacyjne."></textarea><button onclick="createCompetition(event)">Utwórz zawody</button></div>
@@ -1656,7 +1662,7 @@ const HTML = `<!doctype html>
 </section>
 </main>
 <div class="quickScroll"><button onclick="scrollAppTop()">↑</button><button onclick="scrollAppBottom()">↓</button></div>
-<script src="/app.js?v=32" defer></script>
+<script src="/app.js?v=33" defer></script>
 </body>
 </html>`;
 
@@ -1667,5 +1673,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V32_DRAW_MAPS_AUTO_RESULTS_STATS_PDF_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V33_MOBILE_READABLE_ROSTER_DRAW_SORT_PDF_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });
