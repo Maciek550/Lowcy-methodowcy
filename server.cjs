@@ -17,7 +17,7 @@ const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const APP_VERSION = '36';
-const APP_VERSION_NAME = 'V36_LEAVE_REQUESTS_STRAIGHT_MOBILE_STICKY';
+const APP_VERSION_NAME = 'V37_STICKY_FIX_ADMIN_MOBILE_SECTORS';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 
 if (webpush && VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
@@ -1072,6 +1072,48 @@ async function route(req, res) {
 
 
 
+
+/* V37 — naprawa sticky kafelków i kompaktowy podgląd sektorów admina na telefonie */
+#competitionDetail,.adminZone{overflow:visible!important}
+.workZoneTabs{
+  position:sticky!important;
+  top:calc(var(--app-header-height,56px) + 4px)!important;
+  z-index:95!important;
+  background:rgba(243,246,239,.99)!important;
+  border-radius:14px!important;
+  padding:8px!important;
+  margin:2px 0 12px!important;
+  box-shadow:0 8px 18px #00000018!important;
+  overflow:visible!important;
+}
+.structurePreviewDesktop{display:block}.structurePreviewMobile{display:none}
+.mobileStructureMap{display:block;background:#f9fcf8;border:1px solid var(--line);border-radius:14px;padding:10px}
+.compactAdminSectors{display:grid;grid-template-columns:1fr;gap:10px}
+.compactAdminSector{border-radius:14px;border:1px solid #c8d5cb;padding:8px;background:#fff;overflow:hidden}
+.mobileStructureBank{margin-top:7px}
+.mobileStructureGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.mobileStructureStand{min-height:46px;border:1.5px solid #95a99b;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px #00000010}
+.mobileStructureStand b{font-size:24px;line-height:1;color:#173627}
+@media(min-width:761px){
+  .structurePreviewMobile{display:none!important}
+  .structurePreviewDesktop{display:block!important}
+}
+@media(max-width:760px){
+  .workZoneTabs{
+    top:calc(var(--app-header-height,52px) + 4px)!important;
+    z-index:95!important;
+    margin:2px 0 10px!important;
+    padding:6px!important;
+    border-radius:12px!important;
+  }
+  .structurePreviewDesktop{display:none!important}
+  .structurePreviewMobile{display:block!important}
+  .mobileStructureMap{padding:8px;border-radius:12px}
+  .mobileStructureGrid{gap:5px}
+  .mobileStructureStand{min-height:44px}
+  .mobileStructureStand b{font-size:22px}
+}
+
 </style></head><body><div class="card"><h2>Reset pamięci aplikacji</h2><p>Usuwam cache i starego service workera. Przekierowanie jest natychmiastowe, bez czekania na zawieszone obietnice przeglądarki.</p><button onclick="go()">Wyczyść teraz</button></div><script>function go(){try{localStorage.removeItem('carp_token');localStorage.removeItem('lowcy_app_version_seen');sessionStorage.clear();if('serviceWorker'in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister()})}).catch(function(){})}if('caches'in window){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k)})}).catch(function(){})}}catch(e){}setTimeout(function(){location.replace('/?hard=36&t='+Date.now())},50)}go();</script></body></html>`, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate'});
 
   if (path === '/manifest.webmanifest') return send(res, 200, JSON.stringify({
@@ -1779,6 +1821,48 @@ header{z-index:100!important}
   .notificationWrap{overflow:visible;border:0}.notificationTable,.notificationTable tbody,.notificationTable tr,.notificationTable td{display:block;width:100%}.notificationTable thead{display:none}.notificationTable tr{border:1px solid var(--line);border-radius:12px;margin:8px 0;background:#fff;overflow:hidden}.notificationTable td{border:0;border-bottom:1px solid #e3e9e4;padding:9px;font-size:12px}.notificationTable td:last-child{border-bottom:0}.leaveRequestActions{min-width:0;width:100%;grid-template-columns:1fr 1fr}.leaveRequestActions button{width:100%;min-height:44px}
 }
 
+
+/* V37 — naprawa sticky kafelków i kompaktowy podgląd sektorów admina na telefonie */
+#competitionDetail,.adminZone{overflow:visible!important}
+.workZoneTabs{
+  position:sticky!important;
+  top:calc(var(--app-header-height,56px) + 4px)!important;
+  z-index:95!important;
+  background:rgba(243,246,239,.99)!important;
+  border-radius:14px!important;
+  padding:8px!important;
+  margin:2px 0 12px!important;
+  box-shadow:0 8px 18px #00000018!important;
+  overflow:visible!important;
+}
+.structurePreviewDesktop{display:block}.structurePreviewMobile{display:none}
+.mobileStructureMap{display:block;background:#f9fcf8;border:1px solid var(--line);border-radius:14px;padding:10px}
+.compactAdminSectors{display:grid;grid-template-columns:1fr;gap:10px}
+.compactAdminSector{border-radius:14px;border:1px solid #c8d5cb;padding:8px;background:#fff;overflow:hidden}
+.mobileStructureBank{margin-top:7px}
+.mobileStructureGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.mobileStructureStand{min-height:46px;border:1.5px solid #95a99b;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px #00000010}
+.mobileStructureStand b{font-size:24px;line-height:1;color:#173627}
+@media(min-width:761px){
+  .structurePreviewMobile{display:none!important}
+  .structurePreviewDesktop{display:block!important}
+}
+@media(max-width:760px){
+  .workZoneTabs{
+    top:calc(var(--app-header-height,52px) + 4px)!important;
+    z-index:95!important;
+    margin:2px 0 10px!important;
+    padding:6px!important;
+    border-radius:12px!important;
+  }
+  .structurePreviewDesktop{display:none!important}
+  .structurePreviewMobile{display:block!important}
+  .mobileStructureMap{padding:8px;border-radius:12px}
+  .mobileStructureGrid{gap:5px}
+  .mobileStructureStand{min-height:44px}
+  .mobileStructureStand b{font-size:22px}
+}
+
 </style>
 </head>
 <body>
@@ -1795,7 +1879,7 @@ header{z-index:100!important}
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V36</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
+  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V37</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
     <div id="adminCreate" class="card hidden"><h2>Utwórz zawody</h2><p class="small muted">Nazwa zawodów jest używana także w nagłówkach PDF.</p><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div></div><label>Opis</label><textarea id="cNotes" placeholder="Opis zawodów, zasady, informacje organizacyjne."></textarea><button onclick="createCompetition(event)">Utwórz zawody</button></div>
@@ -1807,7 +1891,7 @@ header{z-index:100!important}
 </section>
 </main>
 <div class="quickScroll"><button onclick="scrollAppTop()">↑</button><button onclick="scrollAppBottom()">↓</button></div>
-<script src="/app.js?v=36" defer></script>
+<script src="/app.js?v=37" defer></script>
 </body>
 </html>`;
 
@@ -1818,5 +1902,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V36_LEAVE_REQUESTS_STRAIGHT_MOBILE_STICKY_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V37_STICKY_FIX_ADMIN_MOBILE_SECTORS_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });
