@@ -17,7 +17,7 @@ const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const APP_VERSION = '36';
-const APP_VERSION_NAME = 'V38_FIXED_ADMIN_NAV';
+const APP_VERSION_NAME = 'V39_MOBILE_ADMIN_NOTIFICATIONS_SECTOR_AUTO';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 
 if (webpush && VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
@@ -301,7 +301,8 @@ function allocateBottomCountsForSectors(sizes, bank1, bank2, mode) {
   const bottom = raw.map(x => Math.max(0, Math.min(x.size, Math.floor(x.val))));
   let diff = bank1 - bottom.reduce((a,b)=>a+b,0);
   if (diff > 0) {
-    const order = raw.slice().sort((a,b)=>((b.val - Math.floor(b.val)) - (a.val - Math.floor(a.val))) || a.i - b.i);
+    const altRank = i => (i % 2 === 0 ? Math.floor(i / 2) : Math.ceil(raw.length / 2) + Math.floor(i / 2));
+    const order = raw.slice().sort((a,b)=>((b.val - Math.floor(b.val)) - (a.val - Math.floor(a.val))) || (((mode || 'TWO_OPPOSITE') === 'TWO_OPPOSITE') ? (altRank(a.i) - altRank(b.i)) : (a.i - b.i)));
     let guard = 0;
     while (diff > 0 && guard++ < 1000) {
       let changed = false;
@@ -1534,6 +1535,17 @@ self.addEventListener('notificationclick', event => { event.notification.close()
     const { rows } = await pool.query(`select * from notifications where recipient_user_id=$1 and ($2::boolean=false or type not like 'RESULT_ITEM_T%') order by case when type='LEAVE_REQUEST' and coalesce(data->>'status','PENDING')='PENDING' then 0 else 1 end, created_at desc limit 150`, [user.id, user.role==='ADMIN']);
     return sendJson(res, 200, { ok:true, notifications:rows });
   }
+  if (path === '/api/admin/notifications/read-all' && method === 'POST') {
+    if (!requireAdmin(user, res)) return;
+    const out = await pool.query(`update notifications set read_at=now() where recipient_user_id=$1 and read_at is null`, [user.id]);
+    return sendJson(res, 200, { ok:true, updated:out.rowCount || 0 });
+  }
+  if (path === '/api/admin/notifications' && method === 'DELETE') {
+    if (!requireAdmin(user, res)) return;
+    const pending = await pool.query(`select count(*)::int as n from notifications where recipient_user_id=$1 and type='LEAVE_REQUEST' and coalesce(data->>'status','PENDING')='PENDING'`, [user.id]);
+    const out = await pool.query(`delete from notifications where recipient_user_id=$1 and not (type='LEAVE_REQUEST' and coalesce(data->>'status','PENDING')='PENDING')`, [user.id]);
+    return sendJson(res, 200, { ok:true, deleted:out.rowCount || 0, keptPending:Number(pending.rows[0]?.n || 0) });
+  }
   m = path.match(/^\/api\/(?:admin\/)?notifications\/(\d+)\/read$/);
   if (m && method === 'POST') {
     if (!requireUser(user, res)) return;
@@ -1880,6 +1892,32 @@ header{z-index:100!important}
   .mobileStructureStand b{font-size:22px}
 }
 
+
+/* V39 — mobilny admin bez ucinania + pasek możliwie wysoko */
+.adminMobileOnly{display:none!important}.adminDesktopOnly{display:block}
+.notificationBulkActions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 10px}
+.mobileAdminCard{background:#fff;border:1px solid #cbd8ce;border-radius:12px;padding:9px;margin:7px 0;box-shadow:0 1px 3px #0000000b;min-width:0;overflow:hidden}
+.mobileAdminCardHead{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:7px;align-items:center}.mobileAdminCardHead>b{overflow-wrap:anywhere;font-size:13px}.mobileLp,.mobileRank{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:30px;padding:0 6px;border-radius:9px;background:#e7efe8;color:#123827;font-weight:1000}.mobileAdminMeta{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:7px}.mobileAdminMeta>span,.mobileScoreGrid>span{border:1px solid #dde6df;border-radius:9px;padding:6px;background:#f9fbf8;min-width:0}.mobileAdminMeta small,.mobileScoreGrid small,.mobileAdminLine small{display:block;font-size:9px;text-transform:uppercase;color:#68766d;font-weight:900}.mobileAdminMeta b,.mobileScoreGrid b{font-size:13px}.mobileAdminLine{display:flex;justify-content:space-between;gap:8px;margin-top:6px;padding:6px 2px}.mobileAdminActions{margin-top:8px}.mobileAdminActions .inlineBtns{display:grid!important;grid-template-columns:1fr 1fr;gap:6px}.mobileAdminActions button,.mobileConfirmWrap button{width:100%!important;min-width:0!important}.mobileConfirmWrap{margin-top:7px}.mobileDrawPair,.mobileScoreGrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:7px}.mobileDrawPair>div{border:1px solid #dbe5dd;border-radius:10px;padding:7px;text-align:center}.mobileDrawPair small{display:block;font-size:9px;font-weight:900;color:#68766d}.mobileDrawPair b{display:block;font-size:21px;line-height:1.1}.mobileDrawPair span{font-size:10px}.mobileWeightBlock{margin-top:8px;padding-top:7px;border-top:1px solid #e2e9e3}.mobileWeightBlock label{margin:0 0 5px;font-size:11px}.mobileWeightBlock input{width:100%;min-width:0!important}.mobileResultSum,.mobilePlace{font-size:12px;white-space:nowrap;color:#113c28}.mobileResultFooter{display:flex;justify-content:space-between;align-items:center;margin-top:7px;padding-top:7px;border-top:1px solid #e2e9e3}.mobileScoreGrid{grid-template-columns:repeat(4,minmax(0,1fr))}.mobileScoreGrid>span{text-align:center;padding:6px 3px}.mobileScoreGrid em{display:block;font-style:normal;font-size:8.5px;color:#b91c1c;font-weight:900}.mobileStatsList{display:grid;gap:6px}.mobileStatsCard{border:1px solid #cedbd1;border-radius:11px;padding:7px;background:#fff}.mobileStatsStand{display:block;margin-bottom:6px;font-size:14px}.mobileStatsCard>div{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}.mobileStatsCard span{text-align:center;border:1px solid #e0e7e1;border-radius:8px;padding:5px 2px;background:#fafcfa}.mobileStatsCard small{display:block;font-size:8px;text-transform:uppercase;color:#6c786f}.mobileStatsCard b{font-size:11px;overflow-wrap:anywhere}
+.workZoneTabs.fixedAdminNav{border-radius:0 0 10px 10px!important;box-shadow:0 5px 14px #00000022!important}.workZoneTabsSlot{margin-top:0!important}
+@media(max-width:760px){
+  .adminDesktopOnly{display:none!important}.adminMobileOnly{display:block!important}
+  .notificationBulkActions{grid-template-columns:1fr 1fr;gap:6px}.notificationBulkActions button{font-size:11px;padding:9px 5px}
+  .workZoneTabs.fixedAdminNav{padding:3px 4px!important;border-top:0!important}
+  .workZoneTabs.fixedAdminNav button{min-height:40px!important;font-size:9.8px!important;padding:5px 2px!important}
+  .resultEntryRounds{gap:10px}.resultRoundPanel>h3{margin:5px 0;padding:4px 0}
+  #adminZone-entry .grid3,#adminZone-draw .grid3,#adminZone-pdf .grid3{grid-template-columns:1fr!important}
+  #adminZone-entry .grid3 button,#adminZone-draw .grid3 button,#adminZone-pdf .grid3 button{width:100%}
+  .sectorCards{grid-template-columns:1fr!important}.drawSectorGrid{grid-template-columns:1fr!important}
+  .mobileAdminCard{width:100%;max-width:100%;box-sizing:border-box}.mobileAdminCard *{max-width:100%;box-sizing:border-box}
+  .mobileScoreGrid{grid-template-columns:repeat(4,minmax(0,1fr))}.mobileScoreGrid b{font-size:11.5px}.mobileScoreGrid small{font-size:8px}
+  #adminZone-entry .card,#adminZone-results .card,#adminZone-roster .card,#adminZone-draw .card,#adminZone-pdf .card{overflow:visible!important;max-width:100%}
+  #adminZone-entry input,#adminZone-entry button,#adminZone-entry select,#adminZone-results button,#adminZone-roster input,#adminZone-roster button,#adminZone-draw input,#adminZone-draw select,#adminZone-draw button,#adminZone-pdf button{max-width:100%;min-width:0}
+  #adminZone-results .tablewrap:not(.adminDesktopOnly),#adminZone-draw .tablewrap:not(.adminDesktopOnly){overflow-x:visible!important}
+  #adminZone-results .tablewrap:not(.adminDesktopOnly) table,#adminZone-draw .tablewrap:not(.adminDesktopOnly) table{width:100%!important;min-width:0!important;table-layout:fixed}
+  #adminZone-results .tablewrap:not(.adminDesktopOnly) th,#adminZone-results .tablewrap:not(.adminDesktopOnly) td,#adminZone-draw .tablewrap:not(.adminDesktopOnly) th,#adminZone-draw .tablewrap:not(.adminDesktopOnly) td{font-size:9.5px!important;padding:5px 2px!important;white-space:normal!important;overflow-wrap:anywhere}
+  #adminZone-results .roundClassTable,#adminZone-results .generalTable{display:none!important}
+}
+
 </style>
 </head>
 <body>
@@ -1896,7 +1934,7 @@ header{z-index:100!important}
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V38</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
+  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V39</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
     <div id="adminCreate" class="card hidden"><h2>Utwórz zawody</h2><p class="small muted">Nazwa zawodów jest używana także w nagłówkach PDF.</p><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div></div><label>Opis</label><textarea id="cNotes" placeholder="Opis zawodów, zasady, informacje organizacyjne."></textarea><button onclick="createCompetition(event)">Utwórz zawody</button></div>
@@ -1908,7 +1946,7 @@ header{z-index:100!important}
 </section>
 </main>
 <div class="quickScroll"><button onclick="scrollAppTop()">↑</button><button onclick="scrollAppBottom()">↓</button></div>
-<script src="/app.js?v=38" defer></script>
+<script src="/app.js?v=39" defer></script>
 </body>
 </html>`;
 
@@ -1919,5 +1957,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V38_FIXED_ADMIN_NAV_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V39_MOBILE_ADMIN_NOTIFICATIONS_SECTOR_AUTO_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });
