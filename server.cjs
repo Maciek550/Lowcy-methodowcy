@@ -17,7 +17,7 @@ let VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 let VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const APP_VERSION = '66';
-const APP_VERSION_NAME = 'V67_DATE_WEEKDAY_COUNTDOWN_UI';
+const APP_VERSION_NAME = 'V68_DESKTOP_COMPETITION_ROW_FIX';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 
 
@@ -1095,7 +1095,7 @@ async function route(req, res) {
   const path = url.pathname;
   const method = req.method;
 
-  if (path === '/__probe_js_v67' || path === '/__probe_boot_v67' || path === '/__probe_js_v66' || path === '/__probe_boot_v66' || path === '/__probe_js_v65' || path === '/__probe_boot_v65' || path === '/__probe_js_v63' || path === '/__probe_boot_v63' || path === '/__probe_js_v62' || path === '/__probe_boot_v62' || path === '/__probe_js_v60' || path === '/__probe_boot_v60' || path === '/__probe_js_v59' || path === '/__probe_boot_v59' || path === '/__probe_js_v58' || path === '/__probe_boot_v58' || path === '/__probe_js_v57' || path === '/__probe_boot_v57' || path === '/__probe_js_v56' || path === '/__probe_boot_v56' || path === '/__probe_js_v55' || path === '/__probe_boot_v55' || path === '/__probe_js_v54' || path === '/__probe_boot_v54' || path === '/__probe_js_v53' || path === '/__probe_boot_v53' || path === '/__probe_js_v52' || path === '/__probe_boot_v52' || path === '/__probe_js_v51' || path === '/__probe_boot_v51' || path === '/__probe_js_v50' || path === '/__probe_boot_v50' || path === '/__probe_js_v49' || path === '/__probe_boot_v49' || path === '/__probe_js_v36' || path === '/__probe_boot_v36' || path === '/__probe_js_v35' || path === '/__probe_boot_v35' || path === '/__probe_js_v34' || path === '/__probe_boot_v34' || path === '/__probe_js_v33' || path === '/__probe_boot_v33' || path === '/__probe_js_v32' || path === '/__probe_boot_v32' || path === '/__probe_js_v30' || path === '/__probe_boot_v30' || path === '/__probe_js_v29' || path === '/__probe_boot_v29' || path === '/__probe_js_v27' || path === '/__probe_boot_v27' || path === '/__probe_inline_v26') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
+  if (path === '/__probe_js_v68' || path === '/__probe_boot_v68' || path === '/__probe_js_v67' || path === '/__probe_boot_v67' || path === '/__probe_js_v66' || path === '/__probe_boot_v66' || path === '/__probe_js_v65' || path === '/__probe_boot_v65' || path === '/__probe_js_v63' || path === '/__probe_boot_v63' || path === '/__probe_js_v62' || path === '/__probe_boot_v62' || path === '/__probe_js_v60' || path === '/__probe_boot_v60' || path === '/__probe_js_v59' || path === '/__probe_boot_v59' || path === '/__probe_js_v58' || path === '/__probe_boot_v58' || path === '/__probe_js_v57' || path === '/__probe_boot_v57' || path === '/__probe_js_v56' || path === '/__probe_boot_v56' || path === '/__probe_js_v55' || path === '/__probe_boot_v55' || path === '/__probe_js_v54' || path === '/__probe_boot_v54' || path === '/__probe_js_v53' || path === '/__probe_boot_v53' || path === '/__probe_js_v52' || path === '/__probe_boot_v52' || path === '/__probe_js_v51' || path === '/__probe_boot_v51' || path === '/__probe_js_v50' || path === '/__probe_boot_v50' || path === '/__probe_js_v49' || path === '/__probe_boot_v49' || path === '/__probe_js_v36' || path === '/__probe_boot_v36' || path === '/__probe_js_v35' || path === '/__probe_boot_v35' || path === '/__probe_js_v34' || path === '/__probe_boot_v34' || path === '/__probe_js_v33' || path === '/__probe_boot_v33' || path === '/__probe_js_v32' || path === '/__probe_boot_v32' || path === '/__probe_js_v30' || path === '/__probe_boot_v30' || path === '/__probe_js_v29' || path === '/__probe_boot_v29' || path === '/__probe_js_v27' || path === '/__probe_boot_v27' || path === '/__probe_inline_v26') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/api/version') return sendJson(res, 200, { ok:true, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/app.js') return send(res, 200, APP_JS, {'Content-Type':'application/javascript; charset=utf-8', 'Cache-Control':'no-store, no-cache, must-revalidate'});
 
@@ -2973,6 +2973,64 @@ header{z-index:100!important}
 @media(max-width:760px){.myProfileCard{padding:10px!important}.myProfileHead{align-items:center}.myProfileGrid{grid-template-columns:1fr;gap:7px}.myProfileActions{display:block}.myProfileActions button{width:100%;min-width:0}.playerCompCompactCard{padding-top:8px!important;padding-bottom:8px!important}.playerCompTitle b{font-size:13px!important}.playerCompDateLine{gap:7px!important}.playerCompDate{font-size:16px!important}.playerCompWeekday{font-size:11.5px!important;min-height:23px!important;padding:4px 7px!important}.playerCompSubLine{gap:6px!important}.playerCompCountdown{font-size:10.5px!important;min-height:24px!important;padding:5px 8px!important}.playerCompFishery{font-size:9.8px!important}}
 @media(max-width:390px){.playerCompDateLine{gap:5px!important}.playerCompDate{font-size:15px!important}.playerCompWeekday{font-size:10.5px!important;padding:4px 6px!important}.playerCompCountdown{font-size:9.8px!important;padding:5px 6px!important}.playerCompFishery{font-size:9.2px!important}}
 
+
+
+/* V68 — desktop: data / dzień / odliczanie bez nachodzenia na kolejne kolumny */
+@media(min-width:761px){
+  .playerCompDesktopRow{
+    grid-template-columns:52px minmax(220px,1fr) 200px 110px 112px 92px minmax(180px,.82fr)!important;
+    column-gap:8px!important;
+    min-height:74px!important;
+    align-items:center!important;
+  }
+  .playerCompDesktopRow>*{min-width:0!important}
+  .playerCompDesktopDate{width:100%!important;min-width:0!important;overflow:visible!important;white-space:normal!important}
+  .playerCompDesktopDateBox{
+    width:100%!important;
+    display:grid!important;
+    grid-template-rows:auto auto!important;
+    gap:6px!important;
+    align-items:center!important;
+    white-space:normal!important;
+  }
+  .playerCompDesktopDateTop{
+    display:grid!important;
+    grid-template-columns:max-content max-content!important;
+    justify-content:start!important;
+    align-items:center!important;
+    gap:7px!important;
+    min-width:0!important;
+  }
+  .playerCompDesktopDateBox .playerCompDate{font-size:15px!important;white-space:nowrap!important}
+  .playerCompDesktopDateBox .playerCompWeekday{
+    font-size:11px!important;
+    min-height:24px!important;
+    padding:4px 8px!important;
+    white-space:nowrap!important;
+  }
+  .playerCompDesktopDateBox .playerCompCountdown{
+    justify-self:start!important;
+    font-size:10.5px!important;
+    min-height:25px!important;
+    padding:5px 9px!important;
+    white-space:nowrap!important;
+  }
+  .playerCompDesktopCount{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    gap:4px!important;
+    min-width:0!important;
+  }
+  .playerCompDesktopRow .playerCompMineBadge{justify-self:center!important}
+  .playerCompDesktopRow .playerCompStatus{justify-self:stretch!important}
+  .playerCompDesktopRow .playerCompCompactActions{min-width:0!important}
+}
+@media(min-width:761px) and (max-width:1080px){
+  .playerCompetitionDesktopOnly{overflow-x:auto!important;-webkit-overflow-scrolling:touch}
+  .playerCompDesktopRow{min-width:1030px!important}
+}
+
 </style>
 </head>
 <body>
@@ -2989,7 +3047,7 @@ header{z-index:100!important}
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V67</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
+  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V68</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-profile" class="hidden" onclick="showTab('profile')">Mój profil</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
     <div id="adminCreate" class="card hidden"><h2>Utwórz zawody</h2><p class="small muted">Nazwa zawodów jest używana także w nagłówkach PDF.</p><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div></div><label>Opis</label><textarea id="cNotes" placeholder="Opis zawodów, zasady, informacje organizacyjne."></textarea><button onclick="createCompetition(event)">Utwórz zawody</button></div>
@@ -3002,7 +3060,7 @@ header{z-index:100!important}
 </section>
 </main>
 <div class="quickScroll"><button onclick="scrollAppTop()">↑</button><button onclick="scrollAppBottom()">↓</button></div>
-<script src="/app.js?v=62" defer></script>
+<script src="/app.js?v=68" defer></script>
 </body>
 </html>`;
 
@@ -3013,5 +3071,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V67_DATE_WEEKDAY_COUNTDOWN_UI_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V68_DESKTOP_COMPETITION_ROW_FIX_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });
