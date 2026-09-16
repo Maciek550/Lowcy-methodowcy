@@ -17,7 +17,7 @@ const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const APP_VERSION = '36';
-const APP_VERSION_NAME = 'V39_MOBILE_ADMIN_NOTIFICATIONS_SECTOR_AUTO';
+const APP_VERSION_NAME = 'V40_COMPACT_MOBILE_ADMIN';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 
 if (webpush && VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
@@ -1918,6 +1918,81 @@ header{z-index:100!important}
   #adminZone-results .roundClassTable,#adminZone-results .generalTable{display:none!important}
 }
 
+
+/* V40 — mobilny admin: zwarty, pełne wykorzystanie ekranu */
+.adminMobileOnly{display:none}
+@media(max-width:760px){
+  body{font-size:13px!important}
+  main{padding:3px!important}
+  .card{margin:4px 0!important;padding:6px!important;border-radius:9px!important}
+  h2{font-size:15px!important;line-height:1.1!important;margin:0 0 5px!important}
+  h3{font-size:13px!important;line-height:1.1!important;margin:6px 0 4px!important}
+  .small{font-size:10.5px!important}
+  label{font-size:9.5px!important;margin:4px 0 2px!important}
+  input,select,textarea,button{font-size:11.5px!important;padding:6px 7px!important;border-radius:8px!important}
+  textarea{min-height:48px!important}
+  .grid,.grid3,.grid4,.twoCols,.ownbox,.adminbar{gap:4px!important}
+  .inlineBtns{gap:3px!important}
+  .inlineBtns button{min-height:28px!important;padding:4px 6px!important;font-size:10.5px!important}
+  .adminDesktopOnly{display:none!important}
+  .adminMobileOnly{display:block!important}
+
+  /* pasek stref: możliwie wysoko i zwarty */
+  .workZoneTabs{gap:3px!important;padding:3px!important;margin:0!important}
+  .workZoneTabs.fixedAdminNav{z-index:1000!important;margin:0!important}
+  .workZoneTabs button{min-height:34px!important;padding:4px 3px!important;font-size:9.2px!important;line-height:1.02!important;border-radius:7px!important}
+
+  /* lista zawodników — gęste wiersze zamiast dużych kart */
+  .rosterSectionTitle{margin-top:5px!important}
+  .mobileRosterCompact{display:flex;flex-direction:column;gap:2px}
+  .mobileRosterCompactRow{border:1px solid #d5dfd7;border-radius:7px;background:#fff;padding:4px 5px}
+  .mobileRosterCompactHead{display:grid;grid-template-columns:22px minmax(0,1fr) auto;align-items:center;gap:4px}
+  .mobileRosterCompactLp{display:flex;align-items:center;justify-content:center;width:22px;height:22px;background:#edf3ee;border-radius:6px;font-weight:1000;font-size:11px}
+  .mobileRosterCompactHead>b{font-size:11.8px;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mobileRosterCompactStatus{font-size:8.8px;font-weight:900;color:#5a6860;white-space:nowrap}
+  .mobileRosterCompactMeta{display:flex;justify-content:space-between;gap:5px;margin:2px 0 3px 26px;font-size:9px;color:#647068;white-space:nowrap;overflow:hidden}
+  .mobileRosterCompactMeta span{overflow:hidden;text-overflow:ellipsis}
+  .mobileRosterCompactActions{display:grid;grid-template-columns:1.05fr 1.5fr;gap:3px;margin-left:26px}
+  .mobileRosterCompactActions>.confirmEntryBtn{grid-column:auto;min-width:0!important}
+  .mobileRosterCompactActions>.inlineBtns{display:grid!important;grid-template-columns:1fr 1fr!important;gap:3px!important}
+  .mobileRosterCompactActions button{width:100%!important;min-width:0!important;min-height:27px!important;padding:3px 3px!important;font-size:9.8px!important}
+
+  /* wpisywanie wyników — maksymalnie zwarte karty */
+  .mobileResultEntryList{display:flex;flex-direction:column;gap:3px!important}
+  .mobileAdminCard,.mobileResultEntryCard{margin:0!important;padding:5px!important;border-radius:7px!important}
+  .mobileAdminCardHead{gap:4px!important;margin-bottom:3px!important}
+  .mobileAdminCardHead>b{font-size:11.5px!important}
+  .mobileLp{width:22px!important;height:22px!important;font-size:10.5px!important}
+  .mobileResultSum{font-size:10.5px!important}
+  .mobileAdminMeta{grid-template-columns:1fr 1fr!important;gap:3px!important;margin:3px 0!important}
+  .mobileAdminMeta span{padding:3px 5px!important;border-radius:6px!important}
+  .mobileAdminMeta small{font-size:8px!important}
+  .mobileWeightBlock{margin-top:3px!important}
+  .mobileWeightBlock label{margin:2px 0!important}
+  .weightItems{gap:2px!important;margin-bottom:2px!important}
+  .weightTag{font-size:9px!important;padding:2px 4px!important}
+  .weightInput{min-width:0!important;width:100%!important;min-height:30px!important;padding:5px 6px!important;font-size:11px!important}
+
+  /* sektor/mapa, wyniki i PDF */
+  .mobileStructureMap{padding:4px!important}
+  .compactAdminSectors{gap:4px!important}
+  .compactAdminSector{padding:4px!important;border-radius:7px!important}
+  .mobileStructureGrid{gap:3px!important}
+  .mobileStructureStand{min-height:30px!important;border-radius:6px!important}
+  .mobileStructureStand b{font-size:16px!important}
+  .drawSectorGrid{gap:4px!important}
+  .drawSectorBox{padding:4px!important}
+  .sharpTable th,.sharpTable td{padding:4px 3px!important;font-size:10.5px!important}
+  .generalTable th,.generalTable td{padding:4px 3px!important;font-size:10.5px!important}
+  .notificationTable td{padding:5px!important;font-size:10.5px!important}
+  .leaveRequestActions{gap:3px!important}
+  .leaveRequestActions button{min-height:29px!important;padding:4px!important;font-size:10px!important}
+
+  /* mniej miejsca na przewijanie pomocnicze */
+  .quickScroll{right:4px!important;bottom:44px!important;gap:4px!important}
+  .quickScroll button{width:34px!important;padding:5px 0!important;font-size:11px!important}
+}
+
 </style>
 </head>
 <body>
@@ -1934,7 +2009,7 @@ header{z-index:100!important}
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V39</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
+  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V40</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
     <div id="adminCreate" class="card hidden"><h2>Utwórz zawody</h2><p class="small muted">Nazwa zawodów jest używana także w nagłówkach PDF.</p><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div></div><label>Opis</label><textarea id="cNotes" placeholder="Opis zawodów, zasady, informacje organizacyjne."></textarea><button onclick="createCompetition(event)">Utwórz zawody</button></div>
@@ -1946,7 +2021,7 @@ header{z-index:100!important}
 </section>
 </main>
 <div class="quickScroll"><button onclick="scrollAppTop()">↑</button><button onclick="scrollAppBottom()">↓</button></div>
-<script src="/app.js?v=39" defer></script>
+<script src="/app.js?v=40" defer></script>
 </body>
 </html>`;
 
@@ -1957,5 +2032,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V39_MOBILE_ADMIN_NOTIFICATIONS_SECTOR_AUTO_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V40_COMPACT_MOBILE_ADMIN_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });

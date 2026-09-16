@@ -1,4 +1,4 @@
-const CLIENT_VERSION='39';const CLIENT_VERSION_NAME='V39_MOBILE_ADMIN_NOTIFICATIONS_SECTOR_AUTO';try{fetch('/__probe_js_v39',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V39_MOBILE_ADMIN_NOTIFICATIONS_SECTOR_AUTO_LOADED');
+const CLIENT_VERSION='40';const CLIENT_VERSION_NAME='V40_COMPACT_MOBILE_ADMIN';try{fetch('/__probe_js_v40',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V40_COMPACT_MOBILE_ADMIN_LOADED');
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let TOKEN = STORE.get('carp_token') || '';
 let ME = null;
@@ -146,7 +146,33 @@ function importZawodyPro(id,ev){const btn=ev?.target;if(btn){btn.disabled=true;b
 async function addManualPlayer(id,ev){const btn=ev?.target;if(btn){btn.disabled=true;btn.textContent='Dopisuję...'}try{const fullName=q('manualFullName').value.trim();if(!fullName)throw new Error('Podaj imię i nazwisko');await api('/api/admin/competitions/'+id+'/players/manual',{method:'POST',body:JSON.stringify({fullName,phone:q('manualPhone').value,pzwClub:q('manualClub').value,password:q('manualPassword').value,entryStatus:q('manualStatus').value})});['manualFullName','manualPhone','manualClub','manualPassword'].forEach(x=>{const el=q(x);if(el)el.value='' });msg('Dopisano zawodnika');await refreshCompetitionKeepScroll(id);await loadCompetitions();await loadPlayers();await loadNotifications()}catch(e){msg(e.message,'bad')}finally{if(btn){btn.disabled=false;btn.textContent='Dopisz zawodnika'}}}
 async function setEntryStatus(compId,entryId,action){try{const txt=action==='promote'?'Przenieść na listę główną?':action==='reserve'?'Przenieść na rezerwę?':'Wypisać zawodnika z zawodów?';if(!confirm(txt))return;await api('/api/admin/competitions/'+compId+'/entries/'+entryId+'/'+action,{method:'POST',body:'{}'});msg('Zmieniono status zawodnika');await refreshCompetitionKeepScroll(compId);await loadCompetitions();await loadPlayers();await loadNotifications()}catch(e){msg(e.message,'bad')}}
 async function toggleEntryConfirm(compId,entryId,el){try{if(el)el.disabled=true;const d=await api('/api/admin/competitions/'+compId+'/entries/'+entryId+'/confirm',{method:'POST',body:'{}'});msg(d.confirmed?'Potwierdzono zawodnika':'Cofnięto potwierdzenie');await refreshCompetitionKeepScroll(compId)}catch(e){msg(e.message,'bad');if(el)el.disabled=false}}
-function rosterTable(title,rows,compId,kind){rows=rows||[];let html='<h3>'+title+' <span class="pill">'+rows.length+'</span></h3>';if(!rows.length)return html+'<p class="muted small">Brak.</p>';const makeButtons=e=>{if(kind==='ACTIVE')return '<div class="inlineBtns"><button type="button" class="secondary" onclick="setEntryStatus('+compId+','+e.id+',\'reserve\')">⬇ Rezerwa</button><button type="button" class="warn" onclick="setEntryStatus('+compId+','+e.id+',\'cancel\')">Wypisz</button></div>';if(kind==='RESERVE')return '<div class="inlineBtns"><button type="button" onclick="setEntryStatus('+compId+','+e.id+',\'promote\')">⬆ Do głównej</button><button type="button" class="warn" onclick="setEntryStatus('+compId+','+e.id+',\'cancel\')">Wypisz</button></div>';return '<button type="button" class="secondary" onclick="setEntryStatus('+compId+','+e.id+',\'promote\')">Przywróć do głównej</button>'};const confirmBtn=e=>kind==='ACTIVE'?'<button type="button" class="confirmEntryBtn '+(e.confirmed?'confirmed':'')+'" onclick="toggleEntryConfirm('+compId+','+e.id+',this)">'+(e.confirmed?'✓ Potwierdzony':'Potwierdź')+'</button>':'—';const desktop='<div class="tablewrap adminDesktopOnly"><table><thead><tr><th style="width:46px">Lp.</th><th>Zawodnik</th><th>Telefon</th><th>Koło</th><th>Status</th><th>Potw.</th><th>Akcja</th></tr></thead><tbody>'+rows.map((e,idx)=>'<tr><td class="center"><b>'+(idx+1)+'</b></td><td><b>'+esc(e.first_name+' '+e.last_name)+'</b></td><td class="nowrap">'+esc(e.phone||'')+'</td><td>'+esc(e.pzw_club||'')+'</td><td>'+statusLabel(e.status)+'</td><td class="center">'+confirmBtn(e)+'</td><td>'+makeButtons(e)+'</td></tr>').join('')+'</tbody></table></div>';const mobile='<div class="adminMobileOnly mobileRosterList">'+rows.map((e,idx)=>'<article class="mobileAdminCard mobileRosterCard"><div class="mobileAdminCardHead"><span class="mobileLp">'+(idx+1)+'</span><b>'+esc(e.first_name+' '+e.last_name)+'</b></div><div class="mobileAdminMeta"><span><small>Status</small><b>'+statusLabel(e.status)+'</b></span><span><small>Koło</small><b>'+esc(e.pzw_club||'—')+'</b></span></div>'+(e.phone?'<div class="mobileAdminLine"><small>Telefon</small><span>'+esc(e.phone)+'</span></div>':'')+(kind==='ACTIVE'?'<div class="mobileConfirmWrap">'+confirmBtn(e)+'</div>':'')+'<div class="mobileAdminActions">'+makeButtons(e)+'</div></article>').join('')+'</div>';return html+desktop+mobile}
+function rosterTable(title,rows,compId,kind){
+  rows=rows||[];
+  let html='<h3 class="rosterSectionTitle">'+title+' <span class="pill">'+rows.length+'</span></h3>';
+  if(!rows.length)return html+'<p class="muted small">Brak.</p>';
+  const makeButtons=e=>{
+    if(kind==='ACTIVE')return '<div class="inlineBtns"><button type="button" class="secondary" onclick="setEntryStatus('+compId+','+e.id+',\'reserve\')">↓ Rezerwa</button><button type="button" class="warn" onclick="setEntryStatus('+compId+','+e.id+',\'cancel\')">Wypisz</button></div>';
+    if(kind==='RESERVE')return '<div class="inlineBtns"><button type="button" onclick="setEntryStatus('+compId+','+e.id+',\'promote\')">↑ Główna</button><button type="button" class="warn" onclick="setEntryStatus('+compId+','+e.id+',\'cancel\')">Wypisz</button></div>';
+    return '<button type="button" class="secondary" onclick="setEntryStatus('+compId+','+e.id+',\'promote\')">Przywróć</button>';
+  };
+  const confirmBtn=e=>kind==='ACTIVE'
+    ?'<button type="button" class="confirmEntryBtn '+(e.confirmed?'confirmed':'')+'" onclick="toggleEntryConfirm('+compId+','+e.id+',this)">'+(e.confirmed?'✓':'Potwierdź')+'</button>'
+    :'';
+  const desktop='<div class="tablewrap adminDesktopOnly"><table><thead><tr><th style="width:46px">Lp.</th><th>Zawodnik</th><th>Telefon</th><th>Koło</th><th>Status</th><th>Potw.</th><th>Akcja</th></tr></thead><tbody>'
+    +rows.map((e,idx)=>'<tr><td class="center"><b>'+(idx+1)+'</b></td><td><b>'+esc(e.first_name+' '+e.last_name)+'</b></td><td class="nowrap">'+esc(e.phone||'')+'</td><td>'+esc(e.pzw_club||'')+'</td><td>'+statusLabel(e.status)+'</td><td class="center">'+(confirmBtn(e)||'—')+'</td><td>'+makeButtons(e)+'</td></tr>').join('')
+    +'</tbody></table></div>';
+  const mobile='<div class="adminMobileOnly mobileRosterCompact">'
+    +rows.map((e,idx)=>{
+      const club=e.pzw_club?('K'+esc(e.pzw_club)):'';
+      return '<div class="mobileRosterCompactRow">'
+        +'<div class="mobileRosterCompactHead"><span class="mobileRosterCompactLp">'+(idx+1)+'</span><b>'+esc(e.first_name+' '+e.last_name)+'</b><span class="mobileRosterCompactStatus">'+statusLabel(e.status)+'</span></div>'
+        +'<div class="mobileRosterCompactMeta"><span>'+esc(e.phone||'')+'</span>'+(club?'<span>'+club+'</span>':'')+'</div>'
+        +'<div class="mobileRosterCompactActions">'+(confirmBtn(e)||'')+makeButtons(e)+'</div>'
+        +'</div>';
+    }).join('')
+    +'</div>';
+  return html+desktop+mobile;
+}
 function renderEntries(d){const c=d.competition;return '<div class="card"><h2>Panel zapisów — lista główna i rezerwa</h2>'+rosterTable('Lista główna — bierze udział w losowaniu',d.activeEntries||[],c.id,'ACTIVE')+rosterTable('Lista rezerwowa',d.reserveEntries||[],c.id,'RESERVE')+rosterTable('Wypisani',d.cancelledEntries||[],c.id,'CANCELLED')+'</div>'}
 function renderDrawPanel(d){const c=d.competition;const x=rosterCounts(d);const hasDraw=(d.draws||[]).length>0;return '<div class="card"><h2>Losowanie stanowisk</h2><div class="card '+(x.stands===x.draw?'success-line':'danger-line')+'"><b>Do losowania: '+x.draw+' zawodników z listy głównej.</b><br><span class="small muted">Stanowiska w strukturze: '+x.stands+'. Rezerwa nie jest losowana.</span></div><div class="grid3"><button type="button" onclick="drawRound('+c.id+',1,event)">Losuj T1</button><button type="button" class="blue" onclick="drawRound('+c.id+',2,event)">Losuj T2</button><button type="button" class="secondary" onclick="publishDraw('+c.id+',event)">Publikuj losowanie</button></div><button type="button" class="warn" style="margin-top:10px" '+(hasDraw?'':'disabled')+' onclick="resetDraw('+c.id+',event)">Resetuj losowanie T1 i T2</button><p class="small muted">Reset usuwa wyłącznie wylosowane stanowiska obu tur. Lista zawodników, sektory, ustawienia zawodów i wpisane wyniki pozostają bez zmian.</p>'+renderRoundDrawView(d,1,false)+renderRoundDrawView(d,2,false)+'<h3>Tabela zbiorcza losowania</h3>'+renderDrawTable(d,true)+'</div>'}
 async function drawRound(id,round,ev){const btn=ev?.target;try{if(!confirm('Wykonać losowanie T'+round+' dla aktualnej listy głównej? Poprzednie T'+round+' zostanie zastąpione. Powiadomienia pójdą dopiero po kliknięciu Publikuj losowanie.'))return;if(btn){btn.disabled=true;btn.textContent='Losuję...'}await api('/api/admin/competitions/'+id+'/draw/'+round,{method:'POST',body:'{}'});msg('Wylosowano T'+round+' — bez publikacji');await refreshCompetitionKeepScroll(id);await loadNotifications()}catch(e){msg(e.message,'bad')}finally{if(btn){btn.disabled=false;btn.textContent='Losuj T'+round}}}
@@ -284,10 +310,11 @@ function syncFixedAdminNav(){
       if(slot)slot.style.height='';
       return;
     }
-    const header=document.querySelector('header'),hr=header?header.getBoundingClientRect():null;const top=(hr&&hr.bottom>0&&hr.top<=1)?Math.max(0,Math.ceil(hr.bottom)):0;
+    const header=document.querySelector('header'),hr=header?header.getBoundingClientRect():null;
+    const top=(hr&&hr.bottom>0)?Math.max(0,Math.ceil(hr.bottom)):0;
     const slotRect=slot.getBoundingClientRect(),detailRect=detail.getBoundingClientRect();
-    const tabH=Math.ceil(tabs.getBoundingClientRect().height||tabs.offsetHeight||56);
-    const shouldFix=slotRect.top<=top && detailRect.bottom>top+tabH+12;
+    const tabH=Math.ceil(tabs.getBoundingClientRect().height||tabs.offsetHeight||44);
+    const shouldFix=slotRect.top<=top && detailRect.bottom>top+tabH+6;
     if(shouldFix){
       slot.style.height=tabH+'px';
       tabs.classList.add('fixedAdminNav');
