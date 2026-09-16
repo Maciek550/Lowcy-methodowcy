@@ -1,4 +1,4 @@
-const CLIENT_VERSION='49';const CLIENT_VERSION_NAME='V49_PLAYER_MOBILE_DRAW_MAPS';try{fetch('/__probe_js_v49',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V49_PLAYER_MOBILE_DRAW_MAPS_LOADED');
+const CLIENT_VERSION='50';const CLIENT_VERSION_NAME='V50_PLAYER_MOBILE_ACCORDION_MAPS';try{fetch('/__probe_js_v50',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V50_PLAYER_MOBILE_ACCORDION_MAPS_LOADED');
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let TOKEN = STORE.get('carp_token') || '';
 let ME = null;
@@ -14,7 +14,7 @@ let ACTIVE_ADMIN_ZONE = 'roster';
 let PLAYER_DRAW_ROUND = 1;
 let PLAYER_RESULTS_TAB = 't1';
 let PLAYER_MOBILE_PANEL = null;
-let PLAYER_DRAW_VIEW_MODE = {1:'sectors',2:'sectors'};
+let PLAYER_SECTOR_STATE = {1:null,2:null};
 let SHOW_FINAL_CLUB = false;
 const q = id => document.getElementById(id);
 window.addEventListener('error',e=>{console.error('CLIENT_ERR',e.message);try{const m=document.getElementById('msg');if(m)m.innerHTML='<div class=\"card bad danger-line\">Błąd ekranu: '+String(e.message||'nieznany')+'</div>'}catch(_){}});
@@ -167,26 +167,44 @@ function renderPlayerResultsMobile(d){
     +'<section id="playerResults-stats" class="playerResultsSection '+(active==='stats'?'':'hidden')+'">'+renderPlayerStatsCompact(d)+'</section>'
     +'</div>';
 }
-function getPlayerDrawMode(round){return PLAYER_DRAW_VIEW_MODE&&PLAYER_DRAW_VIEW_MODE[Number(round)]==='map'?'map':'sectors'}
-function setPlayerDrawMode(round,mode){if(!PLAYER_DRAW_VIEW_MODE)PLAYER_DRAW_VIEW_MODE={1:'sectors',2:'sectors'};PLAYER_DRAW_VIEW_MODE[Number(round)]=mode==='map'?'map':'sectors'}
-function renderPlayerOwnRound(d,round){
-  const x=(d.draws||[]).find(v=>Number(v.round)===Number(round)&&Number(v.user_id)===Number(ME.id));
-  return '<div class="playerSelectedOwn"><span class="tag '+(round===1?'t1tag':'t2tag')+'">T'+round+'</span><strong>'+(x?esc(x.stand):'—')+'</strong><b>'+(x?'Sektor '+esc(x.sector):'Brak losowania')+'</b></div>';
+function playerNameCompact(name,cramped=false){
+  const parts=String(name||'').trim().split(/\s+/).filter(Boolean);
+  if(!parts.length)return '—';
+  const first=parts[0]||'',last=parts[parts.length-1]||'';
+  if(cramped || last.length>12)return (first?first.charAt(0)+'.':'')+last;
+  return last;
 }
+function renderPlayerOwnSummary(d){
+  const one=(round)=>{const x=(d.draws||[]).find(v=>Number(v.round)===Number(round)&&Number(v.user_id)===Number(ME.id));return '<div class="playerOwnSummaryCard round'+round+'"><div class="playerOwnSummaryTitle">TURA '+round+'</div><div class="playerOwnSummaryMain"><span class="playerOwnSummaryRound">T'+round+'</span><span class="playerOwnSummaryStand">'+(x?esc(x.stand):'—')+'</span><span class="playerOwnSummarySector">Sektor '+(x?esc(x.sector):'—')+'</span></div><div class="playerOwnSummaryLabels"><span>Tura</span><span>Stanowisko</span><span>Sektor</span></div></div>'};
+  return '<div class="playerOwnSummaryWrap"><div class="playerOwnSummaryHeading">MOJE STANOWISKA</div><div class="playerOwnSummaryGrid">'+one(1)+one(2)+'</div></div>';
+}
+function renderPlayerSectorStand(n,c,byStand,cramped){
+  const sec=sectorForStandClient(n,c),x=byStand[Number(n)],mine=x&&Number(x.draw.user_id)===Number(ME.id),name=x?x.name.trim():'—';
+  return '<div class="playerSectorStand '+sectorColorClass(sec,c)+(mine?' minePlayerSectorStand':'')+'"><b class="playerSectorStandNo">'+n+'</b><span class="playerSectorStandName">'+esc(playerNameCompact(name,cramped))+'</span>'+(mine?'<small class="playerSectorMineBadge">TY</small>':'')+'</div>';
+}
+function renderPlayerSectorBank(label,arr,c,byStand){
+  if(!arr||!arr.length)return '';
+  const cramped=arr.length>=4;
+  return '<div class="playerSectorBank"><div class="playerSectorBankTitle">≋ '+esc(label)+' <span>('+arr.length+' os.)</span></div><div class="playerSectorStandGrid cols'+Math.min(4,Math.max(1,arr.length))+'">'+arr.map(n=>renderPlayerSectorStand(n,c,byStand,cramped)).join('')+'</div></div>';
+}
+function renderPlayerSectorAccordion(d,round){
+  const c=d.competition,layout=sectorLayoutClient(c),byStand=roundDrawStandMap(d,round),mine=(d.draws||[]).find(v=>Number(v.round)===Number(round)&&Number(v.user_id)===Number(ME.id)),mineSector=mine?String(mine.sector||''):'';
+  if(!Object.keys(byStand).length)return '<div class="card"><p class="muted">Brak losowania T'+round+'.</p></div>';
+  return '<div class="playerSectorAccordionList">'+layout.map((sec,idx)=>{const letter=String(sec.letter||''),open=(idx===0||letter===mineSector),total=(sec.top||[]).length+(sec.bottom||[]).length;let inner='';if(c.map_mode==='ONE_BANK')inner+=renderPlayerSectorBank('JEDEN BRZEG',sec.bottom,c,byStand);else if(c.map_mode==='TWO_ALONG'){if(sec.top?.length)inner+=renderPlayerSectorBank('BRZEG 2',sec.top,c,byStand);if(sec.bottom?.length)inner+=renderPlayerSectorBank('BRZEG 1',sec.bottom,c,byStand)}else{if(sec.top?.length)inner+=renderPlayerSectorBank('BRZEG GÓRNY',sec.top,c,byStand);if(sec.bottom?.length)inner+=renderPlayerSectorBank('BRZEG DOLNY',sec.bottom,c,byStand)}return '<section class="playerSectorAccordion '+sectorColorClass(letter,c)+' '+(open?'open':'collapsed')+'"><button type="button" class="playerSectorAccordionHead" onclick="togglePlayerSectorAccordion(this,event)"><span class="playerSectorCircle">'+esc(letter)+'</span><b>SEKTOR '+esc(letter)+'</b><span class="playerSectorCount">'+total+' os.</span><span class="playerSectorChevron">⌃</span></button><div class="playerSectorAccordionBody">'+inner+'</div></section>'}).join('')+'</div>';
+}
+function togglePlayerSectorAccordion(btn,ev){if(ev){ev.preventDefault();ev.stopPropagation()}const box=btn&&btn.closest('.playerSectorAccordion');if(!box)return;box.classList.toggle('collapsed');box.classList.toggle('open');}
 function renderPlayerMobilePanelContent(d,panel){
   if(panel==='draw1'||panel==='draw2'){
     const round=panel==='draw2'?2:1;
-    const mode=getPlayerDrawMode(round);
-    const drawButton=(m,label)=>'<button type="button" class="'+(mode===m?'active':'')+'" onclick="showPlayerDrawMode('+round+',\''+m+'\',event)">'+label+'</button>';
-    const drawContent=mode==='map'
-      ? '<div class="playerMobileFullMapWrap"><div class="playerMobileFullMapScroll">'+renderRoundDrawMap(d,round)+'</div></div>'
-      : renderMobileRoundDrawMap(d,round);
     return '<div class="playerMobileSelectedPanel playerMobileDrawSelected">'
-      +renderPlayerOwnRound(d,round)
-      +'<div class="playerDrawModeTabs">'+drawButton('sectors','SEKTORY T'+round)+drawButton('map','MAPA ŁOWISKA T'+round)+'</div>'
-      +drawContent
+      +'<div class="playerMobileSectionTitle">ROZMIESZCZENIE W SEKTORACH — TURA '+round+'</div>'
+      +renderPlayerSectorAccordion(d,round)
       +'<div class="playerMobileSectorTables">'+renderDrawSectorTables(d,round)+'</div>'
       +'</div>';
+  }
+  if(panel==='map1'||panel==='map2'){
+    const round=panel==='map2'?2:1;
+    return '<div class="playerMobileSelectedPanel"><div class="playerMobileFullMapWrap"><div class="playerMobileFullMapTitle">MAPA ŁOWISKA — TURA '+round+'</div><div class="playerMobileFullMapScroll">'+renderRoundDrawMap(d,round)+'</div></div></div>';
   }
   if(panel==='t1')return '<div class="playerMobileSelectedPanel"><div class="card playerResultCard"><h2>Wyniki sektorowe — Tura 1</h2>'+renderSectorResultsColumn(d.classification.round1,'1 tura')+'<h2 class="playerWholeRoundTitle">Cała Tura 1</h2>'+renderPlayerRoundCompact(d.classification.round1,1)+'</div></div>';
   if(panel==='t2')return '<div class="playerMobileSelectedPanel"><div class="card playerResultCard"><h2>Wyniki sektorowe — Tura 2</h2>'+renderSectorResultsColumn(d.classification.round2,'2 tura')+'<h2 class="playerWholeRoundTitle">Cała Tura 2</h2>'+renderPlayerRoundCompact(d.classification.round2,2)+'</div></div>';
@@ -201,7 +219,9 @@ function renderPlayerMobileDashboard(d){
     +'<div class="playerDrawStickySlot"><div class="card playerDrawHeaderCard playerUnifiedNav">'
     +'<div class="playerDrawTabs">'+b('draw1','Losowanie Tura 1','drawTile')+b('draw2','Losowanie Tura 2','drawTile')+'</div>'
     +'<div class="playerResultsNav playerResultsNavInline">'+b('t1','TURA 1')+b('t2','TURA 2')+b('general','KLASYFIKACJA')+b('stats','STATYSTYKI')+'</div>'
+    +'<div class="playerMapNav">'+b('map1','MAPA ŁOWISKA T1','mapTile')+b('map2','MAPA ŁOWISKA T2','mapTile')+'</div>'
     +'</div></div>'
+    +renderPlayerOwnSummary(d)
     +'<div id="playerMobilePanelContent">'+renderPlayerMobilePanelContent(d,p)+'</div>'
     +'</div>';
 }
@@ -222,10 +242,10 @@ function renderPlayerDetail(d){
 }
 function showPlayerMobilePanel(panel,ev){
   if(ev){ev.preventDefault();ev.stopPropagation()}
-  const allowed=['draw1','draw2','t1','t2','general','stats'];
+  const allowed=['draw1','draw2','map1','map2','t1','t2','general','stats'];
   if(!allowed.includes(panel))return;
   PLAYER_MOBILE_PANEL=panel;
-  if(panel==='draw1'||panel==='draw2')PLAYER_DRAW_ROUND=panel==='draw2'?2:1;
+  if(panel==='draw1'||panel==='draw2'||panel==='map1'||panel==='map2')PLAYER_DRAW_ROUND=(panel==='draw2'||panel==='map2')?2:1;
   if(['t1','t2','general','stats'].includes(panel))PLAYER_RESULTS_TAB=panel;
   const box=q('playerMobilePanelContent');
   if(box&&CURRENT_DETAIL)box.innerHTML=renderPlayerMobilePanelContent(CURRENT_DETAIL,panel);
@@ -235,15 +255,6 @@ function showPlayerMobilePanel(panel,ev){
     const nav=document.querySelector('.playerUnifiedNav'),content=q('playerMobilePanelContent');
     if(nav&&content){const top=window.scrollY+content.getBoundingClientRect().top-nav.getBoundingClientRect().height-3;window.scrollTo({top:Math.max(0,top),behavior:'smooth'})}
   });
-}
-function showPlayerDrawMode(round,mode,ev){
-  if(ev){ev.preventDefault();ev.stopPropagation()}
-  setPlayerDrawMode(round,mode);
-  PLAYER_MOBILE_PANEL=Number(round)===2?'draw2':'draw1';
-  PLAYER_DRAW_ROUND=Number(round)===2?2:1;
-  const box=q('playerMobilePanelContent');
-  if(box&&CURRENT_DETAIL)box.innerHTML=renderPlayerMobilePanelContent(CURRENT_DETAIL,PLAYER_MOBILE_PANEL);
-  requestAnimationFrame(()=>syncPlayerStickyBars());
 }
 function showPlayerResults(tab,ev){
   if(ev){ev.preventDefault();ev.stopPropagation()}
@@ -541,6 +552,6 @@ function bindAuthButtons(){
 }
 
 function scrollAppBottom(){window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})}
-Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,showAdminZone,loadCompetitions,createCompetition,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,enablePush,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,toggleFinalClub,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
+Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,showAdminZone,loadCompetitions,createCompetition,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,enablePush,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,togglePlayerSectorAccordion,toggleFinalClub,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
 function startBoot(){console.log('CLIENT_V36_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v36',{cache:'no-store'}).catch(()=>{})}catch(_){};try{if('serviceWorker'in navigator){navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister().catch(()=>{}))).catch(()=>{})}if('caches'in window){caches.keys().then(ks=>ks.forEach(k=>caches.delete(k).catch(()=>{}))).catch(()=>{})}}catch(_){}bindAuthButtons();boot().catch(e=>{console.error('BOOT_FATAL',e);try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();
