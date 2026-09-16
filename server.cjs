@@ -16,8 +16,8 @@ const ADMIN_SETUP_CODE = process.env.ADMIN_SETUP_CODE || '';
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
-const APP_VERSION = '34';
-const APP_VERSION_NAME = 'V34_PLAYER_MOBILE_VERTICAL_MAP';
+const APP_VERSION = '35';
+const APP_VERSION_NAME = 'V35_STICKY_MOBILE_CARDS_ANGLED_MAP';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 
 if (webpush && VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
@@ -1046,7 +1046,7 @@ async function route(req, res) {
   const path = url.pathname;
   const method = req.method;
 
-  if (path === '/__probe_js_v34' || path === '/__probe_boot_v34' || path === '/__probe_js_v33' || path === '/__probe_boot_v33' || path === '/__probe_js_v32' || path === '/__probe_boot_v32' || path === '/__probe_js_v30' || path === '/__probe_boot_v30' || path === '/__probe_js_v29' || path === '/__probe_boot_v29' || path === '/__probe_js_v27' || path === '/__probe_boot_v27' || path === '/__probe_inline_v26') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
+  if (path === '/__probe_js_v35' || path === '/__probe_boot_v35' || path === '/__probe_js_v34' || path === '/__probe_boot_v34' || path === '/__probe_js_v33' || path === '/__probe_boot_v33' || path === '/__probe_js_v32' || path === '/__probe_boot_v32' || path === '/__probe_js_v30' || path === '/__probe_boot_v30' || path === '/__probe_js_v29' || path === '/__probe_boot_v29' || path === '/__probe_js_v27' || path === '/__probe_boot_v27' || path === '/__probe_inline_v26') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/api/version') return sendJson(res, 200, { ok:true, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/app.js') return send(res, 200, APP_JS, {'Content-Type':'application/javascript; charset=utf-8', 'Cache-Control':'no-store, no-cache, must-revalidate'});
 
@@ -1642,6 +1642,50 @@ html,body{max-width:100%;overflow-x:hidden!important}body{-webkit-font-smoothing
 }
 @media(max-width:350px){.mobileStandGrid{grid-template-columns:1fr}.mobileStandCard{grid-template-columns:44px minmax(0,1fr)}.mobileStandInfo{font-size:12px}}
 
+
+/* V35 — sticky nawigacja, mobilne karty zawodów, pochyła mapa zawodnika */
+.workZoneTabs{
+  position:sticky!important;
+  top:58px!important;
+  z-index:45!important;
+  background:linear-gradient(180deg,var(--bg) 0%,var(--bg) 84%,rgba(243,246,239,.96) 100%);
+  padding:9px 0 8px!important;
+  margin:0!important;
+  box-shadow:0 7px 12px -12px #0009;
+}
+.workZoneTabs button{box-shadow:0 1px 2px #00000012}
+.competitionMobileList{display:none}
+.competitionMobileCard{width:100%;min-width:0;border:1px solid var(--line);border-radius:14px;background:#fff;padding:11px;box-shadow:0 1px 4px #0000000d;margin:8px 0;overflow:hidden}
+.competitionMobileTitle{display:flex;flex-direction:column;gap:2px;min-width:0;padding-right:2px}.competitionMobileTitle>b{font-size:17px;line-height:1.13;color:#102f21;overflow-wrap:anywhere}.competitionMobileTitle>span{font-size:12px;font-weight:700;color:var(--muted);overflow-wrap:anywhere}.competitionMobileMeta{display:grid;grid-template-columns:1.05fr 1.05fr .9fr;gap:6px;margin-top:9px}.competitionMobileMeta>div{min-width:0;border:1px solid #d8e1d9;border-radius:10px;padding:7px 6px;background:#f8fbf7}.competitionMobileMeta small{display:block;font-size:9.5px;line-height:1.05;text-transform:uppercase;color:#5c6c62;font-weight:1000;margin-bottom:4px}.competitionMobileMeta strong{display:block;font-size:13px;line-height:1.12;color:#14251b}.competitionMobileMeta .pill{font-size:11px;padding:4px 7px;white-space:nowrap}.competitionCardActions{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px!important;margin-top:10px}.competitionCardActions button{width:100%!important;min-width:0!important;min-height:44px;padding:9px 7px;font-size:13px}.competitionCardActions button:only-child{grid-column:1/-1}.adminCompetitionCardActions{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+#competitionDetail{width:100%;max-width:100%;min-width:0}.playerView{max-width:100%}
+/* Lekkie pochylenie kafelków mapy: górny i dolny brzeg są lustrzane; tekst pozostaje prosty. */
+.mobileStandCard{overflow:visible!important;background:transparent!important;border:0!important;border-radius:0!important;min-height:64px!important;padding:2px 3px}
+.mobileStandCardInner{height:100%;min-height:60px;display:grid;grid-template-columns:43px minmax(0,1fr);align-items:center;border:1.5px solid #8fa698;border-radius:9px;background:#fff;overflow:hidden;box-shadow:0 1px 2px #0000000d;transform-origin:center center}
+.mobileStandCard .mobileStandNo{border-right:1px solid #91a89a;background:#ffffffc9}
+.mobileBankUpper .mobileStandCardInner{transform:skewX(-4deg)}
+.mobileBankUpper .mobileStandCardInner>*{transform:skewX(4deg)}
+.mobileBankLower .mobileStandCardInner{transform:skewX(4deg)}
+.mobileBankLower .mobileStandCardInner>*{transform:skewX(-4deg)}
+.mobileBankSingle .mobileStandCardInner{transform:none}.mobileBankSingle .mobileStandCardInner>*{transform:none}
+.mobileStandCard.sectorFill-A .mobileStandCardInner{background:#f7fff8}.mobileStandCard.sectorFill-B .mobileStandCardInner{background:#f7faff}.mobileStandCard.sectorFill-C .mobileStandCardInner{background:#fffaf1}.mobileStandCard.sectorFill-D .mobileStandCardInner{background:#fff7fa}.mobileStandCard.sectorFill-E .mobileStandCardInner{background:#fbf8ff}.mobileStandCard.sectorFill-F .mobileStandCardInner{background:#f6ffff}
+.mobileStandCard.ownMobileStand{outline:0!important;box-shadow:none!important}.mobileStandCard.ownMobileStand .mobileStandCardInner{border:3px solid #e6ae00!important;background:#fff9cf!important;box-shadow:0 0 0 2px #fff inset,0 2px 6px #8d6d002f!important}
+.mobileStandGrid{padding:0 3px;column-gap:6px!important;row-gap:3px!important}.mobileBankBlock{overflow:hidden}.mobileBankUpper .mobileStandGrid{padding-left:6px;padding-right:2px}.mobileBankLower .mobileStandGrid{padding-left:2px;padding-right:6px}
+@media(max-width:760px){
+  main{width:100%;max-width:100%;padding-left:6px!important;padding-right:6px!important}
+  .competitionDesktopList{display:none!important}.competitionMobileList{display:block!important;width:100%}
+  #competitionsList{width:100%;max-width:100%;min-width:0}.competitionMobileCard{margin:7px 0;padding:10px;border-radius:12px}.competitionMobileTitle>b{font-size:16px}.competitionMobileTitle>span{font-size:11.5px}.competitionMobileMeta{grid-template-columns:1fr 1fr;gap:5px}.competitionMobileMeta>div:last-child{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:8px}.competitionMobileMeta>div:last-child small{margin:0}.competitionMobileMeta small{font-size:9px}.competitionMobileMeta strong{font-size:12.5px}.competitionCardActions{gap:7px!important;margin-top:8px}.competitionCardActions button{min-height:43px;font-size:12.5px}
+  #competitionDetail>.card:first-child{margin-top:8px;padding:10px}.competitionActions{width:100%;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px!important}.competitionActions button{width:100%!important;min-width:0!important}
+  .workZoneTabs{top:50px!important;grid-template-columns:repeat(6,minmax(0,1fr))!important;gap:4px!important;padding:5px 0 5px!important;margin:0 -1px!important;background:rgba(243,246,239,.98)!important;box-shadow:0 5px 10px #00000016!important}
+  .workZoneTabs button{min-height:44px!important;padding:6px 3px!important;font-size:10.2px!important;line-height:1.08!important;border-radius:9px!important}
+  .workZoneTabs button:nth-child(1),.workZoneTabs button:nth-child(2),.workZoneTabs button:nth-child(3){grid-column:span 2}.workZoneTabs button:nth-child(4),.workZoneTabs button:nth-child(5){grid-column:span 3}
+  .mobileStandGrid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:3px 5px!important;padding:0 3px}.mobileStandCard{min-height:61px!important;padding:2px 3px}.mobileStandCardInner{min-height:57px;grid-template-columns:42px minmax(0,1fr);border-radius:8px}.mobileStandNo{font-size:24px!important}.mobileStandInfo{font-size:12.2px!important;line-height:1.12!important;padding:5px 5px!important}.mobileMineBadge{font-size:7.6px!important}.mobileBankUpper .mobileStandCardInner{transform:skewX(-3.5deg)}.mobileBankUpper .mobileStandCardInner>*{transform:skewX(3.5deg)}.mobileBankLower .mobileStandCardInner{transform:skewX(3.5deg)}.mobileBankLower .mobileStandCardInner>*{transform:skewX(-3.5deg)}
+}
+@media(max-width:380px){
+  .competitionMobileMeta{grid-template-columns:1fr 1fr}.competitionMobileTitle>b{font-size:15.5px}.competitionCardActions button{font-size:12px;padding:8px 5px}
+  .mobileStandCardInner{grid-template-columns:39px minmax(0,1fr)}.mobileStandNo{font-size:22px!important}.mobileStandInfo{font-size:11.6px!important}
+}
+@media(max-width:330px){.mobileStandGrid{grid-template-columns:1fr!important}.mobileStandCardInner{grid-template-columns:44px minmax(0,1fr)}.workZoneTabs button{font-size:9.6px!important}}
+
 </style>
 </head>
 <body>
@@ -1658,7 +1702,7 @@ html,body{max-width:100%;overflow-x:hidden!important}body{-webkit-font-smoothing
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V34</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
+  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V35</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
     <div id="adminCreate" class="card hidden"><h2>Utwórz zawody</h2><p class="small muted">Nazwa zawodów jest używana także w nagłówkach PDF.</p><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div></div><label>Opis</label><textarea id="cNotes" placeholder="Opis zawodów, zasady, informacje organizacyjne."></textarea><button onclick="createCompetition(event)">Utwórz zawody</button></div>
@@ -1670,7 +1714,7 @@ html,body{max-width:100%;overflow-x:hidden!important}body{-webkit-font-smoothing
 </section>
 </main>
 <div class="quickScroll"><button onclick="scrollAppTop()">↑</button><button onclick="scrollAppBottom()">↓</button></div>
-<script src="/app.js?v=34" defer></script>
+<script src="/app.js?v=35" defer></script>
 </body>
 </html>`;
 
@@ -1681,5 +1725,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V34_PLAYER_MOBILE_VERTICAL_MAP_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V35_STICKY_MOBILE_CARDS_ANGLED_MAP_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });
