@@ -16,8 +16,8 @@ const ADMIN_SETUP_CODE = process.env.ADMIN_SETUP_CODE || '';
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
-const APP_VERSION = '35';
-const APP_VERSION_NAME = 'V35_STICKY_MOBILE_CARDS_ANGLED_MAP';
+const APP_VERSION = '36';
+const APP_VERSION_NAME = 'V36_LEAVE_REQUESTS_STRAIGHT_MOBILE_STICKY';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 
 if (webpush && VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
@@ -141,6 +141,16 @@ async function initDb() {
       read_at timestamptz,
       created_at timestamptz not null default now()
     );
+    create table if not exists leave_requests (
+      id bigserial primary key,
+      competition_id bigint not null references competitions(id) on delete cascade,
+      user_id bigint not null references users(id) on delete cascade,
+      status text not null default 'PENDING',
+      created_at timestamptz not null default now(),
+      decided_at timestamptz,
+      decided_by bigint references users(id)
+    );
+    create unique index if not exists leave_requests_one_pending_idx on leave_requests(competition_id,user_id) where status='PENDING';
     create table if not exists push_subscriptions (
       id bigserial primary key,
       user_id bigint not null references users(id) on delete cascade,
@@ -156,6 +166,10 @@ async function initDb() {
     alter table competitions add column if not exists sectors_count integer not null default 4;
     alter table competitions add column if not exists signup_open boolean not null default true;
     alter table competitions add column if not exists sector_layout jsonb;
+  `);
+  await pool.query(`
+    alter table entries add column if not exists confirmed boolean not null default false;
+    alter table entries add column if not exists confirmed_at timestamptz;
   `);
   await pool.query(`
     create table if not exists draws (
@@ -1046,7 +1060,7 @@ async function route(req, res) {
   const path = url.pathname;
   const method = req.method;
 
-  if (path === '/__probe_js_v35' || path === '/__probe_boot_v35' || path === '/__probe_js_v34' || path === '/__probe_boot_v34' || path === '/__probe_js_v33' || path === '/__probe_boot_v33' || path === '/__probe_js_v32' || path === '/__probe_boot_v32' || path === '/__probe_js_v30' || path === '/__probe_boot_v30' || path === '/__probe_js_v29' || path === '/__probe_boot_v29' || path === '/__probe_js_v27' || path === '/__probe_boot_v27' || path === '/__probe_inline_v26') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
+  if (path === '/__probe_js_v36' || path === '/__probe_boot_v36' || path === '/__probe_js_v35' || path === '/__probe_boot_v35' || path === '/__probe_js_v34' || path === '/__probe_boot_v34' || path === '/__probe_js_v33' || path === '/__probe_boot_v33' || path === '/__probe_js_v32' || path === '/__probe_boot_v32' || path === '/__probe_js_v30' || path === '/__probe_boot_v30' || path === '/__probe_js_v29' || path === '/__probe_boot_v29' || path === '/__probe_js_v27' || path === '/__probe_boot_v27' || path === '/__probe_inline_v26') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/api/version') return sendJson(res, 200, { ok:true, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/app.js') return send(res, 200, APP_JS, {'Content-Type':'application/javascript; charset=utf-8', 'Cache-Control':'no-store, no-cache, must-revalidate'});
 
@@ -1055,7 +1069,10 @@ async function route(req, res) {
   if (path === '/reset-cache') return send(res, 200, `<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Reset aplikacji</title><style>body{font-family:system-ui;margin:20px;background:#f3f6ef;color:#18251d}.card{background:#fff;border:1px solid #cfd8cc;border-radius:16px;padding:16px;max-width:520px;margin:auto}button{width:100%;padding:12px;border:0;border-radius:12px;background:#114b2f;color:white;font-weight:900}
 
 
-</style></head><body><div class="card"><h2>Reset pamięci aplikacji</h2><p>Usuwam cache i starego service workera. Przekierowanie jest natychmiastowe, bez czekania na zawieszone obietnice przeglądarki.</p><button onclick="go()">Wyczyść teraz</button></div><script>function go(){try{localStorage.removeItem('carp_token');localStorage.removeItem('lowcy_app_version_seen');sessionStorage.clear();if('serviceWorker'in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister()})}).catch(function(){})}if('caches'in window){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k)})}).catch(function(){})}}catch(e){}setTimeout(function(){location.replace('/?hard=34&t='+Date.now())},50)}go();</script></body></html>`, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate'});
+
+
+
+</style></head><body><div class="card"><h2>Reset pamięci aplikacji</h2><p>Usuwam cache i starego service workera. Przekierowanie jest natychmiastowe, bez czekania na zawieszone obietnice przeglądarki.</p><button onclick="go()">Wyczyść teraz</button></div><script>function go(){try{localStorage.removeItem('carp_token');localStorage.removeItem('lowcy_app_version_seen');sessionStorage.clear();if('serviceWorker'in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister()})}).catch(function(){})}if('caches'in window){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k)})}).catch(function(){})}}catch(e){}setTimeout(function(){location.replace('/?hard=36&t='+Date.now())},50)}go();</script></body></html>`, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate'});
 
   if (path === '/manifest.webmanifest') return send(res, 200, JSON.stringify({
     name:'Łowcy Methodowcy', short_name:'Łowcy', start_url:'/', scope:'/', id:'/', display:'standalone', background_color:'#f3f6ef', theme_color:'#114b2f', icons:[]
@@ -1133,7 +1150,8 @@ self.addEventListener('notificationclick', event => { event.notification.close()
     const { rows } = await pool.query(`
       select c.*, (select count(*)::int from entries e where e.competition_id=c.id and e.status='ACTIVE') active_count,
              (select count(*)::int from entries e where e.competition_id=c.id and e.status='RESERVE') reserve_count,
-             (select status from entries e where e.competition_id=c.id and e.user_id=$1) my_status
+             (select status from entries e where e.competition_id=c.id and e.user_id=$1) my_status,
+             (select lr.status from leave_requests lr where lr.competition_id=c.id and lr.user_id=$1 order by lr.created_at desc limit 1) my_leave_request_status
       from competitions c order by c.competition_date nulls last, c.created_at desc
     `, [user.id]);
     return sendJson(res, 200, { ok:true, competitions:rows });
@@ -1245,6 +1263,16 @@ self.addEventListener('notificationclick', event => { event.notification.close()
   }
 
 
+  m = path.match(/^\/api\/admin\/competitions\/(\d+)\/entries\/(\d+)\/confirm$/);
+  if (m && method === 'POST') {
+    if (!requireAdmin(user, res)) return;
+    const compId = Number(m[1]);
+    const entryId = Number(m[2]);
+    const q = await pool.query(`update entries set confirmed=not confirmed, confirmed_at=case when not confirmed then now() else null end where id=$1 and competition_id=$2 and status='ACTIVE' returning confirmed, confirmed_at`, [entryId, compId]);
+    if (!q.rows[0]) return sendJson(res, 404, { ok:false, error:'Nie znaleziono aktywnego zawodnika' });
+    return sendJson(res, 200, { ok:true, confirmed:Boolean(q.rows[0].confirmed), confirmedAt:q.rows[0].confirmed_at });
+  }
+
   m = path.match(/^\/api\/admin\/competitions\/(\d+)\/entries\/(\d+)\/(promote|reserve|cancel)$/);
   if (m && method === 'POST') {
     if (!requireAdmin(user, res)) return;
@@ -1257,7 +1285,11 @@ self.addEventListener('notificationclick', event => { event.notification.close()
     const ent = entQ.rows[0];
     if (!ent) return sendJson(res, 404, { ok:false, error:'Nie znaleziono zapisu' });
     const newStatus = action === 'promote' ? 'ACTIVE' : action === 'reserve' ? 'RESERVE' : 'CANCELLED';
-    await pool.query(`update entries set status=$1, cancelled_at=case when $1='CANCELLED' then now() else null end where id=$2`, [newStatus, entryId]);
+    await pool.query(`update entries set status=$1, cancelled_at=case when $1='CANCELLED' then now() else null end, confirmed=case when $1='CANCELLED' then false else confirmed end, confirmed_at=case when $1='CANCELLED' then null else confirmed_at end where id=$2`, [newStatus, entryId]);
+    if (newStatus==='CANCELLED') {
+      const pendingRq = await pool.query(`update leave_requests set status='APPROVED', decided_at=now(), decided_by=$1 where competition_id=$2 and user_id=$3 and status='PENDING' returning id`, [user.id,compId,ent.user_id]);
+      for (const rq of pendingRq.rows) await pool.query(`update notifications set data=jsonb_set(coalesce(data,'{}'::jsonb),'{status}',to_jsonb('APPROVED'::text),true), read_at=coalesce(read_at,now()) where type='LEAVE_REQUEST' and (data->>'requestId')=$1`, [String(rq.id)]);
+    }
     await notifyUser(ent.user_id, 'ENTRY_STATUS', 'Zmiana statusu zapisu', `${comp.title}: ${rosterStatusLabel(newStatus)}`, { competitionId:compId, status:newStatus, url:'/' });
     await notifyAdmins('ENTRY_STATUS_ADMIN', 'Zmieniono status zawodnika', `${ent.first_name} ${ent.last_name}: ${rosterStatusLabel(newStatus)} — ${comp.title}`, { competitionId:compId, entryId, status:newStatus });
     await autoSyncBanksForRoster(compId);
@@ -1272,8 +1304,8 @@ self.addEventListener('notificationclick', event => { event.notification.close()
     if (!c) return sendJson(res, 404, { ok:false, error:'Nie znaleziono zawodów' });
     if (c.status !== 'OPEN' || c.signup_open === false) return sendJson(res, 409, { ok:false, error:'Zapisy są zamknięte' });
     const wantedStatus = await nextRosterStatus(id, 'AUTO');
-    await pool.query(`insert into entries(competition_id,user_id,status,joined_at,cancelled_at) values($1,$2,$3,now(),null)
-      on conflict(competition_id,user_id) do update set status=excluded.status, joined_at=now(), cancelled_at=null`, [id, user.id, wantedStatus]);
+    await pool.query(`insert into entries(competition_id,user_id,status,joined_at,cancelled_at,confirmed,confirmed_at) values($1,$2,$3,now(),null,false,null)
+      on conflict(competition_id,user_id) do update set status=excluded.status, joined_at=now(), cancelled_at=null, confirmed=false, confirmed_at=null`, [id, user.id, wantedStatus]);
     const label = rosterStatusLabel(wantedStatus);
     await notifyAdmins('JOIN', 'Nowy zapis', `${user.first_name} ${user.last_name} zapisał się: ${c.title} — ${label}`, { competitionId:id, userId:user.id, status:wantedStatus });
     await notifyUser(user.id, 'JOIN_CONFIRM', wantedStatus === 'RESERVE' ? 'Zapisano na rezerwę' : 'Zapisano na zawody', `${c.title}: ${label}`, { competitionId:id, status:wantedStatus });
@@ -1286,11 +1318,54 @@ self.addEventListener('notificationclick', event => { event.notification.close()
     const id = Number(m[1]);
     const c = await getCompetition(id);
     if (!c) return sendJson(res, 404, { ok:false, error:'Nie znaleziono zawodów' });
-    await pool.query(`update entries set status='CANCELLED', cancelled_at=now() where competition_id=$1 and user_id=$2`, [id, user.id]);
-    await notifyAdmins('LEAVE', 'Wypis z zawodów', `${user.first_name} ${user.last_name} wypisał się: ${c.title}`, { competitionId:id, userId:user.id });
-    await notifyUser(user.id, 'LEAVE_CONFIRM', 'Wypisano z zawodów', `Wypisałeś się: ${c.title}`, { competitionId:id });
-    await autoSyncBanksForRoster(id);
-    return sendJson(res, 200, { ok:true });
+    const entQ = await pool.query(`select id,status from entries where competition_id=$1 and user_id=$2`, [id,user.id]);
+    const ent = entQ.rows[0];
+    if (!ent || !['ACTIVE','RESERVE'].includes(ent.status)) return sendJson(res, 409, { ok:false, error:'Nie masz aktywnego zapisu na te zawody' });
+    const pending = await pool.query(`select id from leave_requests where competition_id=$1 and user_id=$2 and status='PENDING' order by created_at desc limit 1`, [id,user.id]);
+    if (pending.rows[0]) return sendJson(res, 200, { ok:true, pending:true, requestId:pending.rows[0].id });
+    let request;
+    try {
+      const rq = await pool.query(`insert into leave_requests(competition_id,user_id,status) values($1,$2,'PENDING') returning *`, [id,user.id]);
+      request = rq.rows[0];
+    } catch (e) {
+      if (String(e.code)==='23505') {
+        const rq = await pool.query(`select * from leave_requests where competition_id=$1 and user_id=$2 and status='PENDING' order by created_at desc limit 1`, [id,user.id]);
+        request = rq.rows[0];
+      } else throw e;
+    }
+    await notifyAdmins('LEAVE_REQUEST', 'Prośba o wypisanie', `${user.first_name} ${user.last_name} prosi o wypisanie z: ${c.title}`, { competitionId:id, userId:user.id, requestId:request.id, status:'PENDING' });
+    await notifyUser(user.id, 'LEAVE_REQUEST_CONFIRM', 'Prośba o wypisanie wysłana', `Administrator musi zaakceptować wypisanie z: ${c.title}`, { competitionId:id, requestId:request.id, status:'PENDING' });
+    return sendJson(res, 200, { ok:true, pending:true, requestId:request.id });
+  }
+
+  m = path.match(/^\/api\/admin\/leave-requests\/(\d+)\/(approve|reject)$/);
+  if (m && method === 'POST') {
+    if (!requireAdmin(user, res)) return;
+    const requestId = Number(m[1]);
+    const decision = m[2];
+    const client = await pool.connect();
+    let info;
+    try {
+      await client.query('begin');
+      const rq = await client.query(`select lr.*, c.title, u.first_name, u.last_name from leave_requests lr join competitions c on c.id=lr.competition_id join users u on u.id=lr.user_id where lr.id=$1 for update`, [requestId]);
+      info = rq.rows[0];
+      if (!info) { await client.query('rollback'); return sendJson(res, 404, { ok:false, error:'Nie znaleziono prośby' }); }
+      if (info.status !== 'PENDING') { await client.query('rollback'); return sendJson(res, 200, { ok:true, status:info.status, competitionId:Number(info.competition_id) }); }
+      const status = decision==='approve' ? 'APPROVED' : 'REJECTED';
+      await client.query(`update leave_requests set status=$1, decided_at=now(), decided_by=$2 where id=$3`, [status,user.id,requestId]);
+      if (status==='APPROVED') await client.query(`update entries set status='CANCELLED', cancelled_at=now(), confirmed=false, confirmed_at=null where competition_id=$1 and user_id=$2 and status in ('ACTIVE','RESERVE')`, [info.competition_id,info.user_id]);
+      await client.query(`update notifications set data=jsonb_set(coalesce(data,'{}'::jsonb),'{status}',to_jsonb($1::text),true), read_at=coalesce(read_at,now()) where type='LEAVE_REQUEST' and (data->>'requestId')=$2`, [status,String(requestId)]);
+      await client.query('commit');
+      info.status=status;
+    } catch (e) { try{await client.query('rollback')}catch(_){} throw e; }
+    finally { client.release(); }
+    if (info.status==='APPROVED') {
+      await notifyUser(info.user_id, 'LEAVE_APPROVED', 'Zaakceptowano wypisanie', `Administrator zaakceptował wypisanie z: ${info.title}`, { competitionId:Number(info.competition_id), requestId, status:'APPROVED' });
+      await autoSyncBanksForRoster(Number(info.competition_id));
+    } else {
+      await notifyUser(info.user_id, 'LEAVE_REJECTED', 'Prośba o wypisanie odrzucona', `Administrator odrzucił prośbę o wypisanie z: ${info.title}`, { competitionId:Number(info.competition_id), requestId, status:'REJECTED' });
+    }
+    return sendJson(res, 200, { ok:true, status:info.status, competitionId:Number(info.competition_id), userId:Number(info.user_id) });
   }
 
   m = path.match(/^\/api\/admin\/competitions\/(\d+)\/draw\/(1|2)$/);
@@ -1388,7 +1463,6 @@ self.addEventListener('notificationclick', event => { event.notification.close()
     const b = await readBody(req);
     try {
       const out = await addResultItem(compId, Number(b.userId), round, b.kind, b.weight);
-      await notifyAdmins('RESULT_ITEM_T'+round, 'Dodano wagę T'+round, `${user.first_name} ${user.last_name} dodał wagę ${out.item.weight} g (${out.item.kind}) do: ${comp.title}`, { competitionId:compId, round, userId:Number(b.userId), itemId:out.item.id });
       return sendJson(res, 200, { ok:true, item:out.item, aggregate:out.aggregate });
     } catch (e) { return sendJson(res, 400, { ok:false, error:e.message }); }
   }
@@ -1415,7 +1489,7 @@ self.addEventListener('notificationclick', event => { event.notification.close()
   if ((path === '/api/notifications' || path === '/api/admin/notifications') && method === 'GET') {
     if (!requireUser(user, res)) return;
     if (path === '/api/admin/notifications' && user.role !== 'ADMIN') return sendJson(res, 403, { ok:false, error:'Brak uprawnień admina' });
-    const { rows } = await pool.query(`select * from notifications where recipient_user_id=$1 order by created_at desc limit 150`, [user.id]);
+    const { rows } = await pool.query(`select * from notifications where recipient_user_id=$1 and ($2::boolean=false or type not like 'RESULT_ITEM_T%') order by case when type='LEAVE_REQUEST' and coalesce(data->>'status','PENDING')='PENDING' then 0 else 1 end, created_at desc limit 150`, [user.id, user.role==='ADMIN']);
     return sendJson(res, 200, { ok:true, notifications:rows });
   }
   m = path.match(/^\/api\/(?:admin\/)?notifications\/(\d+)\/read$/);
@@ -1686,6 +1760,25 @@ html,body{max-width:100%;overflow-x:hidden!important}body{-webkit-font-smoothing
 }
 @media(max-width:330px){.mobileStandGrid{grid-template-columns:1fr!important}.mobileStandCardInner{grid-template-columns:44px minmax(0,1fr)}.workZoneTabs button{font-size:9.6px!important}}
 
+/* V36 — prosta mapa mobilna, pewny sticky pasek, prośby o wypisanie */
+header{z-index:100!important}
+.workZoneTabs{position:sticky!important;top:var(--app-header-height,56px)!important;z-index:90!important;background:#f3f6ef!important;box-shadow:0 5px 12px #0000001f!important;border-bottom:1px solid #d2ddd4;padding:7px 0 7px!important}
+.leavePendingBtn{background:#f0f3ef!important;color:#607066!important;border:1px solid #c7d2ca!important;opacity:1!important}
+.confirmEntryBtn{background:#e2e6e3!important;color:#435047!important;border:1px solid #b9c3bc!important;min-width:106px;font-weight:900}.confirmEntryBtn.confirmed{background:#2e7d32!important;color:#fff!important;border-color:#256b2a!important;box-shadow:0 2px 7px #1d5b2233}.confirmEntryBtn:disabled{opacity:.65}
+.leaveRequestRow td{background:#fff9d8}.leaveRequestRow td:first-child{border-left:5px solid #e0aa00}.leaveRequestActions{display:grid;grid-template-columns:1fr 1fr;gap:6px;min-width:190px}.leaveRequestActions button{min-height:38px;padding:7px 8px}.notificationTable td{vertical-align:middle}
+/* Wycofanie pochylenia v35: kafelki są znów proste i stabilne. */
+.mobileStandCard{overflow:visible!important;background:transparent!important;border:0!important;border-radius:0!important;min-height:62px!important;padding:2px!important}
+.mobileStandCardInner{transform:none!important;min-height:58px!important;height:100%;display:grid;grid-template-columns:43px minmax(0,1fr);align-items:center;border:1.5px solid #8fa698;border-radius:9px;background:#fff;overflow:hidden;box-shadow:0 1px 2px #0000000d}
+.mobileStandCardInner>*{transform:none!important}.mobileBankUpper .mobileStandCardInner,.mobileBankLower .mobileStandCardInner,.mobileBankSingle .mobileStandCardInner{transform:none!important}.mobileBankUpper .mobileStandCardInner>*,.mobileBankLower .mobileStandCardInner>*,.mobileBankSingle .mobileStandCardInner>*{transform:none!important}
+.mobileBankUpper .mobileStandGrid,.mobileBankLower .mobileStandGrid{padding-left:3px!important;padding-right:3px!important}.mobileStandGrid{column-gap:5px!important;row-gap:5px!important}
+.mobileStandCard.ownMobileStand .mobileStandCardInner{border:3px solid #e6ae00!important;background:#fff9cf!important;box-shadow:0 0 0 2px #fff inset,0 2px 6px #8d6d002f!important}
+@media(max-width:760px){
+  .workZoneTabs{top:var(--app-header-height,52px)!important;margin:0 -6px!important;padding:5px 6px!important;grid-template-columns:repeat(6,minmax(0,1fr))!important;gap:4px!important}
+  .workZoneTabs button{min-height:45px!important;font-size:10.4px!important;padding:6px 3px!important}
+  .mobileStandCardInner{transform:none!important;grid-template-columns:42px minmax(0,1fr);min-height:58px!important}.mobileStandCardInner>*{transform:none!important}
+  .notificationWrap{overflow:visible;border:0}.notificationTable,.notificationTable tbody,.notificationTable tr,.notificationTable td{display:block;width:100%}.notificationTable thead{display:none}.notificationTable tr{border:1px solid var(--line);border-radius:12px;margin:8px 0;background:#fff;overflow:hidden}.notificationTable td{border:0;border-bottom:1px solid #e3e9e4;padding:9px;font-size:12px}.notificationTable td:last-child{border-bottom:0}.leaveRequestActions{min-width:0;width:100%;grid-template-columns:1fr 1fr}.leaveRequestActions button{width:100%;min-height:44px}
+}
+
 </style>
 </head>
 <body>
@@ -1702,7 +1795,7 @@ html,body{max-width:100%;overflow-x:hidden!important}body{-webkit-font-smoothing
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V35</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
+  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V36</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
     <div id="adminCreate" class="card hidden"><h2>Utwórz zawody</h2><p class="small muted">Nazwa zawodów jest używana także w nagłówkach PDF.</p><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div></div><label>Opis</label><textarea id="cNotes" placeholder="Opis zawodów, zasady, informacje organizacyjne."></textarea><button onclick="createCompetition(event)">Utwórz zawody</button></div>
@@ -1714,7 +1807,7 @@ html,body{max-width:100%;overflow-x:hidden!important}body{-webkit-font-smoothing
 </section>
 </main>
 <div class="quickScroll"><button onclick="scrollAppTop()">↑</button><button onclick="scrollAppBottom()">↓</button></div>
-<script src="/app.js?v=35" defer></script>
+<script src="/app.js?v=36" defer></script>
 </body>
 </html>`;
 
@@ -1725,5 +1818,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V35_STICKY_MOBILE_CARDS_ANGLED_MAP_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V36_LEAVE_REQUESTS_STRAIGHT_MOBILE_STICKY_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });
