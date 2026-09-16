@@ -1,4 +1,4 @@
-const CLIENT_VERSION='52';const CLIENT_VERSION_NAME='V52_REAL_PUSH_PLAYER_ALERTS';try{fetch('/__probe_js_v52',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V52_REAL_PUSH_PLAYER_ALERTS_LOADED');
+const CLIENT_VERSION='55';const CLIENT_VERSION_NAME='V55_PLAYER_DESKTOP_PARITY_INITIAL_SURNAME';try{fetch('/__probe_js_v55',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V55_PLAYER_DESKTOP_PARITY_INITIAL_SURNAME_LOADED');
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let TOKEN = STORE.get('carp_token') || '';
 let ME = null;
@@ -54,7 +54,7 @@ async function boot(){
   renderPushStatus();
   showTab('competitions');
   await Promise.allSettled([loadCompetitions(),loadNotifications(),admin?loadPlayers():Promise.resolve()]);
-  if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=52',{scope:'/'}).then(()=>{if('Notification' in window&&Notification.permission==='granted')ensurePushSubscription(true,false).catch(()=>{})}).catch(()=>{})}
+  if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=55',{scope:'/'}).then(()=>{if('Notification' in window&&Notification.permission==='granted')ensurePushSubscription(true,false).catch(()=>{})}).catch(()=>{})}
 }
 async function login(){try{const phone=q('loginPhone')?.value||'';const password=q('loginPassword')?.value||'';if(!phone.trim()||!password)throw new Error('Wpisz telefon i hasło');const d=await api('/api/login',{method:'POST',body:JSON.stringify({phone,password})});TOKEN=d.token;STORE.set('carp_token',TOKEN);msg('Zalogowano');await boot()}catch(e){msg(e.message,'bad')}}
 async function registerPlayer(ev){if(ev){ev.preventDefault&&ev.preventDefault();ev.stopPropagation&&ev.stopPropagation()}try{const d=await api('/api/register',{method:'POST',body:JSON.stringify({phone:q('regPhone').value,password:q('regPassword').value,firstName:q('regFirst').value,lastName:q('regLast').value,pzwClub:q('regClub').value})});TOKEN=d.token;STORE.set('carp_token',TOKEN);msg('Konto zawodnika utworzone');await boot()}catch(e){msg(e.message,'bad')}}
@@ -177,13 +177,20 @@ function playerNameCompact(name,cramped=false){
   if(cramped || last.length>12)return (first?first.charAt(0)+'.':'')+last;
   return last;
 }
+function playerInitialSurname(name){
+  const parts=String(name||'').trim().split(/\s+/).filter(Boolean);
+  if(!parts.length)return '—';
+  if(parts.length===1)return parts[0];
+  const first=parts[0]||'',last=parts[parts.length-1]||'';
+  return (first?first.charAt(0).toUpperCase()+'.':'')+last;
+}
 function renderPlayerOwnSummary(d){
   const one=(round)=>{const x=(d.draws||[]).find(v=>Number(v.round)===Number(round)&&Number(v.user_id)===Number(ME.id));return '<div class="playerOwnSummaryCard round'+round+'"><div class="playerOwnSummaryTitle">TURA '+round+'</div><div class="playerOwnSummaryMain"><span class="playerOwnSummaryRound">T'+round+'</span><span class="playerOwnSummaryStand">'+(x?esc(x.stand):'—')+'</span><span class="playerOwnSummarySector">Sektor '+(x?esc(x.sector):'—')+'</span></div><div class="playerOwnSummaryLabels"><span>Tura</span><span>Stanowisko</span><span>Sektor</span></div></div>'};
   return '<div class="playerOwnSummaryWrap"><div class="playerOwnSummaryHeading">MOJE STANOWISKA</div><div class="playerOwnSummaryGrid">'+one(1)+one(2)+'</div></div>';
 }
 function renderPlayerSectorStand(n,c,byStand,cramped){
   const sec=sectorForStandClient(n,c),x=byStand[Number(n)],mine=x&&Number(x.draw.user_id)===Number(ME.id),name=x?x.name.trim():'—';
-  return '<div class="playerSectorStand '+sectorColorClass(sec,c)+(mine?' minePlayerSectorStand':'')+'"><b class="playerSectorStandNo">'+n+'</b><span class="playerSectorStandName">'+esc(playerNameCompact(name,cramped))+'</span>'+(mine?'<small class="playerSectorMineBadge">TY</small>':'')+'</div>';
+  return '<div class="playerSectorStand '+sectorColorClass(sec,c)+(mine?' minePlayerSectorStand':'')+'"><b class="playerSectorStandNo">'+n+'</b><span class="playerSectorStandName">'+esc(playerInitialSurname(name))+'</span>'+(mine?'<small class="playerSectorMineBadge">TY</small>':'')+'</div>';
 }
 function renderPlayerSectorBank(label,arr,c,byStand){
   if(!arr||!arr.length)return '';
@@ -229,19 +236,56 @@ function renderPlayerMobileDashboard(d){
     +'<div id="playerMobilePanelContent">'+renderPlayerMobilePanelContent(d,p)+'</div>'
     +'</div>';
 }
-function renderPlayerDetail(d){
-  const c=d.competition;const e=d.myEntry;const t1=myDraw(1),t2=myDraw(2);let html='<div class="playerView">';
-  html+='<div class="playerDesktopDashboard">';
-  if(e){
-    html+='<div class="card playerDrawHeaderCard"><div class="playerDrawTabs"><button type="button" class="'+(PLAYER_DRAW_ROUND===1?'active':'')+'" onclick="showPlayerDraw(1,event)">Losowanie Tura 1</button><button type="button" class="'+(PLAYER_DRAW_ROUND===2?'active':'')+'" onclick="showPlayerDraw(2,event)">Losowanie Tura 2</button></div><div class="playerOwnTitle">Moje stanowiska</div><div class="ownbox playerOwnGrid"><div class="ownitem playerOwnItem"><span class="tag t1tag">T1</span><strong>'+(t1?esc(t1.stand):'—')+'</strong><span>'+(t1?'Sektor '+esc(t1.sector):'Brak losowania')+'</span></div><div class="ownitem playerOwnItem"><span class="tag t2tag">T2</span><strong>'+(t2?esc(t2.stand):'—')+'</strong><span>'+(t2?'Sektor '+esc(t2.sector):'Brak losowania')+'</span></div></div></div><div id="playerDrawView">'+renderRoundDrawView(d,PLAYER_DRAW_ROUND,true)+'</div>';
-  } else html+='<div class="card"><p class="muted">Nie jesteś zapisany na te zawody.</p></div>';
-  html+=renderSectorResultsBoard(d)
-    +'<div class="card playerResultCard"><h2>Klasyfikacja T1</h2>'+renderClassTable(d.classification.round1)+'</div>'
-    +'<div class="card playerResultCard"><h2>Klasyfikacja T2</h2>'+renderClassTable(d.classification.round2)+'</div>'
-    +'<div class="card playerResultCard"><h2>Klasyfikacja końcowa</h2>'+renderFinalClubToggle()+renderGeneralTable(d.classification.general)+'</div>'
-    +renderStationStatistics(d)
+function renderPlayerDesktopPanelContent(d,panel){
+  if(panel==='draw1'||panel==='draw2'){
+    const round=panel==='draw2'?2:1;
+    return '<div class="playerDesktopSelectedPanel playerDesktopDrawSelected">'
+      +'<div class="playerDesktopSectionTitle">ROZMIESZCZENIE W SEKTORACH — TURA '+round+'</div>'
+      +renderPlayerSectorAccordion(d,round)
+      +'<div class="playerDesktopSectorTables">'+renderDrawSectorTables(d,round)+'</div>'
+      +'</div>';
+  }
+  if(panel==='map1'||panel==='map2'){
+    const round=panel==='map2'?2:1;
+    return '<div class="playerDesktopSelectedPanel"><div class="card playerDesktopFullMap"><h2>MAPA ŁOWISKA — TURA '+round+'</h2>'+renderRoundDrawMap(d,round)+'</div></div>';
+  }
+  if(panel==='t1')return '<div class="playerDesktopSelectedPanel"><div class="card playerResultCard"><h2>Wyniki sektorowe — Tura 1</h2>'+renderSectorResultsColumn(d.classification.round1,'1 tura')+'<h2 class="playerWholeRoundTitle">Cała Tura 1</h2>'+renderClassTable(d.classification.round1)+'</div></div>';
+  if(panel==='t2')return '<div class="playerDesktopSelectedPanel"><div class="card playerResultCard"><h2>Wyniki sektorowe — Tura 2</h2>'+renderSectorResultsColumn(d.classification.round2,'2 tura')+'<h2 class="playerWholeRoundTitle">Cała Tura 2</h2>'+renderClassTable(d.classification.round2)+'</div></div>';
+  if(panel==='general')return '<div class="playerDesktopSelectedPanel"><div class="card playerResultCard"><h2>Klasyfikacja końcowa</h2>'+renderFinalClubToggle()+renderGeneralTable(d.classification.general)+'</div></div>';
+  if(panel==='stats')return '<div class="playerDesktopSelectedPanel">'+renderStationStatistics(d)+'</div>';
+  return '';
+}
+function renderPlayerDesktopDashboard(d){
+  const p=PLAYER_MOBILE_PANEL;
+  const b=(panel,label,cls='')=>'<button type="button" class="'+cls+' '+(p===panel?'active':'')+'" onclick="showPlayerDesktopPanel(\''+panel+'\',event)">'+label+'</button>';
+  return '<div class="playerDesktopDashboardV55">'
+    +'<div class="card playerDesktopUnifiedNav">'
+    +'<div class="playerDesktopMainNav">'+b('draw1','Losowanie Tura 1','drawTile')+b('draw2','Losowanie Tura 2','drawTile')+b('t1','TURA 1','resultTile')+b('t2','TURA 2','resultTile')+b('general','KLASYFIKACJA','resultTile')+b('stats','STATYSTYKI','resultTile')+'</div>'
+    +'<div class="playerDesktopSubNav">'+b('map1','MAPA ŁOWISKA T1','mapTile')+b('map2','MAPA ŁOWISKA T2','mapTile')+'<button type="button" class="notificationTile" onclick="openPlayerNotifications(event)">POWIADOMIENIA'+(PLAYER_UNREAD_NOTIFICATIONS?' ('+PLAYER_UNREAD_NOTIFICATIONS+')':'')+'</button></div>'
+    +'</div>'
+    +renderPlayerOwnSummary(d)
+    +'<div id="playerDesktopPanelContent">'+renderPlayerDesktopPanelContent(d,p)+'</div>'
     +'</div>';
-  html+=renderPlayerMobileDashboard(d)+'</div>';
+}
+function showPlayerDesktopPanel(panel,ev){
+  if(ev){ev.preventDefault();ev.stopPropagation()}
+  const allowed=['draw1','draw2','map1','map2','t1','t2','general','stats'];
+  if(!allowed.includes(panel))return;
+  PLAYER_MOBILE_PANEL=panel;
+  if(panel==='draw1'||panel==='draw2'||panel==='map1'||panel==='map2')PLAYER_DRAW_ROUND=(panel==='draw2'||panel==='map2')?2:1;
+  if(['t1','t2','general','stats'].includes(panel))PLAYER_RESULTS_TAB=panel;
+  const desktopBox=q('playerDesktopPanelContent');
+  if(desktopBox&&CURRENT_DETAIL)desktopBox.innerHTML=renderPlayerDesktopPanelContent(CURRENT_DETAIL,panel);
+  const mobileBox=q('playerMobilePanelContent');
+  if(mobileBox&&CURRENT_DETAIL)mobileBox.innerHTML=renderPlayerMobilePanelContent(CURRENT_DETAIL,panel);
+  document.querySelectorAll('.playerDesktopUnifiedNav button,.playerUnifiedNav button').forEach(btn=>btn.classList.toggle('active',btn.getAttribute('onclick')?.includes("'"+panel+"'")));
+  requestAnimationFrame(()=>{fitPlayerMobileFullMaps();const el=q('playerDesktopPanelContent');if(el)el.scrollIntoView({behavior:'smooth',block:'start'})});
+}
+function renderPlayerDetail(d){
+  let html='<div class="playerView">';
+  html+=renderPlayerDesktopDashboard(d);
+  html+=renderPlayerMobileDashboard(d);
+  html+='</div>';
   return html;
 }
 function showPlayerMobilePanel(panel,ev){
@@ -253,7 +297,9 @@ function showPlayerMobilePanel(panel,ev){
   if(['t1','t2','general','stats'].includes(panel))PLAYER_RESULTS_TAB=panel;
   const box=q('playerMobilePanelContent');
   if(box&&CURRENT_DETAIL)box.innerHTML=renderPlayerMobilePanelContent(CURRENT_DETAIL,panel);
-  document.querySelectorAll('.playerUnifiedNav button').forEach(btn=>btn.classList.toggle('active',btn.getAttribute('onclick')?.includes("'"+panel+"'")));
+  const desktopBox=q('playerDesktopPanelContent');
+  if(desktopBox&&CURRENT_DETAIL)desktopBox.innerHTML=renderPlayerDesktopPanelContent(CURRENT_DETAIL,panel);
+  document.querySelectorAll('.playerUnifiedNav button,.playerDesktopUnifiedNav button').forEach(btn=>btn.classList.toggle('active',btn.getAttribute('onclick')?.includes("'"+panel+"'")));
   requestAnimationFrame(()=>{
     syncPlayerStickyBars();
     fitPlayerMobileFullMaps();
@@ -313,18 +359,16 @@ function rosterTable(title,rows,compId,kind){
   const confirmBtn=e=>kind==='ACTIVE'
     ?'<button type="button" class="confirmEntryBtn '+(e.confirmed?'confirmed':'')+'" onclick="toggleEntryConfirm('+compId+','+e.id+',this)">'+(e.confirmed?'✓':'Potwierdź')+'</button>'
     :'';
+  const editBtn=e=>{const nm=String((e.first_name||'')+' '+(e.last_name||'')).trim(),safe=encodeURIComponent(nm);return '<button type="button" class="secondary rosterEditNameBtn" onclick="editPlayerName('+Number(e.user_id)+',decodeURIComponent(\''+safe+'\'))">Edytuj</button>'};
   const desktop='<div class="tablewrap adminDesktopOnly"><table><thead><tr><th style="width:46px">Lp.</th><th>Zawodnik</th><th>Telefon</th><th>Koło</th><th>Status</th><th>Potw.</th><th>Akcja</th></tr></thead><tbody>'
-    +rows.map((e,idx)=>'<tr><td class="center"><b>'+(idx+1)+'</b></td><td><b>'+esc(e.first_name+' '+e.last_name)+'</b></td><td class="nowrap">'+esc(e.phone||'')+'</td><td>'+esc(e.pzw_club||'')+'</td><td>'+statusLabel(e.status)+'</td><td class="center">'+(confirmBtn(e)||'—')+'</td><td>'+makeButtons(e)+'</td></tr>').join('')
+    +rows.map((e,idx)=>'<tr><td class="center"><b>'+(idx+1)+'</b></td><td><div class="rosterNameEdit"><b>'+esc(e.first_name+' '+e.last_name)+'</b>'+editBtn(e)+'</div></td><td class="nowrap">'+esc(e.phone||'')+'</td><td>'+esc(e.pzw_club||'')+'</td><td>'+statusLabel(e.status)+'</td><td class="center">'+(confirmBtn(e)||'—')+'</td><td>'+makeButtons(e)+'</td></tr>').join('')
     +'</tbody></table></div>';
   const mobile='<div class="adminMobileOnly mobileRosterCompact">'
-    +rows.map((e,idx)=>{
-      const club=e.pzw_club?('K'+esc(e.pzw_club)):'';
-      return '<div class="mobileRosterCompactRow">'
-        +'<div class="mobileRosterCompactHead"><span class="mobileRosterCompactLp">'+(idx+1)+'</span><b>'+esc(e.first_name+' '+e.last_name)+'</b><span class="mobileRosterCompactStatus">'+statusLabel(e.status)+'</span></div>'
+    +rows.map((e,idx)=>{const club=e.pzw_club?('K'+esc(e.pzw_club)):'';return '<div class="mobileRosterCompactRow">'
+        +'<div class="mobileRosterCompactHead"><span class="mobileRosterCompactLp">'+(idx+1)+'</span><b>'+esc(e.first_name+' '+e.last_name)+'</b>'+editBtn(e)+'<span class="mobileRosterCompactStatus">'+statusLabel(e.status)+'</span></div>'
         +'<div class="mobileRosterCompactMeta"><span>'+esc(e.phone||'')+'</span>'+(club?'<span>'+club+'</span>':'')+'</div>'
         +'<div class="mobileRosterCompactActions">'+(confirmBtn(e)||'')+makeButtons(e)+'</div>'
-        +'</div>';
-    }).join('')
+        +'</div>';}).join('')
     +'</div>';
   return html+desktop+mobile;
 }
@@ -485,7 +529,10 @@ async function confirmAllNotifications(){try{const path=ME?.role==='ADMIN'?'/api
 async function deleteAllNotifications(){try{const admin=ME?.role==='ADMIN';const question=admin?'Usunąć wszystkie zwykłe i zakończone powiadomienia? Oczekujące prośby o wypisanie pozostaną.':'Usunąć wszystkie swoje powiadomienia?';if(!confirm(question))return;const path=admin?'/api/admin/notifications':'/api/notifications';const d=await api(path,{method:'DELETE',body:'{}'});msg('Usunięto powiadomienia: '+Number(d.deleted||0)+(Number(d.keptPending||0)?'. Oczekujące prośby: '+Number(d.keptPending):''));await loadNotifications()}catch(e){msg(e.message,'bad')}}
 async function decideLeaveRequest(requestId,decision,notifId){try{if(!requestId)throw new Error('Brak identyfikatora prośby');const approve=decision==='approve';if(!confirm(approve?'Zaakceptować prośbę i wypisać zawodnika z zawodów?':'Odrzucić prośbę o wypisanie?'))return;const out=await api('/api/admin/leave-requests/'+requestId+'/'+(approve?'approve':'reject'),{method:'POST',body:'{}'});msg(approve?'Zawodnik został wypisany':'Prośba została odrzucona');await loadNotifications();await loadCompetitions();if(CURRENT_DETAIL?.competition?.id==out.competitionId)await refreshCompetitionKeepScroll(out.competitionId)}catch(e){msg(e.message,'bad')}}
 async function readNotif(id){await api('/api/notifications/'+id+'/read',{method:'POST',body:'{}'});loadNotifications()}
-async function loadPlayers(){if(!ME||ME.role!=='ADMIN')return;const d=await api('/api/admin/players');const desktop='<div class="tablewrap adminDesktopOnly"><table><thead><tr><th style="width:46px">Lp.</th><th>Imię i nazwisko</th><th>Telefon</th><th>Koło PZW</th><th>Rola</th><th>Aktywne zapisy</th></tr></thead><tbody>'+d.players.map((p,i)=>'<tr><td class="center"><b>'+(i+1)+'</b></td><td><b>'+esc(p.first_name+' '+p.last_name)+'</b></td><td class="nowrap">'+esc(p.phone)+'</td><td>'+esc(p.pzw_club)+'</td><td>'+esc(p.role)+'</td><td>'+esc(p.active_entries||0)+'</td></tr>').join('')+'</tbody></table></div>';const mobile='<div class="adminMobileOnly mobilePlayersList">'+d.players.map((p,i)=>'<article class="mobileAdminCard"><div class="mobileAdminCardHead"><span class="mobileLp">'+(i+1)+'</span><b>'+esc(p.first_name+' '+p.last_name)+'</b></div><div class="mobileAdminMeta"><span><small>Koło</small><b>'+esc(p.pzw_club||'—')+'</b></span><span><small>Zapisy</small><b>'+esc(p.active_entries||0)+'</b></span></div><div class="mobileAdminLine"><small>Telefon</small><span>'+esc(p.phone||'—')+'</span></div><div class="mobileAdminLine"><small>Rola</small><span>'+esc(p.role||'—')+'</span></div></article>').join('')+'</div>';q('playersList').innerHTML=desktop+mobile}
+async function editPlayerName(id,currentName){if(!ME||ME.role!=='ADMIN')return;const before=String(currentName||'').replace(/\s+/g,' ').trim();const entered=prompt('Popraw imię i nazwisko zawodnika:',before);if(entered===null)return;const fullName=String(entered||'').replace(/\s+/g,' ').trim();if(!fullName){msg('Imię i nazwisko nie może być puste','bad');return}if(fullName===before)return;try{const d=await api('/api/admin/players/'+Number(id),{method:'PATCH',body:JSON.stringify({fullName})});msg('Poprawiono nazwę zawodnika: '+(d.player?.name||fullName));await loadPlayers();if(CURRENT_DETAIL?.competition?.id)await refreshCompetitionKeepScroll(CURRENT_DETAIL.competition.id)}catch(e){msg(e.message,'bad')}}
+function playerInfoBadges(p){let out='';if(p.has_logged_in)out+='<span class="playerAccountBadge playerAccountVerified" title="Zawodnik zalogował się w aplikacji">V</span>';if(String(p.account_source||'SELF').toUpperCase()==='ADMIN')out+='<span class="playerAccountBadge playerAccountAdmin" title="Zawodnik dodany przez administratora">A</span>';return out||'<span class="muted">—</span>'}
+async function deletePlayer(id,name){if(!ME||ME.role!=='ADMIN')return;const label=String(name||'zawodnika');if(!confirm('Usunąć zawodnika '+label+'?\n\nUsunięte zostaną także jego zapisy, losowania, wyniki i powiadomienia.'))return;try{const d=await api('/api/admin/players/'+Number(id),{method:'DELETE',body:'{}'});msg('Usunięto zawodnika: '+(d.player?.name||label));await loadPlayers();await loadCompetitions();if(CURRENT_DETAIL?.competition?.id)await refreshCompetitionKeepScroll(CURRENT_DETAIL.competition.id)}catch(e){msg(e.message,'bad')}}
+async function loadPlayers(){if(!ME||ME.role!=='ADMIN')return;const d=await api('/api/admin/players');const legend='<div class="playerAccountLegend"><span><b class="playerAccountBadge playerAccountVerified">V</b> zalogował się w aplikacji</span><span><b class="playerAccountBadge playerAccountAdmin">A</b> dodany przez admina</span></div>';const desktop='<div class="tablewrap adminDesktopOnly"><table class="adminPlayersTable"><thead><tr><th style="width:46px">Lp.</th><th>Imię i nazwisko</th><th style="width:82px">Info</th><th>Telefon</th><th>Koło PZW</th><th>Aktywne zapisy</th><th style="width:150px">Akcja</th></tr></thead><tbody>'+d.players.map((p,i)=>{const name=String((p.first_name||'')+' '+(p.last_name||'')).trim();const safeName=encodeURIComponent(name);return '<tr><td class="center"><b>'+(i+1)+'</b></td><td><b>'+esc(name)+'</b></td><td class="playerBadgeCell">'+playerInfoBadges(p)+'</td><td class="nowrap">'+esc(p.phone)+'</td><td>'+esc(p.pzw_club)+'</td><td class="center">'+esc(p.active_entries||0)+'</td><td><div class="inlineBtns playerManageBtns"><button type="button" class="secondary" onclick="editPlayerName('+Number(p.id)+',decodeURIComponent(\''+safeName+'\'))">Edytuj</button><button type="button" class="warn playerDeleteBtn" onclick="deletePlayer('+Number(p.id)+',decodeURIComponent(\''+safeName+'\'))">Usuń</button></div></td></tr>'}).join('')+'</tbody></table></div>';const mobile='<div class="adminMobileOnly mobilePlayersList">'+d.players.map((p,i)=>{const name=String((p.first_name||'')+' '+(p.last_name||'')).trim();const safeName=encodeURIComponent(name);return '<article class="mobileAdminCard mobilePlayerManageCard"><div class="mobileAdminCardHead"><span class="mobileLp">'+(i+1)+'</span><b>'+esc(name)+'</b><span class="mobilePlayerBadges">'+playerInfoBadges(p)+'</span></div><div class="mobileAdminMeta"><span><small>Koło</small><b>'+esc(p.pzw_club||'—')+'</b></span><span><small>Zapisy</small><b>'+esc(p.active_entries||0)+'</b></span></div><div class="mobileAdminLine"><small>Telefon</small><span>'+esc(p.phone||'—')+'</span></div><div class="mobilePlayerManageActions"><button type="button" class="secondary" onclick="editPlayerName('+Number(p.id)+',decodeURIComponent(\''+safeName+'\'))">Edytuj nazwę</button><button type="button" class="warn playerDeleteBtn mobilePlayerDeleteBtn" onclick="deletePlayer('+Number(p.id)+',decodeURIComponent(\''+safeName+'\'))">Usuń zawodnika</button></div></article>'}).join('')+'</div>';q('playersList').innerHTML=legend+desktop+mobile}
 function urlBase64ToUint8Array(base64String){const padding='='.repeat((4-base64String.length%4)%4);const base64=(base64String+padding).replace(/-/g,'+').replace(/_/g,'/');const raw=atob(base64);const out=new Uint8Array(raw.length);for(let i=0;i<raw.length;++i)out[i]=raw.charCodeAt(i);return out}
 async function getPushConfig(force=false){if(PUSH_CONFIG&&!force)return PUSH_CONFIG;PUSH_CONFIG=await api('/api/config');return PUSH_CONFIG}
 function pushUiLabel(){if(!('Notification'in window))return 'Alerty niedostępne';if(Notification.permission==='denied')return 'Alerty zablokowane';if(Notification.permission==='granted'&&PUSH_SUBSCRIBED)return 'Test alertu';return 'Włącz alerty telefonu'}
@@ -510,7 +557,7 @@ async function ensurePushSubscription(silent=false,sendTest=false){
   let permission=Notification.permission;
   if(permission==='default'&&!silent)permission=await Notification.requestPermission();
   if(permission!=='granted'){if(!silent)msg(permission==='denied'?'Powiadomienia są zablokowane w ustawieniach tej strony.':'Nie włączono powiadomień telefonu.','bad');renderPushStatus();return false}
-  const reg=await navigator.serviceWorker.register('/sw.js?v=52',{scope:'/'});
+  const reg=await navigator.serviceWorker.register('/sw.js?v=55',{scope:'/'});
   await navigator.serviceWorker.ready;
   let sub=await reg.pushManager.getSubscription();
   if(sub&&sendTest){await sub.unsubscribe().catch(()=>{});sub=null}
@@ -616,6 +663,6 @@ function bindAuthButtons(){
 }
 
 function scrollAppBottom(){window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})}
-Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,showAdminZone,loadCompetitions,createCompetition,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,enablePush,sendPushTest,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,openPlayerNotifications,fitPlayerMobileFullMaps,togglePlayerSectorAccordion,toggleFinalClub,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
-function startBoot(){console.log('CLIENT_V52_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v52',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().catch(e=>{console.error('BOOT_FATAL',e);try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
+Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,showAdminZone,loadCompetitions,createCompetition,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,editPlayerName,deletePlayer,enablePush,sendPushTest,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,openPlayerNotifications,fitPlayerMobileFullMaps,togglePlayerSectorAccordion,toggleFinalClub,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
+function startBoot(){console.log('CLIENT_V55_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v55',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().catch(e=>{console.error('BOOT_FATAL',e);try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();

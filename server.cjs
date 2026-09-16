@@ -16,8 +16,8 @@ const ADMIN_SETUP_CODE = process.env.ADMIN_SETUP_CODE || '';
 let VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 let VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
-const APP_VERSION = '52';
-const APP_VERSION_NAME = 'V52_REAL_PUSH_PLAYER_ALERTS';
+const APP_VERSION = '55';
+const APP_VERSION_NAME = 'V55_PLAYER_DESKTOP_PARITY_INITIAL_SURNAME';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 
 
@@ -82,7 +82,7 @@ async function auth(req) {
   const p = verifyToken(token);
   if (!p) return null;
   try {
-    const { rows } = await pool.query('select id, phone, first_name, last_name, pzw_club, role, created_at from users where id=$1', [p.uid]);
+    const { rows } = await pool.query('select id, phone, first_name, last_name, pzw_club, role, created_at, account_source, last_login_at from users where id=$1', [p.uid]);
     return rows[0] || null;
   } catch { return null; }
 }
@@ -159,6 +159,12 @@ async function initDb() {
       key text primary key,
       value text not null
     );
+  `);
+  await pool.query(`
+    alter table users add column if not exists account_source text not null default 'SELF';
+    alter table users add column if not exists last_login_at timestamptz;
+    update users set account_source='ADMIN' where role='PLAYER' and (phone like 'MANUAL-%' or phone like 'ZPRO-%' or phone like 'IMPORT-%');
+    update users set last_login_at=created_at where role='PLAYER' and account_source='SELF' and last_login_at is null and phone not like 'MANUAL-%' and phone not like 'ZPRO-%' and phone not like 'IMPORT-%';
   `);
   await pool.query(`
     alter table competitions add column if not exists map_mode text not null default 'TWO_OPPOSITE';
@@ -1012,12 +1018,13 @@ async function ensureCompetitionPlayer(competitionId, person, mode='IMPORT', pre
   if (person.password) passwordHash = await bcrypt.hash(String(person.password), 10);
   else passwordHash = await bcrypt.hash(crypto.randomBytes(16).toString('hex'), 10);
   const wantedStatus = await nextRosterStatus(competitionId, preferredStatus);
+  const accountSource = ['MANUAL','ZPRO','IMPORT'].includes(String(mode||'').toUpperCase()) ? 'ADMIN' : 'SELF';
   const { rows } = await pool.query(`
-    insert into users(phone,password_hash,first_name,last_name,pzw_club,role)
-    values($1,$2,$3,$4,$5,'PLAYER')
+    insert into users(phone,password_hash,first_name,last_name,pzw_club,role,account_source)
+    values($1,$2,$3,$4,$5,'PLAYER',$6)
     on conflict(phone) do update set first_name=excluded.first_name, last_name=excluded.last_name, pzw_club=excluded.pzw_club
-    returning id, first_name, last_name, phone, pzw_club
-  `, [phone, passwordHash, firstName, lastName, pzwClub]);
+    returning id, first_name, last_name, phone, pzw_club, account_source, last_login_at
+  `, [phone, passwordHash, firstName, lastName, pzwClub, accountSource]);
   const uid = rows[0].id;
   await pool.query(`
     insert into entries(competition_id,user_id,status,joined_at,cancelled_at)
@@ -1088,7 +1095,7 @@ async function route(req, res) {
   const path = url.pathname;
   const method = req.method;
 
-  if (path === '/__probe_js_v51' || path === '/__probe_boot_v51' || path === '/__probe_js_v50' || path === '/__probe_boot_v50' || path === '/__probe_js_v49' || path === '/__probe_boot_v49' || path === '/__probe_js_v36' || path === '/__probe_boot_v36' || path === '/__probe_js_v35' || path === '/__probe_boot_v35' || path === '/__probe_js_v34' || path === '/__probe_boot_v34' || path === '/__probe_js_v33' || path === '/__probe_boot_v33' || path === '/__probe_js_v32' || path === '/__probe_boot_v32' || path === '/__probe_js_v30' || path === '/__probe_boot_v30' || path === '/__probe_js_v29' || path === '/__probe_boot_v29' || path === '/__probe_js_v27' || path === '/__probe_boot_v27' || path === '/__probe_inline_v26') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
+  if (path === '/__probe_js_v55' || path === '/__probe_boot_v55' || path === '/__probe_js_v54' || path === '/__probe_boot_v54' || path === '/__probe_js_v53' || path === '/__probe_boot_v53' || path === '/__probe_js_v52' || path === '/__probe_boot_v52' || path === '/__probe_js_v51' || path === '/__probe_boot_v51' || path === '/__probe_js_v50' || path === '/__probe_boot_v50' || path === '/__probe_js_v49' || path === '/__probe_boot_v49' || path === '/__probe_js_v36' || path === '/__probe_boot_v36' || path === '/__probe_js_v35' || path === '/__probe_boot_v35' || path === '/__probe_js_v34' || path === '/__probe_boot_v34' || path === '/__probe_js_v33' || path === '/__probe_boot_v33' || path === '/__probe_js_v32' || path === '/__probe_boot_v32' || path === '/__probe_js_v30' || path === '/__probe_boot_v30' || path === '/__probe_js_v29' || path === '/__probe_boot_v29' || path === '/__probe_js_v27' || path === '/__probe_boot_v27' || path === '/__probe_inline_v26') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/api/version') return sendJson(res, 200, { ok:true, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/app.js') return send(res, 200, APP_JS, {'Content-Type':'application/javascript; charset=utf-8', 'Cache-Control':'no-store, no-cache, must-revalidate'});
 
@@ -1148,7 +1155,7 @@ async function route(req, res) {
     name:'Łowcy Methodowcy', short_name:'Łowcy', start_url:'/', scope:'/', id:'/', display:'standalone', background_color:'#f3f6ef', theme_color:'#114b2f', icons:[]
   }), {'Content-Type':'application/manifest+json; charset=utf-8'});
   if (path === '/sw.js') return send(res, 200, `
-const SW_VERSION='lowcy-v52-push';
+const SW_VERSION='lowcy-v55-push';
 self.addEventListener('install', event => { self.skipWaiting(); });
 self.addEventListener('activate', event => event.waitUntil((async()=>{ try{const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k)));}catch(e){} await self.clients.claim(); })()));
 self.addEventListener('push', event => {
@@ -1174,7 +1181,7 @@ self.addEventListener('notificationclick', event => {
     if (!phone || !b.password || !b.firstName || !b.lastName) return sendJson(res, 400, { ok:false, error:'Uzupełnij telefon, hasło, imię i nazwisko' });
     const hash = await bcrypt.hash(String(b.password), 12);
     const { rows } = await pool.query(
-      `insert into users(phone,password_hash,first_name,last_name,pzw_club,role) values($1,$2,$3,$4,$5,'ADMIN') returning id, phone, first_name, last_name, pzw_club, role, created_at`,
+      `insert into users(phone,password_hash,first_name,last_name,pzw_club,role,account_source,last_login_at) values($1,$2,$3,$4,$5,'ADMIN','ADMIN',now()) returning id, phone, first_name, last_name, pzw_club, role, created_at, last_login_at`,
       [phone, hash, String(b.firstName).trim(), String(b.lastName).trim(), String(b.pzwClub||'').trim()]
     );
     return sendJson(res, 200, { ok:true, user:rows[0], token:signToken(rows[0]) });
@@ -1186,7 +1193,7 @@ self.addEventListener('notificationclick', event => {
     const hash = await bcrypt.hash(String(b.password), 12);
     try {
       const { rows } = await pool.query(
-        `insert into users(phone,password_hash,first_name,last_name,pzw_club,role) values($1,$2,$3,$4,$5,'PLAYER') returning id, phone, first_name, last_name, pzw_club, role, created_at`,
+        `insert into users(phone,password_hash,first_name,last_name,pzw_club,role,account_source,last_login_at) values($1,$2,$3,$4,$5,'PLAYER','SELF',now()) returning id, phone, first_name, last_name, pzw_club, role, created_at, account_source, last_login_at`,
         [phone, hash, String(b.firstName).trim(), String(b.lastName).trim(), String(b.pzwClub).trim()]
       );
       await notifyAdmins('REGISTER', 'Nowe konto zawodnika', `${rows[0].first_name} ${rows[0].last_name}, Koło PZW ${rows[0].pzw_club}`, { userId: rows[0].id });
@@ -1202,7 +1209,9 @@ self.addEventListener('notificationclick', event => {
     const { rows } = await pool.query('select * from users where phone=$1', [phone]);
     const u = rows[0];
     if (!u || !(await bcrypt.compare(String(b.password||''), u.password_hash))) return sendJson(res, 401, { ok:false, error:'Błędny telefon lub hasło' });
-    return sendJson(res, 200, { ok:true, user:{id:u.id,phone:u.phone,first_name:u.first_name,last_name:u.last_name,pzw_club:u.pzw_club,role:u.role,created_at:u.created_at}, token:signToken(u) });
+    const loginStamp = new Date();
+    await pool.query('update users set last_login_at=$1 where id=$2', [loginStamp, u.id]);
+    return sendJson(res, 200, { ok:true, user:{id:u.id,phone:u.phone,first_name:u.first_name,last_name:u.last_name,pzw_club:u.pzw_club,role:u.role,created_at:u.created_at,account_source:u.account_source||'SELF',last_login_at:loginStamp.toISOString()}, token:signToken(u) });
   }
 
   const user = await auth(req);
@@ -1614,10 +1623,46 @@ self.addEventListener('notificationclick', event => {
     if (!requireAdmin(user, res)) return;
     const { rows } = await pool.query(`
       select u.id, u.phone, u.first_name, u.last_name, u.pzw_club, u.role, u.created_at,
+      coalesce(u.account_source,'SELF') account_source, u.last_login_at,
+      (u.last_login_at is not null) has_logged_in,
       (select count(*)::int from entries e where e.user_id=u.id and e.status='ACTIVE') active_entries
-      from users u order by u.created_at desc
+      from users u where u.role='PLAYER' order by u.created_at desc
     `);
     return sendJson(res, 200, { ok:true, players:rows });
+  }
+  m = path.match(/^\/api\/admin\/players\/(\d+)$/);
+  if (m && method === 'PATCH') {
+    if (!requireAdmin(user, res)) return;
+    const playerId = Number(m[1]);
+    const b = await readBody(req);
+    const fullName = normalizePersonName(b.fullName || '');
+    if (!looksLikePersonName(fullName)) return sendJson(res, 400, { ok:false, error:'Podaj poprawne imię i nazwisko zawodnika' });
+    const parts = splitFullName(fullName);
+    const out = await pool.query(`update users set first_name=$1, last_name=$2 where id=$3 and role='PLAYER' returning id, first_name, last_name`, [parts.firstName, parts.lastName, playerId]);
+    if (!out.rowCount) return sendJson(res, 404, { ok:false, error:'Nie znaleziono zawodnika' });
+    const p = out.rows[0];
+    await notifyAdmins('PLAYER_NAME_EDIT', 'Poprawiono nazwę zawodnika', `${p.first_name} ${p.last_name}`, { userId:playerId });
+    return sendJson(res, 200, { ok:true, player:{id:playerId,name:`${p.first_name} ${p.last_name}`.trim(),first_name:p.first_name,last_name:p.last_name} });
+  }
+  if (m && method === 'DELETE') {
+    if (!requireAdmin(user, res)) return;
+    const playerId = Number(m[1]);
+    const pq = await pool.query(`select id, first_name, last_name, role from users where id=$1`, [playerId]);
+    const player = pq.rows[0];
+    if (!player || player.role !== 'PLAYER') return sendJson(res, 404, { ok:false, error:'Nie znaleziono zawodnika' });
+    const name = `${player.first_name} ${player.last_name}`.trim();
+    const client = await pool.connect();
+    try {
+      await client.query('begin');
+      await client.query('update competitions set created_by=null where created_by=$1', [playerId]);
+      await client.query('update leave_requests set decided_by=null where decided_by=$1', [playerId]);
+      await client.query("delete from users where id=$1 and role='PLAYER'", [playerId]);
+      await client.query('commit');
+    } catch (e) {
+      await client.query('rollback');
+      throw e;
+    } finally { client.release(); }
+    return sendJson(res, 200, { ok:true, player:{ id:playerId, name } });
   }
 
   return send(res, 200, HTML);
@@ -2543,6 +2588,74 @@ header{z-index:100!important}
   .playerNotificationNav button{min-height:32px!important;padding:4px!important;font-size:10px!important}
 }
 
+
+
+/* V54 — edycja nazw po imporcie + V/A + usuwanie */
+.playerAccountLegend{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:0 0 9px;padding:7px 9px;border:1px solid #d4ddd6;border-radius:9px;background:#f7faf7;font-size:11px;font-weight:800;color:#334b3d}
+.playerAccountLegend>span{display:inline-flex;align-items:center;gap:5px}
+.playerAccountBadge{display:inline-flex;align-items:center;justify-content:center;width:25px;height:25px;border-radius:999px;font-size:13px;font-weight:1000;line-height:1;border:2px solid transparent;box-sizing:border-box;margin-right:3px}
+.playerAccountVerified{background:#0b8f46;color:#fff;border-color:#08753a;box-shadow:0 0 0 2px #d9f2e3}
+.playerAccountAdmin{background:#f0b429;color:#3e2a00;border-color:#cf9414;box-shadow:0 0 0 2px #fff1bf}
+.playerBadgeCell{white-space:nowrap;text-align:center}
+.playerDeleteBtn{width:auto!important;min-width:60px!important;padding:5px 9px!important;font-size:11px!important;min-height:30px!important}
+.adminPlayersTable td,.adminPlayersTable th{vertical-align:middle}
+.mobilePlayerBadges{display:flex;gap:2px;margin-left:auto;align-items:center}
+.mobilePlayerDeleteBtn{width:100%!important;margin-top:7px!important}
+@media(max-width:760px){
+  .playerAccountLegend{gap:8px!important;padding:5px 6px!important;margin-bottom:6px!important;font-size:9px!important}
+  .playerAccountBadge{width:22px!important;height:22px!important;font-size:11px!important;margin-right:1px!important}
+  .mobilePlayerManageCard{padding:7px!important}
+  .mobilePlayerManageCard .mobileAdminCardHead{display:flex!important;align-items:center!important;gap:5px!important}
+  .mobilePlayerDeleteBtn{min-height:30px!important;padding:4px 7px!important;font-size:10px!important}
+}
+
+/* V54 — szybka korekta nazw zawodników po imporcie */
+.rosterNameEdit{display:flex;align-items:center;gap:7px;min-width:0}.rosterNameEdit b{min-width:0}.rosterEditNameBtn{padding:4px 7px!important;min-height:28px!important;font-size:10px!important;white-space:nowrap}.playerManageBtns{display:grid!important;grid-template-columns:1fr 1fr!important;gap:4px!important}.mobilePlayerManageActions{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:7px}.mobilePlayerManageActions button{width:100%;min-width:0}.mobileRosterCompactHead .rosterEditNameBtn{margin-left:auto}.mobileRosterCompactHead .mobileRosterCompactStatus{margin-left:0!important}
+@media(max-width:760px){.rosterEditNameBtn{font-size:9px!important;padding:3px 5px!important;min-height:25px!important}.mobilePlayerManageActions{gap:4px}}
+
+
+/* V55 — zawodnik: pulpit komputerowy jak mobilny + zapis P.Nowak w sektorach */
+.playerDesktopDashboardV55{display:block;width:100%;min-width:0}
+.playerDesktopUnifiedNav{position:sticky;top:0;z-index:1400;margin:0 0 10px;padding:8px;background:rgba(247,250,246,.985);box-shadow:0 5px 18px #00000018;border:1px solid #c8d5cc}
+.playerDesktopMainNav{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px}
+.playerDesktopMainNav button,.playerDesktopSubNav button{min-width:0;min-height:50px;padding:8px 7px;border-radius:9px;font-size:13px;font-weight:1000;line-height:1.08;white-space:normal}
+.playerDesktopMainNav .drawTile{background:#146db7;border-color:#0d5b9b;color:#fff}
+.playerDesktopMainNav .resultTile{background:#0d7a42;border-color:#096334;color:#fff}
+.playerDesktopMainNav .resultTile:nth-child(5),.playerDesktopMainNav .resultTile:nth-child(6){background:#6b3bb3;border-color:#572b9a}
+.playerDesktopUnifiedNav button.active{outline:3px solid #f1bd16;outline-offset:1px;box-shadow:0 0 0 1px #fff inset}
+.playerDesktopSubNav{display:grid;grid-template-columns:1fr 1fr .8fr;gap:7px;margin-top:7px}
+.playerDesktopSubNav .mapTile{background:#164f7f;border-color:#0d416d;color:#fff}
+.playerDesktopSubNav .notificationTile{background:#285a3e;border-color:#17472e;color:#fff}
+.playerDesktopDashboardV55 .playerOwnSummaryWrap{margin:10px 0}
+.playerDesktopDashboardV55 .playerOwnSummaryHeading{margin:0 0 6px;font-size:14px;font-weight:1000;color:#315544;letter-spacing:.02em}
+.playerDesktopDashboardV55 .playerOwnSummaryGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.playerDesktopDashboardV55 .playerOwnSummaryCard{border:1px solid #bed0c3;border-radius:12px;padding:12px 14px;background:#fff;box-shadow:0 2px 8px #0000000e}
+.playerDesktopDashboardV55 .playerOwnSummaryCard.round1{background:#eefbf0}.playerDesktopDashboardV55 .playerOwnSummaryCard.round2{background:#eef6ff}
+.playerDesktopDashboardV55 .playerOwnSummaryTitle{font-size:13px;font-weight:1000;color:#1f4c38;margin-bottom:5px}
+.playerDesktopDashboardV55 .playerOwnSummaryMain{display:grid;grid-template-columns:70px 90px minmax(0,1fr);gap:10px;align-items:end}
+.playerDesktopDashboardV55 .playerOwnSummaryRound{font-size:24px;font-weight:1000}.playerDesktopDashboardV55 .playerOwnSummaryStand{font-size:42px;line-height:1;font-weight:1000;color:#102f23}.playerDesktopDashboardV55 .playerOwnSummarySector{font-size:20px;font-weight:1000}
+.playerDesktopDashboardV55 .playerOwnSummaryLabels{display:grid;grid-template-columns:70px 90px minmax(0,1fr);gap:10px;margin-top:3px;color:#607169;font-size:10px;font-weight:800;text-transform:uppercase}
+.playerDesktopSectionTitle{margin:12px 2px 8px;font-size:15px;font-weight:1000;color:#315544;letter-spacing:.02em}
+.playerDesktopDashboardV55 .playerSectorAccordionList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:start}
+.playerDesktopDashboardV55 .playerSectorAccordion{border:1px solid #a9bcb0;border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 2px 8px #0000000d}
+.playerDesktopDashboardV55 .playerSectorAccordionHead{display:grid;grid-template-columns:42px minmax(0,1fr) auto 30px;gap:8px;align-items:center;width:100%;min-height:50px;padding:7px 10px;border-radius:0;text-align:left;color:#fff}
+.playerDesktopDashboardV55 .playerSectorAccordionHead b{font-size:17px;line-height:1}.playerDesktopDashboardV55 .playerSectorCount{font-size:12px;font-weight:1000}.playerDesktopDashboardV55 .playerSectorChevron{font-size:21px;text-align:center;transition:transform .15s ease}
+.playerDesktopDashboardV55 .playerSectorCircle{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:999px;background:#ffffffdf;color:#173d2e;font-size:21px;font-weight:1000}
+.playerDesktopDashboardV55 .playerSectorAccordion.sectorFill-A .playerSectorAccordionHead{background:#0c7b42}.playerDesktopDashboardV55 .playerSectorAccordion.sectorFill-B .playerSectorAccordionHead{background:#cc3131}.playerDesktopDashboardV55 .playerSectorAccordion.sectorFill-C .playerSectorAccordionHead{background:#d98b13}.playerDesktopDashboardV55 .playerSectorAccordion.sectorFill-D .playerSectorAccordionHead{background:#176cc2}.playerDesktopDashboardV55 .playerSectorAccordion.sectorFill-E .playerSectorAccordionHead{background:#703ac6}.playerDesktopDashboardV55 .playerSectorAccordion.sectorFill-F .playerSectorAccordionHead{background:#50697c}.playerDesktopDashboardV55 .playerSectorAccordion.sectorFill-G .playerSectorAccordionHead{background:#8c671f}.playerDesktopDashboardV55 .playerSectorAccordion.sectorFill-H .playerSectorAccordionHead{background:#4a7b2b}
+.playerDesktopDashboardV55 .playerSectorAccordion.collapsed .playerSectorAccordionBody{display:none}.playerDesktopDashboardV55 .playerSectorAccordion.collapsed .playerSectorChevron{transform:rotate(180deg)}
+.playerDesktopDashboardV55 .playerSectorAccordionBody{padding:8px;background:#f9fbf9}
+.playerDesktopDashboardV55 .playerSectorBank+.playerSectorBank{border-top:1px dashed #bbc9bf;margin-top:8px;padding-top:8px}
+.playerDesktopDashboardV55 .playerSectorBankTitle{font-size:12px;font-weight:1000;color:#2a5b43;margin:0 0 6px}.playerDesktopDashboardV55 .playerSectorBankTitle span{font-weight:800;color:#6b7d72}
+.playerDesktopDashboardV55 .playerSectorStandGrid{display:grid;gap:6px}.playerDesktopDashboardV55 .playerSectorStandGrid.cols1{grid-template-columns:1fr}.playerDesktopDashboardV55 .playerSectorStandGrid.cols2{grid-template-columns:repeat(2,minmax(0,1fr))}.playerDesktopDashboardV55 .playerSectorStandGrid.cols3{grid-template-columns:repeat(3,minmax(0,1fr))}.playerDesktopDashboardV55 .playerSectorStandGrid.cols4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.playerDesktopDashboardV55 .playerSectorStand{position:relative;min-width:0;min-height:70px;border:1px solid #b7c6bc;border-radius:9px;background:#eef3f0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:5px 4px;overflow:hidden}
+.playerDesktopDashboardV55 .playerSectorStandNo{font-size:29px;line-height:1;font-weight:1000;color:#142f24}.playerDesktopDashboardV55 .playerSectorStandName{display:block;width:100%;text-align:center;margin-top:5px;font-size:14px;font-weight:1000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#1d3228}
+.playerDesktopDashboardV55 .minePlayerSectorStand{border:3px solid #e0aa00;background:#fff6bf}.playerDesktopDashboardV55 .playerSectorMineBadge{position:absolute;top:3px;right:4px;background:#f0ba00;color:#3d2b00;border-radius:5px;padding:2px 5px;font-size:8px;font-weight:1000}
+.playerDesktopSectorTables{margin-top:12px}.playerDesktopSectorTables .drawSectorGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.playerDesktopSectorTables .drawSectorBox{margin:0;padding:9px}.playerDesktopSectorTables .drawSectorBox h4{font-size:16px;margin:2px 0 7px}
+.playerDesktopFullMap{margin-top:10px;overflow:hidden}.playerDesktopFullMap>h2{margin:0 0 8px}.playerDesktopFullMap .sectorMap{max-width:100%;overflow-x:auto;margin:0}.playerDesktopFullMap .roundDrawName{font-size:14px!important;font-weight:1000!important}
+.playerDesktopSelectedPanel .playerResultCard,.playerDesktopSelectedPanel>.card{margin-top:10px}
+@media(max-width:1000px) and (min-width:761px){.playerDesktopMainNav{grid-template-columns:repeat(3,minmax(0,1fr))}.playerDesktopDashboardV55 .playerSectorAccordionList{grid-template-columns:1fr}.playerDesktopSectorTables .drawSectorGrid{grid-template-columns:1fr}}
+@media(max-width:760px){.playerDesktopDashboardV55{display:none!important}}
+
 </style>
 </head>
 <body>
@@ -2559,7 +2672,7 @@ header{z-index:100!important}
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V52</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
+  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V55</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
     <div id="adminCreate" class="card hidden"><h2>Utwórz zawody</h2><p class="small muted">Nazwa zawodów jest używana także w nagłówkach PDF.</p><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div></div><label>Opis</label><textarea id="cNotes" placeholder="Opis zawodów, zasady, informacje organizacyjne."></textarea><button onclick="createCompetition(event)">Utwórz zawody</button></div>
@@ -2571,7 +2684,7 @@ header{z-index:100!important}
 </section>
 </main>
 <div class="quickScroll"><button onclick="scrollAppTop()">↑</button><button onclick="scrollAppBottom()">↓</button></div>
-<script src="/app.js?v=52" defer></script>
+<script src="/app.js?v=55" defer></script>
 </body>
 </html>`;
 
@@ -2582,5 +2695,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V52_REAL_PUSH_PLAYER_ALERTS_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V55_PLAYER_DESKTOP_PARITY_INITIAL_SURNAME_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });
