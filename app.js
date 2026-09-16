@@ -1,4 +1,4 @@
-const CLIENT_VERSION='58';const CLIENT_VERSION_NAME='V58_PLAYER_STICKY_SLOT';try{fetch('/__probe_js_v58',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V58_PLAYER_STICKY_SLOT_LOADED');
+const CLIENT_VERSION='59';const CLIENT_VERSION_NAME='V59_PLAYER_STICKY_LIKE_ADMIN';try{fetch('/__probe_js_v59',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V59_PLAYER_STICKY_LIKE_ADMIN_LOADED');
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let TOKEN = STORE.get('carp_token') || '';
 let ME = null;
@@ -628,26 +628,28 @@ function getPlayerStickyTop(){
   const r=header.getBoundingClientRect();
   return Math.max(0,Math.ceil(r.bottom));
 }
-function syncOnePlayerBar(slot,bar,boundary,top){
+function syncOnePlayerBar(slot,bar,boundary){
   if(!slot||!bar||!boundary){clearPlayerFixed(bar,slot);return}
-  const stickyTop=Number.isFinite(top)?top:getPlayerStickyTop();
+  const top=0;
   const slotRect=slot.getBoundingClientRect();
   const boundaryRect=boundary.getBoundingClientRect();
   const wasFixed=bar.classList.contains('fixedPlayerBar');
-  if(wasFixed)bar.classList.remove('fixedPlayerBar');
-  const naturalH=Math.ceil(bar.getBoundingClientRect().height||bar.offsetHeight||40);
-  if(wasFixed)bar.classList.add('fixedPlayerBar');
-  const fixedH=Math.ceil(bar.getBoundingClientRect().height||naturalH);
-  const barH=Math.max(naturalH,fixedH);
-  const shouldFix=slotRect.top<=stickyTop && boundaryRect.bottom>stickyTop+barH+6;
+  if(wasFixed){
+    bar.classList.remove('fixedPlayerBar');
+    bar.style.left='';bar.style.width='';bar.style.top='';
+  }
+  const barH=Math.ceil(bar.getBoundingClientRect().height||bar.offsetHeight||44);
+  const shouldFix=slotRect.top<=top && boundaryRect.bottom>top+barH+6;
   if(shouldFix){
     slot.style.height=barH+'px';
     bar.classList.add('fixedPlayerBar');
     const r=slot.getBoundingClientRect();
     bar.style.left=Math.round(r.left)+'px';
     bar.style.width=Math.round(r.width)+'px';
-    bar.style.top=stickyTop+'px';
-  }else clearPlayerFixed(bar,slot);
+    bar.style.top=top+'px';
+  }else{
+    clearPlayerFixed(bar,slot);
+  }
 }
 function syncPlayerStickyBars(){
   if(PLAYER_STICKY_RAF){cancelAnimationFrame(PLAYER_STICKY_RAF);PLAYER_STICKY_RAF=0}
@@ -668,11 +670,10 @@ function syncPlayerStickyBars(){
     }
     if(mobile){
       clearPlayerFixed(desktopBar,desktopSlot);
-      syncOnePlayerBar(mobileSlot,mobileBar,mobileBoundary,top);
+      syncOnePlayerBar(mobileSlot,mobileBar,mobileBoundary);
     }else{
       clearPlayerFixed(mobileBar,mobileSlot);
-      clearPlayerFixed(desktopBar,desktopSlot);
-      if(desktopSlot)desktopSlot.style.height='';
+      syncOnePlayerBar(desktopSlot,desktopBar,desktopBoundary);
     }
   });
 }
@@ -687,5 +688,5 @@ function bindAuthButtons(){
 
 function scrollAppBottom(){window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})}
 Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,showAdminZone,loadCompetitions,createCompetition,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,editPlayerName,deletePlayer,enablePush,sendPushTest,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,openPlayerNotifications,fitPlayerMobileFullMaps,togglePlayerSectorAccordion,toggleFinalClub,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
-function startBoot(){console.log('CLIENT_V58_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v58',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().catch(e=>{console.error('BOOT_FATAL',e);try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
+function startBoot(){console.log('CLIENT_V59_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v59',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().catch(e=>{console.error('BOOT_FATAL',e);try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();
