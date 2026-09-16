@@ -17,7 +17,7 @@ const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const APP_VERSION = '36';
-const APP_VERSION_NAME = 'V40_COMPACT_MOBILE_ADMIN';
+const APP_VERSION_NAME = 'V42_PLAYER_MOBILE_RESULTS';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 
 if (webpush && VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
@@ -1993,6 +1993,111 @@ header{z-index:100!important}
   .quickScroll button{width:34px!important;padding:5px 0!important;font-size:11px!important}
 }
 
+
+/* V41 — pasek administratora naprawdę przy samej górze ekranu */
+.workZoneTabs.fixedAdminNav{
+  top:0!important;
+  z-index:5000!important;
+  border-radius:0 0 10px 10px!important;
+}
+header{z-index:100!important}
+@media(max-width:760px){
+  .workZoneTabs.fixedAdminNav{top:0!important}
+}
+
+
+/* V42 — mobilny panel wyników zawodnika */
+.playerResultsMobile{display:none}
+@media(max-width:760px){
+  .playerView{overflow:visible!important}
+  .playerResultsDesktop{display:none!important}
+  .playerResultsMobile{display:block!important;overflow:visible!important}
+  .playerResultsNavSlot{width:100%;min-height:40px;overflow:visible!important}
+  .playerResultsNav{
+    position:sticky!important;
+    top:0!important;
+    z-index:4200!important;
+    display:grid!important;
+    grid-template-columns:repeat(4,minmax(0,1fr))!important;
+    gap:2px!important;
+    width:100%!important;
+    padding:3px!important;
+    margin:4px 0 5px!important;
+    background:rgba(243,246,239,.995)!important;
+    border:1px solid #c9d6cc!important;
+    border-radius:8px!important;
+    box-shadow:0 4px 12px #00000020!important;
+  }
+  .playerResultsNav button{
+    min-width:0!important;
+    min-height:34px!important;
+    padding:4px 2px!important;
+    border-radius:6px!important;
+    font-size:9px!important;
+    line-height:1.02!important;
+    background:#e2ebe4!important;
+    color:#173d2e!important;
+    border:1px solid #b9cabd!important;
+  }
+  .playerResultsNav button.active{
+    background:#0b5634!important;
+    color:#fff!important;
+    border-color:#0b5634!important;
+  }
+  .playerResultsSection{min-width:0!important}
+  .playerResultsSection>.card,.playerResultsSection .playerResultCard{margin:4px 0!important;padding:5px!important}
+  .playerResultsSection h2{font-size:14px!important;margin:2px 0 5px!important}
+  .playerResultsSection h3{font-size:12px!important;margin:5px 0 3px!important}
+  .playerWholeRoundTitle{margin-top:8px!important;padding-top:5px!important;border-top:1px solid #dce5de!important}
+
+  /* Wyniki sektorowe pozostają w dotychczasowym układzie, tylko mieszczą się w ekranie. */
+  .playerResultsSection .drawSectorBox,
+  .playerResultsSection .card{max-width:100%!important}
+  .playerResultsSection .tablewrap{max-width:100%!important}
+  .playerResultsSection .twoCols{grid-template-columns:1fr!important}
+
+  /* Całe T1/T2 — gęsta tabela bez przewijania poziomego. */
+  .playerNoScroll{width:100%!important;max-width:100%!important;overflow:hidden!important;border:1px solid #cbd8ce;border-radius:7px}
+  .playerCompactRoundTable{width:100%!important;min-width:0!important;table-layout:fixed!important}
+  .playerCompactRoundTable th,.playerCompactRoundTable td{padding:4px 2px!important;font-size:9.8px!important;line-height:1.08!important;overflow:hidden!important}
+  .playerCompactRoundTable th{font-size:8.3px!important}
+  .playerCompactRoundTable .pcLp{width:25px!important}
+  .playerCompactRoundTable .pcPos{width:48px!important}
+  .playerCompactRoundTable .pcPlace{width:31px!important}
+  .playerCompactRoundTable .pcWeight{width:70px!important;white-space:nowrap!important}
+  .playerCompactRoundTable .pcName{font-size:10.5px!important;overflow-wrap:anywhere!important}
+  .playerCompactRoundTable .pcPos span{font-weight:700}
+  .pcBf{display:block!important;font-size:7.8px!important;line-height:1.05!important;color:#b91c1c!important;font-weight:900!important;white-space:nowrap!important;margin-top:1px!important}
+
+  /* Klasyfikacja końcowa: MSC | Zawodnik | T1 | T2 | Punkty | Waga */
+  .playerCompactFinalTable{width:100%!important;min-width:0!important;table-layout:fixed!important}
+  .playerCompactFinalTable th,.playerCompactFinalTable td{padding:4px 2px!important;font-size:9.4px!important;line-height:1.08!important;overflow:hidden!important}
+  .playerCompactFinalTable th{font-size:7.7px!important}
+  .playerCompactFinalTable .pfRank{width:27px!important}
+  .playerCompactFinalTable .pfRound{width:27px!important}
+  .playerCompactFinalTable .pfPoints{width:42px!important}
+  .playerCompactFinalTable .pfWeight{width:72px!important;white-space:nowrap!important}
+  .playerCompactFinalTable .pfName{width:auto!important;font-size:10px!important;overflow-wrap:anywhere!important}
+  .playerCompactFinalTable td.pfRound b,.playerCompactFinalTable td.pfPoints b{font-size:10.5px!important}
+  .playerCompactFinalTable td.pfRank b{font-size:11px!important}
+
+  /* Statystyki w jednej zwartej tabeli. */
+  .playerCompactStats{width:100%!important;min-width:0!important;table-layout:fixed!important}
+  .playerCompactStats th,.playerCompactStats td{padding:4px 3px!important;font-size:9.5px!important}
+  .playerCompactStats th{font-size:8px!important}
+  .playerCompactStats th:nth-child(1),.playerCompactStats td:nth-child(1){width:45px!important}
+  .playerCompactStats th:nth-child(2),.playerCompactStats td:nth-child(2){width:72px!important}
+  .playerCompactStats th:nth-child(3),.playerCompactStats td:nth-child(3){width:48px!important}
+  .playerStatsCompact .stationStandBest,.playerStatsCompact .stationStandWorst{font-size:11px!important}
+
+  /* W mobilnym panelu wyników nie wymuszamy szerokości desktopowych tabel. */
+  .playerResultsMobile table{max-width:100%!important}
+}
+@media(min-width:761px){
+  .playerResultsDesktop{display:block!important}
+  .playerResultsMobile{display:none!important}
+}
+
 </style>
 </head>
 <body>
@@ -2009,7 +2114,7 @@ header{z-index:100!important}
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V40</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
+  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V42</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
     <div id="adminCreate" class="card hidden"><h2>Utwórz zawody</h2><p class="small muted">Nazwa zawodów jest używana także w nagłówkach PDF.</p><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div></div><label>Opis</label><textarea id="cNotes" placeholder="Opis zawodów, zasady, informacje organizacyjne."></textarea><button onclick="createCompetition(event)">Utwórz zawody</button></div>
@@ -2021,7 +2126,7 @@ header{z-index:100!important}
 </section>
 </main>
 <div class="quickScroll"><button onclick="scrollAppTop()">↑</button><button onclick="scrollAppBottom()">↓</button></div>
-<script src="/app.js?v=40" defer></script>
+<script src="/app.js?v=42" defer></script>
 </body>
 </html>`;
 
@@ -2032,5 +2137,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V40_COMPACT_MOBILE_ADMIN_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V42_PLAYER_MOBILE_RESULTS_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });

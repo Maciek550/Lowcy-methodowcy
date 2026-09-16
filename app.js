@@ -1,4 +1,4 @@
-const CLIENT_VERSION='40';const CLIENT_VERSION_NAME='V40_COMPACT_MOBILE_ADMIN';try{fetch('/__probe_js_v40',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V40_COMPACT_MOBILE_ADMIN_LOADED');
+const CLIENT_VERSION='42';const CLIENT_VERSION_NAME='V42_PLAYER_MOBILE_RESULTS';try{fetch('/__probe_js_v42',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V42_PLAYER_MOBILE_RESULTS_LOADED');
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let TOKEN = STORE.get('carp_token') || '';
 let ME = null;
@@ -12,6 +12,7 @@ let STRUCTURE_READY = false;
 let SECTOR_MANUAL_DRAFT = undefined;
 let ACTIVE_ADMIN_ZONE = 'roster';
 let PLAYER_DRAW_ROUND = 1;
+let PLAYER_RESULTS_TAB = 't1';
 let SHOW_FINAL_CLUB = false;
 const q = id => document.getElementById(id);
 window.addEventListener('error',e=>{console.error('CLIENT_ERR',e.message);try{const m=document.getElementById('msg');if(m)m.innerHTML='<div class=\"card bad danger-line\">Błąd ekranu: '+String(e.message||'nieznany')+'</div>'}catch(_){}});
@@ -127,18 +128,70 @@ function showAdminZone(zone,ev){
 function renderFinalClubToggle(){return '<label class="checkline finalClubToggle"><input type="checkbox" '+(SHOW_FINAL_CLUB?'checked':'')+' onchange="toggleFinalClub(this)"> Pokaż koło — tylko w klasyfikacji końcowej</label>'}
 function toggleFinalClub(el){SHOW_FINAL_CLUB=!!(el&&typeof el==='object'?el.checked:el);document.querySelectorAll('.finalClub').forEach(x=>x.classList.toggle('hidden',!SHOW_FINAL_CLUB));document.querySelectorAll('.finalClubToggle input').forEach(x=>{x.checked=SHOW_FINAL_CLUB})}
 function renderStructurePanel(d){const c=d.competition;const x=rosterCounts(d);const manual=Array.isArray(c.sector_layout);return '<div class="card"><h2>Struktura łowiska i sektory</h2><p class="small muted">W trybie „Dwa brzegi wzdłuż brzegów” sektory są układane osobno na każdym brzegu, a nie naprzeciwko siebie. Zakresy sektorów możesz wpisać ręcznie — mapa zmienia się od razu, a przycisk Zastosuj zapisuje układ.</p><div class="grid"><div><label>Tryb mapy</label><select id="dMapMode"><option value="TWO_OPPOSITE" '+(c.map_mode==='TWO_OPPOSITE'?'selected':'')+'>Dwa brzegi naprzeciwko</option><option value="ONE_BANK" '+(c.map_mode==='ONE_BANK'?'selected':'')+'>Jeden brzeg</option><option value="TWO_ALONG" '+(c.map_mode==='TWO_ALONG'?'selected':'')+'>Dwa brzegi — sektory wzdłuż brzegów</option></select></div><div><label>Brzeg dolny / brzeg 1</label><input id="dBank1" type="number" value="'+esc(c.bank1_count||0)+'"></div><div><label>Brzeg górny / brzeg 2</label><input id="dBank2" type="number" value="'+esc(c.bank2_count||0)+'"></div><div><label>Liczba sektorów</label><input id="dSectors" type="number" value="'+esc(c.sectors_count||1)+'" min="1" max="26"></div></div><label class="checkline"><input id="dAutoBanks" type="checkbox" '+(manual?'':'checked')+'> Automatycznie dopasuj brzegi do listy głównej / limitu. Przy nieparzystej liczbie więcej dostaje brzeg dolny.</label><div class="inlineBtns"><button type="button" class="secondary" onclick="autoFillBanksFromRoster(false,event)">Auto dopasuj teraz</button><button type="button" class="secondary" onclick="resetSectorLayout(event)">Przywróć automatyczne sektory</button><button type="button" onclick="saveCompetition('+c.id+',false,event)">Zastosuj / zapisz strukturę</button></div><div class="small muted" id="structureHint">Cel: '+x.draw+' do losowania; limit: '+x.limit+'.</div><h3>Szybki podgląd graficzny podziału na sektory</h3><div class="structurePreviewDesktop" id="structurePreview">'+renderMap(d)+'</div><div class="structurePreviewMobile" id="structurePreviewMobile">'+renderMobileStructureMap(c)+'</div><h3>Zakresy stanowisk dla sektorów</h3><div id="sectorCardsWrap">'+renderSectorCards(c)+'</div><div id="sectorEditStatus" class="small '+(manual?'ok':'muted')+'">'+(manual?'Ręczny układ jest zapisany.':'Obecnie działa podział automatyczny.')+'</div></div>'}
+function renderPlayerRoundCompact(rows,round){
+  rows=sortRowsBySectorPlace(rows||[]);
+  if(!rows.length)return '<p class="muted">Brak wyników T'+round+'.</p>';
+  return '<div class="playerNoScroll"><table class="sharpTable playerCompactRoundTable"><thead><tr><th class="pcLp">#</th><th>Zawodnik</th><th class="pcPos">Sek/Stan</th><th class="pcPlace">Msc</th><th class="pcWeight">Waga</th></tr></thead><tbody>'
+    +rows.map((r,idx)=>'<tr class="'+placeRowClass(r.points)+' '+(Number(r.user_id)===Number(ME.id)?'mine':'')+'"><td class="center pcLp">'+(idx+1)+'</td><td class="pcName"><b>'+esc(r.name)+'</b></td><td class="center pcPos"><b>'+esc(r.sector||'—')+'</b>/<span>'+(r.stand||'—')+'</span></td><td class="center pcPlace"><b>'+placeText(r.points)+'</b></td><td class="right pcWeight"><b>'+fmtGram(r.weight||0)+'</b>'+(Number(r.big_fish||0)?'<span class="pcBf">BF: '+fmtGram(r.big_fish)+'</span>':'')+'</td></tr>').join('')
+    +'</tbody></table></div>';
+}
+function renderPlayerFinalCompact(rows){
+  rows=rows||[];
+  if(!rows.length)return '<p class="muted">Brak klasyfikacji końcowej.</p>';
+  return '<div class="playerNoScroll"><table class="sharpTable playerCompactFinalTable"><thead><tr><th class="pfRank">MSC</th><th class="pfName">Zawodnik</th><th class="pfRound">T1</th><th class="pfRound">T2</th><th class="pfPoints">Punkty</th><th class="pfWeight">Waga</th></tr></thead><tbody>'
+    +rows.map(r=>'<tr class="'+placeRowClass(r.rank)+' '+(Number(r.user_id)===Number(ME.id)?'mine':'')+'"><td class="center pfRank"><b>'+r.rank+'</b></td><td class="pfName"><b>'+esc(r.name)+'</b></td><td class="center pfRound"><b>'+placeText(r.t1_points)+'</b></td><td class="center pfRound"><b>'+placeText(r.t2_points)+'</b></td><td class="center pfPoints"><b>'+placeText(r.sum_points)+'</b></td><td class="right pfWeight"><b>'+fmtGram(r.total_weight||0)+'</b>'+(Number(r.biggest_fish||0)?'<span class="pcBf">BF: '+fmtGram(r.biggest_fish)+'</span>':'')+'</td></tr>').join('')
+    +'</tbody></table></div>';
+}
+function renderPlayerStatsCompact(d){
+  const rows=stationStatisticsRows(d);
+  const best=[...rows].filter(x=>x.places.length).sort((a,b)=>a.avg-b.avg||b.totalWeight-a.totalWeight||a.stand-b.stand).slice(0,5);
+  const worst=[...rows].filter(x=>x.places.length).sort((a,b)=>b.avg-a.avg||a.totalWeight-b.totalWeight||a.stand-b.stand).slice(0,5);
+  const table=(arr,kind='')=>{
+    if(!arr.length)return '<p class="muted">Brak danych.</p>';
+    const cls=kind==='best'?'stationStandBest':kind==='worst'?'stationStandWorst':'';
+    return '<div class="playerNoScroll"><table class="sharpTable playerCompactStats"><thead><tr><th>Stan.</th><th>Miejsca</th><th>Śr.</th><th>Waga</th></tr></thead><tbody>'
+      +arr.map(r=>'<tr><td class="center '+cls+'"><b>'+r.stand+'</b></td><td class="center">'+r.places.join('/')+'</td><td class="center"><b>'+r.avg.toFixed(2).replace('.',',')+'</b></td><td class="right"><b>'+fmtGram(r.totalWeight)+'</b></td></tr>').join('')
+      +'</tbody></table></div>';
+  };
+  return '<div class="card playerResultCard playerStatsCompact"><h2>Statystyki stanowisk</h2><h3>5 najlepszych</h3>'+table(best,'best')+'<h3>5 najgorszych</h3>'+table(worst,'worst')+'<h3>Wszystkie stanowiska</h3>'+table(rows)+'</div>';
+}
+function renderPlayerResultsMobile(d){
+  const active=PLAYER_RESULTS_TAB||'t1';
+  const btn=(tab,label)=>'<button type="button" class="'+(active===tab?'active':'')+'" onclick="showPlayerResults(\''+tab+'\',event)">'+label+'</button>';
+  return '<div class="playerResultsMobile">'
+    +'<div class="playerResultsNavSlot"><div class="playerResultsNav">'+btn('t1','TURA 1')+btn('t2','TURA 2')+btn('general','KLASYFIKACJA')+btn('stats','STATYSTYKI')+'</div></div>'
+    +'<section id="playerResults-t1" class="playerResultsSection '+(active==='t1'?'':'hidden')+'"><div class="card playerResultCard"><h2>Wyniki sektorowe — Tura 1</h2>'+renderSectorResultsColumn(d.classification.round1,'1 tura')+'<h2 class="playerWholeRoundTitle">Cała Tura 1</h2>'+renderPlayerRoundCompact(d.classification.round1,1)+'</div></section>'
+    +'<section id="playerResults-t2" class="playerResultsSection '+(active==='t2'?'':'hidden')+'"><div class="card playerResultCard"><h2>Wyniki sektorowe — Tura 2</h2>'+renderSectorResultsColumn(d.classification.round2,'2 tura')+'<h2 class="playerWholeRoundTitle">Cała Tura 2</h2>'+renderPlayerRoundCompact(d.classification.round2,2)+'</div></section>'
+    +'<section id="playerResults-general" class="playerResultsSection '+(active==='general'?'':'hidden')+'"><div class="card playerResultCard"><h2>Klasyfikacja końcowa</h2>'+renderPlayerFinalCompact(d.classification.general)+'</div></section>'
+    +'<section id="playerResults-stats" class="playerResultsSection '+(active==='stats'?'':'hidden')+'">'+renderPlayerStatsCompact(d)+'</section>'
+    +'</div>';
+}
 function renderPlayerDetail(d){
   const c=d.competition;const e=d.myEntry;const t1=myDraw(1),t2=myDraw(2);let html='<div class="playerView">';
   if(e){
     html+='<div class="card playerDrawHeaderCard"><div class="playerDrawTabs"><button type="button" class="'+(PLAYER_DRAW_ROUND===1?'active':'')+'" onclick="showPlayerDraw(1,event)">Losowanie Tura 1</button><button type="button" class="'+(PLAYER_DRAW_ROUND===2?'active':'')+'" onclick="showPlayerDraw(2,event)">Losowanie Tura 2</button></div><div class="playerOwnTitle">Moje stanowiska</div><div class="ownbox playerOwnGrid"><div class="ownitem playerOwnItem"><span class="tag t1tag">T1</span><strong>'+(t1?esc(t1.stand):'—')+'</strong><span>'+(t1?'Sektor '+esc(t1.sector):'Brak losowania')+'</span></div><div class="ownitem playerOwnItem"><span class="tag t2tag">T2</span><strong>'+(t2?esc(t2.stand):'—')+'</strong><span>'+(t2?'Sektor '+esc(t2.sector):'Brak losowania')+'</span></div></div></div><div id="playerDrawView">'+renderRoundDrawView(d,PLAYER_DRAW_ROUND,true)+'</div>';
   } else html+='<div class="card"><p class="muted">Nie jesteś zapisany na te zawody.</p></div>';
-  html+=renderSectorResultsBoard(d)
+
+  html+='<div class="playerResultsDesktop">'
+    +renderSectorResultsBoard(d)
     +'<div class="card playerResultCard"><h2>Klasyfikacja T1</h2>'+renderClassTable(d.classification.round1)+'</div>'
     +'<div class="card playerResultCard"><h2>Klasyfikacja T2</h2>'+renderClassTable(d.classification.round2)+'</div>'
     +'<div class="card playerResultCard"><h2>Klasyfikacja końcowa</h2>'+renderFinalClubToggle()+renderGeneralTable(d.classification.general)+'</div>'
-    +renderStationStatistics(d)+'</div>';
+    +renderStationStatistics(d)
+    +'</div>'
+    +renderPlayerResultsMobile(d)
+    +'</div>';
   return html;
 }
+function showPlayerResults(tab,ev){
+  if(ev){ev.preventDefault();ev.stopPropagation()}
+  if(!['t1','t2','general','stats'].includes(tab))tab='t1';
+  PLAYER_RESULTS_TAB=tab;
+  document.querySelectorAll('.playerResultsSection').forEach(s=>s.classList.add('hidden'));
+  q('playerResults-'+tab)?.classList.remove('hidden');
+  document.querySelectorAll('.playerResultsNav button').forEach(b=>b.classList.toggle('active',b.getAttribute('onclick')?.includes("'"+tab+"'")));
+}
+
 function showPlayerDraw(round,ev){if(ev){ev.preventDefault();ev.stopPropagation()}PLAYER_DRAW_ROUND=Number(round)===2?2:1;const box=q('playerDrawView');if(box&&CURRENT_DETAIL)box.innerHTML=renderRoundDrawView(CURRENT_DETAIL,PLAYER_DRAW_ROUND,true);document.querySelectorAll('.playerDrawTabs button').forEach((b,i)=>b.classList.toggle('active',i===PLAYER_DRAW_ROUND-1))}
 async function saveCompetition(id,quiet=false,ev){const btn=ev?.target;try{if(btn){btn.disabled=true}const sectorLayout=sectorLayoutPayloadForSave();await api('/api/competitions/'+id,{method:'PATCH',body:JSON.stringify({title:q('dTitle')?.value||'',fishery:q('dFishery')?.value||'',competitionDate:q('dDate')?.value||'',limitPlaces:q('dLimit')?.value||'',status:q('dStatus')?.value||'OPEN',mapMode:q('dMapMode')?.value||'TWO_OPPOSITE',bank1Count:q('dBank1')?.value||0,bank2Count:q('dBank2')?.value||0,sectorsCount:q('dSectors')?.value||1,sectorLayout,autoBanks:Boolean(q('dAutoBanks')?.checked),notes:q('dNotes')?.value||''})});if(!quiet)msg('Zapisano strukturę, sektory i zakresy stanowisk');await loadCompetitions();if(!quiet)await refreshCompetitionKeepScroll(id)}catch(e){msg(e.message,'bad')}finally{if(btn){btn.disabled=false}}}
 function renderRosterTools(d){const c=d.competition;return '<div class="card"><h2>Wgranie listy zawodników</h2><p class="small muted">Import i ręczne dopisanie uzupełniają najpierw listę główną do limitu, a nadmiar idzie na rezerwę. Admin może później przenieść rezerwowego na listę główną nawet powyżej limitu.</p><label>Link zawody.pro</label><input id="zproUrl" placeholder="https://www.zawody.pro/competitions/79/details"><button type="button" class="blue" onclick="importZawodyPro('+c.id+',event)">Importuj listę z zawody.pro</button><hr style="border:0;border-top:1px solid var(--line);margin:14px 0"><h3>Ręcznie dopisz zawodnika</h3><div class="grid"><div><label>Imię i nazwisko</label><input id="manualFullName" placeholder="Jan Kowalski"></div><div><label>Telefon — opcjonalnie</label><input id="manualPhone" placeholder="np. 501222333"></div><div><label>Nr Koła PZW — opcjonalnie</label><input id="manualClub"></div><div><label>Hasło — opcjonalnie, jeśli ma się logować</label><input id="manualPassword" type="password"></div><div><label>Gdzie dopisać</label><select id="manualStatus"><option value="AUTO">Auto: główna do limitu, potem rezerwa</option><option value="ACTIVE">Od razu lista główna</option><option value="RESERVE">Od razu rezerwa</option></select></div></div><button type="button" onclick="addManualPlayer('+c.id+',event)">Dopisz zawodnika</button></div>'}
@@ -310,8 +363,7 @@ function syncFixedAdminNav(){
       if(slot)slot.style.height='';
       return;
     }
-    const header=document.querySelector('header'),hr=header?header.getBoundingClientRect():null;
-    const top=(hr&&hr.bottom>0)?Math.max(0,Math.ceil(hr.bottom)):0;
+    const top=0;
     const slotRect=slot.getBoundingClientRect(),detailRect=detail.getBoundingClientRect();
     const tabH=Math.ceil(tabs.getBoundingClientRect().height||tabs.offsetHeight||44);
     const shouldFix=slotRect.top<=top && detailRect.bottom>top+tabH+6;
@@ -341,6 +393,6 @@ function bindAuthButtons(){
 }
 
 function scrollAppBottom(){window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})}
-Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,showAdminZone,loadCompetitions,createCompetition,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,enablePush,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,toggleFinalClub,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
+Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,showAdminZone,loadCompetitions,createCompetition,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,enablePush,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,toggleFinalClub,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
 function startBoot(){console.log('CLIENT_V36_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v36',{cache:'no-store'}).catch(()=>{})}catch(_){};try{if('serviceWorker'in navigator){navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister().catch(()=>{}))).catch(()=>{})}if('caches'in window){caches.keys().then(ks=>ks.forEach(k=>caches.delete(k).catch(()=>{}))).catch(()=>{})}}catch(_){}bindAuthButtons();boot().catch(e=>{console.error('BOOT_FATAL',e);try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();
