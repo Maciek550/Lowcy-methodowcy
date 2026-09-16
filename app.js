@@ -1,4 +1,4 @@
-const CLIENT_VERSION='47';const CLIENT_VERSION_NAME='V47_PLAYER_MOBILE_TILES_AND_DRAW';try{fetch('/__probe_js_v47',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V47_PLAYER_MOBILE_TILES_AND_DRAW_LOADED');
+const CLIENT_VERSION='49';const CLIENT_VERSION_NAME='V49_PLAYER_MOBILE_DRAW_MAPS';try{fetch('/__probe_js_v49',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V49_PLAYER_MOBILE_DRAW_MAPS_LOADED');
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let TOKEN = STORE.get('carp_token') || '';
 let ME = null;
@@ -14,6 +14,7 @@ let ACTIVE_ADMIN_ZONE = 'roster';
 let PLAYER_DRAW_ROUND = 1;
 let PLAYER_RESULTS_TAB = 't1';
 let PLAYER_MOBILE_PANEL = null;
+let PLAYER_DRAW_VIEW_MODE = {1:'sectors',2:'sectors'};
 let SHOW_FINAL_CLUB = false;
 const q = id => document.getElementById(id);
 window.addEventListener('error',e=>{console.error('CLIENT_ERR',e.message);try{const m=document.getElementById('msg');if(m)m.innerHTML='<div class=\"card bad danger-line\">Błąd ekranu: '+String(e.message||'nieznany')+'</div>'}catch(_){}});
@@ -166,6 +167,8 @@ function renderPlayerResultsMobile(d){
     +'<section id="playerResults-stats" class="playerResultsSection '+(active==='stats'?'':'hidden')+'">'+renderPlayerStatsCompact(d)+'</section>'
     +'</div>';
 }
+function getPlayerDrawMode(round){return PLAYER_DRAW_VIEW_MODE&&PLAYER_DRAW_VIEW_MODE[Number(round)]==='map'?'map':'sectors'}
+function setPlayerDrawMode(round,mode){if(!PLAYER_DRAW_VIEW_MODE)PLAYER_DRAW_VIEW_MODE={1:'sectors',2:'sectors'};PLAYER_DRAW_VIEW_MODE[Number(round)]=mode==='map'?'map':'sectors'}
 function renderPlayerOwnRound(d,round){
   const x=(d.draws||[]).find(v=>Number(v.round)===Number(round)&&Number(v.user_id)===Number(ME.id));
   return '<div class="playerSelectedOwn"><span class="tag '+(round===1?'t1tag':'t2tag')+'">T'+round+'</span><strong>'+(x?esc(x.stand):'—')+'</strong><b>'+(x?'Sektor '+esc(x.sector):'Brak losowania')+'</b></div>';
@@ -173,9 +176,15 @@ function renderPlayerOwnRound(d,round){
 function renderPlayerMobilePanelContent(d,panel){
   if(panel==='draw1'||panel==='draw2'){
     const round=panel==='draw2'?2:1;
+    const mode=getPlayerDrawMode(round);
+    const drawButton=(m,label)=>'<button type="button" class="'+(mode===m?'active':'')+'" onclick="showPlayerDrawMode('+round+',\''+m+'\',event)">'+label+'</button>';
+    const drawContent=mode==='map'
+      ? '<div class="playerMobileFullMapWrap"><div class="playerMobileFullMapScroll">'+renderRoundDrawMap(d,round)+'</div></div>'
+      : renderMobileRoundDrawMap(d,round);
     return '<div class="playerMobileSelectedPanel playerMobileDrawSelected">'
       +renderPlayerOwnRound(d,round)
-      +renderMobileRoundDrawMap(d,round)
+      +'<div class="playerDrawModeTabs">'+drawButton('sectors','SEKTORY T'+round)+drawButton('map','MAPA ŁOWISKA T'+round)+'</div>'
+      +drawContent
       +'<div class="playerMobileSectorTables">'+renderDrawSectorTables(d,round)+'</div>'
       +'</div>';
   }
@@ -226,6 +235,15 @@ function showPlayerMobilePanel(panel,ev){
     const nav=document.querySelector('.playerUnifiedNav'),content=q('playerMobilePanelContent');
     if(nav&&content){const top=window.scrollY+content.getBoundingClientRect().top-nav.getBoundingClientRect().height-3;window.scrollTo({top:Math.max(0,top),behavior:'smooth'})}
   });
+}
+function showPlayerDrawMode(round,mode,ev){
+  if(ev){ev.preventDefault();ev.stopPropagation()}
+  setPlayerDrawMode(round,mode);
+  PLAYER_MOBILE_PANEL=Number(round)===2?'draw2':'draw1';
+  PLAYER_DRAW_ROUND=Number(round)===2?2:1;
+  const box=q('playerMobilePanelContent');
+  if(box&&CURRENT_DETAIL)box.innerHTML=renderPlayerMobilePanelContent(CURRENT_DETAIL,PLAYER_MOBILE_PANEL);
+  requestAnimationFrame(()=>syncPlayerStickyBars());
 }
 function showPlayerResults(tab,ev){
   if(ev){ev.preventDefault();ev.stopPropagation()}
@@ -316,7 +334,7 @@ function renderMobileStructureStand(n,c){const sec=sectorForStandClient(n,c);ret
 function renderMobileStructureBank(label,arr,c){if(!arr||!arr.length)return '';return '<div class="mobileStructureBank"><div class="mobileBankName">'+esc(label)+'</div><div class="mobileStructureGrid">'+arr.map(n=>renderMobileStructureStand(n,c)).join('')+'</div></div>'}
 function renderMobileStructureMap(c){const layout=sectorLayoutClient(c);let html='<div class="mobileStructureMap"><div class="mobileMapMeta"><b>Podgląd sektorów</b><span>'+esc(c.fishery||'Łowisko')+'</span></div><div class="mobileSectorStack compactAdminSectors">';for(const sec of layout){const total=(sec.top||[]).length+(sec.bottom||[]).length;html+='<section class="mobileSectorCard compactAdminSector '+sectorColorClass(sec.letter,c)+'"><div class="mobileSectorHeader"><span>SEKTOR <b>'+esc(sec.letter)+'</b></span><small>'+total+' '+(total===1?'osoba':total>=2&&total<=4?'osoby':'osób')+'</small></div>';if((c.map_mode||'TWO_OPPOSITE')==='ONE_BANK')html+=renderMobileStructureBank('JEDEN BRZEG',sec.bottom,c);else if((c.map_mode||'TWO_OPPOSITE')==='TWO_ALONG'){if(sec.top?.length)html+=renderMobileStructureBank('BRZEG 2',sec.top,c);if(sec.bottom?.length)html+=renderMobileStructureBank('BRZEG 1',sec.bottom,c)}else{if(sec.top?.length)html+=renderMobileStructureBank('BRZEG GÓRNY',sec.top,c);if(sec.bottom?.length)html+=renderMobileStructureBank('BRZEG DOLNY',sec.bottom,c)}html+='</section>'}html+='</div></div>';return html}
 function roundDrawStandMap(d,round){const entryByUser={};for(const e of (d.activeEntries||[]))entryByUser[Number(e.user_id)]=e;const byStand={};for(const dr of (d.draws||[])){if(Number(dr.round)!==Number(round))continue;const e=entryByUser[Number(dr.user_id)];byStand[Number(dr.stand)]={draw:dr,entry:e,name:e?(e.first_name+' '+e.last_name):''}}return byStand}
-function renderRoundDrawCell(n,c,byStand,empty=false){if(empty)return '<div class="roundDrawCell empty"></div>';const sec=sectorForStandClient(n,c),x=byStand[Number(n)],mine=x&&Number(x.draw.user_id)===Number(ME.id),label=x?shortPlayerName(x.name):'—';return '<div class="roundDrawCell '+sectorColorClass(sec,c)+(mine?' ownRoundDraw':'')+'"><b class="roundStandNo">'+n+'</b><span class="roundDrawName">'+esc(label)+'</span></div>'}
+function renderRoundDrawCell(n,c,byStand,empty=false){if(empty)return '<div class=\"roundDrawCell empty\"></div>';const sec=sectorForStandClient(n,c),x=byStand[Number(n)],mine=x&&Number(x.draw.user_id)===Number(ME.id),label=x?shortPlayerLabel(x.name):'—';return '<div class=\"roundDrawCell '+sectorColorClass(sec,c)+(mine?' ownRoundDraw':'')+'\"><b class=\"roundStandNo\">'+n+'</b><span class=\"roundDrawName\">'+esc(label)+'</span></div>'}
 function renderRoundBankGroup(c,which,byStand){const layout=sectorLayoutClient(c),minw=Math.max(680,mapMinWidth(c));let html='<div class="sectorFlexRow roundDrawRow" style="min-width:'+minw+'px">';for(const sec of layout){const arr=which==='top'?sec.top:sec.bottom;const count=Math.max(1,arr.length);html+='<div class="sectorGroup" style="flex:'+sec.size+' 0 0;grid-template-columns:repeat('+count+',minmax(50px,1fr))">';if(arr.length){for(const n of arr)html+=renderRoundDrawCell(n,c,byStand)}else html+=renderRoundDrawCell(0,c,byStand,true);html+='</div>'}return html+'</div>'}
 function renderRoundOneBank(c,byStand){const layout=sectorLayoutClient(c),minw=Math.max(680,mapMinWidth(c));let html='<div class="sectorFlexRow roundDrawRow" style="min-width:'+minw+'px">';for(const sec of layout){const arr=sec.bottom;html+='<div class="sectorGroup" style="flex:'+sec.size+' 0 0;grid-template-columns:repeat('+Math.max(1,arr.length)+',minmax(50px,1fr))">';for(const n of arr)html+=renderRoundDrawCell(n,c,byStand);html+='</div>'}return html+'</div>'}
 function renderRoundAlongBank(c,which,byStand){const layout=sectorLayoutClient(c).filter(sec=>(which==='top'?sec.top:sec.bottom).length),bankCount=which==='top'?Number(c.bank2_count||0):Number(c.bank1_count||0),minw=Math.max(640,bankCount*60);let html='<div class="sectorFlexRow roundDrawRow" style="min-width:'+minw+'px">';for(const sec of layout){const arr=which==='top'?sec.top:sec.bottom;html+='<div class="sectorGroup" style="flex:'+arr.length+' 0 0;grid-template-columns:repeat('+arr.length+',minmax(50px,1fr))">';for(const n of arr)html+=renderRoundDrawCell(n,c,byStand);html+='</div>'}return html+'</div>'}
@@ -327,23 +345,29 @@ function shortPlayerName(name){
   const parts=String(name||'').trim().split(/\s+/).filter(Boolean);
   if(!parts.length)return '—';
   const last=parts[parts.length-1];
-  if(last.length<=13)return last;
-  return last.slice(0,12)+'…';
+  if(last.length<=15)return last;
+  return last.slice(0,14)+'…';
+}
+function shortPlayerLabel(name){
+  const parts=String(name||'').trim().split(/\s+/).filter(Boolean);
+  if(!parts.length)return '—';
+  const last=parts[parts.length-1];
+  const first=parts[0]||'';
+  return (first?first.charAt(0)+'. ':'')+last;
 }
 function renderMobileRoundStand(n,c,byStand){
   const sec=sectorForStandClient(n,c),x=byStand[Number(n)],mine=x&&Number(x.draw.user_id)===Number(ME.id),name=x?x.name.trim():'—';
-  return '<div class="mobileStandCard '+sectorColorClass(sec,c)+(mine?' ownMobileStand':'')+'"><div class="mobileStandCardInner"><div class="mobileStandNo">'+n+'</div><div class="mobileStandInfo"><b>'+esc(shortPlayerName(name))+'</b>'+(mine?'<span class="mobileMineBadge">TWOJE</span>':'')+'</div></div></div>';
+  return '<div class="mobileStandCard '+sectorColorClass(sec,c)+(mine?' ownMobileStand':'')+'"><div class="mobileStandCardInner"><div class="mobileStandNo">'+n+'</div><div class="mobileStandInfo"><b>'+esc(shortPlayerLabel(name))+'</b>'+(mine?'<span class="mobileMineBadge">TWOJE STANOWISKO</span>':'')+'</div></div></div>';
 }
 function renderMobileBankStands(label,arr,c,byStand){
   if(!arr||!arr.length)return '';
-  const txt=String(label||'').toUpperCase(),bankClass=(txt.includes('GÓRNY')||txt.includes('BRZEG 2'))?'mobileBankUpper':(txt.includes('DOLNY')||txt.includes('BRZEG 1'))?'mobileBankLower':'mobileBankSingle';
-  const cols=arr.length<=2?2:arr.length===4?2:3;
-  return '<div class="mobileBankBlock '+bankClass+'"><div class="mobileBankName">'+esc(label)+'</div><div class="mobileStandGrid mobileStandGridReadable" style="grid-template-columns:repeat('+cols+',minmax(0,1fr))">'+arr.map(n=>renderMobileRoundStand(n,c,byStand)).join('')+'</div></div>';
+  const cols=arr.length<=2?2:(arr.length<=4?2:3);
+  return '<div class="mobileBankBlock"><div class="mobileBankName">'+esc(label)+'</div><div class="mobileStandGrid mobileStandGridReadable" style="grid-template-columns:repeat('+cols+',minmax(0,1fr))">'+arr.map(n=>renderMobileRoundStand(n,c,byStand)).join('')+'</div></div>';
 }
 function renderMobileRoundDrawMap(d,round){
   const c=d.competition,byStand=roundDrawStandMap(d,round),layout=sectorLayoutClient(c);
   if(!Object.keys(byStand).length)return '<div class="card"><p class="muted">Brak losowania T'+round+'.</p></div>';
-  let html='<div class="mobileDrawMap compactPlayerDrawMap"><div class="mobileMapMeta"><b>MAPA ŁOWISKA — TURA '+round+'</b><span>'+esc(c.fishery||'Łowisko')+'</span></div><div class="mobileSectorStack">';
+  let html='<div class="mobileDrawMap compactPlayerDrawMap"><div class="mobileMapMeta"><b>ZOBRAZOWANIE SEKTORÓW — TURA '+round+'</b><span>'+esc(c.fishery||'Łowisko')+'</span></div><div class="mobileSectorStack">';
   for(const sec of layout){
     const total=(sec.top||[]).length+(sec.bottom||[]).length;
     html+='<section class="mobileSectorCard compactPlayerSector '+sectorColorClass(sec.letter,c)+'"><div class="mobileSectorHeader"><span>Sektor <b>'+esc(sec.letter)+'</b></span><small>'+total+' os.</small></div>';

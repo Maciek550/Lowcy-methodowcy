@@ -17,7 +17,7 @@ const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const APP_VERSION = '36';
-const APP_VERSION_NAME = 'V47_PLAYER_MOBILE_TILES_AND_DRAW';
+const APP_VERSION_NAME = 'V49_PLAYER_MOBILE_DRAW_MAPS';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 
 if (webpush && VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
@@ -1061,7 +1061,7 @@ async function route(req, res) {
   const path = url.pathname;
   const method = req.method;
 
-  if (path === '/__probe_js_v36' || path === '/__probe_boot_v36' || path === '/__probe_js_v35' || path === '/__probe_boot_v35' || path === '/__probe_js_v34' || path === '/__probe_boot_v34' || path === '/__probe_js_v33' || path === '/__probe_boot_v33' || path === '/__probe_js_v32' || path === '/__probe_boot_v32' || path === '/__probe_js_v30' || path === '/__probe_boot_v30' || path === '/__probe_js_v29' || path === '/__probe_boot_v29' || path === '/__probe_js_v27' || path === '/__probe_boot_v27' || path === '/__probe_inline_v26') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
+  if (path === '/__probe_js_v49' || path === '/__probe_boot_v49' || path === '/__probe_js_v36' || path === '/__probe_boot_v36' || path === '/__probe_js_v35' || path === '/__probe_boot_v35' || path === '/__probe_js_v34' || path === '/__probe_boot_v34' || path === '/__probe_js_v33' || path === '/__probe_boot_v33' || path === '/__probe_js_v32' || path === '/__probe_boot_v32' || path === '/__probe_js_v30' || path === '/__probe_boot_v30' || path === '/__probe_js_v29' || path === '/__probe_boot_v29' || path === '/__probe_js_v27' || path === '/__probe_boot_v27' || path === '/__probe_inline_v26') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/api/version') return sendJson(res, 200, { ok:true, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/app.js') return send(res, 200, APP_JS, {'Content-Type':'application/javascript; charset=utf-8', 'Cache-Control':'no-store, no-cache, must-revalidate'});
 
@@ -2347,6 +2347,49 @@ header{z-index:100!important}
 .roundDrawName{font-size:14px!important;font-weight:1000!important;letter-spacing:.01em!important;text-rendering:geometricPrecision!important;-webkit-font-smoothing:antialiased!important}
 .roundStandNo{font-size:24px!important}
 
+
+
+/* V49 — mobilne losowanie zawodnika: czytelne sektory + pełna mapa łowiska */
+@media(max-width:760px){
+  .playerMobileDashboard .playerUnifiedNav{position:relative!important;top:0!important;z-index:40!important}
+  .playerMobileDashboard .playerUnifiedNav.fixedPlayerBar{position:fixed!important;top:0!important;left:0!important;right:0!important;z-index:5400!important}
+  .playerDrawModeTabs{display:grid!important;grid-template-columns:1fr 1fr!important;gap:6px!important;margin:6px 0 8px!important}
+  .playerDrawModeTabs button{min-height:36px!important;padding:6px 5px!important;border-radius:8px!important;border:1px solid #b8c9bd!important;background:#eef4ef!important;color:#173d2e!important;font-size:10.5px!important;font-weight:900!important;line-height:1.05!important}
+  .playerDrawModeTabs button.active{background:#0b5634!important;color:#fff!important;border-color:#0b5634!important}
+  .playerMobileFullMapWrap{margin:6px 0 8px!important;border:1px solid #c8d5cc!important;border-radius:10px!important;background:#fff!important;overflow:hidden!important}
+  .playerMobileFullMapScroll{overflow-x:auto!important;-webkit-overflow-scrolling:touch!important;padding:8px!important}
+  .playerMobileFullMapScroll .sectorMap{min-width:760px!important;margin:0!important}
+  .playerMobileFullMapScroll .roundMapHeading{font-size:20px!important;margin-bottom:4px!important}
+  .playerMobileFullMapScroll .roundStandNo{font-size:24px!important}
+  .playerMobileFullMapScroll .roundDrawName{font-size:14px!important;font-weight:1000!important;line-height:1.05!important;writing-mode:vertical-rl!important;transform:rotate(180deg)!important}
+  .compactPlayerDrawMap{width:100%!important;max-width:100%!important}
+  .compactPlayerDrawMap .mobileMapMeta{display:flex!important;justify-content:space-between!important;align-items:center!important;gap:6px!important;margin:0 0 6px!important;padding:7px 9px!important;border-radius:9px!important;background:#edf4ee!important}
+  .compactPlayerDrawMap .mobileMapMeta b{font-size:12px!important;color:#143a2b!important;line-height:1.1!important}
+  .compactPlayerDrawMap .mobileMapMeta span{font-size:10px!important;font-weight:900!important;color:#466455!important}
+  .compactPlayerDrawMap .mobileSectorStack{display:grid!important;grid-template-columns:1fr!important;gap:8px!important}
+  .compactPlayerSector{border:1px solid #b7c6bb!important;border-radius:12px!important;overflow:hidden!important;background:#fff!important;box-shadow:0 1px 2px #00000010!important}
+  .compactPlayerSector .mobileSectorHeader{display:flex!important;justify-content:space-between!important;align-items:center!important;padding:7px 10px!important;background:#ffffffd9!important;border-bottom:1px solid #c2d2c6!important}
+  .compactPlayerSector .mobileSectorHeader span{font-size:16px!important;font-weight:1000!important;color:#173b2c!important}
+  .compactPlayerSector .mobileSectorHeader span b{font-size:26px!important;line-height:1!important;margin-left:2px!important}
+  .compactPlayerSector .mobileSectorHeader small{font-size:11px!important;font-weight:900!important;color:#355947!important}
+  .compactPlayerSector .mobileBankBlock{padding:8px!important}
+  .compactPlayerSector .mobileBankBlock+.mobileBankBlock{border-top:1px dashed #b9c8bd!important}
+  .compactPlayerSector .mobileBankName{text-align:center!important;font-size:10px!important;font-weight:1000!important;letter-spacing:.06em!important;color:#355947!important;margin:0 0 6px!important}
+  .compactPlayerSector .mobileStandGridReadable{display:grid!important;gap:6px!important}
+  .compactPlayerSector .mobileStandCard{min-width:0!important}
+  .compactPlayerSector .mobileStandCardInner{display:grid!important;grid-template-columns:40px minmax(0,1fr)!important;align-items:center!important;min-height:50px!important;border:1px solid #98ac9f!important;border-radius:10px!important;background:#ffffffeb!important;overflow:hidden!important}
+  .compactPlayerSector .mobileStandNo{display:flex!important;align-items:center!important;justify-content:center!important;height:100%!important;font-size:24px!important;font-weight:1000!important;color:#103b2a!important;background:#ffffffb8!important;border-right:1px solid #a7b8ad!important}
+  .compactPlayerSector .mobileStandInfo{padding:5px 6px!important;text-align:left!important;color:#183226!important}
+  .compactPlayerSector .mobileStandInfo b{display:block!important;font-size:12px!important;line-height:1.08!important;font-weight:1000!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+  .compactPlayerSector .mobileMineBadge{display:inline-block!important;margin-top:3px!important;padding:1px 5px!important;border-radius:999px!important;background:#f3b500!important;color:#4a3200!important;font-size:7px!important;font-weight:1000!important}
+  .compactPlayerSector .ownMobileStand .mobileStandCardInner{border:2px solid #e0aa00!important;background:#fff6c2!important}
+  .playerMobileSectorTables{margin-top:8px!important}
+  .playerMobileSectorTables .drawSectorGrid{display:grid!important;grid-template-columns:1fr!important;gap:8px!important}
+  .playerMobileSectorTables .drawSectorBox{padding:8px!important;border-radius:10px!important}
+}
+.roundDrawName{font-size:15px!important;font-weight:1000!important;letter-spacing:.01em!important;text-rendering:geometricPrecision!important;-webkit-font-smoothing:antialiased!important}
+.roundStandNo{font-size:25px!important}
+
 </style>
 </head>
 <body>
@@ -2363,7 +2406,7 @@ header{z-index:100!important}
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V48</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
+  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V49</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
     <div id="adminCreate" class="card hidden"><h2>Utwórz zawody</h2><p class="small muted">Nazwa zawodów jest używana także w nagłówkach PDF.</p><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div></div><label>Opis</label><textarea id="cNotes" placeholder="Opis zawodów, zasady, informacje organizacyjne."></textarea><button onclick="createCompetition(event)">Utwórz zawody</button></div>
@@ -2375,7 +2418,7 @@ header{z-index:100!important}
 </section>
 </main>
 <div class="quickScroll"><button onclick="scrollAppTop()">↑</button><button onclick="scrollAppBottom()">↓</button></div>
-<script src="/app.js?v=48" defer></script>
+<script src="/app.js?v=49" defer></script>
 </body>
 </html>`;
 
