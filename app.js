@@ -1,4 +1,4 @@
-const CLIENT_VERSION='46';const CLIENT_VERSION_NAME='V46_PDF_DRAW_LAYOUT_AND_READABILITY';try{fetch('/__probe_js_v46',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V46_PDF_DRAW_LAYOUT_AND_READABILITY_LOADED');
+const CLIENT_VERSION='47';const CLIENT_VERSION_NAME='V47_PLAYER_MOBILE_TILES_AND_DRAW';try{fetch('/__probe_js_v47',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V47_PLAYER_MOBILE_TILES_AND_DRAW_LOADED');
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let TOKEN = STORE.get('carp_token') || '';
 let ME = null;
@@ -13,6 +13,7 @@ let SECTOR_MANUAL_DRAFT = undefined;
 let ACTIVE_ADMIN_ZONE = 'roster';
 let PLAYER_DRAW_ROUND = 1;
 let PLAYER_RESULTS_TAB = 't1';
+let PLAYER_MOBILE_PANEL = null;
 let SHOW_FINAL_CLUB = false;
 const q = id => document.getElementById(id);
 window.addEventListener('error',e=>{console.error('CLIENT_ERR',e.message);try{const m=document.getElementById('msg');if(m)m.innerHTML='<div class=\"card bad danger-line\">Błąd ekranu: '+String(e.message||'nieznany')+'</div>'}catch(_){}});
@@ -82,13 +83,13 @@ async function deleteCompetition(id){try{if(!confirm('Usunąć te zawody?'))retu
 async function clearCompetitions(){try{if(!confirm('Usunąć WSZYSTKIE zawody testowe z bazy?'))return;if(!confirm('Na pewno? Operacji nie da się cofnąć.'))return;const d=await api('/api/admin/competitions/clear',{method:'POST',body:JSON.stringify({confirm:'USUN'})});q('competitionDetail').classList.add('hidden');msg('Usunięto zawody: '+d.deleted);await loadCompetitions();await loadNotifications()}catch(e){msg(e.message,'bad')}}
 async function joinComp(id){try{await api('/api/competitions/'+id+'/join',{method:'POST',body:'{}'});msg('Zapisano na zawody');await loadCompetitions();if(CURRENT_DETAIL?.competition?.id==id)await refreshCompetitionKeepScroll(id)}catch(e){msg(e.message,'bad')}}
 async function leaveComp(id){try{if(!confirm('Wysłać do administratora prośbę o wypisanie z tych zawodów?'))return;await api('/api/competitions/'+id+'/leave',{method:'POST',body:'{}'});msg('Prośba o wypisanie została wysłana do administratora');await loadCompetitions();await loadNotifications();if(CURRENT_DETAIL?.competition?.id==id)await refreshCompetitionKeepScroll(id)}catch(e){msg(e.message,'bad')}}
-async function openCompetition(id,preserve=false){try{const d=await api('/api/competitions/'+id);CURRENT_DETAIL=d;renderDetail();q('competitionDetail').classList.remove('hidden');if(!preserve)q('competitionDetail').scrollIntoView({behavior:'smooth',block:'start'})}catch(e){msg(e.message,'bad')}}
+async function openCompetition(id,preserve=false){try{const d=await api('/api/competitions/'+id);CURRENT_DETAIL=d;if(!preserve&&ME?.role!=='ADMIN')PLAYER_MOBILE_PANEL=null;renderDetail();q('competitionDetail').classList.remove('hidden');if(!preserve)q('competitionDetail').scrollIntoView({behavior:'smooth',block:'start'})}catch(e){msg(e.message,'bad')}}
 function myDraw(round){return (CURRENT_DETAIL.draws||[]).find(d=>Number(d.user_id)===Number(ME.id)&&Number(d.round)===round)}
 function resMap(round){const m={};(CURRENT_DETAIL.results||[]).forEach(r=>{if(Number(r.round)===round)m[Number(r.user_id)]=r});return m}
 function resultItems(round,userId,kind){return (CURRENT_DETAIL.resultItems||[]).filter(x=>Number(x.round)===Number(round)&&Number(x.user_id)===Number(userId)&&(!kind||String(x.kind)===kind))}
 function drawMap(round){const m={};(CURRENT_DETAIL.draws||[]).forEach(r=>{if(Number(r.round)===round)m[Number(r.user_id)]=r});return m}
 function renderDetail(){
-  const d=CURRENT_DETAIL;const c=d.competition;const admin=ME.role==='ADMIN';let html='<div class="card"><div class="inlineBtns"><button type="button" class="secondary" onclick="q(\'competitionDetail\').classList.add(\'hidden\')">Zamknij panel zawodów</button><button type="button" onclick="openCompetition('+c.id+')">Odśwież</button></div><h2>'+esc(c.title)+'</h2><p class="muted">'+fmtDate(c.competition_date)+' — '+esc(c.fishery||'')+'</p></div>';
+  const d=CURRENT_DETAIL;const c=d.competition;const admin=ME.role==='ADMIN';let html='<div class="card competitionDetailHead '+(admin?'adminDetailHead':'playerDetailHead')+'"><div class="inlineBtns"><button type="button" class="secondary" onclick="q(\'competitionDetail\').classList.add(\'hidden\')">Zamknij panel zawodów</button><button type="button" onclick="openCompetition('+c.id+')">Odśwież</button></div><h2>'+esc(c.title)+'</h2><p class="muted">'+fmtDate(c.competition_date)+' — '+esc(c.fishery||'')+'</p></div>';
   SECTOR_MANUAL_DRAFT=undefined;
   if(admin) html+=renderAdminDetail(d); else html+=renderPlayerDetail(d);
   q('competitionDetail').innerHTML=html;
@@ -165,25 +166,63 @@ function renderPlayerResultsMobile(d){
     +'<section id="playerResults-stats" class="playerResultsSection '+(active==='stats'?'':'hidden')+'">'+renderPlayerStatsCompact(d)+'</section>'
     +'</div>';
 }
+function renderPlayerOwnRound(d,round){
+  const x=(d.draws||[]).find(v=>Number(v.round)===Number(round)&&Number(v.user_id)===Number(ME.id));
+  return '<div class="playerSelectedOwn"><span class="tag '+(round===1?'t1tag':'t2tag')+'">T'+round+'</span><strong>'+(x?esc(x.stand):'—')+'</strong><b>'+(x?'Sektor '+esc(x.sector):'Brak losowania')+'</b></div>';
+}
+function renderPlayerMobilePanelContent(d,panel){
+  if(!panel)return '';
+  if(panel==='draw1'||panel==='draw2'){
+    const round=panel==='draw2'?2:1;
+    return '<div class="playerMobileSelectedPanel playerMobileDrawSelected">'+renderPlayerOwnRound(d,round)+renderMobileRoundDrawMap(d,round)+'</div>';
+  }
+  if(panel==='t1')return '<div class="playerMobileSelectedPanel"><div class="card playerResultCard"><h2>Wyniki sektorowe — Tura 1</h2>'+renderSectorResultsColumn(d.classification.round1,'1 tura')+'<h2 class="playerWholeRoundTitle">Cała Tura 1</h2>'+renderPlayerRoundCompact(d.classification.round1,1)+'</div></div>';
+  if(panel==='t2')return '<div class="playerMobileSelectedPanel"><div class="card playerResultCard"><h2>Wyniki sektorowe — Tura 2</h2>'+renderSectorResultsColumn(d.classification.round2,'2 tura')+'<h2 class="playerWholeRoundTitle">Cała Tura 2</h2>'+renderPlayerRoundCompact(d.classification.round2,2)+'</div></div>';
+  if(panel==='general')return '<div class="playerMobileSelectedPanel"><div class="card playerResultCard"><h2>Klasyfikacja końcowa</h2>'+renderPlayerFinalCompact(d.classification.general)+'</div></div>';
+  if(panel==='stats')return '<div class="playerMobileSelectedPanel">'+renderPlayerStatsCompact(d)+'</div>';
+  return '';
+}
+function renderPlayerMobileDashboard(d){
+  const p=PLAYER_MOBILE_PANEL;
+  const b=(panel,label,cls='')=>'<button type="button" class="'+cls+' '+(p===panel?'active':'')+'" onclick="showPlayerMobilePanel(\''+panel+'\',event)">'+label+'</button>';
+  return '<div class="playerMobileDashboard">'
+    +'<div class="playerDrawStickySlot"><div class="card playerDrawHeaderCard playerUnifiedNav">'
+    +'<div class="playerDrawTabs">'+b('draw1','Losowanie Tura 1','drawTile')+b('draw2','Losowanie Tura 2','drawTile')+'</div>'
+    +'<div class="playerResultsNav playerResultsNavInline">'+b('t1','TURA 1')+b('t2','TURA 2')+b('general','KLASYFIKACJA')+b('stats','STATYSTYKI')+'</div>'
+    +'</div></div>'
+    +'<div id="playerMobilePanelContent">'+renderPlayerMobilePanelContent(d,p)+'</div>'
+    +'</div>';
+}
 function renderPlayerDetail(d){
-  const c=d.competition;const e=d.myEntry;const t1=myDraw(1),t2=myDraw(2);
-  const active=PLAYER_RESULTS_TAB||'t1';
-  const rbtn=(tab,label)=>'<button type="button" class="'+(active===tab?'active':'')+'" onclick="showPlayerResults(\''+tab+'\',event)">'+label+'</button>';
-  let html='<div class="playerView">';
+  const c=d.competition;const e=d.myEntry;const t1=myDraw(1),t2=myDraw(2);let html='<div class="playerView">';
+  html+='<div class="playerDesktopDashboard">';
   if(e){
-    html+='<div class="playerDrawStickySlot"><div class="card playerDrawHeaderCard"><div class="playerDrawTabs"><button type="button" class="'+(PLAYER_DRAW_ROUND===1?'active':'')+'" onclick="showPlayerDraw(1,event)">Losowanie Tura 1</button><button type="button" class="'+(PLAYER_DRAW_ROUND===2?'active':'')+'" onclick="showPlayerDraw(2,event)">Losowanie Tura 2</button></div><div class="playerResultsNav playerResultsNavInline">'+rbtn('t1','TURA 1')+rbtn('t2','TURA 2')+rbtn('general','KLASYFIKACJA')+rbtn('stats','STATYSTYKI')+'</div><div class="playerOwnGridWrap"><div class="ownbox playerOwnGrid"><div class="ownitem playerOwnItem"><span class="tag t1tag">T1</span><strong>'+(t1?esc(t1.stand):'—')+'</strong><span>'+(t1?'Sektor '+esc(t1.sector):'Brak losowania')+'</span></div><div class="ownitem playerOwnItem"><span class="tag t2tag">T2</span><strong>'+(t2?esc(t2.stand):'—')+'</strong><span>'+(t2?'Sektor '+esc(t2.sector):'Brak losowania')+'</span></div></div></div></div></div><div id="playerDrawView">'+renderRoundDrawView(d,PLAYER_DRAW_ROUND,true)+'</div>';
+    html+='<div class="card playerDrawHeaderCard"><div class="playerDrawTabs"><button type="button" class="'+(PLAYER_DRAW_ROUND===1?'active':'')+'" onclick="showPlayerDraw(1,event)">Losowanie Tura 1</button><button type="button" class="'+(PLAYER_DRAW_ROUND===2?'active':'')+'" onclick="showPlayerDraw(2,event)">Losowanie Tura 2</button></div><div class="playerOwnTitle">Moje stanowiska</div><div class="ownbox playerOwnGrid"><div class="ownitem playerOwnItem"><span class="tag t1tag">T1</span><strong>'+(t1?esc(t1.stand):'—')+'</strong><span>'+(t1?'Sektor '+esc(t1.sector):'Brak losowania')+'</span></div><div class="ownitem playerOwnItem"><span class="tag t2tag">T2</span><strong>'+(t2?esc(t2.stand):'—')+'</strong><span>'+(t2?'Sektor '+esc(t2.sector):'Brak losowania')+'</span></div></div></div><div id="playerDrawView">'+renderRoundDrawView(d,PLAYER_DRAW_ROUND,true)+'</div>';
   } else html+='<div class="card"><p class="muted">Nie jesteś zapisany na te zawody.</p></div>';
-
-  html+='<div class="playerResultsDesktop">'
-    +renderSectorResultsBoard(d)
+  html+=renderSectorResultsBoard(d)
     +'<div class="card playerResultCard"><h2>Klasyfikacja T1</h2>'+renderClassTable(d.classification.round1)+'</div>'
     +'<div class="card playerResultCard"><h2>Klasyfikacja T2</h2>'+renderClassTable(d.classification.round2)+'</div>'
     +'<div class="card playerResultCard"><h2>Klasyfikacja końcowa</h2>'+renderFinalClubToggle()+renderGeneralTable(d.classification.general)+'</div>'
     +renderStationStatistics(d)
-    +'</div>'
-    +renderPlayerResultsMobile(d)
     +'</div>';
+  html+=renderPlayerMobileDashboard(d)+'</div>';
   return html;
+}
+function showPlayerMobilePanel(panel,ev){
+  if(ev){ev.preventDefault();ev.stopPropagation()}
+  const allowed=['draw1','draw2','t1','t2','general','stats'];
+  if(!allowed.includes(panel))return;
+  PLAYER_MOBILE_PANEL=panel;
+  if(panel==='draw1'||panel==='draw2')PLAYER_DRAW_ROUND=panel==='draw2'?2:1;
+  if(['t1','t2','general','stats'].includes(panel))PLAYER_RESULTS_TAB=panel;
+  const box=q('playerMobilePanelContent');
+  if(box&&CURRENT_DETAIL)box.innerHTML=renderPlayerMobilePanelContent(CURRENT_DETAIL,panel);
+  document.querySelectorAll('.playerUnifiedNav button').forEach(btn=>btn.classList.toggle('active',btn.getAttribute('onclick')?.includes("'"+panel+"'")));
+  requestAnimationFrame(()=>{
+    syncPlayerStickyBars();
+    const nav=document.querySelector('.playerUnifiedNav'),content=q('playerMobilePanelContent');
+    if(nav&&content){const top=window.scrollY+content.getBoundingClientRect().top-nav.getBoundingClientRect().height-3;window.scrollTo({top:Math.max(0,top),behavior:'smooth'})}
+  });
 }
 function showPlayerResults(tab,ev){
   if(ev){ev.preventDefault();ev.stopPropagation()}
@@ -282,50 +321,41 @@ function renderRoundDrawMap(d,round){const c=d.competition,byStand=roundDrawStan
 function drawRowsBySector(d,round){const entryByUser={};for(const e of (d.activeEntries||[]))entryByUser[Number(e.user_id)]=e;const box={};for(const dr of (d.draws||[])){if(Number(dr.round)!==Number(round))continue;const sec=String(dr.sector||'—'),e=entryByUser[Number(dr.user_id)]||{};(box[sec]=box[sec]||[]).push({user_id:dr.user_id,stand:Number(dr.stand),sector:sec,name:(e.first_name||'')+' '+(e.last_name||''),pzw_club:e.pzw_club||''})}return Object.keys(box).sort((a,b)=>a.localeCompare(b,'pl')).map(sec=>({sector:sec,rows:box[sec].sort((a,b)=>a.stand-b.stand)}))}
 function renderDrawSectorTables(d,round){const groups=drawRowsBySector(d,round);if(!groups.length)return '';return '<div class="drawSectorGrid">'+groups.map(g=>'<div class="card drawSectorBox"><h4>Sektor '+esc(g.sector)+'</h4><div class="tablewrap"><table class="sharpTable"><thead><tr><th style="width:42px">Lp.</th><th style="width:54px">Stan.</th><th>Zawodnik</th></tr></thead><tbody>'+g.rows.map((r,i)=>'<tr class="'+(Number(r.user_id)===Number(ME.id)?'mine':'')+'"><td class="center">'+(i+1)+'</td><td class="center"><b>'+r.stand+'</b></td><td><b>'+esc(r.name.trim())+'</b></td></tr>').join('')+'</tbody></table></div></div>').join('')+'</div>'}
 function shortPlayerName(name){
-  name=String(name||'').trim();
-  if(!name)return '—';
-  const parts=name.split(/\s+/).filter(Boolean);
+  const parts=String(name||'').trim().split(/\s+/).filter(Boolean);
   if(!parts.length)return '—';
   const last=parts[parts.length-1];
-  if(last.length<=11)return last;
-  if(parts.length>=2)return parts[0].charAt(0)+'. '+last;
-  return last.slice(0,10)+'…';
+  if(last.length<=13)return last;
+  return last.slice(0,12)+'…';
 }
 function renderMobileRoundStand(n,c,byStand){
   const sec=sectorForStandClient(n,c),x=byStand[Number(n)],mine=x&&Number(x.draw.user_id)===Number(ME.id),name=x?x.name.trim():'—';
-  return '<div class="mobileStandCard '+sectorColorClass(sec,c)+(mine?' ownMobileStand':'')+'">'
-    +'<div class="mobileStandCardInner">'
-    +'<div class="mobileStandNo">'+n+'</div>'
-    +'<div class="mobileStandInfo"><b>'+esc(shortPlayerName(name))+'</b>'+(mine?'<span class="mobileMineBadge">TWOJE</span>':'')+'</div>'
-    +'</div></div>';
+  return '<div class="mobileStandCard '+sectorColorClass(sec,c)+(mine?' ownMobileStand':'')+'"><div class="mobileStandCardInner"><div class="mobileStandNo">'+n+'</div><div class="mobileStandInfo"><b>'+esc(shortPlayerName(name))+'</b>'+(mine?'<span class="mobileMineBadge">TWOJE</span>':'')+'</div></div></div>';
 }
 function renderMobileBankStands(label,arr,c,byStand){
   if(!arr||!arr.length)return '';
   const txt=String(label||'').toUpperCase(),bankClass=(txt.includes('GÓRNY')||txt.includes('BRZEG 2'))?'mobileBankUpper':(txt.includes('DOLNY')||txt.includes('BRZEG 1'))?'mobileBankLower':'mobileBankSingle';
-  return '<div class="mobileBankBlock '+bankClass+'"><div class="mobileBankName">'+esc(label)+'</div><div class="mobileStandGrid">'+arr.map(n=>renderMobileRoundStand(n,c,byStand)).join('')+'</div></div>';
+  const cols=Math.max(1,Math.min(3,arr.length));
+  return '<div class="mobileBankBlock '+bankClass+'"><div class="mobileBankName">'+esc(label)+'</div><div class="mobileStandGrid" style="grid-template-columns:repeat('+cols+',minmax(0,1fr))">'+arr.map(n=>renderMobileRoundStand(n,c,byStand)).join('')+'</div></div>';
 }
 function renderMobileRoundDrawMap(d,round){
   const c=d.competition,byStand=roundDrawStandMap(d,round),layout=sectorLayoutClient(c);
-  if(!Object.keys(byStand).length)return '<p class="muted">Brak losowania T'+round+'.</p>';
-  let html='<div class="mobileDrawMap compactPlayerDrawMap"><div class="mobileMapMeta"><b>T'+round+' — '+esc(c.fishery||'Łowisko')+'</b><span>'+layout.length+' sekt.</span></div><div class="mobileSectorStack">';
+  if(!Object.keys(byStand).length)return '<div class="card"><p class="muted">Brak losowania T'+round+'.</p></div>';
+  let html='<div class="mobileDrawMap compactPlayerDrawMap"><div class="mobileMapMeta"><b>T'+round+' — '+esc(c.fishery||'Łowisko')+'</b><span>'+layout.length+' sektorów</span></div><div class="mobileSectorStack">';
   for(const sec of layout){
     const total=(sec.top||[]).length+(sec.bottom||[]).length;
-    html+='<section class="mobileSectorCard compactPlayerSector '+sectorColorClass(sec.letter,c)+'">'
-      +'<div class="mobileSectorHeader"><span><b>'+esc(sec.letter)+'</b> · '+total+' os.</span></div>';
+    html+='<section class="mobileSectorCard compactPlayerSector '+sectorColorClass(sec.letter,c)+'"><div class="mobileSectorHeader"><span>SEKTOR <b>'+esc(sec.letter)+'</b></span><small>'+total+' os.</small></div>';
     if(c.map_mode==='ONE_BANK')html+=renderMobileBankStands('JEDEN BRZEG',sec.bottom,c,byStand);
     else if(c.map_mode==='TWO_ALONG'){
       if(sec.top?.length)html+=renderMobileBankStands('BRZEG 2',sec.top,c,byStand);
       if(sec.bottom?.length)html+=renderMobileBankStands('BRZEG 1',sec.bottom,c,byStand);
     }else{
-      if(sec.top?.length)html+=renderMobileBankStands('GÓRNY',sec.top,c,byStand);
-      if(sec.bottom?.length)html+=renderMobileBankStands('DOLNY',sec.bottom,c,byStand);
+      if(sec.top?.length)html+=renderMobileBankStands('BRZEG GÓRNY',sec.top,c,byStand);
+      if(sec.bottom?.length)html+=renderMobileBankStands('BRZEG DOLNY',sec.bottom,c,byStand);
     }
     html+='</section>';
   }
-  html+='</div></div>';
-  return html;
+  return html+'</div></div>';
 }
-
 function renderRoundDrawView(d,round,forPlayer){const has=(d.draws||[]).some(x=>Number(x.round)===Number(round));let body='';if(has){if(forPlayer)body='<div class="playerDesktopDraw">'+renderRoundDrawMap(d,round)+renderDrawSectorTables(d,round)+'</div><div class="playerMobileDraw">'+renderMobileRoundDrawMap(d,round)+'</div>';else body='<div class="adminDesktopOnly">'+renderRoundDrawMap(d,round)+renderDrawSectorTables(d,round)+'</div><div class="adminMobileOnly">'+renderMobileRoundDrawMap(d,round)+'</div>'}else body='<p class="muted">Losowanie Tury '+round+' nie zostało jeszcze wykonane.</p>';return '<div class="card roundDrawSection '+(forPlayer?'playerRoundDrawSection':'')+'"><h2>Losowanie Tura '+round+'</h2>'+body+'</div>'}
 function sectorCardRangeText(sec,c){if((c.map_mode||'TWO_OPPOSITE')==='ONE_BANK')return compactRange(sec.bottom);return [compactRange(sec.bottom),compactRange(sec.top)].filter(x=>x!=='—').join(', ')}
 function renderSectorCards(c){const layout=sectorLayoutClient(c);return '<div class="grid3 sectorCards">'+layout.map((sec,idx)=>'<div class="card"><h3 style="margin-top:0">Sektor '+(idx+1)+'</h3><label>Nazwa sektora</label><input class="sectorNameInput" data-sector="'+idx+'" value="'+esc(sec.letter)+'" oninput="sectorCardsChanged()"><label>Stanowiska przypisane do sektora</label><input class="sectorRangeInput" data-sector="'+idx+'" value="'+esc(sectorCardRangeText(sec,c))+'" oninput="sectorCardsChanged()"><div class="small muted">Możesz wpisać np. 1-4, 17-19. Bez powtórzeń między sektorami.</div></div>').join('')+'</div>'}
@@ -484,6 +514,6 @@ function bindAuthButtons(){
 }
 
 function scrollAppBottom(){window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})}
-Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,showAdminZone,loadCompetitions,createCompetition,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,enablePush,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,toggleFinalClub,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
+Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,showAdminZone,loadCompetitions,createCompetition,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,enablePush,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,toggleFinalClub,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
 function startBoot(){console.log('CLIENT_V36_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v36',{cache:'no-store'}).catch(()=>{})}catch(_){};try{if('serviceWorker'in navigator){navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister().catch(()=>{}))).catch(()=>{})}if('caches'in window){caches.keys().then(ks=>ks.forEach(k=>caches.delete(k).catch(()=>{}))).catch(()=>{})}}catch(_){}bindAuthButtons();boot().catch(e=>{console.error('BOOT_FATAL',e);try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();

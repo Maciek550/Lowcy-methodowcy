@@ -17,7 +17,7 @@ const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const APP_VERSION = '36';
-const APP_VERSION_NAME = 'V46_PDF_DRAW_LAYOUT_AND_READABILITY';
+const APP_VERSION_NAME = 'V47_PLAYER_MOBILE_TILES_AND_DRAW';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 
 if (webpush && VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
@@ -2262,6 +2262,54 @@ header{z-index:100!important}
   .compactPlayerSector .mobileStandInfo b{font-size:12px!important}
 }
 
+
+/* V47 — mobilne Szczegóły zawodnika: najpierw kafelki, treść dopiero po wyborze */
+.playerMobileDashboard{display:none}
+@media(max-width:760px){
+  .playerDetailHead{display:none!important}
+  .playerDesktopDashboard{display:none!important}
+  .playerMobileDashboard{display:block!important;width:100%!important;overflow:visible!important}
+  .playerDrawStickySlot{position:relative!important;width:100%!important;overflow:visible!important}
+  .playerUnifiedNav{position:relative!important;top:auto!important;margin:0 0 5px!important;padding:4px!important;border-radius:0 0 9px 9px!important;background:rgba(243,246,239,.998)!important;box-shadow:0 4px 10px #0000001d!important}
+  .playerUnifiedNav.fixedPlayerBar{position:fixed!important;top:0!important;z-index:5400!important;margin:0!important;border-radius:0 0 9px 9px!important;box-shadow:0 6px 16px #00000028!important}
+  .playerUnifiedNav .playerDrawTabs{display:grid!important;grid-template-columns:1fr 1fr!important;gap:3px!important;margin:0 0 3px!important}
+  .playerUnifiedNav .playerDrawTabs button{min-height:39px!important;padding:5px 3px!important;font-size:11px!important;line-height:1.05!important;border-radius:7px!important}
+  .playerUnifiedNav .playerResultsNavInline{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:2px!important;margin:0!important;padding:0!important;border:0!important}
+  .playerUnifiedNav .playerResultsNavInline button{min-width:0!important;min-height:34px!important;padding:4px 1px!important;font-size:8.8px!important;line-height:1.02!important;border-radius:6px!important;background:#e2ebe4!important;color:#173d2e!important;border:1px solid #b9cabd!important}
+  .playerUnifiedNav button.active{background:#0b5634!important;color:#fff!important;border-color:#0b5634!important}
+  #playerMobilePanelContent{width:100%!important;min-height:0!important}
+  .playerMobileSelectedPanel{width:100%!important;margin:0!important}
+  .playerSelectedOwn{display:flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;margin:4px 0!important;padding:5px 7px!important;border:1px solid #c8d6cc!important;border-radius:8px!important;background:#fff!important}
+  .playerSelectedOwn .tag{font-size:8px!important;padding:1px 5px!important}
+  .playerSelectedOwn strong{font-size:25px!important;line-height:1!important;color:#103b2a!important}
+  .playerSelectedOwn b{font-size:11px!important;color:#294d3d!important}
+
+  .compactPlayerDrawMap{width:100%!important;max-width:100%!important}
+  .compactPlayerDrawMap .mobileMapMeta{margin:0 0 5px!important;padding:6px 8px!important;border-radius:8px!important;background:#edf4ee!important}
+  .compactPlayerDrawMap .mobileMapMeta b{font-size:12.5px!important;color:#153d2c!important}
+  .compactPlayerDrawMap .mobileMapMeta span{font-size:9.5px!important;font-weight:900!important}
+  .compactPlayerDrawMap .mobileSectorStack{gap:6px!important}
+  .compactPlayerSector{border:1px solid #b6c6ba!important;border-radius:9px!important;overflow:hidden!important;box-shadow:none!important}
+  .compactPlayerSector .mobileSectorHeader{display:flex!important;align-items:center!important;justify-content:space-between!important;padding:5px 8px!important;min-height:31px!important;background:#ffffffc9!important;border-bottom:1px solid #becdc2!important}
+  .compactPlayerSector .mobileSectorHeader span{font-size:11px!important;font-weight:900!important;color:#224937!important}
+  .compactPlayerSector .mobileSectorHeader span b{font-size:21px!important;line-height:1!important;margin-left:2px!important}
+  .compactPlayerSector .mobileSectorHeader small{font-size:10px!important;font-weight:900!important;color:#355846!important}
+  .compactPlayerSector .mobileBankBlock{padding:5px 6px!important}
+  .compactPlayerSector .mobileBankBlock+.mobileBankBlock{border-top:1px dashed #b1c1b5!important}
+  .compactPlayerSector .mobileBankName{text-align:center!important;margin:0 0 4px!important;font-size:9px!important;font-weight:1000!important;letter-spacing:.035em!important;color:#355846!important}
+  .compactPlayerSector .mobileStandGrid{display:grid!important;gap:5px!important;padding:0!important}
+  .compactPlayerSector .mobileStandCard{min-width:0!important;min-height:0!important;padding:0!important;background:transparent!important}
+  .compactPlayerSector .mobileStandCardInner{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;min-height:58px!important;padding:3px!important;border:1px solid #94a99b!important;border-radius:8px!important;background:#ffffffe6!important;overflow:hidden!important}
+  .compactPlayerSector .mobileStandNo{display:block!important;width:auto!important;height:auto!important;border:0!important;background:transparent!important;font-size:25px!important;line-height:1!important;font-weight:1000!important;color:#103b2a!important;padding:0!important}
+  .compactPlayerSector .mobileStandInfo{width:100%!important;min-width:0!important;padding:2px 2px 0!important;text-align:center!important;font-size:10px!important;line-height:1.05!important;color:#1c3328!important}
+  .compactPlayerSector .mobileStandInfo b{display:block!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;font-size:10.5px!important;font-weight:900!important}
+  .compactPlayerSector .mobileMineBadge{display:inline-block!important;margin-top:2px!important;padding:1px 4px!important;border-radius:999px!important;background:#f6b900!important;color:#3e2b00!important;font-size:6.8px!important;font-weight:1000!important}
+  .compactPlayerSector .ownMobileStand .mobileStandCardInner{border:3px solid #e5ad00!important;background:#fff8c5!important;box-shadow:0 0 0 1px #fff inset!important}
+
+  .playerMobileSelectedPanel .playerResultCard{margin:4px 0!important;padding:5px!important}
+  .playerMobileSelectedPanel h2{font-size:14px!important;margin:2px 0 5px!important}
+}
+
 </style>
 </head>
 <body>
@@ -2278,7 +2326,7 @@ header{z-index:100!important}
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V46</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
+  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V47</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
     <div id="adminCreate" class="card hidden"><h2>Utwórz zawody</h2><p class="small muted">Nazwa zawodów jest używana także w nagłówkach PDF.</p><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div></div><label>Opis</label><textarea id="cNotes" placeholder="Opis zawodów, zasady, informacje organizacyjne."></textarea><button onclick="createCompetition(event)">Utwórz zawody</button></div>
@@ -2290,7 +2338,7 @@ header{z-index:100!important}
 </section>
 </main>
 <div class="quickScroll"><button onclick="scrollAppTop()">↑</button><button onclick="scrollAppBottom()">↓</button></div>
-<script src="/app.js?v=46" defer></script>
+<script src="/app.js?v=47" defer></script>
 </body>
 </html>`;
 
@@ -2301,5 +2349,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V46_PDF_DRAW_LAYOUT_AND_READABILITY_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V47_PLAYER_MOBILE_TILES_AND_DRAW_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });
