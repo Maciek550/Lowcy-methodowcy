@@ -1,4 +1,4 @@
-const CLIENT_VERSION='37';const CLIENT_VERSION_NAME='V37_STICKY_FIX_ADMIN_MOBILE_SECTORS';try{fetch('/__probe_js_v37',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V37_STICKY_FIX_ADMIN_MOBILE_SECTORS_LOADED');
+const CLIENT_VERSION='38';const CLIENT_VERSION_NAME='V38_FIXED_ADMIN_NAV';try{fetch('/__probe_js_v38',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V38_FIXED_ADMIN_NAV_LOADED');
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let TOKEN = STORE.get('carp_token') || '';
 let ME = null;
@@ -92,6 +92,7 @@ function renderDetail(){
   if(admin) html+=renderAdminDetail(d); else html+=renderPlayerDetail(d);
   q('competitionDetail').innerHTML=html;
   syncStickyNavOffset();
+  setTimeout(syncFixedAdminNav,0);
   if(admin&&ACTIVE_ADMIN_ZONE==='draw') setTimeout(()=>setupStructureAuto(c.id),0);
   setTimeout(()=>renderPushStatus(),0);
 }
@@ -102,13 +103,13 @@ function renderCountPanel(d){const x=rosterCounts(d);const over=x.limit&&x.main>
 function renderCompetitionSettings(d){const c=d.competition;return '<div class="card"><h2>Dane zawodów</h2><div class="grid"><div><label>Nazwa</label><input id="dTitle" value="'+esc(c.title)+'"></div><div><label>Łowisko</label><input id="dFishery" value="'+esc(c.fishery||'')+'"></div><div><label>Data</label><input id="dDate" type="date" value="'+dateInputValue(c.competition_date)+'"></div><div><label>Liczba osób / limit listy głównej</label><input id="dLimit" type="number" value="'+esc(c.limit_places||'')+'"></div><div><label>Status zapisów</label><select id="dStatus"><option value="OPEN" '+(c.status==='OPEN'?'selected':'')+'>OPEN — zapisy otwarte</option><option value="CLOSED" '+(c.status==='CLOSED'?'selected':'')+'>CLOSED — zamknięte</option></select></div></div><label>Opis / notatki</label><textarea id="dNotes">'+esc(c.notes||'')+'</textarea><button type="button" onclick="saveCompetition('+c.id+')">Zapisz dane zawodów</button></div>'}
 function adminZoneButton(zone,label){return '<button type="button" id="adminZoneBtn-'+zone+'" class="'+(ACTIVE_ADMIN_ZONE===zone?'active':'')+'" onclick="showAdminZone(\''+zone+'\',event)">'+label+'</button>'}
 function renderAdminDetail(d){
-  return '<div class="workZoneTabs" role="tablist" aria-label="Strefy obsługi zawodów">'
+  return '<div class="workZoneTabsSlot"><div class="workZoneTabs" role="tablist" aria-label="Strefy obsługi zawodów">'
     +adminZoneButton('roster','1. Lista zawodników')
     +adminZoneButton('draw','2. Losowanie i sektory')
     +adminZoneButton('entry','3. Wpisywanie wyników')
     +adminZoneButton('results','4. Wyniki')
     +adminZoneButton('pdf','5. Generowanie PDF')
-    +'</div>'
+    +'</div></div>'
     +'<section id="adminZone-roster" class="adminZone '+(ACTIVE_ADMIN_ZONE==='roster'?'':'hidden')+'">'+renderCountPanel(d)+renderRosterTools(d)+renderEntries(d)+'</section>'
     +'<section id="adminZone-draw" class="adminZone '+(ACTIVE_ADMIN_ZONE==='draw'?'':'hidden')+'">'+renderCompetitionSettings(d)+renderStructurePanel(d)+renderDrawPanel(d)+'</section>'
     +'<section id="adminZone-entry" class="adminZone '+(ACTIVE_ADMIN_ZONE==='entry'?'':'hidden')+'">'+renderResultsEntryPanel(d)+'</section>'
@@ -121,7 +122,7 @@ function showAdminZone(zone,ev){
   ACTIVE_ADMIN_ZONE=zone;
   ['roster','draw','entry','results','pdf'].forEach(name=>{q('adminZone-'+name)?.classList.toggle('hidden',name!==zone);q('adminZoneBtn-'+name)?.classList.toggle('active',name===zone)});
   if(zone==='draw'&&CURRENT_DETAIL)setTimeout(()=>setupStructureAuto(CURRENT_DETAIL.competition.id),0);
-  const tabs=document.querySelector('.workZoneTabs');if(ev&&tabs)tabs.scrollIntoView({behavior:'smooth',block:'start'});
+  const slot=document.querySelector('.workZoneTabsSlot');if(ev&&slot)slot.scrollIntoView({behavior:'smooth',block:'start'});setTimeout(syncFixedAdminNav,0);
 }
 function renderFinalClubToggle(){return '<label class="checkline finalClubToggle"><input type="checkbox" '+(SHOW_FINAL_CLUB?'checked':'')+' onchange="toggleFinalClub(this)"> Pokaż koło — tylko w klasyfikacji końcowej</label>'}
 function toggleFinalClub(el){SHOW_FINAL_CLUB=!!(el&&typeof el==='object'?el.checked:el);document.querySelectorAll('.finalClub').forEach(x=>x.classList.toggle('hidden',!SHOW_FINAL_CLUB));document.querySelectorAll('.finalClubToggle input').forEach(x=>{x.checked=SHOW_FINAL_CLUB})}
@@ -270,7 +271,40 @@ async function enablePush(){msg('Push chwilowo wyłączony w V23, żeby odciąć
 function scrollAppTop(){window.scrollTo({top:0,behavior:'smooth'})}
 
 function syncStickyNavOffset(){const header=document.querySelector('header');const h=header?Math.ceil(header.getBoundingClientRect().height):52;document.documentElement.style.setProperty('--app-header-height',h+'px')}
-window.addEventListener('resize',()=>{clearTimeout(window.__stickySyncTimer);window.__stickySyncTimer=setTimeout(syncStickyNavOffset,80)},{passive:true});
+let ADMIN_NAV_RAF=0;
+function syncFixedAdminNav(){
+  if(ADMIN_NAV_RAF){cancelAnimationFrame(ADMIN_NAV_RAF);ADMIN_NAV_RAF=0}
+  ADMIN_NAV_RAF=requestAnimationFrame(()=>{
+    ADMIN_NAV_RAF=0;
+    const slot=document.querySelector('.workZoneTabsSlot'),tabs=document.querySelector('.workZoneTabs'),detail=q('competitionDetail');
+    if(!slot||!tabs||!detail||detail.classList.contains('hidden')||ME?.role!=='ADMIN'){
+      if(tabs){tabs.classList.remove('fixedAdminNav');tabs.style.left='';tabs.style.width='';tabs.style.top=''}
+      if(slot)slot.style.height='';
+      return;
+    }
+    const header=document.querySelector('header'),headerH=header?Math.ceil(header.getBoundingClientRect().height):52,top=headerH+4;
+    const slotRect=slot.getBoundingClientRect(),detailRect=detail.getBoundingClientRect();
+    const tabH=Math.ceil(tabs.getBoundingClientRect().height||tabs.offsetHeight||56);
+    const shouldFix=slotRect.top<=top && detailRect.bottom>top+tabH+12;
+    if(shouldFix){
+      slot.style.height=tabH+'px';
+      tabs.classList.add('fixedAdminNav');
+      const r=slot.getBoundingClientRect();
+      tabs.style.left=Math.round(r.left)+'px';
+      tabs.style.width=Math.round(r.width)+'px';
+      tabs.style.top=top+'px';
+    }else{
+      tabs.classList.remove('fixedAdminNav');
+      tabs.style.left='';
+      tabs.style.width='';
+      tabs.style.top='';
+      slot.style.height='';
+    }
+  });
+}
+window.addEventListener('scroll',syncFixedAdminNav,{passive:true});
+
+window.addEventListener('resize',()=>{clearTimeout(window.__stickySyncTimer);window.__stickySyncTimer=setTimeout(()=>{syncStickyNavOffset();syncFixedAdminNav()},80)},{passive:true});
 function bindAuthButtons(){
   const pairs=[['clearSessionBtn',clearSession],['regBtn',registerPlayer],['setupAdminBtn',setupAdmin],['pushBtn',enablePush],['logoutBtn',logout]];
   for(const [id,fn] of pairs){const el=q(id);if(el&&!el.dataset.bound){el.dataset.bound='1';el.onclick=null;el.addEventListener('click',ev=>{ev.preventDefault();ev.stopPropagation();fn(ev);});}}

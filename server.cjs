@@ -17,7 +17,7 @@ const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const APP_VERSION = '36';
-const APP_VERSION_NAME = 'V37_STICKY_FIX_ADMIN_MOBILE_SECTORS';
+const APP_VERSION_NAME = 'V38_FIXED_ADMIN_NAV';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 
 if (webpush && VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
@@ -1821,6 +1821,23 @@ header{z-index:100!important}
   .notificationWrap{overflow:visible;border:0}.notificationTable,.notificationTable tbody,.notificationTable tr,.notificationTable td{display:block;width:100%}.notificationTable thead{display:none}.notificationTable tr{border:1px solid var(--line);border-radius:12px;margin:8px 0;background:#fff;overflow:hidden}.notificationTable td{border:0;border-bottom:1px solid #e3e9e4;padding:9px;font-size:12px}.notificationTable td:last-child{border-bottom:0}.leaveRequestActions{min-width:0;width:100%;grid-template-columns:1fr 1fr}.leaveRequestActions button{width:100%;min-height:44px}
 }
 
+/* V38 — niezawodny pasek kafelków: po przewinięciu przechodzi z układu normalnego na fixed */
+.workZoneTabsSlot{width:100%;min-width:0;overflow:visible!important;position:relative}
+.workZoneTabs{position:relative!important;top:auto!important;z-index:95!important}
+.workZoneTabs.fixedAdminNav{
+  position:fixed!important;
+  z-index:1000!important;
+  margin:0!important;
+  background:rgba(243,246,239,.995)!important;
+  border:1px solid #d1ddd4!important;
+  border-radius:12px!important;
+  box-shadow:0 7px 22px #0000002b!important;
+  padding:7px!important;
+}
+@media(max-width:760px){
+  .workZoneTabs.fixedAdminNav{padding:5px!important;border-radius:10px!important}
+}
+
 
 /* V37 — naprawa sticky kafelków i kompaktowy podgląd sektorów admina na telefonie */
 #competitionDetail,.adminZone{overflow:visible!important}
@@ -1879,7 +1896,7 @@ header{z-index:100!important}
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V37</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
+  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V38</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
     <div id="adminCreate" class="card hidden"><h2>Utwórz zawody</h2><p class="small muted">Nazwa zawodów jest używana także w nagłówkach PDF.</p><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div></div><label>Opis</label><textarea id="cNotes" placeholder="Opis zawodów, zasady, informacje organizacyjne."></textarea><button onclick="createCompetition(event)">Utwórz zawody</button></div>
@@ -1891,7 +1908,7 @@ header{z-index:100!important}
 </section>
 </main>
 <div class="quickScroll"><button onclick="scrollAppTop()">↑</button><button onclick="scrollAppBottom()">↓</button></div>
-<script src="/app.js?v=37" defer></script>
+<script src="/app.js?v=38" defer></script>
 </body>
 </html>`;
 
@@ -1902,5 +1919,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V37_STICKY_FIX_ADMIN_MOBILE_SECTORS_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V38_FIXED_ADMIN_NAV_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });
