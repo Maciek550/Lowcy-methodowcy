@@ -16,8 +16,8 @@ const ADMIN_SETUP_CODE = process.env.ADMIN_SETUP_CODE || '';
 let VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 let VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
-const APP_VERSION = '55';
-const APP_VERSION_NAME = 'V55_PLAYER_DESKTOP_PARITY_INITIAL_SURNAME';
+const APP_VERSION = '56';
+const APP_VERSION_NAME = 'V56_PLAYER_STICKY_NAV';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 
 
@@ -1095,7 +1095,7 @@ async function route(req, res) {
   const path = url.pathname;
   const method = req.method;
 
-  if (path === '/__probe_js_v55' || path === '/__probe_boot_v55' || path === '/__probe_js_v54' || path === '/__probe_boot_v54' || path === '/__probe_js_v53' || path === '/__probe_boot_v53' || path === '/__probe_js_v52' || path === '/__probe_boot_v52' || path === '/__probe_js_v51' || path === '/__probe_boot_v51' || path === '/__probe_js_v50' || path === '/__probe_boot_v50' || path === '/__probe_js_v49' || path === '/__probe_boot_v49' || path === '/__probe_js_v36' || path === '/__probe_boot_v36' || path === '/__probe_js_v35' || path === '/__probe_boot_v35' || path === '/__probe_js_v34' || path === '/__probe_boot_v34' || path === '/__probe_js_v33' || path === '/__probe_boot_v33' || path === '/__probe_js_v32' || path === '/__probe_boot_v32' || path === '/__probe_js_v30' || path === '/__probe_boot_v30' || path === '/__probe_js_v29' || path === '/__probe_boot_v29' || path === '/__probe_js_v27' || path === '/__probe_boot_v27' || path === '/__probe_inline_v26') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
+  if (path === '/__probe_js_v56' || path === '/__probe_boot_v56' || path === '/__probe_js_v55' || path === '/__probe_boot_v55' || path === '/__probe_js_v54' || path === '/__probe_boot_v54' || path === '/__probe_js_v53' || path === '/__probe_boot_v53' || path === '/__probe_js_v52' || path === '/__probe_boot_v52' || path === '/__probe_js_v51' || path === '/__probe_boot_v51' || path === '/__probe_js_v50' || path === '/__probe_boot_v50' || path === '/__probe_js_v49' || path === '/__probe_boot_v49' || path === '/__probe_js_v36' || path === '/__probe_boot_v36' || path === '/__probe_js_v35' || path === '/__probe_boot_v35' || path === '/__probe_js_v34' || path === '/__probe_boot_v34' || path === '/__probe_js_v33' || path === '/__probe_boot_v33' || path === '/__probe_js_v32' || path === '/__probe_boot_v32' || path === '/__probe_js_v30' || path === '/__probe_boot_v30' || path === '/__probe_js_v29' || path === '/__probe_boot_v29' || path === '/__probe_js_v27' || path === '/__probe_boot_v27' || path === '/__probe_inline_v26') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/api/version') return sendJson(res, 200, { ok:true, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/app.js') return send(res, 200, APP_JS, {'Content-Type':'application/javascript; charset=utf-8', 'Cache-Control':'no-store, no-cache, must-revalidate'});
 
@@ -1155,7 +1155,7 @@ async function route(req, res) {
     name:'Łowcy Methodowcy', short_name:'Łowcy', start_url:'/', scope:'/', id:'/', display:'standalone', background_color:'#f3f6ef', theme_color:'#114b2f', icons:[]
   }), {'Content-Type':'application/manifest+json; charset=utf-8'});
   if (path === '/sw.js') return send(res, 200, `
-const SW_VERSION='lowcy-v55-push';
+const SW_VERSION='lowcy-v56-push';
 self.addEventListener('install', event => { self.skipWaiting(); });
 self.addEventListener('activate', event => event.waitUntil((async()=>{ try{const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k)));}catch(e){} await self.clients.claim(); })()));
 self.addEventListener('push', event => {
@@ -2656,6 +2656,34 @@ header{z-index:100!important}
 @media(max-width:1000px) and (min-width:761px){.playerDesktopMainNav{grid-template-columns:repeat(3,minmax(0,1fr))}.playerDesktopDashboardV55 .playerSectorAccordionList{grid-template-columns:1fr}.playerDesktopSectorTables .drawSectorGrid{grid-template-columns:1fr}}
 @media(max-width:760px){.playerDesktopDashboardV55{display:none!important}}
 
+
+/* V56 — pewne przypięcie nawigacji zawodnika pod nagłówkiem */
+.playerDesktopStickySlot,.playerDrawStickySlot{position:relative!important;width:100%!important;overflow:visible!important}
+.playerDesktopUnifiedNav.fixedPlayerBar,.playerUnifiedNav.fixedPlayerBar{
+  position:fixed!important;
+  z-index:9000!important;
+  margin:0!important;
+  background:#f3f6ef!important;
+  border:1px solid #b9cbbf!important;
+  box-shadow:0 7px 20px #00000030!important;
+}
+.playerDesktopUnifiedNav.fixedPlayerBar{border-radius:0 0 12px 12px!important;padding:6px 8px!important}
+@media(max-width:760px){
+  .playerUnifiedNav.fixedPlayerBar{right:auto!important;border-radius:0 0 10px 10px!important;padding:3px 4px 4px!important}
+  .playerUnifiedNav.fixedPlayerBar .playerDrawTabs{margin-bottom:2px!important;gap:2px!important}
+  .playerUnifiedNav.fixedPlayerBar .playerDrawTabs button{min-height:34px!important;padding:3px 2px!important;font-size:9.8px!important}
+  .playerUnifiedNav.fixedPlayerBar .playerResultsNavInline{margin-bottom:2px!important;gap:2px!important}
+  .playerUnifiedNav.fixedPlayerBar .playerResultsNavInline button{min-height:30px!important;padding:2px 1px!important;font-size:7.8px!important}
+  .playerUnifiedNav.fixedPlayerBar .playerMapNav{gap:2px!important}
+  .playerUnifiedNav.fixedPlayerBar .playerMapNav button{min-height:29px!important;padding:2px!important;font-size:8.3px!important}
+  .playerUnifiedNav.fixedPlayerBar .playerNotificationNav{margin-top:2px!important}
+  .playerUnifiedNav.fixedPlayerBar .playerNotificationNav button{min-height:27px!important;padding:2px!important;font-size:8px!important}
+}
+@media(min-width:761px){
+  .playerDesktopUnifiedNav{position:relative!important;top:auto!important}
+  .playerDesktopUnifiedNav.fixedPlayerBar{position:fixed!important}
+}
+
 </style>
 </head>
 <body>
@@ -2672,7 +2700,7 @@ header{z-index:100!important}
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V55</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
+  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V56</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
     <div id="adminCreate" class="card hidden"><h2>Utwórz zawody</h2><p class="small muted">Nazwa zawodów jest używana także w nagłówkach PDF.</p><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div></div><label>Opis</label><textarea id="cNotes" placeholder="Opis zawodów, zasady, informacje organizacyjne."></textarea><button onclick="createCompetition(event)">Utwórz zawody</button></div>
@@ -2684,7 +2712,7 @@ header{z-index:100!important}
 </section>
 </main>
 <div class="quickScroll"><button onclick="scrollAppTop()">↑</button><button onclick="scrollAppBottom()">↓</button></div>
-<script src="/app.js?v=55" defer></script>
+<script src="/app.js?v=56" defer></script>
 </body>
 </html>`;
 
@@ -2695,5 +2723,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V55_PLAYER_DESKTOP_PARITY_INITIAL_SURNAME_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V56_PLAYER_STICKY_NAV_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });

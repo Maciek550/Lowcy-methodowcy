@@ -1,4 +1,4 @@
-const CLIENT_VERSION='55';const CLIENT_VERSION_NAME='V55_PLAYER_DESKTOP_PARITY_INITIAL_SURNAME';try{fetch('/__probe_js_v55',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V55_PLAYER_DESKTOP_PARITY_INITIAL_SURNAME_LOADED');
+const CLIENT_VERSION='56';const CLIENT_VERSION_NAME='V56_PLAYER_STICKY_NAV';try{fetch('/__probe_js_v56',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V56_PLAYER_STICKY_NAV_LOADED');
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let TOKEN = STORE.get('carp_token') || '';
 let ME = null;
@@ -54,7 +54,7 @@ async function boot(){
   renderPushStatus();
   showTab('competitions');
   await Promise.allSettled([loadCompetitions(),loadNotifications(),admin?loadPlayers():Promise.resolve()]);
-  if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=55',{scope:'/'}).then(()=>{if('Notification' in window&&Notification.permission==='granted')ensurePushSubscription(true,false).catch(()=>{})}).catch(()=>{})}
+  if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=56',{scope:'/'}).then(()=>{if('Notification' in window&&Notification.permission==='granted')ensurePushSubscription(true,false).catch(()=>{})}).catch(()=>{})}
 }
 async function login(){try{const phone=q('loginPhone')?.value||'';const password=q('loginPassword')?.value||'';if(!phone.trim()||!password)throw new Error('Wpisz telefon i hasło');const d=await api('/api/login',{method:'POST',body:JSON.stringify({phone,password})});TOKEN=d.token;STORE.set('carp_token',TOKEN);msg('Zalogowano');await boot()}catch(e){msg(e.message,'bad')}}
 async function registerPlayer(ev){if(ev){ev.preventDefault&&ev.preventDefault();ev.stopPropagation&&ev.stopPropagation()}try{const d=await api('/api/register',{method:'POST',body:JSON.stringify({phone:q('regPhone').value,password:q('regPassword').value,firstName:q('regFirst').value,lastName:q('regLast').value,pzwClub:q('regClub').value})});TOKEN=d.token;STORE.set('carp_token',TOKEN);msg('Konto zawodnika utworzone');await boot()}catch(e){msg(e.message,'bad')}}
@@ -258,11 +258,11 @@ function renderPlayerDesktopPanelContent(d,panel){
 function renderPlayerDesktopDashboard(d){
   const p=PLAYER_MOBILE_PANEL;
   const b=(panel,label,cls='')=>'<button type="button" class="'+cls+' '+(p===panel?'active':'')+'" onclick="showPlayerDesktopPanel(\''+panel+'\',event)">'+label+'</button>';
-  return '<div class="playerDesktopDashboardV55">'
-    +'<div class="card playerDesktopUnifiedNav">'
+  return '<div class="playerDesktopDashboardV56 playerDesktopDashboardV55">'
+    +'<div class="playerDesktopStickySlot"><div class="card playerDesktopUnifiedNav">'
     +'<div class="playerDesktopMainNav">'+b('draw1','Losowanie Tura 1','drawTile')+b('draw2','Losowanie Tura 2','drawTile')+b('t1','TURA 1','resultTile')+b('t2','TURA 2','resultTile')+b('general','KLASYFIKACJA','resultTile')+b('stats','STATYSTYKI','resultTile')+'</div>'
     +'<div class="playerDesktopSubNav">'+b('map1','MAPA ŁOWISKA T1','mapTile')+b('map2','MAPA ŁOWISKA T2','mapTile')+'<button type="button" class="notificationTile" onclick="openPlayerNotifications(event)">POWIADOMIENIA'+(PLAYER_UNREAD_NOTIFICATIONS?' ('+PLAYER_UNREAD_NOTIFICATIONS+')':'')+'</button></div>'
-    +'</div>'
+    +'</div></div>'
     +renderPlayerOwnSummary(d)
     +'<div id="playerDesktopPanelContent">'+renderPlayerDesktopPanelContent(d,p)+'</div>'
     +'</div>';
@@ -279,7 +279,7 @@ function showPlayerDesktopPanel(panel,ev){
   const mobileBox=q('playerMobilePanelContent');
   if(mobileBox&&CURRENT_DETAIL)mobileBox.innerHTML=renderPlayerMobilePanelContent(CURRENT_DETAIL,panel);
   document.querySelectorAll('.playerDesktopUnifiedNav button,.playerUnifiedNav button').forEach(btn=>btn.classList.toggle('active',btn.getAttribute('onclick')?.includes("'"+panel+"'")));
-  requestAnimationFrame(()=>{fitPlayerMobileFullMaps();const el=q('playerDesktopPanelContent');if(el)el.scrollIntoView({behavior:'smooth',block:'start'})});
+  requestAnimationFrame(()=>{syncPlayerStickyBars();fitPlayerMobileFullMaps();const el=q('playerDesktopPanelContent'),nav=document.querySelector('.playerDesktopUnifiedNav');if(el&&nav){const top=window.scrollY+el.getBoundingClientRect().top-nav.getBoundingClientRect().height-getPlayerStickyTop()-6;window.scrollTo({top:Math.max(0,top),behavior:'smooth'})}});
 }
 function renderPlayerDetail(d){
   let html='<div class="playerView">';
@@ -304,7 +304,7 @@ function showPlayerMobilePanel(panel,ev){
     syncPlayerStickyBars();
     fitPlayerMobileFullMaps();
     const nav=document.querySelector('.playerUnifiedNav'),content=q('playerMobilePanelContent');
-    if(nav&&content){const top=window.scrollY+content.getBoundingClientRect().top-nav.getBoundingClientRect().height-3;window.scrollTo({top:Math.max(0,top),behavior:'smooth'})}
+    if(nav&&content){const top=window.scrollY+content.getBoundingClientRect().top-nav.getBoundingClientRect().height-getPlayerStickyTop()-5;window.scrollTo({top:Math.max(0,top),behavior:'smooth'})}
   });
 }
 function fitPlayerMobileFullMaps(){
@@ -557,7 +557,7 @@ async function ensurePushSubscription(silent=false,sendTest=false){
   let permission=Notification.permission;
   if(permission==='default'&&!silent)permission=await Notification.requestPermission();
   if(permission!=='granted'){if(!silent)msg(permission==='denied'?'Powiadomienia są zablokowane w ustawieniach tej strony.':'Nie włączono powiadomień telefonu.','bad');renderPushStatus();return false}
-  const reg=await navigator.serviceWorker.register('/sw.js?v=55',{scope:'/'});
+  const reg=await navigator.serviceWorker.register('/sw.js?v=56',{scope:'/'});
   await navigator.serviceWorker.ready;
   let sub=await reg.pushManager.getSubscription();
   if(sub&&sendTest){await sub.unsubscribe().catch(()=>{});sub=null}
@@ -616,24 +616,37 @@ function clearPlayerFixed(el,slot){
   if(el){
     el.classList.remove('fixedPlayerBar');
     el.style.left='';
+    el.style.right='';
     el.style.width='';
     el.style.top='';
   }
   if(slot)slot.style.height='';
 }
-function syncOnePlayerBar(slot,bar,boundary){
+function getPlayerStickyTop(){
+  const header=document.querySelector('header');
+  if(!header)return 0;
+  const r=header.getBoundingClientRect();
+  return Math.max(0,Math.ceil(r.bottom));
+}
+function syncOnePlayerBar(slot,bar,boundary,top){
   if(!slot||!bar||!boundary){clearPlayerFixed(bar,slot);return}
+  const stickyTop=Number.isFinite(top)?top:getPlayerStickyTop();
   const slotRect=slot.getBoundingClientRect();
   const boundaryRect=boundary.getBoundingClientRect();
-  const barH=Math.ceil(bar.getBoundingClientRect().height||bar.offsetHeight||40);
-  const shouldFix=slotRect.top<=0 && boundaryRect.bottom>barH+4;
+  const wasFixed=bar.classList.contains('fixedPlayerBar');
+  if(wasFixed)bar.classList.remove('fixedPlayerBar');
+  const naturalH=Math.ceil(bar.getBoundingClientRect().height||bar.offsetHeight||40);
+  if(wasFixed)bar.classList.add('fixedPlayerBar');
+  const fixedH=Math.ceil(bar.getBoundingClientRect().height||naturalH);
+  const barH=Math.max(naturalH,fixedH);
+  const shouldFix=slotRect.top<=stickyTop && boundaryRect.bottom>stickyTop+barH+6;
   if(shouldFix){
     slot.style.height=barH+'px';
     bar.classList.add('fixedPlayerBar');
     const r=slot.getBoundingClientRect();
     bar.style.left=Math.round(r.left)+'px';
     bar.style.width=Math.round(r.width)+'px';
-    bar.style.top='0px';
+    bar.style.top=stickyTop+'px';
   }else clearPlayerFixed(bar,slot);
 }
 function syncPlayerStickyBars(){
@@ -643,14 +656,23 @@ function syncPlayerStickyBars(){
     const mobile=window.matchMedia&&window.matchMedia('(max-width:760px)').matches;
     const player=ME&&ME.role!=='ADMIN';
     const detail=q('competitionDetail');
-    const drawSlot=document.querySelector('.playerMobileDashboard .playerDrawStickySlot');
-    const drawBar=document.querySelector('.playerMobileDashboard .playerUnifiedNav');
-    const drawBoundary=document.querySelector('.playerMobileDashboard');
-    if(!mobile||!player||!detail||detail.classList.contains('hidden')||!drawSlot||!drawBar||!drawBoundary){
-      clearPlayerFixed(drawBar,drawSlot);
-      return;
+    const top=getPlayerStickyTop();
+    const mobileSlot=document.querySelector('.playerMobileDashboard .playerDrawStickySlot');
+    const mobileBar=document.querySelector('.playerMobileDashboard .playerUnifiedNav');
+    const mobileBoundary=document.querySelector('.playerMobileDashboard');
+    const desktopSlot=document.querySelector('.playerDesktopDashboardV56 .playerDesktopStickySlot');
+    const desktopBar=document.querySelector('.playerDesktopDashboardV56 .playerDesktopUnifiedNav');
+    const desktopBoundary=document.querySelector('.playerDesktopDashboardV56');
+    if(!player||!detail||detail.classList.contains('hidden')){
+      clearPlayerFixed(mobileBar,mobileSlot);clearPlayerFixed(desktopBar,desktopSlot);return;
     }
-    syncOnePlayerBar(drawSlot,drawBar,drawBoundary);
+    if(mobile){
+      clearPlayerFixed(desktopBar,desktopSlot);
+      syncOnePlayerBar(mobileSlot,mobileBar,mobileBoundary,top);
+    }else{
+      clearPlayerFixed(mobileBar,mobileSlot);
+      syncOnePlayerBar(desktopSlot,desktopBar,desktopBoundary,top);
+    }
   });
 }
 window.addEventListener('scroll',syncPlayerStickyBars,{passive:true});
@@ -664,5 +686,5 @@ function bindAuthButtons(){
 
 function scrollAppBottom(){window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})}
 Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,showAdminZone,loadCompetitions,createCompetition,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,editPlayerName,deletePlayer,enablePush,sendPushTest,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,openPlayerNotifications,fitPlayerMobileFullMaps,togglePlayerSectorAccordion,toggleFinalClub,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
-function startBoot(){console.log('CLIENT_V55_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v55',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().catch(e=>{console.error('BOOT_FATAL',e);try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
+function startBoot(){console.log('CLIENT_V56_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v56',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().catch(e=>{console.error('BOOT_FATAL',e);try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();
