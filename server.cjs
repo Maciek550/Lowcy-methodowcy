@@ -17,7 +17,7 @@ const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const APP_VERSION = '36';
-const APP_VERSION_NAME = 'V45_PLAYER_TOPBAR_AND_DRAW_READABILITY';
+const APP_VERSION_NAME = 'V46_PDF_DRAW_LAYOUT_AND_READABILITY';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 
 if (webpush && VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
@@ -2278,7 +2278,7 @@ header{z-index:100!important}
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V45</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
+  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V46</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
     <div id="adminCreate" class="card hidden"><h2>Utwórz zawody</h2><p class="small muted">Nazwa zawodów jest używana także w nagłówkach PDF.</p><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div></div><label>Opis</label><textarea id="cNotes" placeholder="Opis zawodów, zasady, informacje organizacyjne."></textarea><button onclick="createCompetition(event)">Utwórz zawody</button></div>
@@ -2290,7 +2290,7 @@ header{z-index:100!important}
 </section>
 </main>
 <div class="quickScroll"><button onclick="scrollAppTop()">↑</button><button onclick="scrollAppBottom()">↓</button></div>
-<script src="/app.js?v=45" defer></script>
+<script src="/app.js?v=46" defer></script>
 </body>
 </html>`;
 
@@ -2301,5 +2301,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V45_PLAYER_TOPBAR_AND_DRAW_READABILITY_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V46_PDF_DRAW_LAYOUT_AND_READABILITY_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });
