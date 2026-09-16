@@ -16,8 +16,8 @@ const ADMIN_SETUP_CODE = process.env.ADMIN_SETUP_CODE || '';
 let VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 let VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
-const APP_VERSION = '59';
-const APP_VERSION_NAME = 'V59_PLAYER_STICKY_LIKE_ADMIN';
+const APP_VERSION = '63';
+const APP_VERSION_NAME = 'V63_DELETE_DRAW_AND_RESULTS';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 
 
@@ -1095,7 +1095,7 @@ async function route(req, res) {
   const path = url.pathname;
   const method = req.method;
 
-  if (path === '/__probe_js_v59' || path === '/__probe_boot_v59' || path === '/__probe_js_v58' || path === '/__probe_boot_v58' || path === '/__probe_js_v57' || path === '/__probe_boot_v57' || path === '/__probe_js_v56' || path === '/__probe_boot_v56' || path === '/__probe_js_v55' || path === '/__probe_boot_v55' || path === '/__probe_js_v54' || path === '/__probe_boot_v54' || path === '/__probe_js_v53' || path === '/__probe_boot_v53' || path === '/__probe_js_v52' || path === '/__probe_boot_v52' || path === '/__probe_js_v51' || path === '/__probe_boot_v51' || path === '/__probe_js_v50' || path === '/__probe_boot_v50' || path === '/__probe_js_v49' || path === '/__probe_boot_v49' || path === '/__probe_js_v36' || path === '/__probe_boot_v36' || path === '/__probe_js_v35' || path === '/__probe_boot_v35' || path === '/__probe_js_v34' || path === '/__probe_boot_v34' || path === '/__probe_js_v33' || path === '/__probe_boot_v33' || path === '/__probe_js_v32' || path === '/__probe_boot_v32' || path === '/__probe_js_v30' || path === '/__probe_boot_v30' || path === '/__probe_js_v29' || path === '/__probe_boot_v29' || path === '/__probe_js_v27' || path === '/__probe_boot_v27' || path === '/__probe_inline_v26') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
+  if (path === '/__probe_js_v63' || path === '/__probe_boot_v63' || path === '/__probe_js_v62' || path === '/__probe_boot_v62' || path === '/__probe_js_v60' || path === '/__probe_boot_v60' || path === '/__probe_js_v59' || path === '/__probe_boot_v59' || path === '/__probe_js_v58' || path === '/__probe_boot_v58' || path === '/__probe_js_v57' || path === '/__probe_boot_v57' || path === '/__probe_js_v56' || path === '/__probe_boot_v56' || path === '/__probe_js_v55' || path === '/__probe_boot_v55' || path === '/__probe_js_v54' || path === '/__probe_boot_v54' || path === '/__probe_js_v53' || path === '/__probe_boot_v53' || path === '/__probe_js_v52' || path === '/__probe_boot_v52' || path === '/__probe_js_v51' || path === '/__probe_boot_v51' || path === '/__probe_js_v50' || path === '/__probe_boot_v50' || path === '/__probe_js_v49' || path === '/__probe_boot_v49' || path === '/__probe_js_v36' || path === '/__probe_boot_v36' || path === '/__probe_js_v35' || path === '/__probe_boot_v35' || path === '/__probe_js_v34' || path === '/__probe_boot_v34' || path === '/__probe_js_v33' || path === '/__probe_boot_v33' || path === '/__probe_js_v32' || path === '/__probe_boot_v32' || path === '/__probe_js_v30' || path === '/__probe_boot_v30' || path === '/__probe_js_v29' || path === '/__probe_boot_v29' || path === '/__probe_js_v27' || path === '/__probe_boot_v27' || path === '/__probe_inline_v26') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/api/version') return sendJson(res, 200, { ok:true, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/app.js') return send(res, 200, APP_JS, {'Content-Type':'application/javascript; charset=utf-8', 'Cache-Control':'no-store, no-cache, must-revalidate'});
 
@@ -1484,9 +1484,21 @@ self.addEventListener('notificationclick', event => {
     if (!comp) return sendJson(res, 404, { ok:false, error:'Nie znaleziono zawodów' });
     const b = await readBody(req);
     if (b.confirm !== 'RESET_LOSOWANIA') return sendJson(res, 400, { ok:false, error:'Brak potwierdzenia resetu losowania' });
-    const removed = await pool.query('delete from draws where competition_id=$1 returning id', [compId]);
-    await notifyAdmins('DRAW_RESET', 'Zresetowano losowanie', `${user.first_name} ${user.last_name} zresetował losowanie T1 i T2: ${comp.title}`, { competitionId:compId, deleted:removed.rowCount });
-    return sendJson(res, 200, { ok:true, deleted:removed.rowCount });
+    const client = await pool.connect();
+    try {
+      await client.query('begin');
+      const items = await client.query('delete from result_items where competition_id=$1 returning id', [compId]);
+      const aggregates = await client.query('delete from results where competition_id=$1 returning id', [compId]);
+      const removed = await client.query('delete from draws where competition_id=$1 returning id', [compId]);
+      await client.query('commit');
+      await notifyAdmins('DRAW_RESET', 'Usunięto losowanie i wyniki', `${user.first_name} ${user.last_name} usunął całe losowanie T1/T2 oraz wyniki: ${comp.title}`, { competitionId:compId, deletedDraws:removed.rowCount, deletedItems:items.rowCount, deletedResults:aggregates.rowCount });
+      return sendJson(res, 200, { ok:true, deletedDraws:removed.rowCount, deletedItems:items.rowCount, deletedResults:aggregates.rowCount });
+    } catch (e) {
+      await client.query('rollback');
+      throw e;
+    } finally {
+      client.release();
+    }
   }
   m = path.match(/^\/api\/admin\/competitions\/(\d+)\/results\/(1|2)\/generate$/);
   if (m && method === 'POST') {
@@ -1629,6 +1641,24 @@ self.addEventListener('notificationclick', event => {
       from users u where u.role='PLAYER' order by u.created_at desc
     `);
     return sendJson(res, 200, { ok:true, players:rows });
+  }
+  if (path === '/api/admin/players/admin-added' && method === 'DELETE') {
+    if (!requireAdmin(user, res)) return;
+    const list = await pool.query(`select id, first_name, last_name from users where role='PLAYER' and upper(coalesce(account_source,'SELF'))='ADMIN' order by id`);
+    const ids = list.rows.map(r => Number(r.id)).filter(Boolean);
+    if (!ids.length) return sendJson(res, 200, { ok:true, deleted:0, players:[] });
+    const client = await pool.connect();
+    try {
+      await client.query('begin');
+      await client.query('update competitions set created_by=null where created_by = any($1::bigint[])', [ids]);
+      await client.query('update leave_requests set decided_by=null where decided_by = any($1::bigint[])', [ids]);
+      const out = await client.query("delete from users where role='PLAYER' and id = any($1::bigint[]) and upper(coalesce(account_source,'SELF'))='ADMIN' returning id, first_name, last_name", [ids]);
+      await client.query('commit');
+      return sendJson(res, 200, { ok:true, deleted:out.rowCount || 0, players:out.rows.map(p=>({id:Number(p.id),name:`${p.first_name||''} ${p.last_name||''}`.trim()})) });
+    } catch (e) {
+      await client.query('rollback');
+      throw e;
+    } finally { client.release(); }
   }
   m = path.match(/^\/api\/admin\/players\/(\d+)$/);
   if (m && method === 'PATCH') {
@@ -2810,6 +2840,61 @@ header{z-index:100!important}
 }
 header{z-index:100!important}
 
+
+
+/* V60 — zbiorcze usuwanie zawodników oznaczonych A */
+.playerAccountTop{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:0 0 8px}
+.playerAccountTop .playerAccountLegend{margin:0!important;flex:1 1 420px}
+.playerDeleteAllAdminBtn{min-height:38px!important;padding:8px 13px!important;font-weight:1000!important;white-space:nowrap}
+.playerDeleteAllAdminBtn:disabled{opacity:.45!important;cursor:not-allowed!important}
+@media(max-width:760px){.playerAccountTop{align-items:stretch;gap:7px}.playerAccountTop .playerAccountLegend{flex-basis:100%}.playerDeleteAllAdminBtn{width:100%!important;min-height:42px!important}}
+
+
+
+/* V62 — uporządkowana, kompaktowa lista zawodów zawodnika: mobile + desktop */
+.playerCompetitionOrganizer{display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:10px;align-items:center;margin-bottom:10px;padding:8px;border:1px solid #cbd8cf;border-radius:12px;background:#f8fbf7}
+.playerCompFilters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.playerCompFilter{min-height:42px!important;display:flex!important;align-items:center;justify-content:center;gap:8px;padding:6px 8px!important;background:#e7efe9!important;color:#173d2e!important;border:1px solid #b9cbbf!important;border-radius:9px!important;font-weight:1000!important}
+.playerCompFilter b{display:inline-flex;align-items:center;justify-content:center;min-width:25px;height:25px;border-radius:999px;background:#fff;color:#173d2e;font-size:12px}
+.playerCompFilter.active{background:#0b5634!important;color:#fff!important;border-color:#0b5634!important}.playerCompFilter.active b{background:#fff;color:#0b5634}
+.playerCompMonthSelect{height:42px!important;margin:0!important;font-weight:900;background:#fff}
+.playerCompGroups{display:grid;gap:8px}.playerCompMonthGroup{border:1px solid #c8d5cc;border-radius:11px;background:#fff;overflow:hidden}.playerCompMonthGroup>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 11px;background:#edf4ef;color:#214c38;font-size:13px;font-weight:1000;letter-spacing:.02em}.playerCompMonthGroup>summary::-webkit-details-marker{display:none}.playerCompMonthGroup>summary b{display:inline-flex;align-items:center;justify-content:center;min-width:27px;height:23px;padding:0 7px;border-radius:999px;background:#d4e4d8;color:#173d2e;font-size:11px}.playerCompMonthGroup[open]>summary{border-bottom:1px solid #cbd8cf}.playerCompMonthBody{padding:5px}
+.playerCompDesktopRow{display:grid;grid-template-columns:52px minmax(240px,1.8fr) 105px 105px 115px 94px minmax(190px,.9fr);gap:8px;align-items:center;min-height:54px;padding:6px 7px;border-bottom:1px solid #e1e8e3}.playerCompDesktopRow:last-child{border-bottom:0}.playerCompDesktopRow.mine{background:#f3fbf5}.playerCompNo{display:inline-flex;align-items:center;justify-content:center;min-width:43px;height:30px;border-radius:8px;background:#173d2e;color:#fff;font-size:13px;font-weight:1000}.playerCompDesktopTitle{min-width:0}.playerCompDesktopTitle b{display:block;font-size:14px;line-height:1.1;color:#142b20;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.playerCompDesktopTitle span{display:block;margin-top:2px;font-size:11px;color:#66756d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.playerCompDesktopDate,.playerCompDesktopCount{font-size:12px;font-weight:900;white-space:nowrap}.playerCompStatus{display:inline-flex;align-items:center;justify-content:center;min-height:26px;padding:4px 7px;border-radius:999px;font-size:10px;font-weight:1000;white-space:nowrap}.playerCompStatus.open{background:#dff4e4;color:#09642f}.playerCompStatus.full{background:#fff0c4;color:#7a5100}.playerCompStatus.closed{background:#eceff0;color:#4c5953}.playerCompStatus.done{background:#e1e4e3;color:#59635e}.playerCompMineBadge{display:inline-flex;align-items:center;justify-content:center;padding:4px 7px;border-radius:999px;background:#dff4e4;color:#0c6832;font-size:9px;font-weight:1000;white-space:nowrap}.playerCompCompactActions{display:grid;grid-template-columns:1fr 1fr;gap:5px;min-width:0}.playerCompCompactActions button{min-width:0!important;min-height:31px!important;padding:4px 6px!important;font-size:10px!important;border-radius:7px!important}.playerCompEmpty{padding:18px;text-align:center;color:#68766e;font-weight:800;background:#f8fbf7;border:1px dashed #c4d2c8;border-radius:10px}.playerCompetitionMobileOnly{display:none}
+.playerCompCompactCard{border-bottom:1px solid #e0e8e2;padding:7px 5px;background:#fff}.playerCompCompactCard:last-child{border-bottom:0}.playerCompCompactCard.mine{background:#f3fbf5}.playerCompCompactTop{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:7px;align-items:center}.playerCompTitle{min-width:0}.playerCompTitle b{display:block;font-size:13.5px;line-height:1.1;color:#142b20;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.playerCompTitle span{display:block;margin-top:3px;font-size:10.3px;line-height:1.05;color:#65756c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.playerCompCompactBottom{display:grid;grid-template-columns:minmax(90px,.75fr) minmax(170px,1.25fr);gap:7px;align-items:center;margin-top:6px}.playerCompMiniInfo{display:flex;align-items:center;gap:5px;min-width:0}.playerCompMiniInfo>b{font-size:11.5px;color:#173d2e;white-space:nowrap}
+@media(max-width:760px){
+  .playerCompetitionOrganizer{grid-template-columns:1fr;gap:6px;margin:0 -2px 7px;padding:6px;border-radius:10px}.playerCompFilters{gap:4px}.playerCompFilter{min-height:38px!important;gap:4px;padding:4px 2px!important;font-size:9.5px!important}.playerCompFilter b{min-width:22px;height:22px;font-size:10px}.playerCompMonthSelect{height:36px!important;font-size:11px!important;padding:4px 7px!important}.playerCompetitionDesktopOnly{display:none!important}.playerCompetitionMobileOnly{display:block!important}.playerCompGroups{gap:6px}.playerCompMonthGroup{border-radius:9px}.playerCompMonthGroup>summary{padding:7px 8px;font-size:11px}.playerCompMonthBody{padding:2px 4px}.playerCompCompactCard{padding:7px 2px}.playerCompCompactTop{grid-template-columns:42px minmax(0,1fr) auto;gap:6px}.playerCompNo{min-width:40px;height:28px;font-size:12px}.playerCompTitle b{font-size:13px}.playerCompTitle span{font-size:9.8px}.playerCompStatus{min-height:24px;padding:3px 6px;font-size:8.5px}.playerCompCompactBottom{grid-template-columns:minmax(80px,.72fr) minmax(155px,1.28fr);gap:5px;margin-top:5px}.playerCompMineBadge{padding:3px 5px;font-size:8px}.playerCompMiniInfo>b{font-size:10.5px}.playerCompCompactActions{gap:4px}.playerCompCompactActions button{min-height:30px!important;padding:3px 4px!important;font-size:9.5px!important}
+}
+@media(max-width:390px){.playerCompFilter{font-size:8.6px!important}.playerCompFilter b{min-width:20px;height:20px}.playerCompCompactTop{grid-template-columns:39px minmax(0,1fr) auto}.playerCompNo{min-width:37px}.playerCompCompactBottom{grid-template-columns:1fr}.playerCompMiniInfo{min-height:24px}.playerCompCompactActions button{font-size:9.2px!important}}
+
+
+
+/* V62 — zasada nr 1: trzy najbliższe zawody zawsze na górze */
+.playerNearestThree{margin:10px 0 12px}
+.playerNearestThreeHead{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 10px;background:#0b5634;color:#fff;border-radius:10px 10px 0 0;border:1px solid #084629}
+.playerNearestThreeHead b{font-size:13px;letter-spacing:.03em}
+.playerNearestThreeHead span{font-size:10px;font-weight:900;opacity:.88}
+.playerNearestThreeBody{border:1px solid #aac0b0;border-top:0;border-radius:0 0 10px 10px;background:#fff;padding:6px}
+.playerNearestThree.desktop .playerCompDesktopRow{margin:0 0 4px}.playerNearestThree.desktop .playerCompDesktopRow:last-child{margin-bottom:0}
+.playerNearestThree.mobile .playerCompCompactCard{margin:0 0 5px}.playerNearestThree.mobile .playerCompCompactCard:last-child{margin-bottom:0}
+@media(max-width:760px){
+  .playerNearestThree{margin:7px 0 9px}
+  .playerNearestThreeHead{padding:6px 8px;border-radius:8px 8px 0 0}
+  .playerNearestThreeHead b{font-size:11px}.playerNearestThreeHead span{font-size:8px}
+  .playerNearestThreeBody{padding:4px;border-radius:0 0 8px 8px}
+}
+
+
+
+/* V63 — kafel admina: usuń całe losowanie razem z wynikami */
+.adminDeleteDrawTile{margin-top:12px;padding:10px;border:2px solid #c62828;border-radius:14px;background:#fff3f3}
+.adminDeleteDrawBtn{min-height:48px;font-size:14px;letter-spacing:.02em}
+.adminDeleteDrawTile .small{margin-top:6px;color:#8a2020;line-height:1.35}
+@media(max-width:760px){
+  .adminDeleteDrawTile{padding:8px;margin-top:9px;border-radius:11px}
+  .adminDeleteDrawBtn{min-height:44px;font-size:12px;padding:8px 6px}
+  .adminDeleteDrawTile .small{font-size:10px}
+}
+
 </style>
 </head>
 <body>
@@ -2826,7 +2911,7 @@ header{z-index:100!important}
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V59</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
+  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V63</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
     <div id="adminCreate" class="card hidden"><h2>Utwórz zawody</h2><p class="small muted">Nazwa zawodów jest używana także w nagłówkach PDF.</p><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div></div><label>Opis</label><textarea id="cNotes" placeholder="Opis zawodów, zasady, informacje organizacyjne."></textarea><button onclick="createCompetition(event)">Utwórz zawody</button></div>
@@ -2838,7 +2923,7 @@ header{z-index:100!important}
 </section>
 </main>
 <div class="quickScroll"><button onclick="scrollAppTop()">↑</button><button onclick="scrollAppBottom()">↓</button></div>
-<script src="/app.js?v=59" defer></script>
+<script src="/app.js?v=62" defer></script>
 </body>
 </html>`;
 
@@ -2849,5 +2934,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V56_PLAYER_STICKY_NAV_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V63_DELETE_DRAW_AND_RESULTS_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });
