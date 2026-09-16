@@ -1,4 +1,4 @@
-const CLIENT_VERSION='44';const CLIENT_VERSION_NAME='V44_PLAYER_STICKY_DRAW_AND_RESULTS';try{fetch('/__probe_js_v44',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V44_PLAYER_STICKY_DRAW_AND_RESULTS_LOADED');
+const CLIENT_VERSION='45';const CLIENT_VERSION_NAME='V45_PLAYER_TOPBAR_AND_DRAW_READABILITY';try{fetch('/__probe_js_v45',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V45_PLAYER_TOPBAR_AND_DRAW_READABILITY_LOADED');
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let TOKEN = STORE.get('carp_token') || '';
 let ME = null;
@@ -158,9 +158,7 @@ function renderPlayerStatsCompact(d){
 }
 function renderPlayerResultsMobile(d){
   const active=PLAYER_RESULTS_TAB||'t1';
-  const btn=(tab,label)=>'<button type="button" class="'+(active===tab?'active':'')+'" onclick="showPlayerResults(\''+tab+'\',event)">'+label+'</button>';
   return '<div class="playerResultsMobile">'
-    +'<div class="playerResultsNavSlot"><div class="playerResultsNav">'+btn('t1','TURA 1')+btn('t2','TURA 2')+btn('general','KLASYFIKACJA')+btn('stats','STATYSTYKI')+'</div></div>'
     +'<section id="playerResults-t1" class="playerResultsSection '+(active==='t1'?'':'hidden')+'"><div class="card playerResultCard"><h2>Wyniki sektorowe — Tura 1</h2>'+renderSectorResultsColumn(d.classification.round1,'1 tura')+'<h2 class="playerWholeRoundTitle">Cała Tura 1</h2>'+renderPlayerRoundCompact(d.classification.round1,1)+'</div></section>'
     +'<section id="playerResults-t2" class="playerResultsSection '+(active==='t2'?'':'hidden')+'"><div class="card playerResultCard"><h2>Wyniki sektorowe — Tura 2</h2>'+renderSectorResultsColumn(d.classification.round2,'2 tura')+'<h2 class="playerWholeRoundTitle">Cała Tura 2</h2>'+renderPlayerRoundCompact(d.classification.round2,2)+'</div></section>'
     +'<section id="playerResults-general" class="playerResultsSection '+(active==='general'?'':'hidden')+'"><div class="card playerResultCard"><h2>Klasyfikacja końcowa</h2>'+renderPlayerFinalCompact(d.classification.general)+'</div></section>'
@@ -168,9 +166,12 @@ function renderPlayerResultsMobile(d){
     +'</div>';
 }
 function renderPlayerDetail(d){
-  const c=d.competition;const e=d.myEntry;const t1=myDraw(1),t2=myDraw(2);let html='<div class="playerView">';
+  const c=d.competition;const e=d.myEntry;const t1=myDraw(1),t2=myDraw(2);
+  const active=PLAYER_RESULTS_TAB||'t1';
+  const rbtn=(tab,label)=>'<button type="button" class="'+(active===tab?'active':'')+'" onclick="showPlayerResults(\''+tab+'\',event)">'+label+'</button>';
+  let html='<div class="playerView">';
   if(e){
-    html+='<div class="playerDrawStickySlot"><div class="card playerDrawHeaderCard"><div class="playerDrawTabs"><button type="button" class="'+(PLAYER_DRAW_ROUND===1?'active':'')+'" onclick="showPlayerDraw(1,event)">Losowanie Tura 1</button><button type="button" class="'+(PLAYER_DRAW_ROUND===2?'active':'')+'" onclick="showPlayerDraw(2,event)">Losowanie Tura 2</button></div><div class="playerOwnTitle">Moje stanowiska</div><div class="ownbox playerOwnGrid"><div class="ownitem playerOwnItem"><span class="tag t1tag">T1</span><strong>'+(t1?esc(t1.stand):'—')+'</strong><span>'+(t1?'Sektor '+esc(t1.sector):'Brak losowania')+'</span></div><div class="ownitem playerOwnItem"><span class="tag t2tag">T2</span><strong>'+(t2?esc(t2.stand):'—')+'</strong><span>'+(t2?'Sektor '+esc(t2.sector):'Brak losowania')+'</span></div></div></div></div><div id="playerDrawView">'+renderRoundDrawView(d,PLAYER_DRAW_ROUND,true)+'</div>';
+    html+='<div class="playerDrawStickySlot"><div class="card playerDrawHeaderCard"><div class="playerDrawTabs"><button type="button" class="'+(PLAYER_DRAW_ROUND===1?'active':'')+'" onclick="showPlayerDraw(1,event)">Losowanie Tura 1</button><button type="button" class="'+(PLAYER_DRAW_ROUND===2?'active':'')+'" onclick="showPlayerDraw(2,event)">Losowanie Tura 2</button></div><div class="playerResultsNav playerResultsNavInline">'+rbtn('t1','TURA 1')+rbtn('t2','TURA 2')+rbtn('general','KLASYFIKACJA')+rbtn('stats','STATYSTYKI')+'</div><div class="playerOwnGridWrap"><div class="ownbox playerOwnGrid"><div class="ownitem playerOwnItem"><span class="tag t1tag">T1</span><strong>'+(t1?esc(t1.stand):'—')+'</strong><span>'+(t1?'Sektor '+esc(t1.sector):'Brak losowania')+'</span></div><div class="ownitem playerOwnItem"><span class="tag t2tag">T2</span><strong>'+(t2?esc(t2.stand):'—')+'</strong><span>'+(t2?'Sektor '+esc(t2.sector):'Brak losowania')+'</span></div></div></div></div></div><div id="playerDrawView">'+renderRoundDrawView(d,PLAYER_DRAW_ROUND,true)+'</div>';
   } else html+='<div class="card"><p class="muted">Nie jesteś zapisany na te zawody.</p></div>';
 
   html+='<div class="playerResultsDesktop">'
@@ -283,10 +284,12 @@ function renderDrawSectorTables(d,round){const groups=drawRowsBySector(d,round);
 function shortPlayerName(name){
   name=String(name||'').trim();
   if(!name)return '—';
-  const parts=name.split(/\s+/);
-  if(parts.length===1)return parts[0];
-  const first=parts.shift(),last=parts.join(' ');
-  return first.charAt(0)+'. '+last;
+  const parts=name.split(/\s+/).filter(Boolean);
+  if(!parts.length)return '—';
+  const last=parts[parts.length-1];
+  if(last.length<=11)return last;
+  if(parts.length>=2)return parts[0].charAt(0)+'. '+last;
+  return last.slice(0,10)+'…';
 }
 function renderMobileRoundStand(n,c,byStand){
   const sec=sectorForStandClient(n,c),x=byStand[Number(n)],mine=x&&Number(x.draw.user_id)===Number(ME.id),name=x?x.name.trim():'—';
@@ -463,26 +466,12 @@ function syncPlayerStickyBars(){
     const detail=q('competitionDetail');
     const drawSlot=document.querySelector('.playerDrawStickySlot');
     const drawBar=document.querySelector('.playerDrawHeaderCard');
-    const drawBoundary=q('playerDrawView');
-    const resultsSlot=document.querySelector('.playerResultsNavSlot');
-    const resultsBar=document.querySelector('.playerResultsNav');
-    const resultsBoundary=document.querySelector('.playerResultsMobile');
+    const drawBoundary=document.querySelector('.playerView');
     if(!mobile||!player||!detail||detail.classList.contains('hidden')){
       clearPlayerFixed(drawBar,drawSlot);
-      clearPlayerFixed(resultsBar,resultsSlot);
       return;
     }
-    // Only one player bar should occupy the top edge at a time.
-    const resultsRect=resultsSlot?resultsSlot.getBoundingClientRect():null;
-    const resultsH=resultsBar?Math.ceil(resultsBar.getBoundingClientRect().height||resultsBar.offsetHeight||40):40;
-    const resultsActive=Boolean(resultsSlot&&resultsBar&&resultsBoundary&&resultsRect.top<=0&&resultsBoundary.getBoundingClientRect().bottom>resultsH+4);
-    if(resultsActive){
-      clearPlayerFixed(drawBar,drawSlot);
-      syncOnePlayerBar(resultsSlot,resultsBar,resultsBoundary);
-    }else{
-      clearPlayerFixed(resultsBar,resultsSlot);
-      syncOnePlayerBar(drawSlot,drawBar,drawBoundary);
-    }
+    syncOnePlayerBar(drawSlot,drawBar,drawBoundary);
   });
 }
 window.addEventListener('scroll',syncPlayerStickyBars,{passive:true});
