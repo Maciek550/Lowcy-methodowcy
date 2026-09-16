@@ -1,4 +1,4 @@
-const CLIENT_VERSION='51';const CLIENT_VERSION_NAME='V51_MOBILE_MAP_FIT_USER_NOTIFICATIONS';try{fetch('/__probe_js_v51',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V51_MOBILE_MAP_FIT_USER_NOTIFICATIONS_LOADED');
+const CLIENT_VERSION='52';const CLIENT_VERSION_NAME='V52_REAL_PUSH_PLAYER_ALERTS';try{fetch('/__probe_js_v52',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V52_REAL_PUSH_PLAYER_ALERTS_LOADED');
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let TOKEN = STORE.get('carp_token') || '';
 let ME = null;
@@ -16,6 +16,8 @@ let PLAYER_RESULTS_TAB = 't1';
 let PLAYER_MOBILE_PANEL = null;
 let PLAYER_SECTOR_STATE = {1:null,2:null};
 let SHOW_FINAL_CLUB = false;
+let PUSH_CONFIG = null;
+let PUSH_SUBSCRIBED = false;
 let PLAYER_UNREAD_NOTIFICATIONS = 0;
 const q = id => document.getElementById(id);
 window.addEventListener('error',e=>{console.error('CLIENT_ERR',e.message);try{const m=document.getElementById('msg');if(m)m.innerHTML='<div class=\"card bad danger-line\">Błąd ekranu: '+String(e.message||'nieznany')+'</div>'}catch(_){}});
@@ -49,16 +51,16 @@ async function boot(){
   if(logout)logout.classList.remove('hidden');
   q('who').textContent=ME.first_name+' '+ME.last_name+' — Koło PZW '+(ME.pzw_club||'');q('role').textContent=ME.role==='ADMIN'?'Administrator':'Zawodnik';
   const admin=ME.role==='ADMIN';q('btn-players').classList.toggle('hidden',!admin);q('adminCreate').classList.toggle('hidden',!admin);
-  // Service worker wyłączony w V23, żeby nie blokował logowania ani nie robił pętli cache.
   renderPushStatus();
   showTab('competitions');
   await Promise.allSettled([loadCompetitions(),loadNotifications(),admin?loadPlayers():Promise.resolve()]);
+  if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=52',{scope:'/'}).then(()=>{if('Notification' in window&&Notification.permission==='granted')ensurePushSubscription(true,false).catch(()=>{})}).catch(()=>{})}
 }
 async function login(){try{const phone=q('loginPhone')?.value||'';const password=q('loginPassword')?.value||'';if(!phone.trim()||!password)throw new Error('Wpisz telefon i hasło');const d=await api('/api/login',{method:'POST',body:JSON.stringify({phone,password})});TOKEN=d.token;STORE.set('carp_token',TOKEN);msg('Zalogowano');await boot()}catch(e){msg(e.message,'bad')}}
 async function registerPlayer(ev){if(ev){ev.preventDefault&&ev.preventDefault();ev.stopPropagation&&ev.stopPropagation()}try{const d=await api('/api/register',{method:'POST',body:JSON.stringify({phone:q('regPhone').value,password:q('regPassword').value,firstName:q('regFirst').value,lastName:q('regLast').value,pzwClub:q('regClub').value})});TOKEN=d.token;STORE.set('carp_token',TOKEN);msg('Konto zawodnika utworzone');await boot()}catch(e){msg(e.message,'bad')}}
 async function setupAdmin(ev){if(ev){ev.preventDefault&&ev.preventDefault();ev.stopPropagation&&ev.stopPropagation()}try{const d=await api('/api/setup-admin',{method:'POST',body:JSON.stringify({setupCode:q('setupCode').value,phone:q('setupPhone').value,password:q('setupPassword').value,firstName:q('setupFirst').value,lastName:q('setupLast').value,pzwClub:q('setupClub').value})});TOKEN=d.token;STORE.set('carp_token',TOKEN);msg('Admin utworzony');await boot()}catch(e){msg(e.message,'bad')}}
-function logout(){STORE.del('carp_token');TOKEN='';ME=null;setLoggedOut(true)}
-async function clearSession(){try{if('serviceWorker'in navigator){const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.map(r=>r.unregister().catch(()=>{})));}if('caches'in window){const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k).catch(()=>{})));}}catch(_){}setLoggedOut(true)}
+async function logout(){try{await disablePushSubscription(false)}catch(_){}STORE.del('carp_token');TOKEN='';ME=null;setLoggedOut(true)}
+async function clearSession(){try{await disablePushSubscription(true);if('caches'in window){const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k).catch(()=>{})));}}catch(_){}setLoggedOut(true)}
 function showTab(n){['competitions','notifications','players'].forEach(x=>{q('tab-'+x).classList.toggle('hidden',x!==n);q('btn-'+x)?.classList.toggle('active',x===n)});if(n==='notifications')loadNotifications();if(n==='players')loadPlayers()}
 function competitionActionHtml(c,admin,mine,closed,cardMode=false){
   if(admin)return '<div class="inlineBtns '+(cardMode?'competitionCardActions adminCompetitionCardActions':'')+'"><button type="button" onclick="openCompetition('+c.id+')">Panel</button><button type="button" class="secondary" onclick="openCompetition('+c.id+')">Edytuj</button><button type="button" class="warn" onclick="deleteCompetition('+c.id+')">Usuń</button></div>';
@@ -221,7 +223,7 @@ function renderPlayerMobileDashboard(d){
     +'<div class="playerDrawTabs">'+b('draw1','Losowanie Tura 1','drawTile')+b('draw2','Losowanie Tura 2','drawTile')+'</div>'
     +'<div class="playerResultsNav playerResultsNavInline">'+b('t1','TURA 1')+b('t2','TURA 2')+b('general','KLASYFIKACJA')+b('stats','STATYSTYKI')+'</div>'
     +'<div class="playerMapNav">'+b('map1','MAPA ŁOWISKA T1','mapTile')+b('map2','MAPA ŁOWISKA T2','mapTile')+'</div>'
-    +'<div class="playerNotificationNav"><button type="button" id="playerNotifBtn" onclick="openPlayerNotifications(event)">POWIADOMIENIA'+(PLAYER_UNREAD_NOTIFICATIONS?' ('+PLAYER_UNREAD_NOTIFICATIONS+')':'')+'</button><button type="button" class="secondary" onclick="enablePush(event)">PUSH / STATUS</button></div>'
+    +'<div class="playerNotificationNav"><button type="button" id="playerNotifBtn" onclick="openPlayerNotifications(event)">POWIADOMIENIA'+(PLAYER_UNREAD_NOTIFICATIONS?' ('+PLAYER_UNREAD_NOTIFICATIONS+')':'')+'</button></div>'
     +'</div></div>'
     +renderPlayerOwnSummary(d)
     +'<div id="playerMobilePanelContent">'+renderPlayerMobilePanelContent(d,p)+'</div>'
@@ -477,7 +479,7 @@ function drawStartListPdfPage(rows){const o=pdfCanvas(2),ctx=o.ctx;let y=drawPdf
 function generateStartListPdf(){const d=CURRENT_DETAIL;if(!d)return;const rows=(d.activeEntries||[]).map((e,i)=>[i+1,e.first_name+' '+e.last_name,e.confirmed?'✓':'','','','']);downloadPdfPages([drawStartListPdfPage(rows)],'lista_startowa_'+pdfSafeName(d.competition.title)+'.pdf')}
 function notifData(n){return n&&n.data&&typeof n.data==='object'?n.data:{}}
 function notificationStatusHtml(n){const data=notifData(n);if(ME?.role==='ADMIN'&&String(n.type)==='LEAVE_REQUEST'){const status=String(data.status||'PENDING').toUpperCase();if(status==='PENDING')return '<div class="leaveRequestActions"><button type="button" onclick="decideLeaveRequest('+Number(data.requestId||0)+',\'approve\','+n.id+')">Akceptuj</button><button type="button" class="warn" onclick="decideLeaveRequest('+Number(data.requestId||0)+',\'reject\','+n.id+')">Odrzuć</button></div>';if(status==='APPROVED')return '<span class="tag ok">Zaakceptowano</span>';if(status==='REJECTED')return '<span class="tag bad">Odrzucono</span>'}return n.read_at?'Przecz.':'<button type="button" onclick="readNotif('+n.id+')">OK</button>'}
-async function loadNotifications(){if(!ME)return;const d=await api('/api/notifications');const arr=d.notifications||[];const unread=arr.filter(n=>!n.read_at).length;PLAYER_UNREAD_NOTIFICATIONS=unread;const counter=q('notifCounter');if(counter)counter.textContent=unread?'Nowe powiadomienia: '+unread:'';const mobileBtn=q('playerNotifBtn');if(mobileBtn)mobileBtn.textContent='POWIADOMIENIA'+(unread?' ('+unread+')':'');const actions='<div class="notificationBulkActions"><button type="button" onclick="confirmAllNotifications()">✓ Potwierdź wszystkie</button><button type="button" class="warn" onclick="deleteAllNotifications()">Usuń powiadomienia</button></div>';q('notificationsList').innerHTML=actions+(arr.length?'<div class="tablewrap notificationWrap"><table class="notificationTable"><thead><tr><th>Zdarzenie</th><th>Czas</th><th>Status / decyzja</th></tr></thead><tbody>'+arr.map(n=>'<tr class="'+(!n.read_at?'mine':'')+' '+(String(n.type)==='LEAVE_REQUEST'?'leaveRequestRow':'')+'"><td><b>'+esc(n.title)+'</b><br>'+esc(n.body)+'</td><td class="nowrap small">'+new Date(n.created_at).toLocaleString('pl-PL')+'</td><td>'+notificationStatusHtml(n)+'</td></tr>').join('')+'</tbody></table></div>':'<p class="muted">Brak powiadomień.</p>')}
+async function loadNotifications(){if(!ME)return;const d=await api('/api/notifications');const arr=d.notifications||[];const unread=arr.filter(n=>!n.read_at).length;PLAYER_UNREAD_NOTIFICATIONS=unread;const counter=q('notifCounter');if(counter)counter.textContent=unread?'🔔 '+unread:'';const mobileBtn=q('playerNotifBtn');if(mobileBtn)mobileBtn.textContent='POWIADOMIENIA'+(unread?' ('+unread+')':'');const actions='<div class="notificationBulkActions"><button type="button" onclick="confirmAllNotifications()">✓ Potwierdź wszystkie</button><button type="button" class="warn" onclick="deleteAllNotifications()">Usuń powiadomienia</button></div>';q('notificationsList').innerHTML=actions+(arr.length?'<div class="tablewrap notificationWrap"><table class="notificationTable"><thead><tr><th>Zdarzenie</th><th>Czas</th><th>Status / decyzja</th></tr></thead><tbody>'+arr.map(n=>'<tr class="'+(!n.read_at?'mine':'')+' '+(String(n.type)==='LEAVE_REQUEST'?'leaveRequestRow':'')+'"><td><b>'+esc(n.title)+'</b><br>'+esc(n.body)+'</td><td class="nowrap small">'+new Date(n.created_at).toLocaleString('pl-PL')+'</td><td>'+notificationStatusHtml(n)+'</td></tr>').join('')+'</tbody></table></div>':'<p class="muted">Brak powiadomień.</p>')}
 
 async function confirmAllNotifications(){try{const path=ME?.role==='ADMIN'?'/api/admin/notifications/read-all':'/api/notifications/read-all';const d=await api(path,{method:'POST',body:'{}'});msg('Potwierdzono powiadomienia: '+Number(d.updated||0));await loadNotifications()}catch(e){msg(e.message,'bad')}}
 async function deleteAllNotifications(){try{const admin=ME?.role==='ADMIN';const question=admin?'Usunąć wszystkie zwykłe i zakończone powiadomienia? Oczekujące prośby o wypisanie pozostaną.':'Usunąć wszystkie swoje powiadomienia?';if(!confirm(question))return;const path=admin?'/api/admin/notifications':'/api/notifications';const d=await api(path,{method:'DELETE',body:'{}'});msg('Usunięto powiadomienia: '+Number(d.deleted||0)+(Number(d.keptPending||0)?'. Oczekujące prośby: '+Number(d.keptPending):''));await loadNotifications()}catch(e){msg(e.message,'bad')}}
@@ -485,10 +487,45 @@ async function decideLeaveRequest(requestId,decision,notifId){try{if(!requestId)
 async function readNotif(id){await api('/api/notifications/'+id+'/read',{method:'POST',body:'{}'});loadNotifications()}
 async function loadPlayers(){if(!ME||ME.role!=='ADMIN')return;const d=await api('/api/admin/players');const desktop='<div class="tablewrap adminDesktopOnly"><table><thead><tr><th style="width:46px">Lp.</th><th>Imię i nazwisko</th><th>Telefon</th><th>Koło PZW</th><th>Rola</th><th>Aktywne zapisy</th></tr></thead><tbody>'+d.players.map((p,i)=>'<tr><td class="center"><b>'+(i+1)+'</b></td><td><b>'+esc(p.first_name+' '+p.last_name)+'</b></td><td class="nowrap">'+esc(p.phone)+'</td><td>'+esc(p.pzw_club)+'</td><td>'+esc(p.role)+'</td><td>'+esc(p.active_entries||0)+'</td></tr>').join('')+'</tbody></table></div>';const mobile='<div class="adminMobileOnly mobilePlayersList">'+d.players.map((p,i)=>'<article class="mobileAdminCard"><div class="mobileAdminCardHead"><span class="mobileLp">'+(i+1)+'</span><b>'+esc(p.first_name+' '+p.last_name)+'</b></div><div class="mobileAdminMeta"><span><small>Koło</small><b>'+esc(p.pzw_club||'—')+'</b></span><span><small>Zapisy</small><b>'+esc(p.active_entries||0)+'</b></span></div><div class="mobileAdminLine"><small>Telefon</small><span>'+esc(p.phone||'—')+'</span></div><div class="mobileAdminLine"><small>Rola</small><span>'+esc(p.role||'—')+'</span></div></article>').join('')+'</div>';q('playersList').innerHTML=desktop+mobile}
 function urlBase64ToUint8Array(base64String){const padding='='.repeat((4-base64String.length%4)%4);const base64=(base64String+padding).replace(/-/g,'+').replace(/_/g,'/');const raw=atob(base64);const out=new Uint8Array(raw.length);for(let i=0;i<raw.length;++i)out[i]=raw.charCodeAt(i);return out}
-function pushHelpText(){if(!('Notification'in window))return 'Ta przeglądarka nie obsługuje powiadomień.';if(Notification.permission==='granted')return 'Push: zgoda udzielona. Powiadomienia systemowe mogą działać na tym urządzeniu.';if(Notification.permission==='denied')return 'Push: zablokowane w przeglądarce. Kod aplikacji nie może włączyć tego na siłę. Odblokuj: kłódka/ustawienia strony → Powiadomienia → Zezwalaj, albo wyczyść dane strony i wejdź ponownie. Powiadomienia w aplikacji dalej działają.';return 'Push: nieustawione. Kliknij Push/status i zaakceptuj zgodę.'}
-function renderPushStatus(){const el=q('pushStatus');if(!el)return;let cls='tag';if('Notification'in window){if(Notification.permission==='granted')cls+=' ok';else if(Notification.permission==='denied')cls+=' bad'}el.innerHTML='<span class="'+cls+'">'+esc(pushHelpText())+'</span>'}
-async function resetPush(){try{if('serviceWorker'in navigator){const reg=await navigator.serviceWorker.getRegistration('/');const sub=reg?await reg.pushManager.getSubscription():null;if(sub)await sub.unsubscribe();}if(TOKEN)await api('/api/push-subscription',{method:'DELETE'}).catch(()=>{});msg('Subskrypcja push wyczyszczona w aplikacji. Zgody zablokowanej w przeglądarce nie da się wyczyścić kodem.');renderPushStatus()}catch(e){msg(e.message,'bad')}}
-async function enablePush(){msg('Push chwilowo wyłączony w V23, żeby odciąć problem cache/logowania. Powiadomienia w aplikacji dalej działają.','bad');renderPushStatus()}
+async function getPushConfig(force=false){if(PUSH_CONFIG&&!force)return PUSH_CONFIG;PUSH_CONFIG=await api('/api/config');return PUSH_CONFIG}
+function pushUiLabel(){if(!('Notification'in window))return 'Alerty niedostępne';if(Notification.permission==='denied')return 'Alerty zablokowane';if(Notification.permission==='granted'&&PUSH_SUBSCRIBED)return 'Test alertu';return 'Włącz alerty telefonu'}
+function renderPushStatus(){
+  const legacy=q('pushStatus');if(legacy)legacy.innerHTML='';
+  const state=q('notifPushState');
+  const btn=q('notifPushBtn');
+  const pbtn=q('playerPushBtn');
+  let label='Alerty telefonu: wyłączone';
+  if('Notification'in window){if(Notification.permission==='granted')label=PUSH_SUBSCRIBED?'Alerty telefonu: włączone':'Alerty telefonu: gotowe do włączenia';else if(Notification.permission==='denied')label='Alerty telefonu: zablokowane w przeglądarce'}
+  if(state)state.textContent=label;
+  if(btn)btn.textContent=pushUiLabel();
+  if(pbtn)pbtn.textContent=pushUiLabel();
+}
+async function ensurePushSubscription(silent=false,sendTest=false){
+  if(!('Notification'in window)||!('serviceWorker'in navigator)||!('PushManager'in window)){
+    if(!silent){const isiPhone=/iPhone|iPad|iPod/i.test(navigator.userAgent);msg(isiPhone?'Na iPhone alerty działają po dodaniu strony do ekranu początkowego.':'Ta przeglądarka nie obsługuje powiadomień telefonu.','bad')}
+    renderPushStatus();return false;
+  }
+  const cfg=await getPushConfig(true);
+  if(!cfg.pushReady||!cfg.vapidPublicKey){if(!silent)msg('Serwer powiadomień nie jest jeszcze gotowy.','bad');renderPushStatus();return false}
+  let permission=Notification.permission;
+  if(permission==='default'&&!silent)permission=await Notification.requestPermission();
+  if(permission!=='granted'){if(!silent)msg(permission==='denied'?'Powiadomienia są zablokowane w ustawieniach tej strony.':'Nie włączono powiadomień telefonu.','bad');renderPushStatus();return false}
+  const reg=await navigator.serviceWorker.register('/sw.js?v=52',{scope:'/'});
+  await navigator.serviceWorker.ready;
+  let sub=await reg.pushManager.getSubscription();
+  if(sub&&sendTest){await sub.unsubscribe().catch(()=>{});sub=null}
+  if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8Array(cfg.vapidPublicKey)});
+  await api('/api/push-subscription',{method:'POST',body:JSON.stringify({subscription:sub.toJSON?sub.toJSON():sub})});
+  PUSH_SUBSCRIBED=true;renderPushStatus();
+  if(sendTest){const t=await api('/api/push-test',{method:'POST',body:'{}'});if(!silent)msg(t.sent?'Wysłano testowe powiadomienie na telefon.':'Subskrypcja zapisana, ale test nie został dostarczony.',t.sent?'ok':'bad')}
+  return true;
+}
+async function disablePushSubscription(unregister=false){
+  try{if(TOKEN)await api('/api/push-subscription',{method:'DELETE',body:'{}'}).catch(()=>{});if('serviceWorker'in navigator){const reg=await navigator.serviceWorker.getRegistration('/');if(reg){const sub=await reg.pushManager.getSubscription();if(sub)await sub.unsubscribe().catch(()=>{});if(unregister)await reg.unregister().catch(()=>{})}}}finally{PUSH_SUBSCRIBED=false;renderPushStatus()}
+}
+async function resetPush(){try{await disablePushSubscription(false);msg('Alerty telefonu wyłączone.');}catch(e){msg(e.message,'bad')}}
+async function enablePush(ev){if(ev){ev.preventDefault();ev.stopPropagation()}try{await ensurePushSubscription(false,true)}catch(e){msg('Nie udało się włączyć alertów: '+(e.message||e),'bad');renderPushStatus()}}
+async function sendPushTest(ev){return enablePush(ev)}
 function scrollAppTop(){window.scrollTo({top:0,behavior:'smooth'})}
 
 function syncStickyNavOffset(){const header=document.querySelector('header');const h=header?Math.ceil(header.getBoundingClientRect().height):52;document.documentElement.style.setProperty('--app-header-height',h+'px')}
@@ -579,6 +616,6 @@ function bindAuthButtons(){
 }
 
 function scrollAppBottom(){window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})}
-Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,showAdminZone,loadCompetitions,createCompetition,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,enablePush,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,openPlayerNotifications,fitPlayerMobileFullMaps,togglePlayerSectorAccordion,toggleFinalClub,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
-function startBoot(){console.log('CLIENT_V36_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v36',{cache:'no-store'}).catch(()=>{})}catch(_){};try{if('serviceWorker'in navigator){navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister().catch(()=>{}))).catch(()=>{})}if('caches'in window){caches.keys().then(ks=>ks.forEach(k=>caches.delete(k).catch(()=>{}))).catch(()=>{})}}catch(_){}bindAuthButtons();boot().catch(e=>{console.error('BOOT_FATAL',e);try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
+Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,showAdminZone,loadCompetitions,createCompetition,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,enablePush,sendPushTest,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,openPlayerNotifications,fitPlayerMobileFullMaps,togglePlayerSectorAccordion,toggleFinalClub,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
+function startBoot(){console.log('CLIENT_V52_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v52',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().catch(e=>{console.error('BOOT_FATAL',e);try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();

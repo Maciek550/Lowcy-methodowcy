@@ -13,16 +13,13 @@ const crypto = require('crypto');
 const PORT = Number(process.env.PORT || 3000);
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 const ADMIN_SETUP_CODE = process.env.ADMIN_SETUP_CODE || '';
-const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
-const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
+let VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
+let VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
-const APP_VERSION = '36';
-const APP_VERSION_NAME = 'V51_MOBILE_MAP_FIT_USER_NOTIFICATIONS';
+const APP_VERSION = '52';
+const APP_VERSION_NAME = 'V52_REAL_PUSH_PLAYER_ALERTS';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 
-if (webpush && VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
-  webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
-}
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -158,6 +155,10 @@ async function initDb() {
       subscription jsonb not null,
       created_at timestamptz not null default now()
     );
+    create table if not exists app_settings (
+      key text primary key,
+      value text not null
+    );
   `);
   await pool.query(`
     alter table competitions add column if not exists map_mode text not null default 'TWO_OPPOSITE';
@@ -221,6 +222,24 @@ async function initDb() {
         where i.competition_id=r.competition_id and i.user_id=r.user_id and i.round=r.round and i.kind='BF'
       );
   `);
+  await ensureVapidConfig();
+}
+
+async function ensureVapidConfig(){
+  if(!webpush)return false;
+  if(!VAPID_PUBLIC_KEY||!VAPID_PRIVATE_KEY){
+    const q=await pool.query(`select key,value from app_settings where key in ('vapid_public_key','vapid_private_key')`);
+    const m=new Map(q.rows.map(r=>[r.key,r.value]));
+    VAPID_PUBLIC_KEY=VAPID_PUBLIC_KEY||m.get('vapid_public_key')||'';
+    VAPID_PRIVATE_KEY=VAPID_PRIVATE_KEY||m.get('vapid_private_key')||'';
+    if((!VAPID_PUBLIC_KEY||!VAPID_PRIVATE_KEY)&&typeof webpush.generateVAPIDKeys==='function'){
+      const keys=webpush.generateVAPIDKeys();VAPID_PUBLIC_KEY=keys.publicKey;VAPID_PRIVATE_KEY=keys.privateKey;
+      await pool.query(`insert into app_settings(key,value) values('vapid_public_key',$1),('vapid_private_key',$2) on conflict(key) do update set value=excluded.value`,[VAPID_PUBLIC_KEY,VAPID_PRIVATE_KEY]);
+      console.log('PUSH_VAPID_GENERATED_AND_SAVED');
+    }
+  }
+  if(VAPID_PUBLIC_KEY&&VAPID_PRIVATE_KEY){webpush.setVapidDetails(VAPID_SUBJECT,VAPID_PUBLIC_KEY,VAPID_PRIVATE_KEY);return true}
+  return false;
 }
 
 async function waitForDb() {
@@ -241,20 +260,28 @@ async function waitForDb() {
   throw lastErr || new Error('DB not ready');
 }
 
-async function pushToUser(userId, title, body, url='/') {
-  if (!webpush || !VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) return;
+async function pushToUser(userId, title, body, url='/', meta={}) {
+  if (!webpush || !VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) return { ready:false, sent:0, failed:0 };
   const subs = await pool.query('select id, subscription from push_subscriptions where user_id=$1', [userId]);
+  let sent=0,failed=0;
   for (const s of subs.rows) {
     try {
-      await webpush.sendNotification(s.subscription, JSON.stringify({ title, body, url }));
+      await webpush.sendNotification(s.subscription, JSON.stringify({ title, body, url, type:meta.type||'', competitionId:meta.competitionId||null }));
+      sent++;
     } catch (e) {
+      failed++;
       console.log('PUSH_SEND_ERR user=' + userId + ' sub=' + s.id + ' ' + e.message);
+      if (Number(e.statusCode)===404 || Number(e.statusCode)===410) await pool.query('delete from push_subscriptions where id=$1',[s.id]).catch(()=>{});
     }
   }
+  return { ready:true, sent, failed };
 }
+function playerPushType(type){return ['NEW_COMPETITION','DRAW_PUBLISH','RESULTS_T1','RESULTS_T2','RESULTS_GENERAL'].includes(String(type||''))}
 async function notifyUser(userId, type, title, body, data={}) {
   await pool.query('insert into notifications(recipient_user_id,type,title,body,data) values($1,$2,$3,$4,$5)', [userId, type, title, body, data]);
-  await pushToUser(userId, title, body, data.url || '/');
+  const u=await pool.query('select role from users where id=$1',[userId]);
+  const role=u.rows[0]?.role||'PLAYER';
+  if(role==='ADMIN'||playerPushType(type))await pushToUser(userId,title,body,data.url||'/',{type,competitionId:data.competitionId});
 }
 async function notifyAdmins(type, title, body, data={}) {
   const admins = await pool.query(`select id from users where role='ADMIN'`);
@@ -678,7 +705,7 @@ async function publishDraw(competitionId, actor) {
     const parts = [];
     if (t1) parts.push(`T1: stanowisko ${t1.stand}, sektor ${t1.sector}`);
     if (t2) parts.push(`T2: stanowisko ${t2.stand}, sektor ${t2.sector}`);
-    await notifyUser(e.user_id, 'DRAW_PUBLISH', 'Opublikowano losowanie', `${comp.title}: ${parts.join(' | ')}`, { competitionId, t1:t1?{stand:t1.stand,sector:t1.sector}:null, t2:t2?{stand:t2.stand,sector:t2.sector}:null, url:'/' });
+    await notifyUser(e.user_id, 'DRAW_PUBLISH', 'Twoje losowanie', `${comp.title}: ${parts.join(' | ')}`, { competitionId, t1:t1?{stand:t1.stand,sector:t1.sector}:null, t2:t2?{stand:t2.stand,sector:t2.sector}:null, url:'/' });
     notified++;
   }
   await notifyAdmins('DRAW_PUBLISH_ADMIN', 'Opublikowano losowanie', `${actor.first_name} ${actor.last_name} opublikował losowanie: ${comp.title}. Powiadomiono: ${notified}`, { competitionId, notified });
@@ -1121,15 +1148,20 @@ async function route(req, res) {
     name:'Łowcy Methodowcy', short_name:'Łowcy', start_url:'/', scope:'/', id:'/', display:'standalone', background_color:'#f3f6ef', theme_color:'#114b2f', icons:[]
   }), {'Content-Type':'application/manifest+json; charset=utf-8'});
   if (path === '/sw.js') return send(res, 200, `
-const SW_VERSION='lowcy-v26-unregister';
-self.addEventListener('install', event => self.skipWaiting());
-self.addEventListener('activate', event => event.waitUntil((async()=>{try{const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k)));}catch(e){} try{await self.registration.unregister();}catch(e){} await self.clients.claim();})()));
+const SW_VERSION='lowcy-v52-push';
+self.addEventListener('install', event => { self.skipWaiting(); });
+self.addEventListener('activate', event => event.waitUntil((async()=>{ try{const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k)));}catch(e){} await self.clients.claim(); })()));
 self.addEventListener('push', event => {
-  let data = {};
-  try { data = event.data ? event.data.json() : {}; } catch(e) {}
-  event.waitUntil(self.registration.showNotification(data.title || 'Łowcy Methodowcy', { body: data.body || 'Nowe powiadomienie', data: { url: data.url || '/'  } }));
+  let data={}; try{data=event.data?event.data.json():{}}catch(e){}
+  const title=data.title||'Łowcy Methodowcy';
+  const options={body:data.body||'Nowe powiadomienie',data:{url:data.url||'/'},tag:data.type?(data.type+'-'+(data.competitionId||'')):undefined,renotify:true};
+  event.waitUntil(self.registration.showNotification(title,options));
 });
-self.addEventListener('notificationclick', event => { event.notification.close(); event.waitUntil(clients.openWindow((event.notification.data && event.notification.data.url) || '/')); });
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const target=(event.notification.data&&event.notification.data.url)||'/';
+  event.waitUntil((async()=>{const list=await clients.matchAll({type:'window',includeUncontrolled:true});for(const c of list){try{if('focus'in c){await c.focus();if('navigate'in c)await c.navigate(target);return}}catch(e){}}return clients.openWindow(target)})());
+});
 `, {'Content-Type':'application/javascript; charset=utf-8', 'Cache-Control':'no-store, no-cache, must-revalidate'});
   if (path === '/api/config') return sendJson(res, 200, { ok:true, vapidPublicKey: VAPID_PUBLIC_KEY, pushReady: Boolean(webpush && VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY), appVersion:APP_VERSION, version:APP_VERSION_NAME });
 
@@ -1187,6 +1219,11 @@ self.addEventListener('notificationclick', event => { event.notification.close()
     await pool.query('delete from push_subscriptions where user_id=$1', [user.id]);
     return sendJson(res, 200, { ok:true });
   }
+  if (path === '/api/push-test' && method === 'POST') {
+    if (!requireUser(user, res)) return;
+    const out=await pushToUser(user.id,'Test powiadomień','Powiadomienia telefonu działają poprawnie.','/',{type:'PUSH_TEST'});
+    return sendJson(res, 200, { ok:true, sent:Number(out.sent||0), failed:Number(out.failed||0), ready:Boolean(out.ready) });
+  }
 
   if (path === '/api/competitions' && method === 'GET') {
     if (!requireUser(user, res)) return;
@@ -1217,6 +1254,9 @@ self.addEventListener('notificationclick', event => { event.notification.close()
       [title, fishery, b.competitionDate || null, limit, b.status || 'OPEN', String(b.notes||''), user.id, mapMode, bank1, bank2, sectors, b.signupOpen !== false]
     );
     await notifyAdmins('COMPETITION_CREATE', 'Utworzono zawody', user.first_name + ' ' + user.last_name + ' utworzył zawody: ' + rows[0].title, { competitionId: rows[0].id });
+    const players=await pool.query(`select id from users where role='PLAYER'`);
+    const dateTxt=rows[0].competition_date?String(rows[0].competition_date).slice(0,10):'termin do ustalenia';
+    for(const p of players.rows)await notifyUser(p.id,'NEW_COMPETITION','Nowe zawody',`${rows[0].title} — ${rows[0].fishery||'łowisko'} — ${dateTxt}`,{competitionId:rows[0].id,url:'/'});
     return sendJson(res, 200, { ok:true, competition:rows[0] });
   }
 
@@ -1524,8 +1564,20 @@ self.addEventListener('notificationclick', event => { event.notification.close()
     const comp = await getCompetition(compId);
     if (!comp) return sendJson(res, 404, { ok:false, error:'Nie znaleziono zawodów' });
     const active = await getActiveEntries(compId);
-    for (const e of active) await notifyUser(e.user_id, 'RESULTS_T'+round, 'Wyniki T'+round, `Są dostępne wyniki T${round}: ${comp.title}`, { competitionId:compId, round, url:'/' });
-    await notifyAdmins('RESULTS_NOTIFY_T'+round, 'Powiadomiono o wynikach T'+round, `Wysłano powiadomienia o wynikach T${round}: ${comp.title}`, { competitionId:compId, round });
+    const detail=await buildDetail(compId,user);
+    const rr=round===1?detail.classification.round1:detail.classification.round2;
+    const fmtW=n=>String(Number(n||0)).replace(/\B(?=(\d{3})+(?!\d))/g,' ');
+    for (const e of active) {
+      const r=rr.find(x=>Number(x.user_id)===Number(e.user_id));
+      const bf=r&&Number(r.big_fish||0)>0?`, BF ${fmtW(r.big_fish)} g`:'';
+      const body=r?`${comp.title}: T${round} — sektor ${r.sector}, miejsce ${r.points}, waga ${fmtW(r.weight)} g${bf}`:`${comp.title}: wyniki T${round} są dostępne`;
+      await notifyUser(e.user_id,'RESULTS_T'+round,'Twój wynik T'+round,body,{competitionId:compId,round,url:'/'});
+      if(round===2){
+        const g=detail.classification.general.find(x=>Number(x.user_id)===Number(e.user_id));
+        if(g)await notifyUser(e.user_id,'RESULTS_GENERAL','Klasyfikacja końcowa',`${comp.title}: ${g.rank}. miejsce, ${g.sum_points} pkt, ${fmtW(g.total_weight)} g${Number(g.biggest_fish||0)>0?', BF '+fmtW(g.biggest_fish)+' g':''}`,{competitionId:compId,url:'/'});
+      }
+    }
+    await notifyAdmins('RESULTS_NOTIFY_T'+round,'Powiadomiono o wynikach T'+round,`Wysłano indywidualne powiadomienia o wynikach T${round}: ${comp.title}`,{competitionId:compId,round});
     return sendJson(res, 200, { ok:true, notified: active.length });
   }
 
@@ -2472,10 +2524,29 @@ header{z-index:100!important}
   .playerMobileMapHint{padding:4px 7px 6px!important;font-size:9px!important;text-align:center!important;color:#617166!important;background:#fafcfb!important}
 }
 
+
+/* V52 — realne Web Push + kompaktowy interfejs powiadomień */
+.pushBox{display:none!important}
+.notificationHeaderRow{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.notificationHeaderRow h2{margin:0}
+.phoneAlertControls{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.phoneAlertControls button{width:auto;min-height:32px;padding:5px 8px;font-size:11px}
+.compactUserBar{padding:8px 10px!important;margin:6px 0!important}
+.compactUserBar .adminbar{align-items:center}
+@media(max-width:760px){
+  .compactUserBar{padding:5px 7px!important;margin:3px 0!important}
+  .compactUserBar .adminbar{grid-template-columns:minmax(0,1fr) auto auto!important;gap:4px!important}
+  .compactUserBar #who{font-size:11px!important}.compactUserBar #role{font-size:9px!important}.compactUserBar #notifCounter{font-size:11px!important}
+  .notificationHeaderRow{gap:5px!important}.phoneAlertControls{width:100%;display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:5px!important}
+  .phoneAlertControls #notifPushState{font-size:9.5px!important}.phoneAlertControls button{min-height:30px!important;padding:4px 6px!important;font-size:10px!important}
+  .playerNotificationNav{grid-template-columns:1fr!important}
+  .playerNotificationNav button{min-height:32px!important;padding:4px!important;font-size:10px!important}
+}
+
 </style>
 </head>
 <body>
-<header><div class="row"><h1>🎣 Łowcy Methodowcy</h1><div class="top-actions"><button type="button" id="pushBtn">Push/status</button><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
+<header><div class="row"><h1>🎣 Łowcy Methodowcy</h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
 <main>
 <div id="msg"></div>
 <section id="auth" class="card">
@@ -2488,19 +2559,19 @@ header{z-index:100!important}
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V51</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
+  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V52</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
     <div id="adminCreate" class="card hidden"><h2>Utwórz zawody</h2><p class="small muted">Nazwa zawodów jest używana także w nagłówkach PDF.</p><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div></div><label>Opis</label><textarea id="cNotes" placeholder="Opis zawodów, zasady, informacje organizacyjne."></textarea><button onclick="createCompetition(event)">Utwórz zawody</button></div>
     <div class="card"><h2>Lista zawodów</h2><div id="competitionsList"></div></div>
     <div id="competitionDetail" class="hidden"></div>
   </section>
-  <section id="tab-notifications" class="hidden"><div class="card"><h2>Powiadomienia</h2><div id="notificationsList"></div></div></section>
+  <section id="tab-notifications" class="hidden"><div class="card"><div class="notificationHeaderRow"><h2>Powiadomienia</h2><div class="phoneAlertControls"><span id="notifPushState" class="small muted">Alerty telefonu</span><button type="button" id="notifPushBtn" class="secondary" onclick="enablePush(event)">Włącz alerty telefonu</button></div></div><div id="notificationsList"></div></div></section>
   <section id="tab-players" class="hidden"><div class="card"><h2>Zawodnicy</h2><div id="playersList"></div></div></section>
 </section>
 </main>
 <div class="quickScroll"><button onclick="scrollAppTop()">↑</button><button onclick="scrollAppBottom()">↓</button></div>
-<script src="/app.js?v=51" defer></script>
+<script src="/app.js?v=52" defer></script>
 </body>
 </html>`;
 
@@ -2511,5 +2582,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V47_PLAYER_MOBILE_TILES_AND_DRAW_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V52_REAL_PUSH_PLAYER_ALERTS_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });
