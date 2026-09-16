@@ -17,7 +17,7 @@ const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const APP_VERSION = '36';
-const APP_VERSION_NAME = 'V42_PLAYER_MOBILE_RESULTS';
+const APP_VERSION_NAME = 'V44_PLAYER_STICKY_DRAW_AND_RESULTS';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 
 if (webpush && VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
@@ -2098,6 +2098,114 @@ header{z-index:100!important}
   .playerResultsMobile{display:none!important}
 }
 
+
+/* V43 — kompaktowe zobrazowanie losowania dla zawodnika na telefonie */
+@media(max-width:760px){
+  .playerRoundDrawSection{padding:5px!important;margin:4px 0!important;overflow:visible!important}
+  .playerRoundDrawSection>h2{font-size:14px!important;margin:2px 0 4px!important}
+  .playerDrawHeaderCard{
+    position:sticky!important;
+    top:0!important;
+    z-index:4100!important;
+    padding:4px!important;
+    margin:0 0 4px!important;
+    border-radius:0 0 8px 8px!important;
+    background:rgba(243,246,239,.995)!important;
+    box-shadow:0 4px 10px #0000001e!important;
+  }
+  .playerDrawTabs{display:grid!important;grid-template-columns:1fr 1fr!important;gap:3px!important}
+  .playerDrawTabs button{min-height:32px!important;padding:4px!important;font-size:10.5px!important;border-radius:6px!important}
+  .playerOwnTitle{display:none!important}
+  .playerOwnGrid{grid-template-columns:1fr 1fr!important;gap:3px!important;margin-top:3px!important}
+  .playerOwnItem{padding:3px 5px!important;border-radius:6px!important;min-height:0!important}
+  .playerOwnItem .tag{font-size:8px!important;padding:1px 4px!important}
+  .playerOwnItem strong{font-size:18px!important;display:inline!important;margin:0 4px!important}
+  .playerOwnItem>span:last-child{font-size:9px!important}
+
+  .compactPlayerDrawMap{width:100%!important;max-width:100%!important}
+  .compactPlayerDrawMap .mobileMapMeta{margin:0 0 4px!important;padding:5px 6px!important;border-radius:7px!important}
+  .compactPlayerDrawMap .mobileMapMeta b{font-size:11.5px!important}
+  .compactPlayerDrawMap .mobileMapMeta span{font-size:9px!important}
+  .compactPlayerDrawMap .mobileSectorStack{gap:4px!important}
+  .compactPlayerSector{border-radius:7px!important}
+  .compactPlayerSector .mobileSectorHeader{padding:3px 5px!important;min-height:24px!important}
+  .compactPlayerSector .mobileSectorHeader span{font-size:10.5px!important;line-height:1!important}
+  .compactPlayerSector .mobileSectorHeader span b{font-size:15px!important}
+  .compactPlayerSector .mobileBankBlock{padding:3px 4px!important}
+  .compactPlayerSector .mobileBankBlock+.mobileBankBlock{border-top:1px dashed #b7c5ba!important}
+  .compactPlayerSector .mobileBankName{margin:0 0 2px!important;font-size:7.8px!important;line-height:1!important}
+  .compactPlayerSector .mobileStandGrid{
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    gap:2px!important;
+    padding:0!important;
+  }
+  .compactPlayerSector .mobileStandCard{min-height:34px!important;padding:0!important}
+  .compactPlayerSector .mobileStandCardInner{
+    min-height:34px!important;
+    grid-template-columns:27px minmax(0,1fr)!important;
+    border-radius:5px!important;
+    border-width:1px!important;
+  }
+  .compactPlayerSector .mobileStandNo{
+    font-size:16px!important;
+    border-right:1px solid #a4b4a8!important;
+  }
+  .compactPlayerSector .mobileStandInfo{
+    padding:2px 3px!important;
+    font-size:8.8px!important;
+    line-height:1.02!important;
+    overflow:hidden!important;
+  }
+  .compactPlayerSector .mobileStandInfo b{
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+  }
+  .compactPlayerSector .mobileMineBadge{
+    margin-top:1px!important;
+    padding:1px 3px!important;
+    font-size:6.5px!important;
+  }
+  .compactPlayerSector .ownMobileStand .mobileStandCardInner{
+    border:2px solid #e6ae00!important;
+    background:#fff4a8!important;
+  }
+}
+@media(max-width:360px){
+  .compactPlayerSector .mobileStandGrid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .compactPlayerSector .mobileStandCardInner{grid-template-columns:29px minmax(0,1fr)!important}
+  .compactPlayerSector .mobileStandInfo{font-size:9px!important}
+}
+
+
+/* V44 — dwa niezależne paski mobilnego zawodnika:
+   1) Losowanie T1/T2 + moje stanowiska
+   2) Wyniki T1/T2/Klasyfikacja/Statystyki */
+.playerDrawStickySlot,.playerResultsNavSlot{overflow:visible!important;position:relative!important;width:100%!important}
+@media(max-width:760px){
+  .playerView{overflow:visible!important}
+  .playerDrawHeaderCard,.playerResultsNav{
+    position:relative!important;
+    top:auto!important;
+  }
+  .playerDrawHeaderCard.fixedPlayerBar,
+  .playerResultsNav.fixedPlayerBar{
+    position:fixed!important;
+    top:0!important;
+    z-index:5200!important;
+    margin:0!important;
+    border-radius:0 0 8px 8px!important;
+    box-shadow:0 5px 14px #00000028!important;
+    background:rgba(243,246,239,.998)!important;
+  }
+  .playerDrawHeaderCard.fixedPlayerBar{
+    padding:4px!important;
+  }
+  .playerResultsNav.fixedPlayerBar{
+    padding:3px!important;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -2114,7 +2222,7 @@ header{z-index:100!important}
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V42</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
+  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V44</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
     <div id="adminCreate" class="card hidden"><h2>Utwórz zawody</h2><p class="small muted">Nazwa zawodów jest używana także w nagłówkach PDF.</p><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div></div><label>Opis</label><textarea id="cNotes" placeholder="Opis zawodów, zasady, informacje organizacyjne."></textarea><button onclick="createCompetition(event)">Utwórz zawody</button></div>
@@ -2126,7 +2234,7 @@ header{z-index:100!important}
 </section>
 </main>
 <div class="quickScroll"><button onclick="scrollAppTop()">↑</button><button onclick="scrollAppBottom()">↓</button></div>
-<script src="/app.js?v=42" defer></script>
+<script src="/app.js?v=44" defer></script>
 </body>
 </html>`;
 
@@ -2137,5 +2245,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V42_PLAYER_MOBILE_RESULTS_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V44_PLAYER_STICKY_DRAW_AND_RESULTS_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });
