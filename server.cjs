@@ -16,8 +16,8 @@ const ADMIN_SETUP_CODE = process.env.ADMIN_SETUP_CODE || '';
 let VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 let VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
-const APP_VERSION = '63';
-const APP_VERSION_NAME = 'V65_NOTIFICATION_BADGE';
+const APP_VERSION = '66';
+const APP_VERSION_NAME = 'V66_PROFILE_AND_COUNTDOWN';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 
 
@@ -1095,7 +1095,7 @@ async function route(req, res) {
   const path = url.pathname;
   const method = req.method;
 
-  if (path === '/__probe_js_v65' || path === '/__probe_boot_v65' || path === '/__probe_js_v63' || path === '/__probe_boot_v63' || path === '/__probe_js_v62' || path === '/__probe_boot_v62' || path === '/__probe_js_v60' || path === '/__probe_boot_v60' || path === '/__probe_js_v59' || path === '/__probe_boot_v59' || path === '/__probe_js_v58' || path === '/__probe_boot_v58' || path === '/__probe_js_v57' || path === '/__probe_boot_v57' || path === '/__probe_js_v56' || path === '/__probe_boot_v56' || path === '/__probe_js_v55' || path === '/__probe_boot_v55' || path === '/__probe_js_v54' || path === '/__probe_boot_v54' || path === '/__probe_js_v53' || path === '/__probe_boot_v53' || path === '/__probe_js_v52' || path === '/__probe_boot_v52' || path === '/__probe_js_v51' || path === '/__probe_boot_v51' || path === '/__probe_js_v50' || path === '/__probe_boot_v50' || path === '/__probe_js_v49' || path === '/__probe_boot_v49' || path === '/__probe_js_v36' || path === '/__probe_boot_v36' || path === '/__probe_js_v35' || path === '/__probe_boot_v35' || path === '/__probe_js_v34' || path === '/__probe_boot_v34' || path === '/__probe_js_v33' || path === '/__probe_boot_v33' || path === '/__probe_js_v32' || path === '/__probe_boot_v32' || path === '/__probe_js_v30' || path === '/__probe_boot_v30' || path === '/__probe_js_v29' || path === '/__probe_boot_v29' || path === '/__probe_js_v27' || path === '/__probe_boot_v27' || path === '/__probe_inline_v26') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
+  if (path === '/__probe_js_v66' || path === '/__probe_boot_v66' || path === '/__probe_js_v65' || path === '/__probe_boot_v65' || path === '/__probe_js_v63' || path === '/__probe_boot_v63' || path === '/__probe_js_v62' || path === '/__probe_boot_v62' || path === '/__probe_js_v60' || path === '/__probe_boot_v60' || path === '/__probe_js_v59' || path === '/__probe_boot_v59' || path === '/__probe_js_v58' || path === '/__probe_boot_v58' || path === '/__probe_js_v57' || path === '/__probe_boot_v57' || path === '/__probe_js_v56' || path === '/__probe_boot_v56' || path === '/__probe_js_v55' || path === '/__probe_boot_v55' || path === '/__probe_js_v54' || path === '/__probe_boot_v54' || path === '/__probe_js_v53' || path === '/__probe_boot_v53' || path === '/__probe_js_v52' || path === '/__probe_boot_v52' || path === '/__probe_js_v51' || path === '/__probe_boot_v51' || path === '/__probe_js_v50' || path === '/__probe_boot_v50' || path === '/__probe_js_v49' || path === '/__probe_boot_v49' || path === '/__probe_js_v36' || path === '/__probe_boot_v36' || path === '/__probe_js_v35' || path === '/__probe_boot_v35' || path === '/__probe_js_v34' || path === '/__probe_boot_v34' || path === '/__probe_js_v33' || path === '/__probe_boot_v33' || path === '/__probe_js_v32' || path === '/__probe_boot_v32' || path === '/__probe_js_v30' || path === '/__probe_boot_v30' || path === '/__probe_js_v29' || path === '/__probe_boot_v29' || path === '/__probe_js_v27' || path === '/__probe_boot_v27' || path === '/__probe_inline_v26') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/api/version') return sendJson(res, 200, { ok:true, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/app.js') return send(res, 200, APP_JS, {'Content-Type':'application/javascript; charset=utf-8', 'Cache-Control':'no-store, no-cache, must-revalidate'});
 
@@ -1215,7 +1215,28 @@ self.addEventListener('notificationclick', event => {
   }
 
   const user = await auth(req);
-  if (path === '/api/me') { if (!requireUser(user, res)) return; return sendJson(res, 200, { ok:true, user }); }
+  if (path === '/api/me' && method === 'GET') { if (!requireUser(user, res)) return; return sendJson(res, 200, { ok:true, user }); }
+  if (path === '/api/me' && method === 'PATCH') {
+    if (!requireUser(user, res)) return;
+    const b = await readBody(req);
+    const firstName = String(b.firstName||'').trim(), lastName = String(b.lastName||'').trim(), pzwClub = String(b.pzwClub||'').trim(), phone = normalizePhone(b.phone);
+    const newPassword = String(b.password||'');
+    if (!firstName || !lastName || !pzwClub || !phone) return sendJson(res, 400, { ok:false, error:'Uzupełnij imię, nazwisko, Koło PZW i telefon' });
+    try {
+      let rows;
+      if (newPassword) {
+        const hash = await bcrypt.hash(newPassword, 12);
+        ({rows} = await pool.query(`update users set first_name=$1,last_name=$2,pzw_club=$3,phone=$4,password_hash=$5 where id=$6 returning id,phone,first_name,last_name,pzw_club,role,created_at,account_source,last_login_at`, [firstName,lastName,pzwClub,phone,hash,user.id]));
+      } else {
+        ({rows} = await pool.query(`update users set first_name=$1,last_name=$2,pzw_club=$3,phone=$4 where id=$5 returning id,phone,first_name,last_name,pzw_club,role,created_at,account_source,last_login_at`, [firstName,lastName,pzwClub,phone,user.id]));
+      }
+      const updated=rows[0];
+      return sendJson(res, 200, {ok:true,user:updated,token:signToken(updated)});
+    } catch(e) {
+      if (String(e.code||'')==='23505' || String(e.message||'').toLowerCase().includes('duplicate')) return sendJson(res, 409, {ok:false,error:'Ten numer telefonu jest już używany przez inne konto'});
+      throw e;
+    }
+  }
   if (path === '/api/push-subscription' && method === 'POST') {
     if (!requireUser(user, res)) return;
     const b = await readBody(req);
@@ -2943,6 +2964,15 @@ header{z-index:100!important}
   .playerNotifBadge{min-width:17px!important;height:17px!important;padding:0 4px!important;margin-left:5px!important;font-size:9px!important}
 }
 
+
+
+/* V66 — profil zawodnika + czytelna data i odliczanie do startu */
+.myProfileCard{max-width:980px;margin:0 auto}.myProfileHead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px}.myProfileHead h2{margin:0 0 3px}.myProfileHead p{margin:0}.myProfileRole{display:inline-flex;align-items:center;justify-content:center;padding:5px 9px;border-radius:999px;background:#173d2e;color:#fff;font-size:10px;font-weight:1000}.myProfileGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.myProfilePassword{margin-top:14px;padding-top:12px;border-top:1px solid #d7e1da}.myProfilePassword h3{margin:0 0 3px}.myProfilePassword p{margin:0 0 8px}.myProfileActions{display:flex;justify-content:flex-end;margin-top:14px}.myProfileActions button{min-width:220px}
+.playerCompDateLine{display:flex;align-items:baseline;gap:7px;min-width:0;margin-top:3px;white-space:nowrap}.playerCompDateLine strong{font-size:14.5px;line-height:1;font-weight:1000;color:#173d2e}.playerCompDateLine span{font-size:10px!important;font-weight:1000;color:#314f40!important;letter-spacing:.04em}.playerCompSubLine{display:flex;align-items:center;gap:6px;min-width:0;margin-top:3px}.playerCompFishery{display:block!important;min-width:0;flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px!important;color:#65756c!important}.playerCompCountdown{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;padding:3px 6px;border-radius:999px;background:#dff4e4;color:#09642f;font-size:8.5px;font-style:normal;font-weight:1000;white-space:nowrap}.playerCompCountdown.past{background:#e8ebea;color:#5a645f}.playerCompDesktopDateBox{display:flex;flex-direction:column;align-items:flex-start;gap:2px;white-space:nowrap}.playerCompDesktopDateBox strong{font-size:15px;line-height:1;font-weight:1000;color:#173d2e}.playerCompDesktopDateBox b{font-size:10px;line-height:1;color:#345342;letter-spacing:.05em}.playerCompDesktopDateBox .playerCompCountdown{font-size:8px;padding:2px 5px}
+.playerCompDesktopRow{grid-template-columns:52px minmax(240px,1.8fr) 145px 105px 115px 94px minmax(190px,.9fr)!important;min-height:64px!important}.playerCompDesktopDate{font-size:inherit!important}
+@media(max-width:760px){.myProfileCard{padding:10px!important}.myProfileHead{align-items:center}.myProfileGrid{grid-template-columns:1fr;gap:7px}.myProfileActions{display:block}.myProfileActions button{width:100%;min-width:0}.playerCompCompactCard{padding-top:8px!important;padding-bottom:8px!important}.playerCompTitle b{font-size:13px!important}.playerCompDateLine strong{font-size:14px}.playerCompDateLine span{font-size:9.5px!important}.playerCompSubLine{gap:4px}.playerCompCountdown{font-size:7.8px;padding:2px 5px}.playerCompFishery{font-size:9.5px!important}}
+@media(max-width:390px){.playerCompDateLine{gap:5px}.playerCompDateLine strong{font-size:13.2px}.playerCompDateLine span{font-size:8.7px!important}.playerCompCountdown{font-size:7.2px;padding:2px 4px}}
+
 </style>
 </head>
 <body>
@@ -2959,14 +2989,15 @@ header{z-index:100!important}
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V65</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
-  <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
+  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V66</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
+  <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-profile" class="hidden" onclick="showTab('profile')">Mój profil</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
     <div id="adminCreate" class="card hidden"><h2>Utwórz zawody</h2><p class="small muted">Nazwa zawodów jest używana także w nagłówkach PDF.</p><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div></div><label>Opis</label><textarea id="cNotes" placeholder="Opis zawodów, zasady, informacje organizacyjne."></textarea><button onclick="createCompetition(event)">Utwórz zawody</button></div>
     <div class="card"><h2>Lista zawodów</h2><div id="competitionsList"></div></div>
     <div id="competitionDetail" class="hidden"></div>
   </section>
   <section id="tab-notifications" class="hidden"><div class="card"><div class="notificationHeaderRow"><h2>Powiadomienia</h2><div class="phoneAlertControls"><span id="notifPushState" class="small muted">Alerty telefonu</span><button type="button" id="notifPushBtn" class="secondary" onclick="enablePush(event)">Włącz alerty telefonu</button></div></div><div id="notificationsList"></div></div></section>
+  <section id="tab-profile" class="hidden"><div id="myProfileContent"></div></section>
   <section id="tab-players" class="hidden"><div class="card"><h2>Zawodnicy</h2><div id="playersList"></div></div></section>
 </section>
 </main>
@@ -2982,5 +3013,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V65_NOTIFICATION_BADGE_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V66_PROFILE_AND_COUNTDOWN_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });

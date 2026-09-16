@@ -1,4 +1,4 @@
-const CLIENT_VERSION='65';const CLIENT_VERSION_NAME='V65_NOTIFICATION_BADGE';try{fetch('/__probe_js_v65',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V65_NOTIFICATION_BADGE_LOADED');
+const CLIENT_VERSION='66';const CLIENT_VERSION_NAME='V66_PROFILE_AND_COUNTDOWN';try{fetch('/__probe_js_v66',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V66_PROFILE_AND_COUNTDOWN_LOADED');
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let TOKEN = STORE.get('carp_token') || '';
 let ME = null;
@@ -55,18 +55,37 @@ async function boot(){
   if(app)app.classList.remove('hidden');
   if(logout)logout.classList.remove('hidden');
   q('who').textContent=ME.first_name+' '+ME.last_name+' — Koło PZW '+(ME.pzw_club||'');q('role').textContent=ME.role==='ADMIN'?'Administrator':'Zawodnik';
-  const admin=ME.role==='ADMIN';q('btn-players').classList.toggle('hidden',!admin);q('adminCreate').classList.toggle('hidden',!admin);
+  const admin=ME.role==='ADMIN';q('btn-players').classList.toggle('hidden',!admin);q('btn-profile')?.classList.toggle('hidden',admin);q('adminCreate').classList.toggle('hidden',!admin);
   renderPushStatus();
   showTab('competitions');
   await Promise.allSettled([loadCompetitions(),loadNotifications(),admin?loadPlayers():Promise.resolve()]);
-  if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=62',{scope:'/'}).then(()=>{if('Notification' in window&&Notification.permission==='granted')ensurePushSubscription(true,false).catch(()=>{})}).catch(()=>{})}
+  if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=66',{scope:'/'}).then(()=>{if('Notification' in window&&Notification.permission==='granted')ensurePushSubscription(true,false).catch(()=>{})}).catch(()=>{})}
 }
 async function login(){try{const phone=q('loginPhone')?.value||'';const password=q('loginPassword')?.value||'';if(!phone.trim()||!password)throw new Error('Wpisz telefon i hasło');const d=await api('/api/login',{method:'POST',body:JSON.stringify({phone,password})});TOKEN=d.token;STORE.set('carp_token',TOKEN);msg('Zalogowano');await boot()}catch(e){msg(e.message,'bad')}}
 async function registerPlayer(ev){if(ev){ev.preventDefault&&ev.preventDefault();ev.stopPropagation&&ev.stopPropagation()}try{const d=await api('/api/register',{method:'POST',body:JSON.stringify({phone:q('regPhone').value,password:q('regPassword').value,firstName:q('regFirst').value,lastName:q('regLast').value,pzwClub:q('regClub').value})});TOKEN=d.token;STORE.set('carp_token',TOKEN);msg('Konto zawodnika utworzone');await boot()}catch(e){msg(e.message,'bad')}}
 async function setupAdmin(ev){if(ev){ev.preventDefault&&ev.preventDefault();ev.stopPropagation&&ev.stopPropagation()}try{const d=await api('/api/setup-admin',{method:'POST',body:JSON.stringify({setupCode:q('setupCode').value,phone:q('setupPhone').value,password:q('setupPassword').value,firstName:q('setupFirst').value,lastName:q('setupLast').value,pzwClub:q('setupClub').value})});TOKEN=d.token;STORE.set('carp_token',TOKEN);msg('Admin utworzony');await boot()}catch(e){msg(e.message,'bad')}}
 async function logout(){try{await disablePushSubscription(false)}catch(_){}STORE.del('carp_token');TOKEN='';ME=null;setLoggedOut(true)}
 async function clearSession(){try{await disablePushSubscription(true);if('caches'in window){const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k).catch(()=>{})));}}catch(_){}setLoggedOut(true)}
-function showTab(n){['competitions','notifications','players'].forEach(x=>{q('tab-'+x).classList.toggle('hidden',x!==n);q('btn-'+x)?.classList.toggle('active',x===n)});if(n==='notifications')loadNotifications();if(n==='players')loadPlayers()}
+function renderMyProfile(){
+  const box=q('myProfileContent');if(!box||!ME)return;
+  box.innerHTML='<div class="card myProfileCard"><div class="myProfileHead"><div><h2>Mój profil</h2><p class="small muted">Tutaj możesz poprawić swoje dane logowania i dane zawodnika.</p></div><span class="myProfileRole">ZAWODNIK</span></div>'
+    +'<div class="myProfileGrid"><div><label>Imię</label><input id="profileFirstName" autocomplete="given-name" value="'+esc(ME.first_name||'')+'"></div><div><label>Nazwisko</label><input id="profileLastName" autocomplete="family-name" value="'+esc(ME.last_name||'')+'"></div><div><label>Koło PZW</label><input id="profileClub" value="'+esc(ME.pzw_club||'')+'"></div><div><label>Telefon</label><input id="profilePhone" type="tel" inputmode="tel" autocomplete="tel" value="'+esc(ME.phone||'')+'"></div></div>'
+    +'<div class="myProfilePassword"><h3>Zmiana hasła</h3><p class="small muted">Jeżeli nie chcesz zmieniać hasła, zostaw oba pola puste.</p><div class="myProfileGrid"><div><label>Nowe hasło</label><input id="profilePassword" type="password" autocomplete="new-password" placeholder="Nowe hasło"></div><div><label>Powtórz nowe hasło</label><input id="profilePassword2" type="password" autocomplete="new-password" placeholder="Powtórz hasło"></div></div></div>'
+    +'<div class="myProfileActions"><button type="button" onclick="saveMyProfile(event)">Zapisz moje dane</button></div></div>';
+}
+async function saveMyProfile(ev){
+  if(ev){ev.preventDefault();ev.stopPropagation()}
+  const firstName=String(q('profileFirstName')?.value||'').trim(),lastName=String(q('profileLastName')?.value||'').trim(),pzwClub=String(q('profileClub')?.value||'').trim(),phone=String(q('profilePhone')?.value||'').trim(),password=String(q('profilePassword')?.value||''),password2=String(q('profilePassword2')?.value||'');
+  if(!firstName||!lastName||!pzwClub||!phone){msg('Uzupełnij imię, nazwisko, Koło PZW i telefon','bad');return}
+  if(password!==password2){msg('Nowe hasła nie są takie same','bad');return}
+  try{
+    const d=await api('/api/me',{method:'PATCH',body:JSON.stringify({firstName,lastName,pzwClub,phone,password})});
+    ME=d.user||ME;if(d.token){TOKEN=d.token;STORE.set('carp_token',TOKEN)}
+    const who=q('who');if(who)who.textContent=ME.first_name+' '+ME.last_name+' — Koło PZW '+(ME.pzw_club||'');
+    renderMyProfile();msg('Dane profilu zapisane');
+  }catch(e){msg(e.message,'bad')}
+}
+function showTab(n){['competitions','notifications','players','profile'].forEach(x=>{q('tab-'+x)?.classList.toggle('hidden',x!==n);q('btn-'+x)?.classList.toggle('active',x===n)});if(n==='notifications')loadNotifications();if(n==='players')loadPlayers();if(n==='profile')renderMyProfile()}
 function competitionActionHtml(c,admin,mine,closed,cardMode=false){
   if(admin)return '<div class="inlineBtns '+(cardMode?'competitionCardActions adminCompetitionCardActions':'')+'"><button type="button" onclick="openCompetition('+c.id+')">Panel</button><button type="button" class="secondary" onclick="openCompetition('+c.id+')">Edytuj</button><button type="button" class="warn" onclick="deleteCompetition('+c.id+')">Usuń</button></div>';
   const leavePending=String(c.my_leave_request_status||'').toUpperCase()==='PENDING';
@@ -83,6 +102,19 @@ function playerCompetitionTodayKey(){const d=new Date(),p=n=>String(n).padStart(
 function playerCompetitionPast(c){const k=playerCompetitionDateKey(c);return !!k&&k<playerCompetitionTodayKey()}
 function playerCompetitionMonthKey(c){const k=playerCompetitionDateKey(c);return k?k.slice(0,7):'no-date'}
 function playerCompetitionMonthLabel(key){if(key==='no-date')return 'BEZ DATY';const m=String(key).match(/^(\d{4})-(\d{2})$/);if(!m)return String(key).toUpperCase();const d=new Date(Number(m[1]),Number(m[2])-1,1);return d.toLocaleDateString('pl-PL',{month:'long',year:'numeric'}).toUpperCase()}
+function playerCompetitionDateInfo(c){
+  const key=playerCompetitionDateKey(c);if(!key)return {date:'—',weekday:'BRAK DATY',countdown:''};
+  const m=key.match(/^(\d{4})-(\d{2})-(\d{2})$/);if(!m)return {date:fmtDate(c.competition_date),weekday:'',countdown:''};
+  const y=Number(m[1]),mo=Number(m[2])-1,d=Number(m[3]);
+  const dt=new Date(y,mo,d,12,0,0);const now=new Date();
+  const todayUtc=Date.UTC(now.getFullYear(),now.getMonth(),now.getDate()),targetUtc=Date.UTC(y,mo,d);
+  const days=Math.round((targetUtc-todayUtc)/86400000);
+  const weekday=dt.toLocaleDateString('pl-PL',{weekday:'long'}).toUpperCase();
+  let countdown='';if(days===0)countdown='DZISIAJ';else if(days===1)countdown='JUTRO';else if(days>1)countdown='START ZA '+days+' DNI';else countdown='ZAKOŃCZONE';
+  return {date:dt.toLocaleDateString('pl-PL',{day:'2-digit',month:'2-digit',year:'numeric'}),weekday,countdown,days};
+}
+function renderPlayerCompetitionMobileDate(c){const x=playerCompetitionDateInfo(c);return '<div class="playerCompDateLine"><strong>'+esc(x.date)+'</strong><span>'+esc(x.weekday)+'</span></div><div class="playerCompSubLine"><span class="playerCompFishery">'+esc(c.fishery||'—')+'</span>'+(x.countdown?'<em class="playerCompCountdown '+(Number(x.days)<0?'past':'')+'">'+esc(x.countdown)+'</em>':'')+'</div>'}
+function renderPlayerCompetitionDesktopDate(c){const x=playerCompetitionDateInfo(c);return '<div class="playerCompDesktopDateBox"><strong>'+esc(x.date)+'</strong><b>'+esc(x.weekday)+'</b>'+(x.countdown?'<span class="playerCompCountdown '+(Number(x.days)<0?'past':'')+'">'+esc(x.countdown)+'</span>':'')+'</div>'}
 function playerCompetitionNo(c){
   const all=Array.isArray(PLAYER_COMPETITIONS_CACHE)?PLAYER_COMPETITIONS_CACHE:[];
   const ordered=[...all].sort((a,b)=>Number(a.id)-Number(b.id));
@@ -111,8 +143,8 @@ function renderPlayerCompetitionFilters(arr){
   return '<div class="playerCompetitionOrganizer"><div class="playerCompFilters">'+f('upcoming','NADCHODZĄCE',upcoming)+f('registered','ZAPISANE',registered)+f('completed','ZAKOŃCZONE',completed)+'</div><select class="playerCompMonthSelect" onchange="setPlayerCompetitionMonth(this.value)">'+opts+'</select></div>';
 }
 function renderPlayerCompetitionCompactActions(c){const mine=playerCompetitionMine(c),closed=c.status!=='OPEN'||c.signup_open===false,leavePending=String(c.my_leave_request_status||'').toUpperCase()==='PENDING';let second='';if(mine)second=leavePending?'<button type="button" class="secondary" disabled>Prośba wysłana</button>':'<button type="button" class="warn" onclick="leaveComp('+c.id+')">Wypisz</button>';else second='<button type="button" '+(closed?'disabled':'')+' onclick="joinComp('+c.id+')">Zapisz</button>';return '<div class="playerCompCompactActions"><button type="button" onclick="openCompetition('+c.id+')">Szczegóły</button>'+second+'</div>'}
-function renderPlayerCompetitionMobileItem(c){const st=playerCompetitionStatus(c),mine=playerCompetitionMineLabel(c);return '<article class="playerCompCompactCard '+(mine?'mine':'')+'"><div class="playerCompCompactTop"><span class="playerCompNo">'+playerCompetitionNo(c)+'</span><div class="playerCompTitle"><b>'+esc(c.title)+'</b><span>'+fmtDate(c.competition_date)+' • '+esc(c.fishery||'—')+'</span></div><span class="playerCompStatus '+st.cls+'">'+st.label+'</span></div><div class="playerCompCompactBottom"><div class="playerCompMiniInfo">'+playerCompetitionCountHtml(c)+(mine?'<span class="playerCompMineBadge">'+mine+'</span>':'')+'</div>'+renderPlayerCompetitionCompactActions(c)+'</div></article>'}
-function renderPlayerCompetitionDesktopItem(c){const st=playerCompetitionStatus(c),mine=playerCompetitionMineLabel(c);return '<div class="playerCompDesktopRow '+(mine?'mine':'')+'"><span class="playerCompNo">'+playerCompetitionNo(c)+'</span><div class="playerCompDesktopTitle"><b>'+esc(c.title)+'</b><span>'+esc(c.fishery||'—')+'</span></div><div class="playerCompDesktopDate">'+fmtDate(c.competition_date)+'</div><div class="playerCompDesktopCount">'+playerCompetitionCountHtml(c)+'</div><div>'+(mine?'<span class="playerCompMineBadge">'+mine+'</span>':'')+'</div><span class="playerCompStatus '+st.cls+'">'+st.label+'</span>'+renderPlayerCompetitionCompactActions(c)+'</div>'}
+function renderPlayerCompetitionMobileItem(c){const st=playerCompetitionStatus(c),mine=playerCompetitionMineLabel(c);return '<article class="playerCompCompactCard '+(mine?'mine':'')+'"><div class="playerCompCompactTop"><span class="playerCompNo">'+playerCompetitionNo(c)+'</span><div class="playerCompTitle"><b>'+esc(c.title)+'</b>'+renderPlayerCompetitionMobileDate(c)+'</div><span class="playerCompStatus '+st.cls+'">'+st.label+'</span></div><div class="playerCompCompactBottom"><div class="playerCompMiniInfo">'+playerCompetitionCountHtml(c)+(mine?'<span class="playerCompMineBadge">'+mine+'</span>':'')+'</div>'+renderPlayerCompetitionCompactActions(c)+'</div></article>'}
+function renderPlayerCompetitionDesktopItem(c){const st=playerCompetitionStatus(c),mine=playerCompetitionMineLabel(c);return '<div class="playerCompDesktopRow '+(mine?'mine':'')+'"><span class="playerCompNo">'+playerCompetitionNo(c)+'</span><div class="playerCompDesktopTitle"><b>'+esc(c.title)+'</b><span>'+esc(c.fishery||'—')+'</span></div><div class="playerCompDesktopDate">'+renderPlayerCompetitionDesktopDate(c)+'</div><div class="playerCompDesktopCount">'+playerCompetitionCountHtml(c)+'</div><div>'+(mine?'<span class="playerCompMineBadge">'+mine+'</span>':'')+'</div><span class="playerCompStatus '+st.cls+'">'+st.label+'</span>'+renderPlayerCompetitionCompactActions(c)+'</div>'}
 function renderPlayerCompetitionGroups(arr,mode){
   if(!arr.length)return '<div class="playerCompEmpty">Brak zawodów w tej kategorii.</div>';
   const groups=[];for(const c of arr){const key=playerCompetitionMonthKey(c);let g=groups.find(x=>x.key===key);if(!g){g={key,items:[]};groups.push(g)}g.items.push(c)}
@@ -756,6 +788,6 @@ function bindAuthButtons(){
 }
 
 function scrollAppBottom(){window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})}
-Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,showAdminZone,loadCompetitions,createCompetition,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,editPlayerName,deletePlayer,deleteAllAdminPlayers,setPlayerCompetitionFilter,setPlayerCompetitionMonth,enablePush,sendPushTest,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,openPlayerNotifications,fitPlayerMobileFullMaps,togglePlayerSectorAccordion,toggleFinalClub,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
-function startBoot(){console.log('CLIENT_V65_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v65',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().catch(e=>{console.error('BOOT_FATAL',e);try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
+Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,showAdminZone,loadCompetitions,createCompetition,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,editPlayerName,deletePlayer,deleteAllAdminPlayers,saveMyProfile,setPlayerCompetitionFilter,setPlayerCompetitionMonth,enablePush,sendPushTest,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,openPlayerNotifications,fitPlayerMobileFullMaps,togglePlayerSectorAccordion,toggleFinalClub,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
+function startBoot(){console.log('CLIENT_V66_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v66',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().catch(e=>{console.error('BOOT_FATAL',e);try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();
