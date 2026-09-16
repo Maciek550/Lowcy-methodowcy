@@ -17,7 +17,7 @@ const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const APP_VERSION = '36';
-const APP_VERSION_NAME = 'V50_PLAYER_MOBILE_ACCORDION_MAPS';
+const APP_VERSION_NAME = 'V51_MOBILE_MAP_FIT_USER_NOTIFICATIONS';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 
 if (webpush && VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
@@ -1061,7 +1061,7 @@ async function route(req, res) {
   const path = url.pathname;
   const method = req.method;
 
-  if (path === '/__probe_js_v50' || path === '/__probe_boot_v50' || path === '/__probe_js_v49' || path === '/__probe_boot_v49' || path === '/__probe_js_v36' || path === '/__probe_boot_v36' || path === '/__probe_js_v35' || path === '/__probe_boot_v35' || path === '/__probe_js_v34' || path === '/__probe_boot_v34' || path === '/__probe_js_v33' || path === '/__probe_boot_v33' || path === '/__probe_js_v32' || path === '/__probe_boot_v32' || path === '/__probe_js_v30' || path === '/__probe_boot_v30' || path === '/__probe_js_v29' || path === '/__probe_boot_v29' || path === '/__probe_js_v27' || path === '/__probe_boot_v27' || path === '/__probe_inline_v26') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
+  if (path === '/__probe_js_v51' || path === '/__probe_boot_v51' || path === '/__probe_js_v50' || path === '/__probe_boot_v50' || path === '/__probe_js_v49' || path === '/__probe_boot_v49' || path === '/__probe_js_v36' || path === '/__probe_boot_v36' || path === '/__probe_js_v35' || path === '/__probe_boot_v35' || path === '/__probe_js_v34' || path === '/__probe_boot_v34' || path === '/__probe_js_v33' || path === '/__probe_boot_v33' || path === '/__probe_js_v32' || path === '/__probe_boot_v32' || path === '/__probe_js_v30' || path === '/__probe_boot_v30' || path === '/__probe_js_v29' || path === '/__probe_boot_v29' || path === '/__probe_js_v27' || path === '/__probe_boot_v27' || path === '/__probe_inline_v26') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/api/version') return sendJson(res, 200, { ok:true, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/app.js') return send(res, 200, APP_JS, {'Content-Type':'application/javascript; charset=utf-8', 'Cache-Control':'no-store, no-cache, must-revalidate'});
 
@@ -1535,16 +1535,22 @@ self.addEventListener('notificationclick', event => { event.notification.close()
     const { rows } = await pool.query(`select * from notifications where recipient_user_id=$1 and ($2::boolean=false or type not like 'RESULT_ITEM_T%') order by case when type='LEAVE_REQUEST' and coalesce(data->>'status','PENDING')='PENDING' then 0 else 1 end, created_at desc limit 150`, [user.id, user.role==='ADMIN']);
     return sendJson(res, 200, { ok:true, notifications:rows });
   }
-  if (path === '/api/admin/notifications/read-all' && method === 'POST') {
-    if (!requireAdmin(user, res)) return;
+  if ((path === '/api/notifications/read-all' || path === '/api/admin/notifications/read-all') && method === 'POST') {
+    if (!requireUser(user, res)) return;
+    if (path === '/api/admin/notifications/read-all' && user.role !== 'ADMIN') return sendJson(res, 403, { ok:false, error:'Brak uprawnień admina' });
     const out = await pool.query(`update notifications set read_at=now() where recipient_user_id=$1 and read_at is null`, [user.id]);
     return sendJson(res, 200, { ok:true, updated:out.rowCount || 0 });
   }
-  if (path === '/api/admin/notifications' && method === 'DELETE') {
-    if (!requireAdmin(user, res)) return;
-    const pending = await pool.query(`select count(*)::int as n from notifications where recipient_user_id=$1 and type='LEAVE_REQUEST' and coalesce(data->>'status','PENDING')='PENDING'`, [user.id]);
-    const out = await pool.query(`delete from notifications where recipient_user_id=$1 and not (type='LEAVE_REQUEST' and coalesce(data->>'status','PENDING')='PENDING')`, [user.id]);
-    return sendJson(res, 200, { ok:true, deleted:out.rowCount || 0, keptPending:Number(pending.rows[0]?.n || 0) });
+  if ((path === '/api/notifications' || path === '/api/admin/notifications') && method === 'DELETE') {
+    if (!requireUser(user, res)) return;
+    if (path === '/api/admin/notifications' && user.role !== 'ADMIN') return sendJson(res, 403, { ok:false, error:'Brak uprawnień admina' });
+    if (user.role === 'ADMIN') {
+      const pending = await pool.query(`select count(*)::int as n from notifications where recipient_user_id=$1 and type='LEAVE_REQUEST' and coalesce(data->>'status','PENDING')='PENDING'`, [user.id]);
+      const out = await pool.query(`delete from notifications where recipient_user_id=$1 and not (type='LEAVE_REQUEST' and coalesce(data->>'status','PENDING')='PENDING')`, [user.id]);
+      return sendJson(res, 200, { ok:true, deleted:out.rowCount || 0, keptPending:Number(pending.rows[0]?.n || 0) });
+    }
+    const out = await pool.query(`delete from notifications where recipient_user_id=$1`, [user.id]);
+    return sendJson(res, 200, { ok:true, deleted:out.rowCount || 0, keptPending:0 });
   }
   m = path.match(/^\/api\/(?:admin\/)?notifications\/(\d+)\/read$/);
   if (m && method === 'POST') {
@@ -2442,6 +2448,30 @@ header{z-index:100!important}
   .playerMobileFullMapWrap{margin:6px 0 8px!important;border:1px solid #c4d2c8!important;border-radius:10px!important;background:#fff!important;overflow:hidden!important}.playerMobileFullMapTitle{padding:7px 8px!important;background:#edf4ef!important;color:#18432f!important;font-size:12px!important;font-weight:1000!important}.playerMobileFullMapScroll{overflow-x:auto!important;-webkit-overflow-scrolling:touch!important;padding:7px!important}.playerMobileFullMapScroll .sectorMap{min-width:760px!important;margin:0!important}
 }
 
+
+
+/* V51 — pełna mapa mobilna dopasowana do ekranu + przyciski powiadomień zawodnika */
+@media(max-width:760px){
+  .playerNotificationNav{display:grid!important;grid-template-columns:1.35fr .85fr!important;gap:3px!important;margin-top:3px!important}
+  .playerNotificationNav button{min-width:0!important;min-height:32px!important;padding:4px 3px!important;border-radius:6px!important;font-size:8.8px!important;line-height:1.02!important}
+  .playerMobileFullMapWrap{margin:5px 0 8px!important;padding:0!important;border:1px solid #c4d2c8!important;border-radius:10px!important;background:#fff!important;overflow:hidden!important}
+  .playerMobileFullMapTitle{padding:7px 8px!important;background:#edf4ef!important;color:#18432f!important;font-size:12px!important;font-weight:1000!important;text-align:center!important}
+  .playerMobileFullMapViewport{position:relative!important;width:100%!important;overflow:hidden!important;background:#fff!important;padding:4px!important;box-sizing:border-box!important}
+  .playerMobileFullMapCanvas{position:relative!important;transform-origin:top left!important}
+  .playerMobileFullMapCanvas .sectorMap{max-width:none!important;overflow:visible!important;min-width:640px!important;padding:6px!important;margin:0!important;box-sizing:border-box!important}
+  .playerMobileFullMapCanvas .roundMapHeading{font-size:21px!important;line-height:1.05!important;margin:0 0 5px!important}
+  .playerMobileFullMapCanvas .bankLabel{font-size:15px!important;margin:3px 0!important}
+  .playerMobileFullMapCanvas .roundDrawCell{min-height:118px!important;padding:4px 2px!important}
+  .playerMobileFullMapCanvas .roundStandNo{font-size:26px!important;line-height:1!important}
+  .playerMobileFullMapCanvas .roundDrawName{font-size:15px!important;font-weight:1000!important;line-height:1!important}
+  .playerMobileFullMapCanvas .sectorBlock{min-height:82px!important;padding:4px 2px!important}
+  .playerMobileFullMapCanvas .sectorLetter{font-size:29px!important;line-height:1!important}
+  .playerMobileFullMapCanvas .sectorWord,.playerMobileFullMapCanvas .sectorPeople{font-size:10px!important}
+  .playerMobileFullMapCanvas .water{min-height:38px!important;padding:7px!important;font-size:17px!important}
+  .playerMobileFullMapCanvas .sectorSummary{font-size:10px!important;line-height:1.15!important;padding:5px!important}
+  .playerMobileMapHint{padding:4px 7px 6px!important;font-size:9px!important;text-align:center!important;color:#617166!important;background:#fafcfb!important}
+}
+
 </style>
 </head>
 <body>
@@ -2458,7 +2488,7 @@ header{z-index:100!important}
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V50</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
+  <div class="card success-line"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V51</span><div id="pushStatus" class="pushBox"></div><button class="secondary" style="margin-top:6px;width:auto" onclick="resetPush()">Reset push</button></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
     <div id="adminCreate" class="card hidden"><h2>Utwórz zawody</h2><p class="small muted">Nazwa zawodów jest używana także w nagłówkach PDF.</p><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div></div><label>Opis</label><textarea id="cNotes" placeholder="Opis zawodów, zasady, informacje organizacyjne."></textarea><button onclick="createCompetition(event)">Utwórz zawody</button></div>
@@ -2470,7 +2500,7 @@ header{z-index:100!important}
 </section>
 </main>
 <div class="quickScroll"><button onclick="scrollAppTop()">↑</button><button onclick="scrollAppBottom()">↓</button></div>
-<script src="/app.js?v=50" defer></script>
+<script src="/app.js?v=51" defer></script>
 </body>
 </html>`;
 
