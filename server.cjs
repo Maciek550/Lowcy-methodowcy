@@ -3301,6 +3301,30 @@ body.playerTheme .playerView{border-color:#36536b}
 @media(max-width:760px){body.playerTheme #app>.compactUserBar .appVersionBadge{font-size:9px!important;padding:3px 6px!important;letter-spacing:0!important}}
 .headerVersion{display:inline-block;margin-left:6px;padding:2px 6px;border:1px solid #8fd9ff;background:#0b4262;color:#dff6ff;border-radius:5px;font-size:10px;vertical-align:middle;letter-spacing:.04em}
 @media(max-width:760px){header .headerVersion{margin-left:3px;padding:1px 4px;font-size:8px}}
+@media(max-width:760px){
+ .playerView .playerUnifiedNav .playerResultsNavInline button:nth-child(3),
+ .playerView .playerUnifiedNav .playerResultsNavInline button:nth-child(4){grid-column:1/-1!important;width:100%!important;min-height:50px!important;padding:6px 8px!important}
+}
+@keyframes playerNewResultPulse{0%,100%{transform:scale(1);filter:drop-shadow(0 0 2px #fff)}50%{transform:scale(1.22);filter:drop-shadow(0 0 7px #ffe600)}}
+.playerView .playerNewResultStar{position:absolute;top:3px;right:7px;z-index:2;color:#ffe600!important;font-size:23px!important;line-height:1!important;font-weight:1000!important;text-shadow:0 0 2px #071723,0 0 6px #fff!important;animation:playerNewResultPulse 1.15s ease-in-out infinite;pointer-events:none}
+@media(max-width:760px){
+ body.playerTheme main{padding-top:4px!important}
+ body.playerTheme header{padding:3px 6px!important}
+ body.playerTheme header h1{font-size:13px!important;line-height:1!important}
+ body.playerTheme header .top-actions button{min-height:34px!important;padding:3px 6px!important;font-size:9px!important}
+ body.playerTheme #app>.compactUserBar{margin:2px 0!important;padding:3px 5px!important}
+ body.playerTheme #app>.compactUserBar .adminbar{gap:3px!important}
+ body.playerTheme #app>.compactUserBar #who{font-size:10px!important;line-height:1!important}
+ body.playerTheme #app>.compactUserBar #role{font-size:7px!important;line-height:1!important}
+ body.playerTheme #app>.compactUserBar #notifCounter{font-size:8px!important}
+ body.playerTheme #app>.tabs{margin:4px 0!important;padding:1px 0!important;gap:4px!important}
+ body.playerTheme #app>.tabs button{min-height:34px!important;padding:5px 7px!important;font-size:11px!important}
+ .playerView .playerUnifiedNav .playerResultsNavInline button:nth-child(1),
+ .playerView .playerUnifiedNav .playerResultsNavInline button:nth-child(2){grid-column:1/-1!important;width:100%!important;min-height:42px!important;padding:5px 25px 5px 8px!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:6px!important}
+ .playerView .playerUnifiedNav .playerResultsNavInline button:nth-child(1):before,
+ .playerView .playerUnifiedNav .playerResultsNavInline button:nth-child(2):before{display:inline-block!important;width:18px!important;height:18px!important;margin:0!important;flex:0 0 18px!important}
+ .playerView .playerNewResultStar{top:2px;right:8px;font-size:21px!important}
+}
 </style>
 </head>
 <body>
