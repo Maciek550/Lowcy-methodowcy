@@ -1,4 +1,4 @@
-const CLIENT_VERSION='71';const CLIENT_VERSION_NAME='V71_PLAYER_TARGET_VIEW';try{fetch('/__probe_js_v71',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V71_PLAYER_TARGET_VIEW_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='72';const CLIENT_VERSION_NAME='V72_COMPACT_PLAYER_NAV_NEW_CONTENT';try{fetch('/__probe_js_v72',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V72_COMPACT_PLAYER_NAV_NEW_CONTENT_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let TOKEN = STORE.get('carp_token') || '';
 let ME = null;
@@ -37,16 +37,24 @@ function fmtGram(v){v=Number(v||0);return v?String(v).replace(/\B(?=(\d{3})+(?!\
 function statusName(s){return s==='OPEN'?'OPEN':s==='CLOSED'?'CLOSED':esc(s||'')}
 function playerNotifLabel(unread=PLAYER_UNREAD_NOTIFICATIONS){const n=Math.max(0,Number(unread||0));return 'POWIADOMIENIA'+(n?'<span class="playerNotifBadge">'+(n>99?'99+':n)+'</span>':'')}
 function playerRoundHasResults(d,round){const n=Number(round);return (d?.results||[]).some(r=>Number(r.round)===n)||(d?.resultItems||[]).some(r=>Number(r.round)===n)}
+function playerRoundHasOwnDraw(d,round){const n=Number(round),uid=Number(ME?.id||0);return Boolean(uid&&(d?.draws||[]).some(r=>Number(r.round)===n&&Number(r.user_id)===uid))}
 function playerResultSeenKey(compId,round){return 'lowcy_result_seen_'+Number(compId||0)+'_'+Number(round)}
+function playerDrawSeenKey(compId,round){return 'lowcy_draw_seen_'+Number(compId||0)+'_'+Number(round)}
 function playerResultSeen(compId,round){return STORE.get(playerResultSeenKey(compId,round))==='1'}
+function playerDrawSeen(compId,round){return STORE.get(playerDrawSeenKey(compId,round))==='1'}
 function playerHasNewResults(d,round){const id=d?.competition?.id;return Boolean(id&&playerRoundHasResults(d,round)&&!playerResultSeen(id,round))}
-function playerResultStar(d,round){return playerHasNewResults(d,round)?'<span class="playerNewResultStar" data-result-round="'+Number(round)+'" aria-label="Nowe wyniki">★</span>':''}
+function playerHasNewDraw(d,round){const id=d?.competition?.id;return Boolean(id&&playerRoundHasOwnDraw(d,round)&&!playerDrawSeen(id,round))}
+function playerResultStar(d,round){return playerHasNewResults(d,round)?'<span class="playerNewResultStar" data-result-round="'+Number(round)+'" aria-label="Nowe wyniki" title="Nowe wyniki">★</span>':''}
+function playerDrawStar(d,round){return playerHasNewDraw(d,round)?'<span class="playerNewResultStar playerNewDrawStar" data-draw-round="'+Number(round)+'" aria-label="Nowe losowanie" title="Nowe losowanie">★</span>':''}
 function markPlayerResultSeen(round){const id=CURRENT_DETAIL?.competition?.id;if(!id)return;STORE.set(playerResultSeenKey(id,round),'1');document.querySelectorAll('.playerNewResultStar[data-result-round="'+Number(round)+'"]').forEach(x=>x.remove())}
+function markPlayerDrawSeen(round){const id=CURRENT_DETAIL?.competition?.id;if(!id)return;STORE.set(playerDrawSeenKey(id,round),'1');document.querySelectorAll('.playerNewResultStar[data-draw-round="'+Number(round)+'"]').forEach(x=>x.remove())}
 function playerResultsSignature(d){const items=[...(d?.results||[]).map(r=>['r',r.round,r.user_id,r.weight,r.big_fish]),...(d?.resultItems||[]).map(r=>['i',r.round,r.user_id,r.kind,r.weight])];return JSON.stringify(items.sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b))))}
-function syncPlayerResultStars(d=CURRENT_DETAIL){[1,2].forEach(round=>{const fresh=playerHasNewResults(d,round);document.querySelectorAll('.playerNewResultStar[data-result-round="'+round+'"]').forEach(x=>{if(!fresh)x.remove()});if(fresh&&!document.querySelector('.playerNewResultStar[data-result-round="'+round+'"]')){document.querySelectorAll('.playerResultsNavInline button').forEach(btn=>{const click=btn.getAttribute('onclick')||'';if(click.includes("'t"+round+"'")){btn.insertAdjacentHTML('beforeend',playerResultStar(d,round))}});document.querySelectorAll('.playerDesktopMainNav button').forEach(btn=>{const click=btn.getAttribute('onclick')||'';if(click.includes("'t"+round+"'")){btn.insertAdjacentHTML('beforeend',playerResultStar(d,round))}})}})}
+function playerDrawSignature(d){const uid=Number(ME?.id||0);const items=(d?.draws||[]).filter(r=>!uid||Number(r.user_id)===uid).map(r=>[r.round,r.user_id,r.stand,r.sector]);return JSON.stringify(items.sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b))))}
+function playerContentSignature(d){return playerResultsSignature(d)+'|'+playerDrawSignature(d)}
+function syncPlayerContentStars(d=CURRENT_DETAIL){[1,2].forEach(round=>{const freshResult=playerHasNewResults(d,round);document.querySelectorAll('.playerNewResultStar[data-result-round="'+round+'"]').forEach(x=>{if(!freshResult)x.remove()});if(freshResult&&!document.querySelector('.playerNewResultStar[data-result-round="'+round+'"]'))document.querySelectorAll('.playerUnifiedNav button,.playerDesktopUnifiedNav button').forEach(btn=>{const click=btn.getAttribute('onclick')||'';if(click.includes("'t"+round+"'"))btn.insertAdjacentHTML('beforeend',playerResultStar(d,round))});const freshDraw=playerHasNewDraw(d,round);document.querySelectorAll('.playerNewResultStar[data-draw-round="'+round+'"]').forEach(x=>{if(!freshDraw)x.remove()});if(freshDraw&&!document.querySelector('.playerNewResultStar[data-draw-round="'+round+'"]'))document.querySelectorAll('.playerUnifiedNav button,.playerDesktopUnifiedNav button').forEach(btn=>{const click=btn.getAttribute('onclick')||'';if(click.includes("'draw"+round+"'"))btn.insertAdjacentHTML('beforeend',playerDrawStar(d,round))})})}
 function stopPlayerResultPolling(){if(PLAYER_RESULT_POLL_TIMER){clearInterval(PLAYER_RESULT_POLL_TIMER);PLAYER_RESULT_POLL_TIMER=null}}
 function startPlayerResultPolling(){if(PLAYER_RESULT_POLL_TIMER)return;PLAYER_RESULT_POLL_TIMER=setInterval(()=>pollPlayerCompetitionResults(),12000)}
-async function pollPlayerCompetitionResults(){if(PLAYER_RESULT_POLL_BUSY||!ME||ME.role==='ADMIN'||!CURRENT_DETAIL?.competition?.id||q('competitionDetail')?.classList.contains('hidden'))return;PLAYER_RESULT_POLL_BUSY=true;try{const id=CURRENT_DETAIL.competition.id,d=await api('/api/competitions/'+id);if(playerResultsSignature(d)===playerResultsSignature(CURRENT_DETAIL))return;CURRENT_DETAIL=d;const active=PLAYER_MOBILE_PANEL;if(active==='t1'||active==='t2')markPlayerResultSeen(active==='t1'?1:2);const mobile=q('playerMobilePanelContent'),desktop=q('playerDesktopPanelContent');if(mobile)mobile.innerHTML=renderPlayerMobilePanelContent(d,active);if(desktop)desktop.innerHTML=renderPlayerDesktopPanelContent(d,active);syncPlayerResultStars(d);requestAnimationFrame(()=>{syncPlayerStickyBars();fitPlayerMobileFullMaps()})}catch(_){ }finally{PLAYER_RESULT_POLL_BUSY=false}}
+async function pollPlayerCompetitionResults(){if(PLAYER_RESULT_POLL_BUSY||!ME||ME.role==='ADMIN'||!CURRENT_DETAIL?.competition?.id||q('competitionDetail')?.classList.contains('hidden'))return;PLAYER_RESULT_POLL_BUSY=true;try{const id=CURRENT_DETAIL.competition.id,d=await api('/api/competitions/'+id);if(playerContentSignature(d)===playerContentSignature(CURRENT_DETAIL))return;CURRENT_DETAIL=d;const active=PLAYER_MOBILE_PANEL;if(active==='t1'||active==='t2')markPlayerResultSeen(active==='t1'?1:2);if(active==='draw1'||active==='draw2')markPlayerDrawSeen(active==='draw1'?1:2);const mobile=q('playerMobilePanelContent'),desktop=q('playerDesktopPanelContent');if(mobile)mobile.innerHTML=renderPlayerMobilePanelContent(d,active);if(desktop)desktop.innerHTML=renderPlayerDesktopPanelContent(d,active);syncPlayerContentStars(d);requestAnimationFrame(()=>{syncPlayerStickyBars();fitPlayerMobileFullMaps()})}catch(_){ }finally{PLAYER_RESULT_POLL_BUSY=false}}
 function syncNotificationBadges(unread=PLAYER_UNREAD_NOTIFICATIONS){const n=Math.max(0,Number(unread||0));document.querySelectorAll('#playerNotifBtn,.notificationTile').forEach(btn=>{btn.innerHTML=playerNotifLabel(n)});const top=q('btn-notifications');if(top){let b=top.querySelector('.topNotifBadge');if(n){if(!b){b=document.createElement('span');b.className='topNotifBadge';top.appendChild(b)}b.textContent=n>99?'99+':String(n)}else if(b)b.remove()}}
 function setLoggedOut(showMsg){
   stopPlayerResultPolling();
@@ -74,7 +82,7 @@ async function boot(){
   renderPushStatus();
   showTab('competitions');
   await Promise.allSettled([loadCompetitions(),loadNotifications(),admin?loadPlayers():Promise.resolve()]);
-  if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=71',{scope:'/'}).then(()=>{if('Notification' in window&&Notification.permission==='granted')ensurePushSubscription(true,false).catch(()=>{})}).catch(()=>{})}
+  if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=72',{scope:'/'}).then(()=>{if('Notification' in window&&Notification.permission==='granted')ensurePushSubscription(true,false).catch(()=>{})}).catch(()=>{})}
 }
 async function login(){try{const phone=q('loginPhone')?.value||'';const password=q('loginPassword')?.value||'';if(!phone.trim()||!password)throw new Error('Wpisz telefon i hasło');const d=await api('/api/login',{method:'POST',body:JSON.stringify({phone,password})});TOKEN=d.token;STORE.set('carp_token',TOKEN);msg('Zalogowano');await boot()}catch(e){msg(e.message,'bad')}}
 async function registerPlayer(ev){if(ev){ev.preventDefault&&ev.preventDefault();ev.stopPropagation&&ev.stopPropagation()}try{const d=await api('/api/register',{method:'POST',body:JSON.stringify({phone:q('regPhone').value,password:q('regPassword').value,firstName:q('regFirst').value,lastName:q('regLast').value,pzwClub:q('regClub').value})});TOKEN=d.token;STORE.set('carp_token',TOKEN);msg('Konto zawodnika utworzone');await boot()}catch(e){msg(e.message,'bad')}}
@@ -354,8 +362,13 @@ function renderPlayerMobileDashboard(d){
   const b=(panel,label,cls='')=>'<button type="button" class="'+cls+' '+(p===panel?'active':'')+'" onclick="showPlayerMobilePanel(\''+panel+'\',event)">'+label+'</button>';
   return '<div class="playerMobileDashboard">'
     +'<div class="playerDrawStickySlot"><div class="card playerDrawHeaderCard playerUnifiedNav">'
-    +'<div class="playerDrawTabs">'+b('draw1','Losowanie Tura 1','drawTile')+b('draw2','Losowanie Tura 2','drawTile')+'</div>'
-    +'<div class="playerResultsNav playerResultsNavInline">'+b('t1','Wyniki Tura 1'+playerResultStar(d,1),'resultTile')+b('t2','Wyniki Tura 2'+playerResultStar(d,2),'resultTile')+b('general','GENERAL','resultTile')+b('stats','STATYSTYKI','resultTile')+'</div>'
+    +'<div class="playerPrimaryNav">'
+      +b('draw1','Losowanie<br>Tura 1'+playerDrawStar(d,1),'drawTile')
+      +b('draw2','Losowanie<br>Tura 2'+playerDrawStar(d,2),'drawTile')
+      +b('t1','Wyniki<br>Tura 1'+playerResultStar(d,1),'resultTile')
+      +b('t2','Wyniki<br>Tura 2'+playerResultStar(d,2),'resultTile')
+      +'<div class="playerPrimaryStack">'+b('general','GENERAL','resultTile generalTile')+b('stats','STATYSTYKI','resultTile statsTile')+'</div>'
+    +'</div>'
     +'<div class="playerMapNav">'+b('map1','MAPA ŁOWISKA T1','mapTile')+b('map2','MAPA ŁOWISKA T2','mapTile')+'</div>'
     +'<div class="playerNotificationNav"><button type="button" id="playerNotifBtn" onclick="openPlayerNotifications(event)">'+playerNotifLabel()+'</button></div>'
     +'</div></div>'
@@ -396,7 +409,13 @@ function renderPlayerDesktopDashboard(d){
   const b=(panel,label,cls='')=>'<button type="button" class="'+cls+' '+(p===panel?'active':'')+'" onclick="showPlayerDesktopPanel(\''+panel+'\',event)">'+label+'</button>';
   return '<div class="playerDesktopDashboardV56 playerDesktopDashboardV55">'
     +'<div class="playerDesktopStickySlot"><div class="card playerDesktopUnifiedNav">'
-    +'<div class="playerDesktopMainNav">'+b('draw1','Losowanie Tura 1','drawTile')+b('draw2','Losowanie Tura 2','drawTile')+b('t1','Wyniki Tura 1'+playerResultStar(d,1),'resultTile')+b('t2','Wyniki Tura 2'+playerResultStar(d,2),'resultTile')+b('general','GENERAL','resultTile')+b('stats','STATYSTYKI','resultTile')+'</div>'
+    +'<div class="playerDesktopPrimaryNav">'
+      +b('draw1','Losowanie<br>Tura 1'+playerDrawStar(d,1),'drawTile')
+      +b('draw2','Losowanie<br>Tura 2'+playerDrawStar(d,2),'drawTile')
+      +b('t1','Wyniki<br>Tura 1'+playerResultStar(d,1),'resultTile')
+      +b('t2','Wyniki<br>Tura 2'+playerResultStar(d,2),'resultTile')
+      +'<div class="playerPrimaryStack">'+b('general','GENERAL','resultTile generalTile')+b('stats','STATYSTYKI','resultTile statsTile')+'</div>'
+    +'</div>'
     +'<div class="playerDesktopSubNav">'+b('map1','MAPA ŁOWISKA T1','mapTile')+b('map2','MAPA ŁOWISKA T2','mapTile')+'<button type="button" class="notificationTile" onclick="openPlayerNotifications(event)">'+playerNotifLabel()+'</button></div>'
     +'</div></div>'
     +renderPlayerOwnSummary(d)
@@ -408,6 +427,7 @@ function showPlayerDesktopPanel(panel,ev){
   const allowed=['draw1','draw2','map1','map2','t1','t2','general','stats'];
   if(!allowed.includes(panel))return;
   if(panel==='t1'||panel==='t2')markPlayerResultSeen(panel==='t1'?1:2);
+  if(panel==='draw1'||panel==='draw2')markPlayerDrawSeen(panel==='draw1'?1:2);
   PLAYER_MOBILE_PANEL=panel;
   if(panel==='draw1'||panel==='draw2'||panel==='map1'||panel==='map2')PLAYER_DRAW_ROUND=(panel==='draw2'||panel==='map2')?2:1;
   if(['t1','t2','general','stats'].includes(panel))PLAYER_RESULTS_TAB=panel;
@@ -439,6 +459,7 @@ function showPlayerMobilePanel(panel,ev){
   const allowed=['draw1','draw2','map1','map2','t1','t2','general','stats'];
   if(!allowed.includes(panel))return;
   if(panel==='t1'||panel==='t2')markPlayerResultSeen(panel==='t1'?1:2);
+  if(panel==='draw1'||panel==='draw2')markPlayerDrawSeen(panel==='draw1'?1:2);
   PLAYER_MOBILE_PANEL=panel;
   if(panel==='draw1'||panel==='draw2'||panel==='map1'||panel==='map2')PLAYER_DRAW_ROUND=(panel==='draw2'||panel==='map2')?2:1;
   if(['t1','t2','general','stats'].includes(panel))PLAYER_RESULTS_TAB=panel;
@@ -706,7 +727,7 @@ async function ensurePushSubscription(silent=false,sendTest=false){
   let permission=Notification.permission;
   if(permission==='default'&&!silent)permission=await Notification.requestPermission();
   if(permission!=='granted'){if(!silent)msg(permission==='denied'?'Powiadomienia są zablokowane w ustawieniach tej strony.':'Nie włączono powiadomień telefonu.','bad');renderPushStatus();return false}
-  const reg=await navigator.serviceWorker.register('/sw.js?v=71',{scope:'/'});
+  const reg=await navigator.serviceWorker.register('/sw.js?v=72',{scope:'/'});
   await navigator.serviceWorker.ready;
   let sub=await reg.pushManager.getSubscription();
   if(sub&&sendTest){await sub.unsubscribe().catch(()=>{});sub=null}
@@ -837,5 +858,5 @@ function bindAuthButtons(){
 
 function scrollAppBottom(){window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})}
 Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,showAdminZone,loadCompetitions,createCompetition,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,editPlayerName,deletePlayer,deleteAllAdminPlayers,saveMyProfile,setPlayerCompetitionFilter,setPlayerCompetitionMonth,enablePush,sendPushTest,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,setPlayerDrawView,openPlayerNotifications,fitPlayerMobileFullMaps,togglePlayerSectorAccordion,toggleFinalClub,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
-function startBoot(){console.log('CLIENT_V71_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v71',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().catch(e=>{console.error('BOOT_FATAL',e);try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
+function startBoot(){console.log('CLIENT_V72_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v72',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().catch(e=>{console.error('BOOT_FATAL',e);try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();
