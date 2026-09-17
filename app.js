@@ -1,4 +1,4 @@
-const CLIENT_VERSION='79';const CLIENT_VERSION_NAME='V79_PWA_SAFE_UPDATE';window.__LOWCY_APP_JS_79=1;try{fetch('/__probe_js_v79',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V79_PWA_SAFE_UPDATE_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='82';const CLIENT_VERSION_NAME='V82_OWN_STAND_CARD_REDESIGN';window.__LOWCY_APP_JS_82=1;try{fetch('/__probe_js_v82',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V82_OWN_STAND_CARD_REDESIGN_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let TOKEN = STORE.get('carp_token') || '';
 let ME = null;
@@ -200,6 +200,27 @@ function playerCompetitionStatus(c){const main=Number(c.active_count||0),limit=N
 function playerCompetitionCountStat(c){const main=Number(c.active_count||0),reserve=Number(c.reserve_count||0),limit=Number(c.limit_places||0);return main+(limit?'/'+limit:'')+(reserve?' +R'+reserve:'')}
 function playerCompetitionCountHtml(c){const main=Number(c.active_count||0),reserve=Number(c.reserve_count||0),limit=Number(c.limit_places||0);return '<span class="playerCompCountBadge"><small>ZAPISANI</small><b>'+main+(limit?'/'+limit:'')+'</b></span>'+(reserve?'<span class="playerCompReserveBadge">R: '+reserve+'</span>':'')}
 function playerCompetitionMineLabel(c){if(c.my_status==='RESERVE')return '✓ REZERWA';if(c.my_status==='ACTIVE')return '✓ ZAPISANY';return ''}
+function playerPresenceConfirmWindow(c){
+  if(String(c?.my_status||'')!=='ACTIVE')return false;
+  const x=playerCompetitionDateInfo(c),days=Number(x?.days);
+  return Number.isFinite(days)&&days>=0&&days<=4;
+}
+function renderPlayerPresenceConfirm(c){
+  if(!playerPresenceConfirmWindow(c))return '';
+  if(c.my_confirmed===true||String(c.my_confirmed).toLowerCase()==='true')return '<span class="playerPresenceConfirm confirmed">✓ OBECNOŚĆ POTWIERDZONA</span>';
+  return '<button type="button" class="playerPresenceConfirm pending" onclick="confirmPlayerPresence('+Number(c.id)+',this,event)">POTWIERDŹ OBECNOŚĆ</button>';
+}
+function renderPlayerMineStack(c,mine){return mine?'<div class="playerCompMineStack"><span class="playerCompMineBadge">'+mine+'</span>'+renderPlayerPresenceConfirm(c)+'</div>':''}
+async function confirmPlayerPresence(id,el,ev){
+  if(ev){ev.preventDefault();ev.stopPropagation()}
+  try{
+    if(el){el.disabled=true;el.textContent='Potwierdzam...'}
+    await api('/api/competitions/'+Number(id)+'/confirm-presence',{method:'POST',body:'{}'});
+    const c=(PLAYER_COMPETITIONS_CACHE||[]).find(x=>Number(x.id)===Number(id));if(c)c.my_confirmed=true;
+    renderPlayerCompetitionList();
+    msg('Obecność potwierdzona');
+  }catch(e){msg(e.message,'bad');if(el){el.disabled=false;el.textContent='POTWIERDŹ OBECNOŚĆ'}}
+}
 function filterPlayerCompetitions(arr,filter,applyMonth=true){
   let out=(arr||[]).filter(c=>filter==='registered'?playerCompetitionMine(c):filter==='completed'?playerCompetitionPast(c):!playerCompetitionPast(c));
   if(applyMonth&&PLAYER_COMP_MONTH!=='all')out=out.filter(c=>playerCompetitionMonthKey(c)===PLAYER_COMP_MONTH);
@@ -218,8 +239,8 @@ function renderPlayerCompetitionFilters(arr){
   return '<div class="playerCompetitionOrganizer"><div class="playerCompFilters">'+f('upcoming','NADCHODZĄCE',upcoming)+f('registered','ZAPISANE',registered)+f('completed','ZAKOŃCZONE',completed)+'</div><select class="playerCompMonthSelect" onchange="setPlayerCompetitionMonth(this.value)">'+opts+'</select></div>';
 }
 function renderPlayerCompetitionCompactActions(c){const mine=playerCompetitionMine(c),closed=c.status!=='OPEN'||c.signup_open===false,leavePending=String(c.my_leave_request_status||'').toUpperCase()==='PENDING';let second='';if(mine)second=leavePending?'<button type="button" class="secondary" disabled>Prośba wysłana</button>':'<button type="button" class="warn" onclick="leaveComp('+c.id+')">Zrezygnuj</button>';else second='<button type="button" '+(closed?'disabled':'')+' onclick="joinComp('+c.id+')">Zapisz</button>';return '<div class="playerCompCompactActions"><button type="button" onclick="openCompetition('+c.id+')">Losowanie/Wyniki</button>'+second+'</div>'}
-function renderPlayerCompetitionMobileItem(c){const st=playerCompetitionStatus(c),mine=playerCompetitionMineLabel(c);return '<article class="playerCompCompactCard '+(mine?'mine':'')+'"><div class="playerCompCompactTop"><span class="playerCompNo">'+playerCompetitionNo(c)+'</span><div class="playerCompTitle"><b>'+esc(c.title)+'</b>'+renderPlayerCompetitionMobileDate(c)+'</div><span class="playerCompStatus '+st.cls+'">'+st.label+'</span></div><div class="playerCompCompactBottom"><div class="playerCompMiniInfo">'+playerCompetitionCountHtml(c)+(mine?'<span class="playerCompMineBadge">'+mine+'</span>':'')+'</div>'+renderPlayerCompetitionCompactActions(c)+'</div></article>'}
-function renderPlayerCompetitionDesktopItem(c){const st=playerCompetitionStatus(c),mine=playerCompetitionMineLabel(c);return '<div class="playerCompDesktopRow '+(mine?'mine':'')+'"><span class="playerCompNo">'+playerCompetitionNo(c)+'</span><div class="playerCompDesktopTitle"><b>'+esc(c.title)+'</b><span>'+esc(c.fishery||'—')+'</span></div><div class="playerCompDesktopDate">'+renderPlayerCompetitionDesktopDate(c)+'</div><div class="playerCompDesktopCount">'+playerCompetitionCountHtml(c)+'</div><div>'+(mine?'<span class="playerCompMineBadge">'+mine+'</span>':'')+'</div><span class="playerCompStatus '+st.cls+'">'+st.label+'</span>'+renderPlayerCompetitionCompactActions(c)+'</div>'}
+function renderPlayerCompetitionMobileItem(c){const st=playerCompetitionStatus(c),mine=playerCompetitionMineLabel(c);return '<article class="playerCompCompactCard '+(mine?'mine':'')+'"><div class="playerCompCompactTop"><span class="playerCompNo">'+playerCompetitionNo(c)+'</span><div class="playerCompTitle"><b>'+esc(c.title)+'</b>'+renderPlayerCompetitionMobileDate(c)+'</div><span class="playerCompStatus '+st.cls+'">'+st.label+'</span></div><div class="playerCompCompactBottom"><div class="playerCompMiniInfo">'+playerCompetitionCountHtml(c)+renderPlayerMineStack(c,mine)+'</div>'+renderPlayerCompetitionCompactActions(c)+'</div></article>'}
+function renderPlayerCompetitionDesktopItem(c){const st=playerCompetitionStatus(c),mine=playerCompetitionMineLabel(c);return '<div class="playerCompDesktopRow '+(mine?'mine':'')+'"><span class="playerCompNo">'+playerCompetitionNo(c)+'</span><div class="playerCompDesktopTitle"><b>'+esc(c.title)+'</b><span>'+esc(c.fishery||'—')+'</span></div><div class="playerCompDesktopDate">'+renderPlayerCompetitionDesktopDate(c)+'</div><div class="playerCompDesktopCount">'+playerCompetitionCountHtml(c)+'</div><div class="playerCompMineCell">'+renderPlayerMineStack(c,mine)+'</div><span class="playerCompStatus '+st.cls+'">'+st.label+'</span>'+renderPlayerCompetitionCompactActions(c)+'</div>'}
 function renderPlayerCompetitionGroups(arr,mode){
   if(!arr.length)return '<div class="playerCompEmpty">Brak zawodów w tej kategorii.</div>';
   const groups=[];for(const c of arr){const key=playerCompetitionMonthKey(c);let g=groups.find(x=>x.key===key);if(!g){g={key,items:[]};groups.push(g)}g.items.push(c)}
@@ -370,7 +391,7 @@ function playerOwnBankLabel(draw,c){
 }
 function renderPlayerOwnSummary(d){
   const c=d.competition||{};
-  const one=(round)=>{const x=(d.draws||[]).find(v=>Number(v.round)===Number(round)&&Number(v.user_id)===Number(ME.id));const bank=playerOwnBankLabel(x,c);return '<div class="playerOwnSummaryCard round'+round+'"><div class="playerOwnSummaryTitle">TURA '+round+'</div><div class="playerOwnSummaryMain"><span class="playerOwnSummaryRound">T'+round+'</span><span class="playerOwnSummaryStand">'+(x?esc(x.stand):'—')+'</span><span class="playerOwnSummarySector">Sektor '+(x?esc(x.sector):'—')+'</span></div><div class="playerOwnSummaryLabels"><span>Tura</span><span>Stanowisko</span><span>'+esc(bank)+'</span></div><div class="playerOwnSummaryBank">'+(x?esc(bank):'Brak losowania')+'</div></div>'};
+  const one=(round)=>{const x=(d.draws||[]).find(v=>Number(v.round)===Number(round)&&Number(v.user_id)===Number(ME.id));const bank=playerOwnBankLabel(x,c);const bankValue=x?bank.replace(/^Brzeg\s+/i,''):'Brak losowania';return '<div class="playerOwnSummaryCard round'+round+'"><div class="playerOwnRoundBlock"><span class="playerOwnRoundLabel">TURA</span><strong class="playerOwnRoundValue">'+round+'</strong></div><div class="playerOwnStandBlock"><span class="playerOwnFieldLabel">STANOWISKO</span><strong class="playerOwnStandValue">'+(x?esc(x.stand):'—')+'</strong></div><div class="playerOwnBankBlock"><span class="playerOwnFieldLabel">BRZEG</span><strong class="playerOwnBankValue">'+esc(bankValue)+'</strong><span class="playerOwnSectorValue">SEKTOR '+(x?esc(x.sector):'—')+'</span></div></div>'};
   return '<div class="playerOwnSummaryWrap"><div class="playerOwnSummaryHeading">MOJE STANOWISKA</div><div class="playerOwnSummaryGrid">'+one(1)+one(2)+'</div></div>';
 }
 function renderPlayerSectorStand(n,c,byStand,cramped){
@@ -907,7 +928,7 @@ function bindAuthButtons(){
 }
 
 function scrollAppBottom(){window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})}
-Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,closePlayerCompetition,showAdminZone,loadCompetitions,createCompetition,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,editPlayerName,deletePlayer,deleteAllAdminPlayers,saveMyProfile,setPlayerCompetitionFilter,setPlayerCompetitionMonth,enablePush,sendPushTest,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,setPlayerDrawView,openPlayerNotifications,fitPlayerMobileFullMaps,togglePlayerSectorAccordion,toggleFinalClub,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
-function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_79')}catch(_){}}
-function startBoot(){console.log('CLIENT_V79_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v79',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().then(()=>{window.__LOWCY_BOOT_OK_79=1;hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);hideBootGuard();try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
+Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,closePlayerCompetition,showAdminZone,loadCompetitions,createCompetition,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,editPlayerName,deletePlayer,deleteAllAdminPlayers,saveMyProfile,setPlayerCompetitionFilter,setPlayerCompetitionMonth,confirmPlayerPresence,enablePush,sendPushTest,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,setPlayerDrawView,openPlayerNotifications,fitPlayerMobileFullMaps,togglePlayerSectorAccordion,toggleFinalClub,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
+function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_81')}catch(_){}}
+function startBoot(){console.log('CLIENT_V82_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v82',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().then(()=>{window.__LOWCY_BOOT_OK_82=1;hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);hideBootGuard();try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();
