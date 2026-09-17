@@ -16,8 +16,8 @@ const ADMIN_SETUP_CODE = process.env.ADMIN_SETUP_CODE || '';
 let VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 let VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
-const APP_VERSION = '66';
-const APP_VERSION_NAME = 'V68_DESKTOP_COMPETITION_ROW_FIX';
+const APP_VERSION = '69';
+const APP_VERSION_NAME = 'V69_DARK_PLAYER_THEME';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 
 
@@ -3031,6 +3031,85 @@ header{z-index:100!important}
   .playerCompDesktopRow{min-width:1030px!important}
 }
 
+
+/* V69: appearance only. Scoped to the existing player detail; handlers and data unchanged. */
+body:has(#competitionDetail:not(.hidden) .playerView){background:#06121d;color:#18251d}
+body:has(#competitionDetail:not(.hidden) .playerView) header{background:linear-gradient(90deg,#061521ed,#102e4680),url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%201400%20160%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22sky%22%20x2%3D%220%22%20y2%3D%221%22%3E%3Cstop%20stop-color%3D%22%23446078%22%2F%3E%3Cstop%20offset%3D%22.55%22%20stop-color%3D%22%23c1ab88%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%2312314a%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Cpath%20fill%3D%22url%28%23sky%29%22%20d%3D%22M0%200h1400v160H0z%22%2F%3E%3Cpath%20fill%3D%22%23243c4e%22%20d%3D%22M0%2095%20180%2037%20300%2072%20440%2020%20660%2091%20850%2028%201010%2068%201200%2010%201400%2081v80H0z%22%2F%3E%3Cpath%20fill%3D%22%23062130%22%20d%3D%22M0%20115Q350%2096%20690%20113T1400%20109v51H0z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M0%20120v-35l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L0%2085z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M35%20120v-52l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L35%2068z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M70%20120v-69l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L70%2051z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M105%20120v-86l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L105%2034z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M140%20120v-38l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L140%2082z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M175%20120v-55l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L175%2065z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M210%20120v-72l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L210%2048z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M245%20120v-89l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L245%2031z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M280%20120v-41l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L280%2079z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M315%20120v-58l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L315%2062z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M350%20120v-75l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L350%2045z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M385%20120v-92l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L385%2028z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M420%20120v-44l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L420%2076z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M455%20120v-61l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L455%2059z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M490%20120v-78l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L490%2042z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M525%20120v-95l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L525%2025z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M560%20120v-47l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L560%2073z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M595%20120v-64l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L595%2056z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M630%20120v-81l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L630%2039z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M665%20120v-98l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L665%2022z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M700%20120v-50l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L700%2070z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M735%20120v-67l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L735%2053z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M770%20120v-84l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L770%2036z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M805%20120v-36l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L805%2084z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M840%20120v-53l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L840%2067z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M875%20120v-70l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L875%2050z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M910%20120v-87l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L910%2033z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M945%20120v-39l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L945%2081z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M980%20120v-56l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L980%2064z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M1015%20120v-73l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L1015%2047z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M1050%20120v-90l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L1050%2030z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M1085%20120v-42l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L1085%2078z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M1120%20120v-59l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L1120%2061z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M1155%20120v-76l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L1155%2044z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M1190%20120v-93l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L1190%2027z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M1225%20120v-45l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L1225%2075z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M1260%20120v-62l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L1260%2058z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M1295%20120v-79l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L1295%2041z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M1330%20120v-96l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L1330%2024z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M1365%20120v-48l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L1365%2072z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M1400%20120v-65l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L1400%2055z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M1435%20120v-82l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L1435%2038z%22%2F%3E%3C%2Fsvg%3E");background-size:cover;background-position:center;border-bottom:1px solid #32516a;color:#d5ecff}
+body:has(#competitionDetail:not(.hidden) .playerView) header h1{color:#d5ecff;text-shadow:0 2px 10px #000}
+body:has(#competitionDetail:not(.hidden) .playerView) #competitionDetail>.card{background:#0b2130;border:1px solid #36546a;color:#e8f4ff}
+body:has(#competitionDetail:not(.hidden) .playerView) #competitionDetail>.card .muted{color:#c0daeb}
+body:has(#competitionDetail:not(.hidden) .playerView) #competitionDetail>.card p{font-size:18px;font-weight:700}
+.playerView{background:#071723!important;color:#e4f2ff!important;border:1px solid #28445c;border-radius:12px;padding:12px;box-sizing:border-box}
+.playerView .playerUnifiedNav,.playerView .playerDesktopUnifiedNav{background:#071723!important;border:0!important;box-shadow:0 5px 16px #0005!important;border-radius:6px!important;padding:5px!important}
+.playerView .playerUnifiedNav button,.playerView .playerDesktopUnifiedNav button{border-radius:6px!important;color:#fff!important;border:1px solid #547999!important;box-shadow:inset 0 1px 2px #ffffff40!important;line-height:1.15!important}
+.playerView .playerDrawTabs button,.playerView .playerDesktopMainNav .drawTile{background:linear-gradient(#137cda,#06428a)!important;border-color:#399df7!important}
+.playerView .playerResultsNavInline button,.playerView .playerDesktopMainNav .resultTile{background:linear-gradient(#20913c,#07542c)!important;border-color:#43bc63!important}
+.playerView .playerResultsNavInline button:nth-child(n+3),.playerView .playerDesktopMainNav button:nth-child(n+5){background:linear-gradient(#7940dc,#362078)!important;border-color:#9970ff!important}
+.playerView .playerMapNav button,.playerView .playerDesktopSubNav .mapTile{background:linear-gradient(#123e61,#092338)!important;border-color:#3b91ce!important}
+.playerView .playerNotificationNav button,.playerView .playerDesktopSubNav .notificationTile{background:#183746!important;border-color:#52798c!important}
+.playerView .playerUnifiedNav button.active,.playerView .playerDesktopUnifiedNav button.active{outline:2px solid #c3e9ff!important;outline-offset:-3px!important;box-shadow:0 0 9px #318ed555!important}
+.playerView button:focus-visible{outline:3px solid #ffd13b!important;outline-offset:2px!important}
+.playerView .playerDesktopMainNav button{min-height:82px!important}
+.playerView .playerDesktopMainNav button:before,.playerView .playerDrawTabs button:before,.playerView .playerResultsNavInline button:before{content:'';display:block;width:24px;height:24px;margin:0 auto 6px;background:currentColor;mask:var(--nav-icon) center/contain no-repeat;-webkit-mask:var(--nav-icon) center/contain no-repeat}
+.playerView .playerOwnSummaryHeading,.playerView .playerMobileSectionTitle,.playerView .playerDesktopSectionTitle{color:#beddf2!important;letter-spacing:.03em}
+.playerView .playerOwnSummaryCard{border:1px solid #b4e2d5!important;border-radius:7px!important;box-shadow:inset 0 1px 2px #fff5!important;color:#08221c!important}
+.playerView .playerOwnSummaryCard.round1{background:linear-gradient(120deg,#b9ebd3,#d1f4e6)!important}
+.playerView .playerOwnSummaryCard.round2{background:linear-gradient(120deg,#a5d9f2,#d1efff)!important;border-color:#9acfea!important}
+.playerView .playerOwnSummaryTitle,.playerView .playerOwnSummaryStand,.playerView .playerOwnSummaryRound,.playerView .playerOwnSummarySector{color:#082523!important}
+.playerView .playerOwnSummaryLabels{color:#34514e!important}
+.playerView .playerSectorAccordion{--sector:#15a650;background:#091b28!important;border:1px solid var(--sector)!important;border-radius:7px!important;box-shadow:0 2px 8px #0003!important}
+.playerView .playerSectorAccordion.sectorFill-B{--sector:#eb3d53}
+.playerView .playerSectorAccordion.sectorFill-C{--sector:#e7a21d}
+.playerView .playerSectorAccordion.sectorFill-D{--sector:#2789ed}
+.playerView .playerSectorAccordion.sectorFill-E{--sector:#8d50e9}
+.playerView .playerSectorAccordion.sectorFill-F{--sector:#7591aa}
+.playerView .playerSectorAccordion.sectorFill-G{--sector:#a37e3b}
+.playerView .playerSectorAccordion.sectorFill-H{--sector:#75a743}
+.playerView .playerSectorAccordion .playerSectorAccordionHead{background:linear-gradient(#ffffff12,#0005),var(--sector)!important;color:white!important;box-shadow:inset 0 1px 2px #fff6!important;border:0!important;grid-template-columns:minmax(0,1fr) auto 24px!important;min-height:44px!important}
+.playerView .playerSectorCircle{display:none!important}
+.playerView .playerSectorAccordionBody{background:#091b28!important}
+.playerView .playerSectorBank+.playerSectorBank{border-color:#2a485c!important}
+.playerView .playerSectorBankTitle,.playerView .playerSectorBankTitle span{color:#88cefa!important}
+.playerView .playerSectorStand{background:linear-gradient(135deg,#263e52,#142737)!important;border:1px solid #58788f!important;border-radius:5px!important;box-shadow:inset 0 1px 1px #ffffff18!important}
+.playerView .playerSectorStandNo,.playerView .playerSectorStandName{color:#f0f7ff!important}
+.playerView .minePlayerSectorStand{border:3px solid #ffcf23!important;background:linear-gradient(135deg,#354138,#172c28)!important;box-shadow:0 0 6px #ffce2330!important}
+.playerView .playerSectorMineBadge{background:#ffd12b!important;color:#13222a!important;border-radius:2px!important;font-size:9px!important;top:0!important;right:0!important;padding:2px 4px!important}
+/* Keep table/map surfaces light so all existing inline rank and sector colors stay legible. */
+.playerView .card,.playerView .playerResultCard,.playerView .drawSectorBox,.playerView .playerDesktopFullMap,.playerView .playerMobileFullMapWrap,.playerView .stationStats{color:#18251d}
+.playerView .playerMobileMapHint{color:#173d2e}
+@media(min-width:761px){
+ .playerView{padding:16px}
+ .playerView .playerDesktopUnifiedNav .playerDesktopMainNav{grid-template-columns:repeat(6,minmax(0,1fr))!important}
+ .playerView .playerSectorAccordionList{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important;align-items:start}
+ .playerView .playerSectorStand{min-height:68px!important}
+}
+@media(max-width:760px){
+ .playerView{padding:6px!important;border-radius:8px!important}
+ .playerView .playerUnifiedNav{display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr))!important;gap:5px!important}
+ .playerView .playerUnifiedNav .playerDrawTabs,.playerView .playerUnifiedNav .playerResultsNavInline{display:contents!important}
+ .playerView .playerUnifiedNav .playerDrawTabs button,.playerView .playerUnifiedNav .playerResultsNavInline button{min-height:64px!important;padding:5px 2px!important;font-size:9px!important;margin:0!important;min-width:0!important;overflow-wrap:normal!important}
+ .playerView .playerMapNav{grid-column:1/-1;gap:5px!important;margin:0!important}
+ .playerView .playerNotificationNav{grid-column:1/-1;margin:0!important}
+ .playerView .playerNotificationNav button{min-height:34px!important}
+ .playerView .playerDrawTabs button:before,.playerView .playerResultsNavInline button:before{width:21px;height:21px;margin-bottom:5px}
+ .playerView .playerOwnSummaryCard{padding:8px 6px!important}
+ .playerView .playerOwnSummaryMain,.playerView .playerOwnSummaryLabels{grid-template-columns:25px 40px minmax(0,1fr)!important;gap:3px!important}
+ .playerView .playerOwnSummaryStand{font-size:29px!important}
+ .playerView .playerOwnSummarySector{font-size:12px!important}
+ .playerView .playerSectorAccordionHead{padding:7px 9px!important}
+ .playerView .playerSectorAccordionHead b{font-size:14px!important}
+ .playerView .playerSectorBankTitle{font-size:11px!important}
+ .playerView .playerSectorStand{min-height:53px!important}
+ .playerView .playerSectorStandNo{font-size:23px!important}
+ .playerView .playerSectorStandName{font-size:10px!important;font-weight:600!important}
+ .playerView .playerSectorAccordionBody{padding:7px!important}
+}
+@media(max-width:360px){.playerView .playerUnifiedNav .playerResultsNavInline button{font-size:8px!important}.playerView .playerOwnSummaryMain,.playerView .playerOwnSummaryLabels{grid-template-columns:20px 30px minmax(0,1fr)!important}.playerView .playerOwnSummarySector{font-size:11px!important}}
+@media print{.playerView{background:white!important;color:black!important;box-shadow:none!important}}
+.playerView .drawTile{--nav-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%224%22%20y%3D%224%22%20width%3D%2216%22%20height%3D%2216%22%20rx%3D%223%22%2F%3E%3Cpath%20d%3D%22M8%208h.01M16%208h.01M12%2012h.01M8%2016h.01M16%2016h.01%22%20stroke-width%3D%223%22%2F%3E%3C%2Fsvg%3E")}
+.playerView .playerDesktopMainNav .resultTile,.playerView .playerResultsNavInline button{--nav-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M8%203h8v7a4%204%200%200%201-8%200V3ZM8%205H4v3a4%204%200%200%200%204%204m8-7h4v3a4%204%200%200%201-4%204m-4%202v6m-4%201h8%22%2F%3E%3C%2Fsvg%3E")}
+.playerView .playerDesktopMainNav button:nth-child(5),.playerView .playerResultsNavInline button:nth-child(3){--nav-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M5%2020V11h3v9zm6%200V4h3v16zm6%200V8h3v12z%22%2F%3E%3C%2Fsvg%3E")}
+.playerView .playerDesktopMainNav button:nth-child(6),.playerView .playerResultsNavInline button:nth-child(4){--nav-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22m3%2016%206-6%204%203%207-9m-6%200h6v6M4%2021h17%22%2F%3E%3C%2Fsvg%3E")}
 </style>
 </head>
 <body>
@@ -3047,7 +3126,7 @@ header{z-index:100!important}
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V68</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
+  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V69</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-profile" class="hidden" onclick="showTab('profile')">Mój profil</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
     <div id="adminCreate" class="card hidden"><h2>Utwórz zawody</h2><p class="small muted">Nazwa zawodów jest używana także w nagłówkach PDF.</p><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div></div><label>Opis</label><textarea id="cNotes" placeholder="Opis zawodów, zasady, informacje organizacyjne."></textarea><button onclick="createCompetition(event)">Utwórz zawody</button></div>
