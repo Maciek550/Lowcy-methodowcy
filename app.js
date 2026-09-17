@@ -1,4 +1,4 @@
-const CLIENT_VERSION='84';const CLIENT_VERSION_NAME='V84_DESKTOP_PLAYER_UNIFIED_VIEW';window.__LOWCY_APP_JS_84=1;try{fetch('/__probe_js_v84',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V84_DESKTOP_PLAYER_UNIFIED_VIEW_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='85';const CLIENT_VERSION_NAME='V85_DESKTOP_GENERAL_PARITY_LOGIN_DARK';window.__LOWCY_APP_JS_85=1;try{fetch('/__probe_js_v85',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V85_DESKTOP_GENERAL_PARITY_LOGIN_DARK_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let TOKEN = STORE.get('carp_token') || '';
 let ME = null;
@@ -105,7 +105,7 @@ function startPlayerResultPolling(){if(PLAYER_RESULT_POLL_TIMER)return;PLAYER_RE
 async function pollPlayerCompetitionResults(){if(PLAYER_RESULT_POLL_BUSY||!ME||ME.role==='ADMIN'||!CURRENT_DETAIL?.competition?.id||q('competitionDetail')?.classList.contains('hidden'))return;PLAYER_RESULT_POLL_BUSY=true;try{const id=CURRENT_DETAIL.competition.id,d=await api('/api/competitions/'+id);if(playerContentSignature(d)===playerContentSignature(CURRENT_DETAIL))return;CURRENT_DETAIL=d;const active=PLAYER_MOBILE_PANEL;if(active==='t1'||active==='t2')markPlayerResultSeen(active==='t1'?1:2);if(active==='draw1'||active==='draw2')markPlayerDrawSeen(active==='draw1'?1:2);const mobile=q('playerMobilePanelContent'),desktop=q('playerDesktopPanelContent');if(mobile)mobile.innerHTML=renderPlayerMobilePanelContent(d,active);if(desktop)desktop.innerHTML=renderPlayerDesktopPanelContent(d,active);syncPlayerContentStars(d);requestAnimationFrame(()=>{syncPlayerStickyBars();fitPlayerMobileFullMaps()})}catch(_){ }finally{PLAYER_RESULT_POLL_BUSY=false}}
 function syncNotificationBadges(unread=PLAYER_UNREAD_NOTIFICATIONS){const n=Math.max(0,Number(unread||0));document.querySelectorAll('#playerNotifBtn,.notificationTile').forEach(btn=>{btn.innerHTML=playerNotifLabel(n)});const top=q('btn-notifications');if(top){let b=top.querySelector('.topNotifBadge');if(n){if(!b){b=document.createElement('span');b.className='topNotifBadge';top.appendChild(b)}b.textContent=n>99?'99+':String(n)}else if(b)b.remove()}}
 function setLoggedOut(showMsg){
-  try{document.documentElement.classList.remove('hasSavedSession')}catch(_){}
+  try{document.documentElement.classList.remove('hasSavedSession');document.body.classList.add('authMode')}catch(_){}
   stopPlayerResultPolling();
   TOKEN=''; ME=null; document.body.classList.remove('playerTheme'); STORE.del('carp_token');
   const logout=q('logoutBtn'), auth=q('auth'), app=q('app');
@@ -127,7 +127,7 @@ async function boot(){
   if(app)app.classList.remove('hidden');
   if(logout)logout.classList.remove('hidden');
   q('who').textContent=ME.first_name+' '+ME.last_name+' — Koło PZW '+(ME.pzw_club||'');q('role').textContent=ME.role==='ADMIN'?'Administrator':'Zawodnik';
-  const admin=ME.role==='ADMIN';document.body.classList.toggle('playerTheme',!admin);q('btn-players').classList.toggle('hidden',!admin);q('btn-profile')?.classList.toggle('hidden',admin);q('adminCreate').classList.toggle('hidden',!admin);
+  const admin=ME.role==='ADMIN';document.body.classList.remove('authMode');document.body.classList.toggle('playerTheme',!admin);q('btn-players').classList.toggle('hidden',!admin);q('btn-profile')?.classList.toggle('hidden',admin);q('adminCreate').classList.toggle('hidden',!admin);
   renderPushStatus();
   showTab('competitions');
   if(!admin){const detail=q('competitionDetail');if(detail)detail.classList.add('hidden')}
@@ -361,9 +361,9 @@ function renderPlayerStatsCompact(d){
 function renderPlayerResultsMobile(d){
   const active=PLAYER_RESULTS_TAB||'t1';
   return '<div class="playerResultsMobile">'
-    +'<section id="playerResults-t1" class="playerResultsSection '+(active==='t1'?'':'hidden')+'"><div class="card playerResultCard"><h2>Wyniki sektorowe — Tura 1</h2>'+renderSectorResultsColumn(d.classification.round1,'')+'<h2 class="playerWholeRoundTitle">Cała Tura 1</h2>'+renderPlayerRoundCompact(d.classification.round1,1)+'</div></section>'
-    +'<section id="playerResults-t2" class="playerResultsSection '+(active==='t2'?'':'hidden')+'"><div class="card playerResultCard"><h2>Wyniki sektorowe — Tura 2</h2>'+renderSectorResultsColumn(d.classification.round2,'')+'<h2 class="playerWholeRoundTitle">Cała Tura 2</h2>'+renderPlayerRoundCompact(d.classification.round2,2)+'</div></section>'
-    +'<section id="playerResults-general" class="playerResultsSection '+(active==='general'?'':'hidden')+'"><div class="card playerResultCard"><h2>Klasyfikacja końcowa</h2>'+renderPlayerFinalCompact(d.classification.general)+'</div></section>'
+    +'<section id="playerResults-t1" class="playerResultsSection '+(active==='t1'?'':'hidden')+'"><div class="card playerDesktopPanelCard playerResultCard"><h2>Wyniki sektorowe — Tura 1</h2>'+renderSectorResultsColumn(d.classification.round1,'')+'<h2 class="playerWholeRoundTitle">Cała Tura 1</h2>'+renderPlayerRoundCompact(d.classification.round1,1)+'</div></section>'
+    +'<section id="playerResults-t2" class="playerResultsSection '+(active==='t2'?'':'hidden')+'"><div class="card playerDesktopPanelCard playerResultCard"><h2>Wyniki sektorowe — Tura 2</h2>'+renderSectorResultsColumn(d.classification.round2,'')+'<h2 class="playerWholeRoundTitle">Cała Tura 2</h2>'+renderPlayerRoundCompact(d.classification.round2,2)+'</div></section>'
+    +'<section id="playerResults-general" class="playerResultsSection '+(active==='general'?'':'hidden')+'"><div class="card playerDesktopPanelCard playerResultCard"><h2>Klasyfikacja końcowa</h2>'+renderPlayerFinalCompact(d.classification.general)+'</div></section>'
     +'<section id="playerResults-stats" class="playerResultsSection '+(active==='stats'?'':'hidden')+'">'+renderPlayerStatsCompact(d)+'</section>'
     +'</div>';
 }
@@ -423,9 +423,9 @@ function renderPlayerMobilePanelContent(d,panel){
     const round=panel==='map2'?2:1;
     return '<div class="playerMobileSelectedPanel"><div class="playerMobileFullMapWrap"><div class="playerMobileFullMapTitle">MAPA ŁOWISKA — TURA '+round+'</div><div class="playerMobileFullMapViewport"><div class="playerMobileFullMapCanvas">'+renderRoundDrawMap(d,round)+'</div></div><div class="playerMobileMapHint">Pełna mapa dopasowana do szerokości ekranu.</div></div></div>';
   }
-  if(panel==='t1')return '<div class="playerMobileSelectedPanel"><div class="card playerResultCard"><h2>Wyniki sektorowe — Tura 1</h2>'+renderSectorResultsColumn(d.classification.round1,'')+'<h2 class="playerWholeRoundTitle">Cała Tura 1</h2>'+renderPlayerRoundCompact(d.classification.round1,1)+'</div></div>';
-  if(panel==='t2')return '<div class="playerMobileSelectedPanel"><div class="card playerResultCard"><h2>Wyniki sektorowe — Tura 2</h2>'+renderSectorResultsColumn(d.classification.round2,'')+'<h2 class="playerWholeRoundTitle">Cała Tura 2</h2>'+renderPlayerRoundCompact(d.classification.round2,2)+'</div></div>';
-  if(panel==='general')return '<div class="playerMobileSelectedPanel"><div class="card playerResultCard"><h2>Klasyfikacja końcowa</h2>'+renderPlayerFinalCompact(d.classification.general)+'</div></div>';
+  if(panel==='t1')return '<div class="playerMobileSelectedPanel"><div class="card playerDesktopPanelCard playerResultCard"><h2>Wyniki sektorowe — Tura 1</h2>'+renderSectorResultsColumn(d.classification.round1,'')+'<h2 class="playerWholeRoundTitle">Cała Tura 1</h2>'+renderPlayerRoundCompact(d.classification.round1,1)+'</div></div>';
+  if(panel==='t2')return '<div class="playerMobileSelectedPanel"><div class="card playerDesktopPanelCard playerResultCard"><h2>Wyniki sektorowe — Tura 2</h2>'+renderSectorResultsColumn(d.classification.round2,'')+'<h2 class="playerWholeRoundTitle">Cała Tura 2</h2>'+renderPlayerRoundCompact(d.classification.round2,2)+'</div></div>';
+  if(panel==='general')return '<div class="playerMobileSelectedPanel"><div class="card playerDesktopPanelCard playerResultCard"><h2>Klasyfikacja końcowa</h2>'+renderPlayerFinalCompact(d.classification.general)+'</div></div>';
   if(panel==='stats')return '<div class="playerMobileSelectedPanel">'+renderPlayerStatsCompact(d)+'</div>';
   return '';
 }
@@ -459,19 +459,19 @@ function renderPlayerDesktopPanelContent(d,panel){
   if(panel==='draw1'||panel==='draw2'){
     const round=panel==='draw2'?2:1;
     const mapView=PLAYER_DRAW_VIEW!=='table';
-    return '<div class="playerDesktopSelectedPanel playerDesktopDrawSelected">'
+    return '<div class="playerDesktopSelectedPanel playerDesktopDrawSelected"><div class="card playerDesktopPanelCard">'
       +'<div class="playerDesktopSectionTitle">ROZMIESZCZENIE W SEKTORACH — TURA '+round+'</div>'
       +'<div class="playerDrawViewSwitch" role="tablist"><button type="button" class="'+(mapView?'active':'')+'" onclick="setPlayerDrawView(\'map\',event)">MAPA</button><button type="button" class="'+(!mapView?'active':'')+'" onclick="setPlayerDrawView(\'table\',event)">TABELA</button></div>'
       +(mapView?renderPlayerSectorAccordion(d,round):'<div class="playerDesktopSectorTables">'+renderDrawSectorTables(d,round)+'</div>')
-      +'</div>';
+      +'</div></div>';
   }
   if(panel==='map1'||panel==='map2'){
     const round=panel==='map2'?2:1;
-    return '<div class="playerDesktopSelectedPanel"><div class="card playerDesktopFullMap"><h2>MAPA ŁOWISKA — TURA '+round+'</h2>'+renderRoundDrawMap(d,round)+'</div></div>';
+    return '<div class="playerDesktopSelectedPanel"><div class="card playerDesktopPanelCard playerDesktopFullMap"><h2>MAPA ŁOWISKA — TURA '+round+'</h2>'+renderRoundDrawMap(d,round)+'</div></div>';
   }
-  if(panel==='t1')return '<div class="playerDesktopSelectedPanel"><div class="card playerResultCard"><h2>Wyniki sektorowe — Tura 1</h2>'+renderSectorResultsColumn(d.classification.round1,'')+'<h2 class="playerWholeRoundTitle">Cała Tura 1</h2>'+renderClassTable(d.classification.round1)+'</div></div>';
-  if(panel==='t2')return '<div class="playerDesktopSelectedPanel"><div class="card playerResultCard"><h2>Wyniki sektorowe — Tura 2</h2>'+renderSectorResultsColumn(d.classification.round2,'')+'<h2 class="playerWholeRoundTitle">Cała Tura 2</h2>'+renderClassTable(d.classification.round2)+'</div></div>';
-  if(panel==='general')return '<div class="playerDesktopSelectedPanel"><div class="card playerResultCard"><h2>Klasyfikacja końcowa</h2>'+renderFinalClubToggle()+renderGeneralTable(d.classification.general)+'</div></div>';
+  if(panel==='t1')return '<div class="playerDesktopSelectedPanel"><div class="card playerDesktopPanelCard playerResultCard"><h2>Wyniki sektorowe — Tura 1</h2>'+renderSectorResultsColumn(d.classification.round1,'')+'<h2 class="playerWholeRoundTitle">Cała Tura 1</h2>'+renderClassTable(d.classification.round1)+'</div></div>';
+  if(panel==='t2')return '<div class="playerDesktopSelectedPanel"><div class="card playerDesktopPanelCard playerResultCard"><h2>Wyniki sektorowe — Tura 2</h2>'+renderSectorResultsColumn(d.classification.round2,'')+'<h2 class="playerWholeRoundTitle">Cała Tura 2</h2>'+renderClassTable(d.classification.round2)+'</div></div>';
+  if(panel==='general')return '<div class="playerDesktopSelectedPanel"><div class="card playerDesktopPanelCard playerResultCard"><h2>Klasyfikacja końcowa</h2>'+renderFinalClubToggle()+renderGeneralTable(d.classification.general)+'</div></div>';
   if(panel==='stats')return '<div class="playerDesktopSelectedPanel">'+renderStationStatistics(d)+'</div>';
   return '';
 }
@@ -509,10 +509,16 @@ function scrollPlayerPanelIntoView(panel,isMobile){
     const target=playerPanelScrollTarget(panel,isMobile);
     if(!nav||!target)return;
     const stickyTop=getPlayerStickyTop();
-    const navH=Math.max(0,Math.round(nav.getBoundingClientRect().height||0));
-    const extra=isMobile?8:12;
-    const top=window.scrollY+target.getBoundingClientRect().top-navH-stickyTop-extra;
-    window.scrollTo({top:Math.max(0,top),behavior:'smooth'});
+    const navH=Math.max(0,Math.ceil(nav.getBoundingClientRect().height||nav.offsetHeight||0));
+    if(isMobile){
+      const top=window.scrollY+target.getBoundingClientRect().top-navH-stickyTop-8;
+      window.scrollTo({top:Math.max(0,top),behavior:'smooth'});
+      return;
+    }
+    /* V85 desktop: wszystkie kafle zachowują się jak GENERAL — jeden stały punkt startu,
+       bez zależności od wysokości poprzedniego panelu. */
+    target.style.scrollMarginTop=(stickyTop+navH+16)+'px';
+    target.scrollIntoView({behavior:'auto',block:'start',inline:'nearest'});
   }));
 }
 function showPlayerDesktopPanel(panel,ev){
@@ -948,6 +954,6 @@ function bindAuthButtons(){
 
 function scrollAppBottom(){window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})}
 Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,closePlayerCompetition,showAdminZone,loadCompetitions,createCompetition,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,editPlayerName,deletePlayer,deleteAllAdminPlayers,saveMyProfile,setPlayerCompetitionFilter,setPlayerCompetitionMonth,confirmPlayerPresence,enablePush,sendPushTest,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,setPlayerDrawView,openPlayerNotifications,fitPlayerMobileFullMaps,togglePlayerSectorAccordion,toggleFinalClub,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
-function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_84')}catch(_){}}
-function startBoot(){console.log('CLIENT_V84_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v84',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().then(()=>{window.__LOWCY_BOOT_OK_84=1;hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);hideBootGuard();try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
+function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_85')}catch(_){}}
+function startBoot(){console.log('CLIENT_V85_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v85',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().then(()=>{window.__LOWCY_BOOT_OK_85=1;hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);hideBootGuard();try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();

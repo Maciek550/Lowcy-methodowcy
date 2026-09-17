@@ -23,3 +23,5 @@ V82 — przebudowany panel „Moje stanowiska” dla zawodnika. Najważniejsze i
 
 
 V84 — uporządkowany komputerowy widok zawodnika. Wszystkie kafle (Losowanie T1/T2, Wyniki T1/T2, General, Statystyki, Mapy) mają ten sam punkt przewinięcia i tę samą szerokość panelu. Pasek desktopowy korzysta z jednego stabilnego sticky slotu zamiast ręcznego fixed/left/width. Mobilka pozostaje bez zmian. Poprawiono też numery cache/recovery do V84.
+
+V85 — desktop zawodnika: wszystkie kafle korzystają z jednego układu/punktu startu wzorowanego na działającym widoku GENERAL. Losowanie T1/T2, Wyniki T1/T2, Statystyki i Mapy mają jeden kontener 1080 px i identyczny początek panelu. Mobilka bez zmian. Dodatkowo ekran logowania/rejestracji otrzymał ciemny granatowy styl spójny z panelem zawodnika.
