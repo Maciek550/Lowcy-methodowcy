@@ -1,4 +1,4 @@
-const CLIENT_VERSION='78';const CLIENT_VERSION_NAME='V78_MOBILE_HOME_NAV_HARD_FIX';try{fetch('/__probe_js_v78',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V78_MOBILE_HOME_NAV_HARD_FIX_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='79';const CLIENT_VERSION_NAME='V79_PWA_SAFE_UPDATE';window.__LOWCY_APP_JS_79=1;try{fetch('/__probe_js_v79',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V79_PWA_SAFE_UPDATE_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let TOKEN = STORE.get('carp_token') || '';
 let ME = null;
@@ -340,8 +340,8 @@ function renderPlayerStatsCompact(d){
 function renderPlayerResultsMobile(d){
   const active=PLAYER_RESULTS_TAB||'t1';
   return '<div class="playerResultsMobile">'
-    +'<section id="playerResults-t1" class="playerResultsSection '+(active==='t1'?'':'hidden')+'"><div class="card playerResultCard"><h2>Wyniki sektorowe — Tura 1</h2>'+renderSectorResultsColumn(d.classification.round1,'1 tura')+'<h2 class="playerWholeRoundTitle">Cała Tura 1</h2>'+renderPlayerRoundCompact(d.classification.round1,1)+'</div></section>'
-    +'<section id="playerResults-t2" class="playerResultsSection '+(active==='t2'?'':'hidden')+'"><div class="card playerResultCard"><h2>Wyniki sektorowe — Tura 2</h2>'+renderSectorResultsColumn(d.classification.round2,'2 tura')+'<h2 class="playerWholeRoundTitle">Cała Tura 2</h2>'+renderPlayerRoundCompact(d.classification.round2,2)+'</div></section>'
+    +'<section id="playerResults-t1" class="playerResultsSection '+(active==='t1'?'':'hidden')+'"><div class="card playerResultCard"><h2>Wyniki sektorowe — Tura 1</h2>'+renderSectorResultsColumn(d.classification.round1,'')+'<h2 class="playerWholeRoundTitle">Cała Tura 1</h2>'+renderPlayerRoundCompact(d.classification.round1,1)+'</div></section>'
+    +'<section id="playerResults-t2" class="playerResultsSection '+(active==='t2'?'':'hidden')+'"><div class="card playerResultCard"><h2>Wyniki sektorowe — Tura 2</h2>'+renderSectorResultsColumn(d.classification.round2,'')+'<h2 class="playerWholeRoundTitle">Cała Tura 2</h2>'+renderPlayerRoundCompact(d.classification.round2,2)+'</div></section>'
     +'<section id="playerResults-general" class="playerResultsSection '+(active==='general'?'':'hidden')+'"><div class="card playerResultCard"><h2>Klasyfikacja końcowa</h2>'+renderPlayerFinalCompact(d.classification.general)+'</div></section>'
     +'<section id="playerResults-stats" class="playerResultsSection '+(active==='stats'?'':'hidden')+'">'+renderPlayerStatsCompact(d)+'</section>'
     +'</div>';
@@ -402,8 +402,8 @@ function renderPlayerMobilePanelContent(d,panel){
     const round=panel==='map2'?2:1;
     return '<div class="playerMobileSelectedPanel"><div class="playerMobileFullMapWrap"><div class="playerMobileFullMapTitle">MAPA ŁOWISKA — TURA '+round+'</div><div class="playerMobileFullMapViewport"><div class="playerMobileFullMapCanvas">'+renderRoundDrawMap(d,round)+'</div></div><div class="playerMobileMapHint">Pełna mapa dopasowana do szerokości ekranu.</div></div></div>';
   }
-  if(panel==='t1')return '<div class="playerMobileSelectedPanel"><div class="card playerResultCard"><h2>Wyniki sektorowe — Tura 1</h2>'+renderSectorResultsColumn(d.classification.round1,'1 tura')+'<h2 class="playerWholeRoundTitle">Cała Tura 1</h2>'+renderPlayerRoundCompact(d.classification.round1,1)+'</div></div>';
-  if(panel==='t2')return '<div class="playerMobileSelectedPanel"><div class="card playerResultCard"><h2>Wyniki sektorowe — Tura 2</h2>'+renderSectorResultsColumn(d.classification.round2,'2 tura')+'<h2 class="playerWholeRoundTitle">Cała Tura 2</h2>'+renderPlayerRoundCompact(d.classification.round2,2)+'</div></div>';
+  if(panel==='t1')return '<div class="playerMobileSelectedPanel"><div class="card playerResultCard"><h2>Wyniki sektorowe — Tura 1</h2>'+renderSectorResultsColumn(d.classification.round1,'')+'<h2 class="playerWholeRoundTitle">Cała Tura 1</h2>'+renderPlayerRoundCompact(d.classification.round1,1)+'</div></div>';
+  if(panel==='t2')return '<div class="playerMobileSelectedPanel"><div class="card playerResultCard"><h2>Wyniki sektorowe — Tura 2</h2>'+renderSectorResultsColumn(d.classification.round2,'')+'<h2 class="playerWholeRoundTitle">Cała Tura 2</h2>'+renderPlayerRoundCompact(d.classification.round2,2)+'</div></div>';
   if(panel==='general')return '<div class="playerMobileSelectedPanel"><div class="card playerResultCard"><h2>Klasyfikacja końcowa</h2>'+renderPlayerFinalCompact(d.classification.general)+'</div></div>';
   if(panel==='stats')return '<div class="playerMobileSelectedPanel">'+renderPlayerStatsCompact(d)+'</div>';
   return '';
@@ -421,7 +421,6 @@ function renderPlayerMobileDashboard(d){
       +'<div class="playerPrimaryStack">'+b('general','GENERAL','resultTile generalTile')+b('stats','STATYSTYKI','resultTile statsTile')+'</div>'
     +'</div>'
     +'<div class="playerMapNav">'+b('map1','MAPA ŁOWISKA T1','mapTile')+b('map2','MAPA ŁOWISKA T2','mapTile')+'</div>'
-    +'<div class="playerNotificationNav"><button type="button" id="playerNotifBtn" onclick="openPlayerNotifications(event)">'+playerNotifLabel()+'</button></div>'
     +'</div></div>'
     +renderPlayerOwnSummary(d)
     +'<div id="playerMobilePanelContent">'+renderPlayerMobilePanelContent(d,p)+'</div>'
@@ -449,8 +448,8 @@ function renderPlayerDesktopPanelContent(d,panel){
     const round=panel==='map2'?2:1;
     return '<div class="playerDesktopSelectedPanel"><div class="card playerDesktopFullMap"><h2>MAPA ŁOWISKA — TURA '+round+'</h2>'+renderRoundDrawMap(d,round)+'</div></div>';
   }
-  if(panel==='t1')return '<div class="playerDesktopSelectedPanel"><div class="card playerResultCard"><h2>Wyniki sektorowe — Tura 1</h2>'+renderSectorResultsColumn(d.classification.round1,'1 tura')+'<h2 class="playerWholeRoundTitle">Cała Tura 1</h2>'+renderClassTable(d.classification.round1)+'</div></div>';
-  if(panel==='t2')return '<div class="playerDesktopSelectedPanel"><div class="card playerResultCard"><h2>Wyniki sektorowe — Tura 2</h2>'+renderSectorResultsColumn(d.classification.round2,'2 tura')+'<h2 class="playerWholeRoundTitle">Cała Tura 2</h2>'+renderClassTable(d.classification.round2)+'</div></div>';
+  if(panel==='t1')return '<div class="playerDesktopSelectedPanel"><div class="card playerResultCard"><h2>Wyniki sektorowe — Tura 1</h2>'+renderSectorResultsColumn(d.classification.round1,'')+'<h2 class="playerWholeRoundTitle">Cała Tura 1</h2>'+renderClassTable(d.classification.round1)+'</div></div>';
+  if(panel==='t2')return '<div class="playerDesktopSelectedPanel"><div class="card playerResultCard"><h2>Wyniki sektorowe — Tura 2</h2>'+renderSectorResultsColumn(d.classification.round2,'')+'<h2 class="playerWholeRoundTitle">Cała Tura 2</h2>'+renderClassTable(d.classification.round2)+'</div></div>';
   if(panel==='general')return '<div class="playerDesktopSelectedPanel"><div class="card playerResultCard"><h2>Klasyfikacja końcowa</h2>'+renderFinalClubToggle()+renderGeneralTable(d.classification.general)+'</div></div>';
   if(panel==='stats')return '<div class="playerDesktopSelectedPanel">'+renderStationStatistics(d)+'</div>';
   return '';
@@ -467,7 +466,7 @@ function renderPlayerDesktopDashboard(d){
       +b('t2','Wyniki<br>Tura 2'+playerResultStar(d,2),'resultTile')
       +'<div class="playerPrimaryStack">'+b('general','GENERAL','resultTile generalTile')+b('stats','STATYSTYKI','resultTile statsTile')+'</div>'
     +'</div>'
-    +'<div class="playerDesktopSubNav">'+b('map1','MAPA ŁOWISKA T1','mapTile')+b('map2','MAPA ŁOWISKA T2','mapTile')+'<button type="button" class="notificationTile" onclick="openPlayerNotifications(event)">'+playerNotifLabel()+'</button></div>'
+    +'<div class="playerDesktopSubNav playerDesktopMapsOnly">'+b('map1','MAPA ŁOWISKA T1','mapTile')+b('map2','MAPA ŁOWISKA T2','mapTile')+'</div>'
     +'</div></div>'
     +renderPlayerOwnSummary(d)
     +'<div id="playerDesktopPanelContent">'+renderPlayerDesktopPanelContent(d,p)+'</div>'
@@ -700,7 +699,7 @@ function placeRowClass(rank){const r=Number(rank);return r===1?'place1':r===2?'p
 function sortRowsBySectorPlace(rows){return [...(rows||[])].sort((a,b)=>Number(a.points||999)-Number(b.points||999)||Number(b.weight||0)-Number(a.weight||0)||String(a.name||'').localeCompare(String(b.name||''),'pl'))}
 function groupRowsBySector(rows){const box={};for(const r of (rows||[])){const sec=String(r.sector||'—').trim()||'—';(box[sec]=box[sec]||[]).push(r)}return Object.keys(box).sort((a,b)=>a.localeCompare(b,'pl')).map(sec=>({sector:sec,rows:sortRowsBySectorPlace(box[sec])}))}
 function renderSectorMiniTable(group){return '<div class="card" style="padding:8px;margin:0 0 10px 0"><h4 style="margin:0 0 6px 0;text-align:center">Sektor '+esc(group.sector)+'</h4><div class="tablewrap"><table class="sharpTable"><thead><tr><th class="center" style="width:42px">Msc</th><th class="center" style="width:50px">Stan</th><th>Zawodnik</th><th class="right" style="width:108px">Waga</th></tr></thead><tbody>'+group.rows.map(r=>'<tr class="'+placeRowClass(r.points)+' '+(Number(r.user_id)===Number(ME.id)?'mine':'')+'"><td class="center"><b>'+placeText(r.points)+'</b></td><td class="center nowrap">'+(r.stand||'—')+'</td><td><b>'+esc(r.name)+'</b></td><td class="right nowrap">'+resultCellSummary(r)+'</td></tr>').join('')+'</tbody></table></div></div>'}
-function renderSectorResultsColumn(rows,title){const groups=groupRowsBySector(rows);return '<div><h3 style="text-align:center;margin-top:0">'+esc(title)+'</h3>'+(groups.length?groups.map(renderSectorMiniTable).join(''):'<p class="muted">Brak wyników sektorowych.</p>')+'</div>'}
+function renderSectorResultsColumn(rows,title){const groups=groupRowsBySector(rows),head=title?'<h3 style="text-align:center;margin-top:0">'+esc(title)+'</h3>':'';return '<div>'+head+(groups.length?groups.map(renderSectorMiniTable).join(''):'<p class="muted">Brak wyników sektorowych.</p>')+'</div>'}
 function renderSectorResultsBoard(d){return '<div class="card"><h2>Wyniki sektorowe</h2><div class="twoCols"><div>'+renderSectorResultsColumn(d.classification.round1,'1 tura')+'</div><div>'+renderSectorResultsColumn(d.classification.round2,'2 tura')+'</div></div></div>'}
 function stationStatisticsRows(d){const all=[];for(const r of (d.classification?.round1||[]))all.push({round:1,...r});for(const r of (d.classification?.round2||[]))all.push({round:2,...r});const by={};for(const r of all){const stand=Number(r.stand||0);if(!stand)continue;const x=by[stand]||(by[stand]={stand,items:[],totalWeight:0});x.items.push(r);x.totalWeight+=Number(r.weight||0)}return Object.values(by).map(x=>{const places=x.items.map(r=>Number(r.points||0)).filter(Boolean),avg=places.length?places.reduce((a,b)=>a+b,0)/places.length:0;return {...x,occ:x.items.length,places,avg}}).sort((a,b)=>a.stand-b.stand)}
 function stationStatsTable(rows,kind=''){if(!rows.length)return '<p class="muted">Brak danych.</p>';const cls=kind==='best'?'stationStandBest':kind==='worst'?'stationStandWorst':'';const desktop='<div class="tablewrap adminDesktopOnly"><table class="sharpTable"><thead><tr><th>Lp.</th><th>Stan.</th><th>Wystąpienia</th><th>Miejsca</th><th>Śr.</th><th>Waga łączna</th></tr></thead><tbody>'+rows.map((r,i)=>'<tr><td class="center">'+(i+1)+'</td><td class="center '+cls+'"><b>'+r.stand+'</b></td><td class="center">'+r.occ+'</td><td class="center">'+r.places.join(' / ')+'</td><td class="center"><b>'+r.avg.toFixed(2).replace('.',',')+'</b></td><td class="right nowrap"><b>'+fmtGram(r.totalWeight)+'g</b></td></tr>').join('')+'</tbody></table></div>';const mobile='<div class="adminMobileOnly mobileStatsList">'+rows.map((r,i)=>'<article class="mobileStatsCard"><b class="mobileStatsStand '+cls+'">Stan. '+r.stand+'</b><div><span><small>Wyst.</small><b>'+r.occ+'</b></span><span><small>Miejsca</small><b>'+r.places.join(' / ')+'</b></span><span><small>Śr.</small><b>'+r.avg.toFixed(2).replace('.',',')+'</b></span><span><small>Waga</small><b>'+fmtGram(r.totalWeight)+'g</b></span></div></article>').join('')+'</div>';return desktop+mobile}
@@ -909,5 +908,6 @@ function bindAuthButtons(){
 
 function scrollAppBottom(){window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})}
 Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,closePlayerCompetition,showAdminZone,loadCompetitions,createCompetition,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,editPlayerName,deletePlayer,deleteAllAdminPlayers,saveMyProfile,setPlayerCompetitionFilter,setPlayerCompetitionMonth,enablePush,sendPushTest,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,setPlayerDrawView,openPlayerNotifications,fitPlayerMobileFullMaps,togglePlayerSectorAccordion,toggleFinalClub,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
-function startBoot(){console.log('CLIENT_V78_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v78',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().catch(e=>{console.error('BOOT_FATAL',e);try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
+function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_79')}catch(_){}}
+function startBoot(){console.log('CLIENT_V79_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v79',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().then(()=>{window.__LOWCY_BOOT_OK_79=1;hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);hideBootGuard();try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();
