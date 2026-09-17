@@ -20,3 +20,6 @@ V81 — zawodnik z listy głównej od 4 dni przed zawodami do dnia zawodów widz
 
 
 V82 — przebudowany panel „Moje stanowiska” dla zawodnika. Najważniejsze informacje (Tura, numer stanowiska, brzeg) mają osobne pola z krawędziami i większą typografią; sektor jest informacją drugorzędną. Układ wykorzystuje całą powierzchnię karty i ma osobne dopasowanie dla telefonu i desktopu. Zachowano potwierdzenie obecności z V81 oraz wcześniejsze poprawki PWA/wyników.
+
+
+V84 — uporządkowany komputerowy widok zawodnika. Wszystkie kafle (Losowanie T1/T2, Wyniki T1/T2, General, Statystyki, Mapy) mają ten sam punkt przewinięcia i tę samą szerokość panelu. Pasek desktopowy korzysta z jednego stabilnego sticky slotu zamiast ręcznego fixed/left/width. Mobilka pozostaje bez zmian. Poprawiono też numery cache/recovery do V84.
