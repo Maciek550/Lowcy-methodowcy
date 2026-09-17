@@ -1,4 +1,4 @@
-const CLIENT_VERSION='82';const CLIENT_VERSION_NAME='V82_OWN_STAND_CARD_REDESIGN';window.__LOWCY_APP_JS_82=1;try{fetch('/__probe_js_v82',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V82_OWN_STAND_CARD_REDESIGN_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='83';const CLIENT_VERSION_NAME='V83_DRAW_SCROLL_ALIGNMENT';window.__LOWCY_APP_JS_83=1;try{fetch('/__probe_js_v83',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V83_DRAW_SCROLL_ALIGNMENT_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let TOKEN = STORE.get('carp_token') || '';
 let ME = null;
@@ -493,6 +493,27 @@ function renderPlayerDesktopDashboard(d){
     +'<div id="playerDesktopPanelContent">'+renderPlayerDesktopPanelContent(d,p)+'</div>'
     +'</div>';
 }
+function playerPanelScrollTarget(panel,isMobile){
+  const drawLike=['draw1','draw2','map1','map2'].includes(panel);
+  if(isMobile){
+    return drawLike?document.querySelector('.playerMobileDashboard .playerOwnSummaryWrap'):q('playerMobilePanelContent');
+  }
+  return drawLike?document.querySelector('.playerDesktopDashboardV56 .playerOwnSummaryWrap, .playerDesktopDashboardV55 .playerOwnSummaryWrap'):q('playerDesktopPanelContent');
+}
+function scrollPlayerPanelIntoView(panel,isMobile){
+  requestAnimationFrame(()=>{
+    syncPlayerStickyBars();
+    fitPlayerMobileFullMaps();
+    const nav=document.querySelector(isMobile?'.playerUnifiedNav':'.playerDesktopUnifiedNav');
+    const target=playerPanelScrollTarget(panel,isMobile);
+    if(!nav||!target)return;
+    const stickyTop=getPlayerStickyTop();
+    const navH=Math.max(0,Math.round(nav.getBoundingClientRect().height||0));
+    const extra=isMobile?8:10;
+    const top=window.scrollY+target.getBoundingClientRect().top-navH-stickyTop-extra;
+    window.scrollTo({top:Math.max(0,top),behavior:'smooth'});
+  });
+}
 function showPlayerDesktopPanel(panel,ev){
   if(ev){ev.preventDefault();ev.stopPropagation()}
   const allowed=['draw1','draw2','map1','map2','t1','t2','general','stats'];
@@ -507,7 +528,7 @@ function showPlayerDesktopPanel(panel,ev){
   const mobileBox=q('playerMobilePanelContent');
   if(mobileBox&&CURRENT_DETAIL)mobileBox.innerHTML=renderPlayerMobilePanelContent(CURRENT_DETAIL,panel);
   document.querySelectorAll('.playerDesktopUnifiedNav button,.playerUnifiedNav button').forEach(btn=>btn.classList.toggle('active',btn.getAttribute('onclick')?.includes("'"+panel+"'")));
-  requestAnimationFrame(()=>{syncPlayerStickyBars();fitPlayerMobileFullMaps();const el=q('playerDesktopPanelContent'),nav=document.querySelector('.playerDesktopUnifiedNav');if(el&&nav){const top=window.scrollY+el.getBoundingClientRect().top-nav.getBoundingClientRect().height-getPlayerStickyTop()-6;window.scrollTo({top:Math.max(0,top),behavior:'smooth'})}});
+  scrollPlayerPanelIntoView(panel,false);
 }
 function setPlayerDrawView(view,ev){
   if(ev){ev.preventDefault();ev.stopPropagation()}
@@ -539,12 +560,7 @@ function showPlayerMobilePanel(panel,ev){
   const desktopBox=q('playerDesktopPanelContent');
   if(desktopBox&&CURRENT_DETAIL)desktopBox.innerHTML=renderPlayerDesktopPanelContent(CURRENT_DETAIL,panel);
   document.querySelectorAll('.playerUnifiedNav button,.playerDesktopUnifiedNav button').forEach(btn=>btn.classList.toggle('active',btn.getAttribute('onclick')?.includes("'"+panel+"'")));
-  requestAnimationFrame(()=>{
-    syncPlayerStickyBars();
-    fitPlayerMobileFullMaps();
-    const nav=document.querySelector('.playerUnifiedNav'),content=q('playerMobilePanelContent');
-    if(nav&&content){const top=window.scrollY+content.getBoundingClientRect().top-nav.getBoundingClientRect().height-getPlayerStickyTop()-5;window.scrollTo({top:Math.max(0,top),behavior:'smooth'})}
-  });
+  scrollPlayerPanelIntoView(panel,true);
 }
 function fitPlayerMobileFullMaps(){
   document.querySelectorAll('.playerMobileFullMapViewport').forEach(viewport=>{
@@ -930,5 +946,5 @@ function bindAuthButtons(){
 function scrollAppBottom(){window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})}
 Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,closePlayerCompetition,showAdminZone,loadCompetitions,createCompetition,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,editPlayerName,deletePlayer,deleteAllAdminPlayers,saveMyProfile,setPlayerCompetitionFilter,setPlayerCompetitionMonth,confirmPlayerPresence,enablePush,sendPushTest,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,setPlayerDrawView,openPlayerNotifications,fitPlayerMobileFullMaps,togglePlayerSectorAccordion,toggleFinalClub,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
 function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_81')}catch(_){}}
-function startBoot(){console.log('CLIENT_V82_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v82',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().then(()=>{window.__LOWCY_BOOT_OK_82=1;hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);hideBootGuard();try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
+function startBoot(){console.log('CLIENT_V83_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v83',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().then(()=>{window.__LOWCY_BOOT_OK_83=1;hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);hideBootGuard();try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();
