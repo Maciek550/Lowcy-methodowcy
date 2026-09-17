@@ -3325,6 +3325,55 @@ body.playerTheme .playerView{border-color:#36536b}
  .playerView .playerUnifiedNav .playerResultsNavInline button:nth-child(2):before{display:inline-block!important;width:18px!important;height:18px!important;margin:0!important;flex:0 0 18px!important}
  .playerView .playerNewResultStar{top:2px;right:8px;font-size:21px!important}
 }
+
+/* V71 — desktop player detail header compacted into one line.
+   Layout only: no logic, buttons, results or mobile view changed. */
+@media (min-width:761px){
+  .competitionDetailHead.playerDetailHead{
+    display:grid!important;
+    grid-template-columns:auto minmax(220px,1fr) auto!important;
+    align-items:center!important;
+    column-gap:12px!important;
+    row-gap:0!important;
+    padding:7px 10px!important;
+    margin-top:6px!important;
+    min-height:0!important;
+  }
+  .competitionDetailHead.playerDetailHead .inlineBtns{
+    display:flex!important;
+    flex-wrap:nowrap!important;
+    gap:6px!important;
+    margin:0!important;
+    width:auto!important;
+  }
+  .competitionDetailHead.playerDetailHead .inlineBtns button{
+    width:auto!important;
+    min-width:0!important;
+    min-height:34px!important;
+    padding:6px 10px!important;
+    margin:0!important;
+    white-space:nowrap!important;
+    font-size:12px!important;
+    line-height:1!important;
+  }
+  .competitionDetailHead.playerDetailHead h2{
+    margin:0!important;
+    min-width:0!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    white-space:nowrap!important;
+    font-size:17px!important;
+    line-height:1.1!important;
+  }
+  .competitionDetailHead.playerDetailHead p{
+    margin:0!important;
+    white-space:nowrap!important;
+    font-size:13px!important;
+    line-height:1.1!important;
+    font-weight:800!important;
+  }
+}
+
 </style>
 </head>
 <body>
