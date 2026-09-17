@@ -3209,6 +3209,13 @@ body.playerTheme .playerView{border-color:#36536b}
  body.playerTheme #app>.tabs button{font-size:13px!important;padding:9px!important}
 }
 .playerView .playerOwnSummaryBank{display:block;margin-top:5px;font-size:11px;font-weight:1000;letter-spacing:.03em;text-transform:uppercase;color:#143c37!important}
+.adminSetupGate{border:1px solid #c5d2c8;border-radius:12px;background:#f6f9f5;padding:0;align-self:start}
+.adminSetupGate>summary{cursor:pointer;list-style:none;padding:13px 14px;font-weight:900;color:#3c5b4a}
+.adminSetupGate>summary::-webkit-details-marker{display:none}
+.adminSetupGate>summary:before{content:'＋';display:inline-block;margin-right:7px;font-size:16px}
+.adminSetupGate[open]>summary:before{content:'−'}
+.adminSetupCard{margin:0;border:0;border-top:1px solid #d4ded6;border-radius:0 0 12px 12px;box-shadow:none}
+.playerRegisterCard{border-color:#93cbb0;box-shadow:0 3px 12px #1b6a3b18}
 .playerDrawViewSwitch{display:flex;justify-content:flex-end;gap:5px;margin:0 0 7px}
 .playerDrawViewSwitch button{width:auto!important;min-width:74px!important;min-height:30px!important;padding:5px 10px!important;border-radius:999px!important;background:#17384d!important;border:1px solid #4b7895!important;color:#bfe3f7!important;font-size:10px!important;font-weight:1000!important}
 .playerDrawViewSwitch button.active{background:#1987c6!important;border-color:#b7e9ff!important;color:#fff!important;box-shadow:0 0 7px #43bff466!important}
@@ -3219,6 +3226,76 @@ body.playerTheme .playerView{border-color:#36536b}
  .playerBottomNav button{width:100%;min-height:38px;padding:4px 0;border:0;border-radius:6px;background:transparent;color:#b9d8eb;font-size:23px;line-height:1;font-weight:700}
  .playerBottomNav button:active,.playerBottomNav button:focus-visible{background:#1d5c84;color:#fff}
  .playerView .playerOwnSummaryBank{font-size:9px;margin-top:4px}
+}
+/* V71 compact front: three upcoming competitions should fit on a phone screen. */
+@media(max-width:760px){
+ body.playerTheme main{padding:5px 5px 76px!important}
+ body.playerTheme #tab-competitions>.card{padding:6px!important;margin:5px 0!important}
+ body.playerTheme .playerNearestThree{margin:4px 0 6px!important}
+ body.playerTheme .playerNearestThreeHead{padding:6px 8px!important;border-radius:7px 7px 0 0!important}
+ body.playerTheme .playerNearestThreeHead b{font-size:11px!important}
+ body.playerTheme .playerNearestThreeHead span{font-size:8px!important}
+ body.playerTheme .playerNearestThreeBody{padding:4px!important;border-radius:0 0 7px 7px!important}
+ body.playerTheme .playerCompCompactCard{padding:5px 6px!important;margin:0 0 4px!important;border-radius:6px!important}
+ body.playerTheme .playerCompCompactTop{grid-template-columns:32px minmax(0,1fr) auto!important;gap:5px!important;align-items:center!important}
+ body.playerTheme .playerCompCompactTop>.playerCompNo{grid-column:1!important;grid-row:1!important}
+ body.playerTheme .playerCompCompactTop>.playerCompTitle{grid-column:2!important;grid-row:1!important}
+ body.playerTheme .playerCompCompactTop>.playerCompStatus{grid-column:3!important;grid-row:1!important;justify-self:end!important}
+ body.playerTheme .playerCompNo{min-width:32px!important;height:24px!important;min-height:24px!important;font-size:10px!important;border-radius:5px!important}
+ body.playerTheme .playerCompTitle b{font-size:12px!important;line-height:1.05!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+ body.playerTheme .playerCompDateLine{display:flex!important;align-items:center!important;gap:5px!important;margin-top:2px!important;flex-wrap:nowrap!important}
+ body.playerTheme .playerCompDate{font-size:14px!important;line-height:1!important;white-space:nowrap!important}
+ body.playerTheme .playerCompWeekday{font-size:8px!important;line-height:1!important;min-height:18px!important;padding:3px 5px!important;white-space:nowrap!important}
+ body.playerTheme .playerCompSubLine{display:flex!important;align-items:center!important;gap:5px!important;margin-top:2px!important;min-width:0!important;flex-direction:row!important}
+ body.playerTheme .playerCompFishery{font-size:9px!important;line-height:1!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;flex:1 1 auto!important}
+ body.playerTheme .playerCompCountdown{font-size:8px!important;line-height:1!important;min-height:18px!important;padding:3px 5px!important;white-space:nowrap!important;flex:none!important}
+ body.playerTheme .playerCompStatus{font-size:8px!important;min-height:20px!important;padding:3px 5px!important;border-radius:5px!important}
+ body.playerTheme .playerCompCompactBottom{grid-template-columns:minmax(0,1fr) minmax(150px,1.35fr)!important;gap:5px!important;margin-top:4px!important;align-items:center!important}
+ body.playerTheme .playerCompMiniInfo{gap:3px!important;min-height:22px!important;overflow:hidden!important}
+ body.playerTheme .playerCompCountBadge{padding:3px 5px!important;border-radius:5px!important;line-height:1!important}
+ body.playerTheme .playerCompCountBadge small{font-size:7px!important}
+ body.playerTheme .playerCompCountBadge b{font-size:11px!important}
+ body.playerTheme .playerCompMineBadge{font-size:8px!important;padding:3px 5px!important}
+ body.playerTheme .playerCompCompactActions{grid-template-columns:1fr 1fr!important;gap:4px!important;width:auto!important}
+ body.playerTheme .playerCompCompactActions button{min-height:27px!important;height:27px!important;padding:3px 4px!important;font-size:8.5px!important;border-radius:5px!important;line-height:1.05!important;white-space:nowrap!important}
+ body.playerTheme .playerCompMonthGroup>summary{padding:6px 8px!important;font-size:10px!important}
+ body.playerTheme .playerCompMonthBody{padding:4px!important}
+}
+@media(max-width:360px){
+ body.playerTheme .playerCompCompactBottom{grid-template-columns:minmax(0,1fr) minmax(136px,1.25fr)!important}
+ body.playerTheme .playerCompCompactActions button{font-size:8px!important;padding-left:2px!important;padding-right:2px!important}
+}
+/* V71 top-to-bottom mobile density: reclaim the header and navigation space too. */
+@media(max-width:760px){
+ body.playerTheme header{padding:6px 8px!important;min-height:0!important}
+ body.playerTheme header .row{gap:6px!important}
+ body.playerTheme header h1{font-size:15px!important;line-height:1.05!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+ body.playerTheme header .top-actions button{font-size:10px!important;padding:5px 7px!important;border-radius:6px!important}
+ body.playerTheme main{padding:2px 4px 72px!important}
+ body.playerTheme #app>.compactUserBar{margin:3px 0!important;padding:4px 6px!important;border-radius:7px!important}
+ body.playerTheme #app>.compactUserBar .adminbar{grid-template-columns:minmax(0,1fr) auto auto!important;gap:5px!important;align-items:center!important}
+ body.playerTheme #app>.compactUserBar #who{font-size:11px!important;line-height:1.05!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;display:block!important}
+ body.playerTheme #app>.compactUserBar #role{font-size:8px!important;line-height:1!important}
+ body.playerTheme #app>.compactUserBar #notifCounter{font-size:9px!important;white-space:nowrap!important}
+ body.playerTheme #app>.compactUserBar .tag{font-size:8px!important;padding:2px 4px!important}
+ body.playerTheme #app>.tabs{padding:2px 0!important;gap:4px!important;flex-wrap:nowrap!important;overflow:hidden!important}
+ body.playerTheme #app>.tabs button{min-height:28px!important;height:28px!important;padding:4px 6px!important;font-size:9px!important;border-radius:5px!important;white-space:nowrap!important}
+ body.playerTheme #tab-competitions>.card{margin:3px 0!important;padding:4px!important;border-radius:7px!important}
+ body.playerTheme #tab-competitions>.card>h2{font-size:13px!important;margin:1px 2px 4px!important}
+ body.playerTheme .playerCompetitionOrganizer{grid-template-columns:1fr!important;gap:3px!important;margin:0 0 4px!important;padding:4px!important;border-radius:6px!important}
+ body.playerTheme .playerCompFilters{gap:3px!important;min-width:0!important}
+ body.playerTheme .playerCompFilter{min-height:27px!important;height:27px!important;padding:2px 1px!important;font-size:8px!important;border-radius:5px!important;line-height:1!important;white-space:nowrap!important}
+ body.playerTheme .playerCompFilter b{min-width:16px!important;width:16px!important;height:16px!important;font-size:8px!important}
+ body.playerTheme .playerCompMonthSelect{grid-column:1/-1!important;height:25px!important;min-height:25px!important;padding:2px 5px!important;font-size:9px!important;border-radius:5px!important}
+ body.playerTheme .playerCompGroups{gap:3px!important}
+ body.playerTheme .playerCompMonthGroup{border-radius:6px!important}
+ body.playerTheme .playerCompMonthGroup>summary{padding:4px 6px!important;font-size:9px!important}
+ body.playerTheme .playerCompMonthBody{padding:2px!important}
+ body.playerTheme .playerNearestThree{margin:2px 0 4px!important}
+ body.playerTheme .playerNearestThreeHead{padding:4px 6px!important}
+ body.playerTheme .playerNearestThreeHead b{font-size:9px!important}
+ body.playerTheme .playerNearestThreeHead span{font-size:7px!important}
+ body.playerTheme .playerNearestThreeBody{padding:2px!important}
 }
 </style>
 </head>
@@ -3231,12 +3308,12 @@ body.playerTheme .playerView{border-color:#36536b}
   <div class="grid"><div><label>Telefon</label><input id="loginPhone" autocomplete="username"></div><div><label>Hasło</label><input id="loginPassword" type="password" autocomplete="current-password"></div></div>
   <div class="grid" style="margin-top:10px"><button type="button" id="loginBtn" onclick="login(event)">Zaloguj</button><button type="button" id="clearSessionBtn" class="secondary">Wyczyść sesję</button></div>
   <div class="twoCols">
-    <div class="card"><h3>Rejestracja zawodnika</h3><label>Telefon</label><input id="regPhone"><label>Hasło</label><input id="regPassword" type="password"><label>Imię</label><input id="regFirst"><label>Nazwisko</label><input id="regLast"><label>Nr Koła PZW</label><input id="regClub"><button type="button" id="regBtn">Utwórz konto zawodnika</button></div>
-    <div class="card"><h3>Pierwsze konto admina</h3><p class="small muted">Sekcja działa tylko, gdy w bazie nie ma jeszcze admina.</p><label>Kod setupu</label><input id="setupCode"><label>Telefon admina</label><input id="setupPhone"><label>Hasło</label><input id="setupPassword" type="password"><label>Imię</label><input id="setupFirst"><label>Nazwisko</label><input id="setupLast"><label>Koło PZW</label><input id="setupClub"><button type="button" id="setupAdminBtn">Utwórz admina</button></div>
+    <div class="card playerRegisterCard"><h3>Rejestracja zawodnika</h3><p class="small muted">Załóż konto zawodnika, aby zapisywać się na zawody i sprawdzać losowania oraz wyniki.</p><label>Telefon</label><input id="regPhone" autocomplete="tel"><label>Hasło</label><input id="regPassword" type="password" autocomplete="new-password"><label>Imię</label><input id="regFirst" autocomplete="given-name"><label>Nazwisko</label><input id="regLast" autocomplete="family-name"><label>Nr Koła PZW</label><input id="regClub"><button type="button" id="regBtn">Utwórz konto zawodnika</button></div>
+    <details class="adminSetupGate"><summary>Konfiguracja pierwszego administratora</summary><div class="card adminSetupCard"><h3>Konto administratora</h3><p class="small muted">Ta ścieżka jest tylko dla właściciela systemu. Wymaga kodu setupu i działa wyłącznie, jeśli administrator nie został jeszcze utworzony.</p><label>Kod setupu</label><input id="setupCode" autocomplete="off"><label>Telefon administratora</label><input id="setupPhone" autocomplete="tel"><label>Hasło</label><input id="setupPassword" type="password" autocomplete="new-password"><label>Imię</label><input id="setupFirst" autocomplete="given-name"><label>Nazwisko</label><input id="setupLast" autocomplete="family-name"><label>Koło PZW</label><input id="setupClub"><button type="button" id="setupAdminBtn">Utwórz konto administratora</button></div></details>
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V70</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
+  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V71</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-profile" class="hidden" onclick="showTab('profile')">Mój profil</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
     <div id="adminCreate" class="card hidden"><h2>Utwórz zawody</h2><p class="small muted">Nazwa zawodów jest używana także w nagłówkach PDF.</p><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div></div><label>Opis</label><textarea id="cNotes" placeholder="Opis zawodów, zasady, informacje organizacyjne."></textarea><button onclick="createCompetition(event)">Utwórz zawody</button></div>
