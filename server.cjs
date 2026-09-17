@@ -16,8 +16,8 @@ const ADMIN_SETUP_CODE = process.env.ADMIN_SETUP_CODE || '';
 let VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 let VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
-const APP_VERSION = '69';
-const APP_VERSION_NAME = 'V69_DARK_PLAYER_THEME';
+const APP_VERSION = '71';
+const APP_VERSION_NAME = 'V71_PLAYER_TARGET_VIEW';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 
 
@@ -1094,6 +1094,8 @@ async function route(req, res) {
   const url = new URL(req.url, 'http://local');
   const path = url.pathname;
   const method = req.method;
+
+  if (path === '/__probe_js_v71' || path === '/__probe_boot_v71') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
 
   if (path === '/__probe_js_v68' || path === '/__probe_boot_v68' || path === '/__probe_js_v67' || path === '/__probe_boot_v67' || path === '/__probe_js_v66' || path === '/__probe_boot_v66' || path === '/__probe_js_v65' || path === '/__probe_boot_v65' || path === '/__probe_js_v63' || path === '/__probe_boot_v63' || path === '/__probe_js_v62' || path === '/__probe_boot_v62' || path === '/__probe_js_v60' || path === '/__probe_boot_v60' || path === '/__probe_js_v59' || path === '/__probe_boot_v59' || path === '/__probe_js_v58' || path === '/__probe_boot_v58' || path === '/__probe_js_v57' || path === '/__probe_boot_v57' || path === '/__probe_js_v56' || path === '/__probe_boot_v56' || path === '/__probe_js_v55' || path === '/__probe_boot_v55' || path === '/__probe_js_v54' || path === '/__probe_boot_v54' || path === '/__probe_js_v53' || path === '/__probe_boot_v53' || path === '/__probe_js_v52' || path === '/__probe_boot_v52' || path === '/__probe_js_v51' || path === '/__probe_boot_v51' || path === '/__probe_js_v50' || path === '/__probe_boot_v50' || path === '/__probe_js_v49' || path === '/__probe_boot_v49' || path === '/__probe_js_v36' || path === '/__probe_boot_v36' || path === '/__probe_js_v35' || path === '/__probe_boot_v35' || path === '/__probe_js_v34' || path === '/__probe_boot_v34' || path === '/__probe_js_v33' || path === '/__probe_boot_v33' || path === '/__probe_js_v32' || path === '/__probe_boot_v32' || path === '/__probe_js_v30' || path === '/__probe_boot_v30' || path === '/__probe_js_v29' || path === '/__probe_boot_v29' || path === '/__probe_js_v27' || path === '/__probe_boot_v27' || path === '/__probe_inline_v26') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/api/version') return sendJson(res, 200, { ok:true, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
@@ -3110,6 +3112,114 @@ body:has(#competitionDetail:not(.hidden) .playerView) #competitionDetail>.card p
 .playerView .playerDesktopMainNav .resultTile,.playerView .playerResultsNavInline button{--nav-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M8%203h8v7a4%204%200%200%201-8%200V3ZM8%205H4v3a4%204%200%200%200%204%204m8-7h4v3a4%204%200%200%201-4%204m-4%202v6m-4%201h8%22%2F%3E%3C%2Fsvg%3E")}
 .playerView .playerDesktopMainNav button:nth-child(5),.playerView .playerResultsNavInline button:nth-child(3){--nav-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M5%2020V11h3v9zm6%200V4h3v16zm6%200V8h3v12z%22%2F%3E%3C%2Fsvg%3E")}
 .playerView .playerDesktopMainNav button:nth-child(6),.playerView .playerResultsNavInline button:nth-child(4){--nav-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22m3%2016%206-6%204%203%207-9m-6%200h6v6M4%2021h17%22%2F%3E%3C%2Fsvg%3E")}
+
+/* V70: the dark theme starts at player sign-in, including the competition list. */
+body.playerTheme{background:#061420!important;color:#e8f3fd!important;font-family:Arial,Helvetica,sans-serif!important;--green:#087344;--bg:#061420;--txt:#e8f3fd}
+body.playerTheme button,body.playerTheme input,body.playerTheme select,body.playerTheme textarea{font-family:Arial,Helvetica,sans-serif!important}
+body.playerTheme header{background:linear-gradient(100deg,#061521eb,#132e4880),url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%201400%20160%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22sky%22%20x2%3D%220%22%20y2%3D%221%22%3E%3Cstop%20stop-color%3D%22%23446078%22%2F%3E%3Cstop%20offset%3D%22.55%22%20stop-color%3D%22%23c1ab88%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%2312314a%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Cpath%20fill%3D%22url%28%23sky%29%22%20d%3D%22M0%200h1400v160H0z%22%2F%3E%3Cpath%20fill%3D%22%23243c4e%22%20d%3D%22M0%2095%20180%2037%20300%2072%20440%2020%20660%2091%20850%2028%201010%2068%201200%2010%201400%2081v80H0z%22%2F%3E%3Cpath%20fill%3D%22%23062130%22%20d%3D%22M0%20115Q350%2096%20690%20113T1400%20109v51H0z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M0%20120v-35l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L0%2085z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M35%20120v-52l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L35%2068z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M70%20120v-69l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L70%2051z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M105%20120v-86l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L105%2034z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M140%20120v-38l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L140%2082z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M175%20120v-55l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L175%2065z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M210%20120v-72l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L210%2048z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M245%20120v-89l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L245%2031z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M280%20120v-41l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L280%2079z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M315%20120v-58l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L315%2062z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M350%20120v-75l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L350%2045z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M385%20120v-92l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L385%2028z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M420%20120v-44l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L420%2076z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M455%20120v-61l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L455%2059z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M490%20120v-78l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L490%2042z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M525%20120v-95l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L525%2025z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M560%20120v-47l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L560%2073z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M595%20120v-64l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L595%2056z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M630%20120v-81l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L630%2039z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M665%20120v-98l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L665%2022z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M700%20120v-50l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L700%2070z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M735%20120v-67l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L735%2053z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M770%20120v-84l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L770%2036z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M805%20120v-36l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L805%2084z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M840%20120v-53l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L840%2067z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M875%20120v-70l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L875%2050z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M910%20120v-87l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L910%2033z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M945%20120v-39l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L945%2081z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M980%20120v-56l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L980%2064z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M1015%20120v-73l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L1015%2047z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M1050%20120v-90l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L1050%2030z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M1085%20120v-42l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L1085%2078z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M1120%20120v-59l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L1120%2061z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M1155%20120v-76l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L1155%2044z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M1190%20120v-93l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L1190%2027z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M1225%20120v-45l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L1225%2075z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M1260%20120v-62l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L1260%2058z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M1295%20120v-79l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L1295%2041z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M1330%20120v-96l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L1330%2024z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M1365%20120v-48l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L1365%2072z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M1400%20120v-65l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L1400%2055z%22%2F%3E%3Cpath%20fill%3D%22%23061b26%22%20d%3D%22M1435%20120v-82l-14%2028h8l-18%2027h14l-20%2025h60l-20-25h14l-18-27h8L1435%2038z%22%2F%3E%3C%2Fsvg%3E") center/cover!important;border-bottom:1px solid #365875!important;color:#d8efff!important;box-shadow:0 3px 16px #0006}
+body.playerTheme header h1{color:#d8efff!important;font-size:24px;letter-spacing:.01em}
+body.playerTheme main{max-width:1220px}
+body.playerTheme #app>.card,body.playerTheme #tab-competitions>.card,body.playerTheme #competitionDetail>.card,body.playerTheme #tab-profile .card,body.playerTheme #tab-notifications .card{background:#102536!important;color:#e5f2ff!important;border-color:#36536b!important;box-shadow:0 4px 18px #0003!important}
+body.playerTheme .compactUserBar{border-left-color:#3ab9ed!important}
+body.playerTheme #role,body.playerTheme #app>.card .muted,body.playerTheme #tab-profile .muted,body.playerTheme #tab-notifications .muted{color:#bfd3e3!important}
+body.playerTheme #app>.tabs{gap:12px;margin:16px 0}
+body.playerTheme #app>.tabs button,body.playerTheme #logoutBtn{background:linear-gradient(#214763,#112c43)!important;color:#e7f4ff!important;border:1px solid #5586ac!important;border-radius:7px!important;min-height:44px}
+body.playerTheme #app>.tabs button.active{background:linear-gradient(#147bd0,#074583)!important;border-color:#5cb7ff!important}
+body.playerTheme #app>.tabs #btn-profile{background:linear-gradient(#683dc0,#352166)!important}
+body.playerTheme #app>.tabs #btn-notifications{background:linear-gradient(#118750,#075030)!important}
+body.playerTheme .playerCompetitionOrganizer{background:#0a1d2c;border:1px solid #36536b;padding:10px;gap:12px}
+body.playerTheme .playerCompFilter{background:#1a354b!important;color:#d4e7f7!important;border-color:#496985!important;font-size:12px!important;min-height:44px!important}
+body.playerTheme .playerCompFilter.active{background:linear-gradient(#147acf,#084478)!important;border-color:#4ba5ed!important;color:white!important}
+body.playerTheme .playerCompFilter b{background:#c7e9ff;color:#08304a}
+body.playerTheme select,body.playerTheme input,body.playerTheme textarea{background:#0a1b29!important;color:#e8f4ff!important;border:1px solid #527591!important;color-scheme:dark}
+body.playerTheme .playerNearestThreeHead{background:linear-gradient(#155386,#0b304f)!important;border-color:#408ac1;padding:12px}
+body.playerTheme .playerNearestThreeHead b{font-size:15px}
+body.playerTheme .playerNearestThreeBody,body.playerTheme .playerCompMonthBody{background:#091d2b!important;border-color:#365c77!important;padding:10px!important}
+body.playerTheme .playerCompMonthGroup{background:#0d2233;border-color:#3c607b}
+body.playerTheme .playerCompMonthGroup>summary{background:#17364e;color:#d4eaff;padding:12px}
+body.playerTheme .playerCompEmpty{background:#0d2233!important;color:#b9cfe0!important;border-color:#36536b!important;font-weight:500}
+body.playerTheme .playerCompDesktopRow,body.playerTheme .playerCompCompactCard{background:linear-gradient(120deg,#18354b,#0e2537)!important;border:1px solid #456e8c!important;border-radius:9px!important;outline:none!important;box-shadow:none!important;color:#eaf4ff!important;margin-bottom:10px!important}
+body.playerTheme .playerCompDesktopRow.mine,body.playerTheme .playerCompCompactCard.mine{background:linear-gradient(120deg,#18354b,#0e2537)!important;border-color:#3d8ab1!important;outline:none!important;box-shadow:none!important}
+body.playerTheme .playerCompTitle b,body.playerTheme .playerCompDesktopTitle b{color:#fff!important;font-size:18px!important;line-height:1.3!important;white-space:normal!important;overflow-wrap:anywhere!important}
+body.playerTheme .playerCompFishery,body.playerTheme .playerCompDesktopTitle span{color:#b9e6ff!important;font-size:21px!important;font-weight:800!important;line-height:1.3!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;overflow-wrap:anywhere!important}
+body.playerTheme .playerCompDesktopTitle span{margin-top:8px}
+body.playerTheme .playerCompDate,body.playerTheme .playerCompDesktopDateBox .playerCompDate{color:#fff!important;font-size:23px!important}
+body.playerTheme .playerCompWeekday{background:#265b89!important;border-color:#609fcd!important;font-size:12px!important}
+body.playerTheme .playerCompCountdown{background:#ffe9aa!important;color:#44340b!important;border-color:#d6b961!important;font-size:12px!important}
+body.playerTheme .playerCompCountdown.today{background:#ffdedb!important;color:#791c16!important}
+body.playerTheme .playerCompCountdown.past{background:#cad6df!important;color:#263b4c!important}
+body.playerTheme .playerCompNo{background:#0b5184;border:1px solid #4083b2;color:white;min-height:36px}
+body.playerTheme .playerCompCountBadge{background:#112b3c;color:#deeffa;border-color:#528098;padding:7px 9px}
+body.playerTheme .playerCompCountBadge small{color:#b5d3e4;font-size:9px}
+body.playerTheme .playerCompCountBadge b{color:white;font-size:16px}
+body.playerTheme .playerCompMineBadge{background:#bceacc;color:#075329;font-size:11px;padding:7px 9px}
+body.playerTheme .playerCompStatus{font-size:11px;padding:7px 9px;min-height:30px}
+body.playerTheme .playerCompCompactActions{grid-template-columns:1fr!important;gap:22px!important;width:100%;margin:0!important}
+body.playerTheme .playerCompCompactActions button{min-height:48px!important;padding:10px 12px!important;font-size:15px!important;font-weight:700!important;border-radius:7px!important;background:linear-gradient(#167dca,#084579)!important;color:#fff!important;border:1px solid #61b0e6!important;white-space:normal!important;line-height:1.25!important}
+body.playerTheme .playerCompCompactActions button.warn{background:#351b29!important;color:#ffd8dd!important;border:2px solid #eb637b!important}
+body.playerTheme .playerCompCompactActions button:disabled{opacity:.65!important;background:#273b49!important;border-color:#708493!important;cursor:not-allowed}
+body.playerTheme button:focus-visible{outline:3px solid #ffd12a!important;outline-offset:3px!important}
+body.playerTheme #tab-profile label{color:#d3e9fa}
+body.playerTheme .playerView{border-color:#36536b}
+@media(min-width:761px){
+ body.playerTheme .playerCompetitionDesktopOnly{overflow:visible!important}
+ body.playerTheme .playerCompDesktopRow{min-width:0!important;grid-template-columns:54px minmax(0,1fr) minmax(150px,.6fr) 205px!important;grid-template-rows:auto auto auto!important;gap:10px 18px!important;padding:18px!important;align-items:center!important}
+ body.playerTheme .playerCompDesktopRow>.playerCompNo{grid-column:1;grid-row:1/4}
+ body.playerTheme .playerCompDesktopRow>.playerCompDesktopTitle{grid-column:2;grid-row:1/3}
+ body.playerTheme .playerCompDesktopRow>.playerCompDesktopDate{grid-column:3;grid-row:1/3}
+ body.playerTheme .playerCompDesktopRow>.playerCompDesktopCount{grid-column:2;grid-row:3;justify-content:flex-start!important}
+ body.playerTheme .playerCompDesktopRow>div:nth-child(5){grid-column:3;grid-row:3}
+ body.playerTheme .playerCompDesktopRow>.playerCompStatus{grid-column:4;grid-row:1;justify-self:end!important}
+ body.playerTheme .playerCompDesktopRow>.playerCompCompactActions{grid-column:4;grid-row:2/4}
+ body.playerTheme .playerCompDesktopDateTop{display:flex!important;flex-wrap:wrap!important;gap:8px!important}
+ body.playerTheme .playerCompDesktopDateBox{gap:12px!important}
+}
+@media(min-width:761px) and (max-width:1000px){
+ body.playerTheme .playerCompDesktopRow{grid-template-columns:44px minmax(0,1fr) 150px!important;gap:12px!important}
+ body.playerTheme .playerCompDesktopRow>.playerCompNo{grid-row:1}
+ body.playerTheme .playerCompDesktopRow>.playerCompDesktopTitle{grid-column:2/4;grid-row:1}
+ body.playerTheme .playerCompDesktopRow>.playerCompDesktopDate{grid-column:1/3;grid-row:2}
+ body.playerTheme .playerCompDesktopRow>.playerCompStatus{grid-column:3;grid-row:2}
+ body.playerTheme .playerCompDesktopRow>.playerCompDesktopCount{grid-column:1/3;grid-row:3}
+ body.playerTheme .playerCompDesktopRow>div:nth-child(5){grid-column:3;grid-row:3}
+ body.playerTheme .playerCompDesktopRow>.playerCompCompactActions{grid-column:1/4;grid-row:4;grid-template-columns:1fr 1fr!important;gap:28px!important}
+}
+@media(max-width:760px){
+ body.playerTheme main{padding:10px!important}
+ body.playerTheme header h1{font-size:19px!important}
+ body.playerTheme #tab-competitions>.card{padding:10px!important}
+ body.playerTheme .playerNearestThreeHead{padding:10px!important}
+ body.playerTheme .playerNearestThreeHead b{font-size:12px}
+ body.playerTheme .playerNearestThreeBody{padding:7px!important}
+ body.playerTheme .playerCompCompactCard{padding:12px!important}
+ body.playerTheme .playerCompCompactTop{grid-template-columns:46px minmax(0,1fr)!important;gap:10px!important;align-items:start!important}
+ body.playerTheme .playerCompCompactTop>.playerCompNo{grid-column:1;grid-row:1}
+ body.playerTheme .playerCompCompactTop>.playerCompTitle{grid-column:1/3;grid-row:2}
+ body.playerTheme .playerCompCompactTop>.playerCompStatus{grid-column:2;grid-row:1;justify-self:end}
+ body.playerTheme .playerCompTitle b{font-size:18px!important}
+ body.playerTheme .playerCompDateLine{flex-wrap:wrap!important;gap:9px!important;margin-top:12px!important}
+ body.playerTheme .playerCompSubLine{display:flex!important;flex-direction:column!important;align-items:flex-start!important;gap:10px!important;margin-top:10px!important}
+ body.playerTheme .playerCompFishery{font-size:21px!important;flex:none!important}
+ body.playerTheme .playerCompCompactBottom{grid-template-columns:1fr!important;gap:16px!important;margin-top:15px!important}
+ body.playerTheme .playerCompMiniInfo{flex-wrap:wrap!important;gap:8px!important}
+ body.playerTheme .playerCompCompactActions{gap:24px!important}
+ body.playerTheme .playerCompCompactActions button{min-height:50px!important;font-size:16px!important}
+ body.playerTheme .playerCompFilter{font-size:10px!important;gap:4px!important}
+ body.playerTheme #app>.tabs{display:flex;flex-wrap:wrap;gap:9px}
+ body.playerTheme #app>.tabs button{font-size:13px!important;padding:9px!important}
+}
+.playerView .playerOwnSummaryBank{display:block;margin-top:5px;font-size:11px;font-weight:1000;letter-spacing:.03em;text-transform:uppercase;color:#143c37!important}
+.playerDrawViewSwitch{display:flex;justify-content:flex-end;gap:5px;margin:0 0 7px}
+.playerDrawViewSwitch button{width:auto!important;min-width:74px!important;min-height:30px!important;padding:5px 10px!important;border-radius:999px!important;background:#17384d!important;border:1px solid #4b7895!important;color:#bfe3f7!important;font-size:10px!important;font-weight:1000!important}
+.playerDrawViewSwitch button.active{background:#1987c6!important;border-color:#b7e9ff!important;color:#fff!important;box-shadow:0 0 7px #43bff466!important}
+.playerBottomNav{display:none}
+@media(max-width:760px){
+ body.playerTheme main{padding-bottom:78px!important}
+ .playerBottomNav{display:grid;position:fixed;left:0;right:0;bottom:0;z-index:5300;grid-template-columns:repeat(6,minmax(0,1fr));gap:0;padding:5px max(6px,env(safe-area-inset-left)) calc(5px + env(safe-area-inset-bottom)) max(6px,env(safe-area-inset-right));background:#071522f2;border-top:1px solid #3d6077;box-shadow:0 -4px 16px #0008;backdrop-filter:blur(8px)}
+ .playerBottomNav button{width:100%;min-height:38px;padding:4px 0;border:0;border-radius:6px;background:transparent;color:#b9d8eb;font-size:23px;line-height:1;font-weight:700}
+ .playerBottomNav button:active,.playerBottomNav button:focus-visible{background:#1d5c84;color:#fff}
+ .playerView .playerOwnSummaryBank{font-size:9px;margin-top:4px}
+}
 </style>
 </head>
 <body>
@@ -3126,7 +3236,7 @@ body:has(#competitionDetail:not(.hidden) .playerView) #competitionDetail>.card p
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V69</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
+  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="tag">V70</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-profile" class="hidden" onclick="showTab('profile')">Mój profil</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
     <div id="adminCreate" class="card hidden"><h2>Utwórz zawody</h2><p class="small muted">Nazwa zawodów jest używana także w nagłówkach PDF.</p><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div></div><label>Opis</label><textarea id="cNotes" placeholder="Opis zawodów, zasady, informacje organizacyjne."></textarea><button onclick="createCompetition(event)">Utwórz zawody</button></div>
@@ -3139,7 +3249,7 @@ body:has(#competitionDetail:not(.hidden) .playerView) #competitionDetail>.card p
 </section>
 </main>
 <div class="quickScroll"><button onclick="scrollAppTop()">↑</button><button onclick="scrollAppBottom()">↓</button></div>
-<script src="/app.js?v=68" defer></script>
+<script src="/app.js?v=71" defer></script>
 </body>
 </html>`;
 
