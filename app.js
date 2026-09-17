@@ -1,4 +1,4 @@
-const CLIENT_VERSION='77';const CLIENT_VERSION_NAME='V77_PLAYER_START_DETAIL_ISOLATION';try{fetch('/__probe_js_v77',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V77_PLAYER_START_DETAIL_ISOLATION_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='78';const CLIENT_VERSION_NAME='V78_MOBILE_HOME_NAV_HARD_FIX';try{fetch('/__probe_js_v78',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V78_MOBILE_HOME_NAV_HARD_FIX_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let TOKEN = STORE.get('carp_token') || '';
 let ME = null;
@@ -16,6 +16,7 @@ let PLAYER_DRAW_VIEW = 'map';
 let PLAYER_RESULTS_TAB = 't1';
 let PLAYER_MOBILE_PANEL = null;
 const UI_STATE_KEY='lowcy_player_ui_state_v2';
+try{if(STORE.get('lowcy_ui_fix_version')!=='78'){STORE.del(UI_STATE_KEY);STORE.set('lowcy_ui_fix_version','78')}}catch(_){}
 function readPersistentUiState(){try{return JSON.parse(STORE.get(UI_STATE_KEY)||'{}')||{}}catch(_){return {}}}
 function activeTopTab(){for(const n of ['competitions','notifications','profile']){const el=q('tab-'+n);if(el&&!el.classList.contains('hidden'))return n}return 'competitions'}
 function isRealPageReload(){
@@ -41,24 +42,16 @@ function savePersistentUiState(){
 }
 async function restorePersistentUiState(){
   if(!ME||ME.role==='ADMIN')return;
+  /* V78: nigdy nie otwieramy panelu zawodów automatycznie przy starcie lub reloadzie.
+     Panel pojawia się wyłącznie po świadomym kliknięciu „Losowanie/Wyniki”. */
   const detail=q('competitionDetail');
-  /* Nowe wejście z ikony / przeglądarki zawsze zaczyna od czystej listy zawodów.
-     Tylko prawdziwe odświeżenie strony może przywrócić otwarte zawody. */
-  if(!isRealPageReload()){
-    CURRENT_DETAIL=null;PLAYER_MOBILE_PANEL=null;PLAYER_RESULTS_TAB='t1';PLAYER_DRAW_ROUND=1;PLAYER_DRAW_VIEW='map';
-    if(detail){detail.classList.add('hidden');detail.innerHTML=''}
-    showTab('competitions');
-    requestAnimationFrame(()=>{window.scrollTo(0,0);syncPlayerStickyBars()});
-    return;
-  }
-  const s=readPersistentUiState();
-  if(s.playerPanel)PLAYER_MOBILE_PANEL=s.playerPanel;
-  if(['competitions','notifications','profile'].includes(s.activeTab))showTab(s.activeTab);else showTab('competitions');
-  if(s.activeTab==='competitions'&&s.detailVisible&&Number(s.competitionId)>0){
-    try{await openCompetition(Number(s.competitionId),true)}catch(_){if(detail)detail.classList.add('hidden')}
-  }else if(detail){detail.classList.add('hidden')}
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{if(Number.isFinite(Number(s.scrollY)))window.scrollTo(0,Math.max(0,Number(s.scrollY)||0));syncPlayerStickyBars();fitPlayerMobileFullMaps()}));
+  CURRENT_DETAIL=null;PLAYER_MOBILE_PANEL=null;PLAYER_RESULTS_TAB='t1';PLAYER_DRAW_ROUND=1;PLAYER_DRAW_VIEW='map';
+  try{STORE.del(UI_STATE_KEY)}catch(_){}
+  if(detail){detail.classList.add('hidden');detail.innerHTML=''}
+  showTab('competitions');
+  requestAnimationFrame(()=>{clearPlayerFixed(document.querySelector('.playerUnifiedNav'),document.querySelector('.playerDrawStickySlot'));window.scrollTo(0,0);syncPlayerStickyBars()});
 }
+
 function closePlayerCompetition(ev){
   if(ev){ev.preventDefault();ev.stopPropagation()}
   const detail=q('competitionDetail');
@@ -916,5 +909,5 @@ function bindAuthButtons(){
 
 function scrollAppBottom(){window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})}
 Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,closePlayerCompetition,showAdminZone,loadCompetitions,createCompetition,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,editPlayerName,deletePlayer,deleteAllAdminPlayers,saveMyProfile,setPlayerCompetitionFilter,setPlayerCompetitionMonth,enablePush,sendPushTest,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,setPlayerDrawView,openPlayerNotifications,fitPlayerMobileFullMaps,togglePlayerSectorAccordion,toggleFinalClub,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
-function startBoot(){console.log('CLIENT_V77_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v77',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().catch(e=>{console.error('BOOT_FATAL',e);try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
+function startBoot(){console.log('CLIENT_V78_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v78',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().catch(e=>{console.error('BOOT_FATAL',e);try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();
