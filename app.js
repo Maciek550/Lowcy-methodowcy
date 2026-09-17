@@ -1,4 +1,4 @@
-const CLIENT_VERSION='72';const CLIENT_VERSION_NAME='V72_COMPACT_PLAYER_NAV_NEW_CONTENT';try{fetch('/__probe_js_v72',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V72_COMPACT_PLAYER_NAV_NEW_CONTENT_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='73';const CLIENT_VERSION_NAME='V73_STABLE_PWA_REFRESH_ICON';try{fetch('/__probe_js_v73',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V73_STABLE_PWA_REFRESH_ICON_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let TOKEN = STORE.get('carp_token') || '';
 let ME = null;
@@ -15,6 +15,35 @@ let PLAYER_DRAW_ROUND = 1;
 let PLAYER_DRAW_VIEW = 'map';
 let PLAYER_RESULTS_TAB = 't1';
 let PLAYER_MOBILE_PANEL = null;
+const UI_STATE_KEY='lowcy_player_ui_state_v1';
+function readPersistentUiState(){try{return JSON.parse(STORE.get(UI_STATE_KEY)||'{}')||{}}catch(_){return {}}}
+function activeTopTab(){for(const n of ['competitions','notifications','profile']){const el=q('tab-'+n);if(el&&!el.classList.contains('hidden'))return n}return 'competitions'}
+function savePersistentUiState(){
+  if(!ME||ME.role==='ADMIN')return;
+  try{
+    const detail=q('competitionDetail');
+    STORE.set(UI_STATE_KEY,JSON.stringify({
+      activeTab:activeTopTab(),
+      competitionId:CURRENT_DETAIL?.competition?.id||null,
+      detailVisible:Boolean(CURRENT_DETAIL&&detail&&!detail.classList.contains('hidden')),
+      playerPanel:PLAYER_MOBILE_PANEL||null,
+      scrollY:Math.max(0,Math.round(window.scrollY||0))
+    }));
+  }catch(_){ }
+}
+async function restorePersistentUiState(){
+  if(!ME||ME.role==='ADMIN')return;
+  const s=readPersistentUiState();
+  if(s.playerPanel)PLAYER_MOBILE_PANEL=s.playerPanel;
+  if(['competitions','notifications','profile'].includes(s.activeTab))showTab(s.activeTab);
+  if(s.activeTab==='competitions'&&s.detailVisible&&Number(s.competitionId)>0){
+    try{await openCompetition(Number(s.competitionId),true)}catch(_){ }
+  }
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{if(Number.isFinite(Number(s.scrollY)))window.scrollTo(0,Math.max(0,Number(s.scrollY)||0));syncPlayerStickyBars();fitPlayerMobileFullMaps()}));
+}
+window.addEventListener('pagehide',savePersistentUiState,{capture:true});
+window.addEventListener('beforeunload',savePersistentUiState,{capture:true});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')savePersistentUiState()});
 let PLAYER_SECTOR_STATE = {1:null,2:null};
 let SHOW_FINAL_CLUB = false;
 let PUSH_CONFIG = null;
@@ -57,6 +86,7 @@ function startPlayerResultPolling(){if(PLAYER_RESULT_POLL_TIMER)return;PLAYER_RE
 async function pollPlayerCompetitionResults(){if(PLAYER_RESULT_POLL_BUSY||!ME||ME.role==='ADMIN'||!CURRENT_DETAIL?.competition?.id||q('competitionDetail')?.classList.contains('hidden'))return;PLAYER_RESULT_POLL_BUSY=true;try{const id=CURRENT_DETAIL.competition.id,d=await api('/api/competitions/'+id);if(playerContentSignature(d)===playerContentSignature(CURRENT_DETAIL))return;CURRENT_DETAIL=d;const active=PLAYER_MOBILE_PANEL;if(active==='t1'||active==='t2')markPlayerResultSeen(active==='t1'?1:2);if(active==='draw1'||active==='draw2')markPlayerDrawSeen(active==='draw1'?1:2);const mobile=q('playerMobilePanelContent'),desktop=q('playerDesktopPanelContent');if(mobile)mobile.innerHTML=renderPlayerMobilePanelContent(d,active);if(desktop)desktop.innerHTML=renderPlayerDesktopPanelContent(d,active);syncPlayerContentStars(d);requestAnimationFrame(()=>{syncPlayerStickyBars();fitPlayerMobileFullMaps()})}catch(_){ }finally{PLAYER_RESULT_POLL_BUSY=false}}
 function syncNotificationBadges(unread=PLAYER_UNREAD_NOTIFICATIONS){const n=Math.max(0,Number(unread||0));document.querySelectorAll('#playerNotifBtn,.notificationTile').forEach(btn=>{btn.innerHTML=playerNotifLabel(n)});const top=q('btn-notifications');if(top){let b=top.querySelector('.topNotifBadge');if(n){if(!b){b=document.createElement('span');b.className='topNotifBadge';top.appendChild(b)}b.textContent=n>99?'99+':String(n)}else if(b)b.remove()}}
 function setLoggedOut(showMsg){
+  try{document.documentElement.classList.remove('hasSavedSession')}catch(_){}
   stopPlayerResultPolling();
   TOKEN=''; ME=null; document.body.classList.remove('playerTheme'); STORE.del('carp_token');
   const logout=q('logoutBtn'), auth=q('auth'), app=q('app');
@@ -70,9 +100,9 @@ function setLoggedOut(showMsg){
 async function boot(){
   const logout=q('logoutBtn'), auth=q('auth'), app=q('app');
   if(logout)logout.classList.add('hidden');
-  if(auth)auth.classList.remove('hidden');
+  if(!TOKEN){if(auth)auth.classList.remove('hidden');if(app)app.classList.add('hidden');setLoggedOut(false);return}
+  if(auth)auth.classList.add('hidden');
   if(app)app.classList.add('hidden');
-  if(!TOKEN){setLoggedOut(false);return}
   try{const d=await api('/api/me');ME=d.user}catch(e){setLoggedOut(false);return}
   if(auth)auth.classList.add('hidden');
   if(app)app.classList.remove('hidden');
@@ -82,7 +112,8 @@ async function boot(){
   renderPushStatus();
   showTab('competitions');
   await Promise.allSettled([loadCompetitions(),loadNotifications(),admin?loadPlayers():Promise.resolve()]);
-  if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=72',{scope:'/'}).then(()=>{if('Notification' in window&&Notification.permission==='granted')ensurePushSubscription(true,false).catch(()=>{})}).catch(()=>{})}
+  if(!admin)await restorePersistentUiState();
+  if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js',{scope:'/'}).then(reg=>{try{reg.update()}catch(_){ }if('Notification' in window&&Notification.permission==='granted')ensurePushSubscription(true,false).catch(()=>{})}).catch(()=>{})}
 }
 async function login(){try{const phone=q('loginPhone')?.value||'';const password=q('loginPassword')?.value||'';if(!phone.trim()||!password)throw new Error('Wpisz telefon i hasło');const d=await api('/api/login',{method:'POST',body:JSON.stringify({phone,password})});TOKEN=d.token;STORE.set('carp_token',TOKEN);msg('Zalogowano');await boot()}catch(e){msg(e.message,'bad')}}
 async function registerPlayer(ev){if(ev){ev.preventDefault&&ev.preventDefault();ev.stopPropagation&&ev.stopPropagation()}try{const d=await api('/api/register',{method:'POST',body:JSON.stringify({phone:q('regPhone').value,password:q('regPassword').value,firstName:q('regFirst').value,lastName:q('regLast').value,pzwClub:q('regClub').value})});TOKEN=d.token;STORE.set('carp_token',TOKEN);msg('Konto zawodnika utworzone');await boot()}catch(e){msg(e.message,'bad')}}
@@ -727,7 +758,7 @@ async function ensurePushSubscription(silent=false,sendTest=false){
   let permission=Notification.permission;
   if(permission==='default'&&!silent)permission=await Notification.requestPermission();
   if(permission!=='granted'){if(!silent)msg(permission==='denied'?'Powiadomienia są zablokowane w ustawieniach tej strony.':'Nie włączono powiadomień telefonu.','bad');renderPushStatus();return false}
-  const reg=await navigator.serviceWorker.register('/sw.js?v=72',{scope:'/'});
+  const reg=await navigator.serviceWorker.register('/sw.js',{scope:'/'});
   await navigator.serviceWorker.ready;
   let sub=await reg.pushManager.getSubscription();
   if(sub&&sendTest){await sub.unsubscribe().catch(()=>{});sub=null}
@@ -858,5 +889,5 @@ function bindAuthButtons(){
 
 function scrollAppBottom(){window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})}
 Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,showAdminZone,loadCompetitions,createCompetition,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,editPlayerName,deletePlayer,deleteAllAdminPlayers,saveMyProfile,setPlayerCompetitionFilter,setPlayerCompetitionMonth,enablePush,sendPushTest,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,setPlayerDrawView,openPlayerNotifications,fitPlayerMobileFullMaps,togglePlayerSectorAccordion,toggleFinalClub,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
-function startBoot(){console.log('CLIENT_V72_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v72',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().catch(e=>{console.error('BOOT_FATAL',e);try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
+function startBoot(){console.log('CLIENT_V73_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v73',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().catch(e=>{console.error('BOOT_FATAL',e);try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();
