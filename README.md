@@ -1,3 +1,9 @@
+Wersja V104 — czytelne karty administratora
+
+Wgraj wszystkie pliki paczki i uruchom ponownie aplikację.
+Poprawiono kontrast nazwisk, stanowisk, sektorów, wag i BF w kartach losowania i wyników.
+Ujednolicono numer wersji serwera i klienta.
+
 
 
 V74: naprawa mobilnego przewijania po V73, aktualizacja PWA/cache, testy widoków i kafelków oraz czytelniejsze powiadomienia zawodnika.

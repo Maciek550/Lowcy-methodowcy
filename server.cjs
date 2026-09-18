@@ -16,8 +16,8 @@ const ADMIN_SETUP_CODE = process.env.ADMIN_SETUP_CODE || '';
 let VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 let VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
-const APP_VERSION = '97';
-const APP_VERSION_NAME = 'V103_MOBILE_RESULTS_CONTRAST';
+const APP_VERSION = '104';
+const APP_VERSION_NAME = 'V104_ADMIN_CARD_CONTRAST';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 const ICON_192 = fs.readFileSync(pathModule.join(__dirname, 'icon-192.png'));
 const ICON_512 = fs.readFileSync(pathModule.join(__dirname, 'icon-512.png'));
@@ -1142,7 +1142,7 @@ async function route(req, res) {
   const path = url.pathname;
   const method = req.method;
 
-  if (path === '/__probe_js_v103' || path === '/__probe_boot_v103' || path === '/__probe_js_v102' || path === '/__probe_boot_v102' || path === '/__probe_js_v101' || path === '/__probe_boot_v101' || path === '/__probe_js_v100' || path === '/__probe_boot_v100' || path === '/__probe_js_v99' || path === '/__probe_boot_v99' || path === '/__probe_js_v98' || path === '/__probe_boot_v98' || path === '/__probe_js_v97' || path === '/__probe_boot_v97' || path === '/__probe_js_v96' || path === '/__probe_boot_v96' || path === '/__probe_js_v95' || path === '/__probe_boot_v95' || path === '/__probe_js_v94' || path === '/__probe_boot_v94' || path === '/__probe_js_v93' || path === '/__probe_boot_v93' || path === '/__probe_js_v91' || path === '/__probe_boot_v91' || path === '/__probe_js_v90' || path === '/__probe_boot_v90' || path === '/__probe_js_v89' || path === '/__probe_boot_v89' || path === '/__probe_js_v88' || path === '/__probe_boot_v88' || path === '/__probe_js_v87' || path === '/__probe_boot_v87' || path === '/__probe_js_v86' || path === '/__probe_boot_v86' || path === '/__probe_js_v85' || path === '/__probe_boot_v85' || path === '/__probe_js_v84' || path === '/__probe_boot_v84' || path === '/__probe_js_v83' || path === '/__probe_boot_v83' || path === '/__probe_js_v82' || path === '/__probe_boot_v82' || path === '/__probe_js_v81' || path === '/__probe_boot_v81' || path === '/__probe_js_v80' || path === '/__probe_boot_v80' || path === '/__probe_js_v79' || path === '/__probe_boot_v79' || path === '/__probe_js_v78' || path === '/__probe_boot_v78' || path === '/__probe_js_v77' || path === '/__probe_boot_v77' || path === '/__probe_js_v76' || path === '/__probe_boot_v76' || path === '/__probe_js_v75' || path === '/__probe_boot_v75' || path === '/__probe_js_v74' || path === '/__probe_boot_v74' || path === '/__probe_js_v73' || path === '/__probe_boot_v73' || path === '/__probe_js_v72' || path === '/__probe_boot_v72' || path === '/__probe_js_v71' || path === '/__probe_boot_v71') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
+  if (path === '/__probe_js_v104' || path === '/__probe_boot_v104' || path === '/__probe_js_v102' || path === '/__probe_boot_v102' || path === '/__probe_js_v101' || path === '/__probe_boot_v101' || path === '/__probe_js_v100' || path === '/__probe_boot_v100' || path === '/__probe_js_v99' || path === '/__probe_boot_v99' || path === '/__probe_js_v98' || path === '/__probe_boot_v98' || path === '/__probe_js_v97' || path === '/__probe_boot_v97' || path === '/__probe_js_v96' || path === '/__probe_boot_v96' || path === '/__probe_js_v95' || path === '/__probe_boot_v95' || path === '/__probe_js_v94' || path === '/__probe_boot_v94' || path === '/__probe_js_v93' || path === '/__probe_boot_v93' || path === '/__probe_js_v91' || path === '/__probe_boot_v91' || path === '/__probe_js_v90' || path === '/__probe_boot_v90' || path === '/__probe_js_v89' || path === '/__probe_boot_v89' || path === '/__probe_js_v88' || path === '/__probe_boot_v88' || path === '/__probe_js_v87' || path === '/__probe_boot_v87' || path === '/__probe_js_v86' || path === '/__probe_boot_v86' || path === '/__probe_js_v85' || path === '/__probe_boot_v85' || path === '/__probe_js_v84' || path === '/__probe_boot_v84' || path === '/__probe_js_v83' || path === '/__probe_boot_v83' || path === '/__probe_js_v82' || path === '/__probe_boot_v82' || path === '/__probe_js_v81' || path === '/__probe_boot_v81' || path === '/__probe_js_v80' || path === '/__probe_boot_v80' || path === '/__probe_js_v79' || path === '/__probe_boot_v79' || path === '/__probe_js_v78' || path === '/__probe_boot_v78' || path === '/__probe_js_v77' || path === '/__probe_boot_v77' || path === '/__probe_js_v76' || path === '/__probe_boot_v76' || path === '/__probe_js_v75' || path === '/__probe_boot_v75' || path === '/__probe_js_v74' || path === '/__probe_boot_v74' || path === '/__probe_js_v73' || path === '/__probe_boot_v73' || path === '/__probe_js_v72' || path === '/__probe_boot_v72' || path === '/__probe_js_v71' || path === '/__probe_boot_v71') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
 
   if (path === '/__probe_js_v68' || path === '/__probe_boot_v68' || path === '/__probe_js_v67' || path === '/__probe_boot_v67' || path === '/__probe_js_v66' || path === '/__probe_boot_v66' || path === '/__probe_js_v65' || path === '/__probe_boot_v65' || path === '/__probe_js_v63' || path === '/__probe_boot_v63' || path === '/__probe_js_v62' || path === '/__probe_boot_v62' || path === '/__probe_js_v60' || path === '/__probe_boot_v60' || path === '/__probe_js_v59' || path === '/__probe_boot_v59' || path === '/__probe_js_v58' || path === '/__probe_boot_v58' || path === '/__probe_js_v57' || path === '/__probe_boot_v57' || path === '/__probe_js_v56' || path === '/__probe_boot_v56' || path === '/__probe_js_v55' || path === '/__probe_boot_v55' || path === '/__probe_js_v54' || path === '/__probe_boot_v54' || path === '/__probe_js_v53' || path === '/__probe_boot_v53' || path === '/__probe_js_v52' || path === '/__probe_boot_v52' || path === '/__probe_js_v51' || path === '/__probe_boot_v51' || path === '/__probe_js_v50' || path === '/__probe_boot_v50' || path === '/__probe_js_v49' || path === '/__probe_boot_v49' || path === '/__probe_js_v36' || path === '/__probe_boot_v36' || path === '/__probe_js_v35' || path === '/__probe_boot_v35' || path === '/__probe_js_v34' || path === '/__probe_boot_v34' || path === '/__probe_js_v33' || path === '/__probe_boot_v33' || path === '/__probe_js_v32' || path === '/__probe_boot_v32' || path === '/__probe_js_v30' || path === '/__probe_boot_v30' || path === '/__probe_js_v29' || path === '/__probe_boot_v29' || path === '/__probe_js_v27' || path === '/__probe_boot_v27' || path === '/__probe_inline_v26') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/api/version') return sendJson(res, 200, { ok:true, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
@@ -1199,7 +1199,7 @@ async function route(req, res) {
 }
 
 
-/* V103 — mobilne wyniki admina: pełny kontrast dla sekcji wyników i klasyfikacji. */
+/* V104 — mobilne wyniki admina: pełny kontrast dla sekcji wyników i klasyfikacji. */
 @media(max-width:760px){
   body:not(.playerTheme):not(.authMode) #adminZone-results > .card{
     background:#0d2636!important;
@@ -1330,9 +1330,9 @@ async function route(req, res) {
     ]
   }), {'Content-Type':'application/manifest+json; charset=utf-8','Cache-Control':'no-cache'});
   if (path === '/sw.js') return send(res, 200, `
-const SW_VERSION='lowcy-v103-mobile-results-contrast';
-const SHELL_CACHE='lowcy-shell-v103';
-const APP_SHELL_JS='/app.js?v=103';
+const SW_VERSION='lowcy-v104-mobile-results-contrast';
+const SHELL_CACHE='lowcy-shell-v104';
+const APP_SHELL_JS='/app.js?v=104';
 const SHELL=['/',APP_SHELL_JS,'/manifest.webmanifest','/icon-192.png','/icon-512.png','/apple-touch-icon.png'];
 const NET_TIMEOUT_MS=4500;
 async function fetchWithTimeout(req,ms=NET_TIMEOUT_MS){
@@ -2147,10 +2147,10 @@ const HTML = `<!doctype html>
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
 <script>try{if(localStorage.getItem('carp_token'))document.documentElement.classList.add('hasSavedSession')}catch(e){}</script>
-<title>Łowcy Methodowcy — V103</title>
+<title>Łowcy Methodowcy — V104</title>
 <style>
 :root{--green:#114b2f;--green2:#17643f;--bg:#f3f6ef;--card:#fff;--line:#cfd8cc;--txt:#18251d;--muted:#68746d;--red:#b32020;--gold:#ffc400;--blue:#1057c8;--soft:#eaf2eb}
-*{box-sizing:border-box}html,body{height:auto!important;min-height:100%!important;overflow-y:auto!important;overscroll-behavior:auto!important}body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}header{position:sticky;top:0;z-index:5;background:var(--green);color:white;padding:12px 14px;box-shadow:0 2px 8px #0002}header .row{display:flex;justify-content:space-between;gap:12px;align-items:center;max-width:1180px;margin:auto}h1{font-size:18px;margin:0}h2{font-size:18px;margin:0 0 8px}h3{font-size:16px;margin:12px 0 8px}main{max-width:1180px;margin:0 auto;padding:12px}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin:12px 0;box-shadow:0 2px 8px #0000000d}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}input,select,textarea,button{width:100%;font:inherit;border-radius:12px;border:1px solid var(--line);padding:10px 11px;background:white}textarea{min-height:70px}button{border:0;background:var(--green);color:white;font-weight:900;cursor:pointer}button.secondary{background:#e7eee7;color:var(--green);border:1px solid #bfd0c2}button.warn{background:var(--red)}button.blue{background:var(--blue)}button:disabled{opacity:.55;cursor:not-allowed}label{display:block;font-size:12px;font-weight:900;color:var(--muted);margin:8px 0 4px}.tabs{display:flex;gap:8px;overflow:auto;padding:8px 0}.tabs button{white-space:nowrap;width:auto;padding:9px 13px}.tabs button.active{background:#072e1c}.tablewrap{width:100%;overflow:auto;border-radius:12px;border:1px solid var(--line)}table{width:100%;border-collapse:collapse;background:white}th,td{border:1px solid var(--line);padding:8px 7px;text-align:left;vertical-align:middle}th{background:#e6f0e8;color:#103b28;font-size:12px;text-transform:uppercase}.nowrap{white-space:nowrap}.muted{color:var(--muted)}.ok{color:var(--green);font-weight:900}.bad{color:var(--red);font-weight:900}.pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#e6f0e8;font-weight:900}.hidden{display:none!important}.top-actions{display:flex;gap:8px;align-items:center}.top-actions button{width:auto;padding:8px 11px;background:#ffffff22;border:1px solid #ffffff55}.small{font-size:12px}.right{text-align:right}.mine{background:#fff4b8!important;outline:3px solid var(--gold);outline-offset:-3px;font-weight:900}.mine td{font-weight:900}.danger-line{border-left:6px solid var(--red)}.success-line{border-left:6px solid var(--green)}.mapbox{background:#f7faf4;border:1px solid var(--line);border-radius:14px;padding:10px;overflow:auto}.banktitle{font-size:12px;font-weight:900;color:var(--muted);margin:8px 0 5px}.bank{display:grid;grid-template-columns:repeat(auto-fit,minmax(42px,1fr));gap:5px;min-width:320px}.stand{min-height:42px;border:1px solid #a8b7aa;border-radius:9px;background:white;display:flex;align-items:center;justify-content:center;flex-direction:column;font-weight:900;font-size:12px}.stand small{font-size:9px;font-weight:800;color:#555}.stand.occ{box-shadow:inset 0 -4px 0 #cbd8cc}.stand.t1{background:#ffe1e1;border:3px solid #d00000;color:#8e0000}.stand.t2{background:#dfeaff;border:3px solid #005bd8;color:#003c91}.stand.both{background:#f0dcff;border:3px solid #7a1fc2;color:#461078}.ownbox{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.ownitem{border:2px solid var(--line);border-radius:14px;padding:12px;background:#fff}.ownitem strong{font-size:24px}.twoCols{display:grid;grid-template-columns:1fr 1fr;gap:12px}.inlineBtns{display:flex;gap:6px;flex-wrap:wrap}.inlineBtns button{width:auto}.competitionActions{gap:22px;align-items:center}.competitionActions button{min-width:96px}.adminbar{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.tag{font-size:11px;border-radius:999px;padding:3px 7px;background:#f0f4ee;font-weight:900}.t1tag{background:#ffe1e1;color:#8e0000}.t2tag{background:#dfeaff;color:#003c91}.sector-A{box-shadow:inset 0 0 0 2px #b32020}.sector-B{box-shadow:inset 0 0 0 2px #1057c8}.sector-C{box-shadow:inset 0 0 0 2px #14803a}.sector-D{box-shadow:inset 0 0 0 2px #7a1fc2}.sector-E{box-shadow:inset 0 0 0 2px #b36b00}.sector-F{box-shadow:inset 0 0 0 2px #006b7a}.checkline{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--txt);font-weight:800}.checkline input{width:auto}.sectorMap{background:#fbfdf9;border:1px solid var(--line);border-radius:14px;padding:12px;overflow:auto}.mapTitle,.bankLabel{font-weight:1000;color:#204b38;margin:5px 0}.standRow{display:grid;gap:0;min-width:640px}.standCell{min-height:45px;border:2px solid #446b56;display:flex;align-items:center;justify-content:center;flex-direction:column;font-weight:1000;color:#123827;margin:-1px 0 0 -1px}.standCell small{font-size:10px}.standCell.empty{border:0;background:transparent}.sectorBand{display:grid;min-width:640px;gap:0}.sectorBlock{min-height:78px;border:3px solid #38664d;display:flex;align-items:center;justify-content:center;flex-direction:column;margin:-1px 0 0 -1px;text-align:center}.sectorBlock span{font-size:22px;font-weight:1000}.sectorSummary{background:#ecf2ed;border-radius:10px;padding:10px;margin-top:10px;font-size:13px}.water{text-align:center;background:#f2f6f1;color:#6a756d;font-weight:1000;padding:12px;min-width:640px}.sectorFill-A{background:#d8f1dd}.sectorFill-B{background:#dbe8fb}.sectorFill-C{background:#ffe7bd}.sectorFill-D{background:#f6d9e3}.sectorFill-E{background:#eadffb}.sectorFill-F{background:#dff4f4}.sectorFill-G{background:#f7e8ce}.sectorFill-H{background:#e5f0d0}.standCell.t1{background:#ffb5b5!important;border:4px solid #d00000!important;color:#7c0000}.standCell.t2{background:#b9d2ff!important;border:4px solid #005bd8!important;color:#002c70}.standCell.both{background:#e1b8ff!important;border:4px solid #7a1fc2!important;color:#3c0060}.standCell.occ{box-shadow:inset 0 -5px 0 #244f36}.weightItems{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:5px}.weightTag{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:3px 6px;font-size:11px;font-weight:900;background:#edf4ec;border:1px solid #bfd0c2}.weightTag button{width:auto;padding:0 4px;border-radius:8px;background:#b91c1c;color:#fff;line-height:1.1}.bfTag{background:#fff0d6;border-color:#e5b965}.netTag{background:#e7f5e7}.bfLine{font-size:12px;font-weight:1000;color:#b91c1c}.flashSave{background:#bff7c8!important;transition:background .25s}.resultInputTable input{min-width:120px}.sectorBand.clean{margin:0}.sectorFlexRow{display:flex;gap:0;min-width:640px}.sectorGroup{display:grid;gap:0;margin:0}.sectorGroup .standCell{border-radius:0;margin:-1px 0 0 -1px}.sectorFlexRow .sectorBlock{border-radius:0;margin:-1px 0 0 -1px}.standFlex{align-items:stretch}.sectorBand.clean .sectorBlock{min-height:72px}.pushBox{margin-top:6px;line-height:1.35}.bankLabelBottom{margin-top:8px}.quickScroll{position:fixed;right:10px;bottom:14px;z-index:30;display:flex;flex-direction:column;gap:7px}.quickScroll button{width:52px;padding:9px 0;border-radius:999px;background:#123827cc;box-shadow:0 3px 10px #0003}.quickScroll button:last-child{background:#e7eee7;color:#123827;border:1px solid #bfd0c2}
+*{box-sizing:border-box}html,body{height:auto!important;min-height:100%!important;overflow-y:auto!important;overscroll-behavior:auto!important}body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}header{position:sticky;top:0;z-index:5;background:var(--green);color:white;padding:12px 14px;box-shadow:0 2px 8px #0002}header .row{display:flex;justify-content:space-between;gap:12px;align-items:center;max-width:1180px;margin:auto}h1{font-size:18px;margin:0}h2{font-size:18px;margin:0 0 8px}h3{font-size:16px;margin:12px 0 8px}main{max-width:1180px;margin:0 auto;padding:12px}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin:12px 0;box-shadow:0 2px 8px #0000000d}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}input,select,textarea,button{width:100%;font:inherit;border-radius:12px;border:1px solid var(--line);padding:10px 11px;background:white}textarea{min-height:70px}button{border:0;background:var(--green);color:white;font-weight:900;cursor:pointer}button.secondary{background:#e7eee7;color:var(--green);border:1px solid #bfd0c2}button.warn{background:var(--red)}button.blue{background:var(--blue)}button:disabled{opacity:.55;cursor:not-allowed}label{display:block;font-size:12px;font-weight:900;color:var(--muted);margin:8px 0 4px}.tabs{display:flex;gap:8px;overflow:auto;padding:8px 0}.tabs button{white-space:nowrap;width:auto;padding:9px 13px}.tabs button.active{background:#072e1c}.tablewrap{width:100%;overflow:auto;border-radius:12px;border:1px solid var(--line)}table{width:100%;border-collapse:collapse;background:white}th,td{border:1px solid var(--line);padding:8px 7px;text-align:left;vertical-align:middle}th{background:#e6f0e8;color:#104b28;font-size:12px;text-transform:uppercase}.nowrap{white-space:nowrap}.muted{color:var(--muted)}.ok{color:var(--green);font-weight:900}.bad{color:var(--red);font-weight:900}.pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#e6f0e8;font-weight:900}.hidden{display:none!important}.top-actions{display:flex;gap:8px;align-items:center}.top-actions button{width:auto;padding:8px 11px;background:#ffffff22;border:1px solid #ffffff55}.small{font-size:12px}.right{text-align:right}.mine{background:#fff4b8!important;outline:3px solid var(--gold);outline-offset:-3px;font-weight:900}.mine td{font-weight:900}.danger-line{border-left:6px solid var(--red)}.success-line{border-left:6px solid var(--green)}.mapbox{background:#f7faf4;border:1px solid var(--line);border-radius:14px;padding:10px;overflow:auto}.banktitle{font-size:12px;font-weight:900;color:var(--muted);margin:8px 0 5px}.bank{display:grid;grid-template-columns:repeat(auto-fit,minmax(42px,1fr));gap:5px;min-width:320px}.stand{min-height:42px;border:1px solid #a8b7aa;border-radius:9px;background:white;display:flex;align-items:center;justify-content:center;flex-direction:column;font-weight:900;font-size:12px}.stand small{font-size:9px;font-weight:800;color:#555}.stand.occ{box-shadow:inset 0 -4px 0 #cbd8cc}.stand.t1{background:#ffe1e1;border:3px solid #d00000;color:#8e0000}.stand.t2{background:#dfeaff;border:3px solid #005bd8;color:#003c91}.stand.both{background:#f0dcff;border:3px solid #7a1fc2;color:#461078}.ownbox{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.ownitem{border:2px solid var(--line);border-radius:14px;padding:12px;background:#fff}.ownitem strong{font-size:24px}.twoCols{display:grid;grid-template-columns:1fr 1fr;gap:12px}.inlineBtns{display:flex;gap:6px;flex-wrap:wrap}.inlineBtns button{width:auto}.competitionActions{gap:22px;align-items:center}.competitionActions button{min-width:96px}.adminbar{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.tag{font-size:11px;border-radius:999px;padding:3px 7px;background:#f0f4ee;font-weight:900}.t1tag{background:#ffe1e1;color:#8e0000}.t2tag{background:#dfeaff;color:#003c91}.sector-A{box-shadow:inset 0 0 0 2px #b32020}.sector-B{box-shadow:inset 0 0 0 2px #1057c8}.sector-C{box-shadow:inset 0 0 0 2px #14803a}.sector-D{box-shadow:inset 0 0 0 2px #7a1fc2}.sector-E{box-shadow:inset 0 0 0 2px #b36b00}.sector-F{box-shadow:inset 0 0 0 2px #006b7a}.checkline{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--txt);font-weight:800}.checkline input{width:auto}.sectorMap{background:#fbfdf9;border:1px solid var(--line);border-radius:14px;padding:12px;overflow:auto}.mapTitle,.bankLabel{font-weight:1000;color:#204b38;margin:5px 0}.standRow{display:grid;gap:0;min-width:640px}.standCell{min-height:45px;border:2px solid #446b56;display:flex;align-items:center;justify-content:center;flex-direction:column;font-weight:1000;color:#123827;margin:-1px 0 0 -1px}.standCell small{font-size:10px}.standCell.empty{border:0;background:transparent}.sectorBand{display:grid;min-width:640px;gap:0}.sectorBlock{min-height:78px;border:3px solid #38664d;display:flex;align-items:center;justify-content:center;flex-direction:column;margin:-1px 0 0 -1px;text-align:center}.sectorBlock span{font-size:22px;font-weight:1000}.sectorSummary{background:#ecf2ed;border-radius:10px;padding:10px;margin-top:10px;font-size:13px}.water{text-align:center;background:#f2f6f1;color:#6a756d;font-weight:1000;padding:12px;min-width:640px}.sectorFill-A{background:#d8f1dd}.sectorFill-B{background:#dbe8fb}.sectorFill-C{background:#ffe7bd}.sectorFill-D{background:#f6d9e3}.sectorFill-E{background:#eadffb}.sectorFill-F{background:#dff4f4}.sectorFill-G{background:#f7e8ce}.sectorFill-H{background:#e5f0d0}.standCell.t1{background:#ffb5b5!important;border:4px solid #d00000!important;color:#7c0000}.standCell.t2{background:#b9d2ff!important;border:4px solid #005bd8!important;color:#002c70}.standCell.both{background:#e1b8ff!important;border:4px solid #7a1fc2!important;color:#3c0060}.standCell.occ{box-shadow:inset 0 -5px 0 #244f36}.weightItems{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:5px}.weightTag{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:3px 6px;font-size:11px;font-weight:900;background:#edf4ec;border:1px solid #bfd0c2}.weightTag button{width:auto;padding:0 4px;border-radius:8px;background:#b91c1c;color:#fff;line-height:1.1}.bfTag{background:#fff0d6;border-color:#e5b965}.netTag{background:#e7f5e7}.bfLine{font-size:12px;font-weight:1000;color:#b91c1c}.flashSave{background:#bff7c8!important;transition:background .25s}.resultInputTable input{min-width:120px}.sectorBand.clean{margin:0}.sectorFlexRow{display:flex;gap:0;min-width:640px}.sectorGroup{display:grid;gap:0;margin:0}.sectorGroup .standCell{border-radius:0;margin:-1px 0 0 -1px}.sectorFlexRow .sectorBlock{border-radius:0;margin:-1px 0 0 -1px}.standFlex{align-items:stretch}.sectorBand.clean .sectorBlock{min-height:72px}.pushBox{margin-top:6px;line-height:1.35}.bankLabelBottom{margin-top:8px}.quickScroll{position:fixed;right:10px;bottom:14px;z-index:30;display:flex;flex-direction:column;gap:7px}.quickScroll button{width:52px;padding:9px 0;border-radius:999px;background:#123827cc;box-shadow:0 3px 10px #0003}.quickScroll button:last-child{background:#e7eee7;color:#123827;border:1px solid #bfd0c2}
 
 .sectorMap,.sectorMap .mapTitle,.sectorMap .bankLabel,.sectorMap .sectorSummary{text-align:center}.sectorBlock{min-height:118px;text-align:center;gap:4px;padding:10px 4px}.sectorWord{font-size:13px;font-weight:1000;letter-spacing:.08em;line-height:1}.sectorLetter{font-size:36px;font-weight:1000;line-height:1}.sectorPeople{font-size:13px;font-weight:1000;line-height:1.1}.standCell{text-align:center}.playerView{text-align:center}.playerView table th,.playerView table td{text-align:center}.playerView .inlineBtns{justify-content:center}.playerView .ownitem{text-align:center}.playerView .sectorSummary{text-align:center}.playerView .card{text-align:center}
 .sharpTable{border-collapse:collapse;background:#fff;color:#001b12;font-size:14px;line-height:1.18;text-rendering:geometricPrecision}.sharpTable th,.sharpTable td{border:1.5px solid #b8cbbb;padding:8px 8px}.sharpTable th{background:#e2eee5;color:#052719;font-weight:1000;letter-spacing:.02em}.generalTable{width:100%;table-layout:auto}.generalTable .center{text-align:center}.generalTable .right{text-align:right}.generalTable .colRank{width:42px}.generalTable .colRound{width:52px;min-width:44px}.generalTable .colSum{width:78px;min-width:68px}.generalTable .colWeight{width:118px;min-width:105px}.generalTable .colName{width:auto;min-width:130px;white-space:normal}.generalTable .nameCell b{font-weight:1000}.generalTable .scoreCell b,.generalTable .sumCell b,.generalTable .weightCell b{font-size:15px;font-weight:1000}.generalTable .weightCell{white-space:nowrap}.finalWrap{box-shadow:0 1px 0 #00000012}.workZoneTabs{position:sticky;top:58px;z-index:4;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;background:var(--bg);padding:10px 0 6px}.workZoneTabs button{min-height:58px;background:#dfe9e1;color:#123827;border:2px solid #a9bcae;font-size:14px;line-height:1.2}.workZoneTabs button.active{background:var(--green);color:#fff;border-color:var(--green);box-shadow:0 3px 10px #0002}.adminZone{min-height:120px}
@@ -2648,7 +2648,7 @@ header{z-index:100!important}
   .compactPlayerSector .mobileStandGrid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:4px!important;padding:0!important}
   .compactPlayerSector .mobileStandCard{min-height:0!important;padding:0!important;background:transparent!important}
   .compactPlayerSector .mobileStandCardInner{display:grid!important;grid-template-columns:34px minmax(0,1fr)!important;align-items:center!important;min-height:42px!important;border:1px solid #95a99a!important;border-radius:8px!important;background:#ffffffd7!important;overflow:hidden!important}
-  .compactPlayerSector .mobileStandNo{display:flex!important;align-items:center!important;justify-content:center!important;height:100%!important;font-size:22px!important;line-height:1!important;font-weight:1000!important;border-right:1px solid #a6b6ab!important;color:#103b2a!important;background:#ffffff90!important}
+  .compactPlayerSector .mobileStandNo{display:flex!important;align-items:center!important;justify-content:center!important;height:100%!important;font-size:22px!important;line-height:1!important;font-weight:1000!important;border-right:1px solid #a6b6ab!important;color:#104b2a!important;background:#ffffff90!important}
   .compactPlayerSector .mobileStandInfo{min-width:0!important;padding:4px 5px!important;font-size:11px!important;line-height:1.05!important;color:#183125!important;overflow:hidden!important}
   .compactPlayerSector .mobileStandInfo b{display:block!important;font-size:11.5px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
   .compactPlayerSector .mobileMineBadge{display:inline-block!important;margin-top:2px!important;padding:1px 4px!important;border-radius:999px!important;background:#f6b900!important;color:#3e2b00!important;font-size:7px!important;font-weight:1000!important;letter-spacing:.02em!important}
@@ -2683,7 +2683,7 @@ header{z-index:100!important}
   .playerMobileSelectedPanel{width:100%!important;margin:0!important}
   .playerSelectedOwn{display:flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;margin:4px 0!important;padding:5px 7px!important;border:1px solid #c8d6cc!important;border-radius:8px!important;background:#fff!important}
   .playerSelectedOwn .tag{font-size:8px!important;padding:1px 5px!important}
-  .playerSelectedOwn strong{font-size:25px!important;line-height:1!important;color:#103b2a!important}
+  .playerSelectedOwn strong{font-size:25px!important;line-height:1!important;color:#104b2a!important}
   .playerSelectedOwn b{font-size:11px!important;color:#294d3d!important}
 
   .compactPlayerDrawMap{width:100%!important;max-width:100%!important}
@@ -2702,7 +2702,7 @@ header{z-index:100!important}
   .compactPlayerSector .mobileStandGrid{display:grid!important;gap:5px!important;padding:0!important}
   .compactPlayerSector .mobileStandCard{min-width:0!important;min-height:0!important;padding:0!important;background:transparent!important}
   .compactPlayerSector .mobileStandCardInner{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;min-height:58px!important;padding:3px!important;border:1px solid #94a99b!important;border-radius:8px!important;background:#ffffffe6!important;overflow:hidden!important}
-  .compactPlayerSector .mobileStandNo{display:block!important;width:auto!important;height:auto!important;border:0!important;background:transparent!important;font-size:25px!important;line-height:1!important;font-weight:1000!important;color:#103b2a!important;padding:0!important}
+  .compactPlayerSector .mobileStandNo{display:block!important;width:auto!important;height:auto!important;border:0!important;background:transparent!important;font-size:25px!important;line-height:1!important;font-weight:1000!important;color:#104b2a!important;padding:0!important}
   .compactPlayerSector .mobileStandInfo{width:100%!important;min-width:0!important;padding:2px 2px 0!important;text-align:center!important;font-size:10px!important;line-height:1.05!important;color:#1c3328!important}
   .compactPlayerSector .mobileStandInfo b{display:block!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;font-size:10.5px!important;font-weight:900!important}
   .compactPlayerSector .mobileMineBadge{display:inline-block!important;margin-top:2px!important;padding:1px 4px!important;border-radius:999px!important;background:#f6b900!important;color:#3e2b00!important;font-size:6.8px!important;font-weight:1000!important}
@@ -2780,7 +2780,7 @@ header{z-index:100!important}
   .compactPlayerSector .mobileStandGridReadable{display:grid!important;gap:6px!important}
   .compactPlayerSector .mobileStandCard{min-width:0!important}
   .compactPlayerSector .mobileStandCardInner{display:grid!important;grid-template-columns:40px minmax(0,1fr)!important;align-items:center!important;min-height:50px!important;border:1px solid #98ac9f!important;border-radius:10px!important;background:#ffffffeb!important;overflow:hidden!important}
-  .compactPlayerSector .mobileStandNo{display:flex!important;align-items:center!important;justify-content:center!important;height:100%!important;font-size:24px!important;font-weight:1000!important;color:#103b2a!important;background:#ffffffb8!important;border-right:1px solid #a7b8ad!important}
+  .compactPlayerSector .mobileStandNo{display:flex!important;align-items:center!important;justify-content:center!important;height:100%!important;font-size:24px!important;font-weight:1000!important;color:#104b2a!important;background:#ffffffb8!important;border-right:1px solid #a7b8ad!important}
   .compactPlayerSector .mobileStandInfo{padding:5px 6px!important;text-align:left!important;color:#183226!important}
   .compactPlayerSector .mobileStandInfo b{display:block!important;font-size:12px!important;line-height:1.08!important;font-weight:1000!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
   .compactPlayerSector .mobileMineBadge{display:inline-block!important;margin-top:3px!important;padding:1px 5px!important;border-radius:999px!important;background:#f3b500!important;color:#4a3200!important;font-size:7px!important;font-weight:1000!important}
@@ -3276,7 +3276,7 @@ header{z-index:100!important}
 }
 @media(min-width:761px) and (max-width:1080px){
   .playerCompetitionDesktopOnly{overflow-x:auto!important;-webkit-overflow-scrolling:touch}
-  .playerCompDesktopRow{min-width:1030px!important}
+  .playerCompDesktopRow{min-width:1040px!important}
 }
 
 
@@ -4499,9 +4499,9 @@ body:not(.playerTheme):not(.authMode) .muted{color:#91adbd!important}
 body:not(.playerTheme):not(.authMode) #app>.tabs{display:flex!important;gap:10px!important;flex-wrap:wrap!important;margin:10px 0 12px!important;padding:0!important;background:transparent!important}
 body:not(.playerTheme):not(.authMode) #app>.tabs button{min-height:46px!important;padding:9px 20px!important;border-radius:8px!important;background:linear-gradient(#0b4562,#082c40)!important;color:#fff!important;border:1px solid #2d7da3!important;font-weight:1000!important;box-shadow:inset 0 1px 1px #ffffff24,0 3px 8px #0003!important}
 body:not(.playerTheme):not(.authMode) #app>.tabs button.active{background:linear-gradient(#2b9b4d,#177137)!important;border-color:#5bc87b!important;box-shadow:0 0 0 2px #87ec9d33!important}
-body:not(.playerTheme):not(.authMode) .compactUserBar{background:linear-gradient(90deg,#0a2535,#103e4c)!important;border-left:4px solid #35ba60!important}
+body:not(.playerTheme):not(.authMode) .compactUserBar{background:linear-gradient(90deg,#0a2535,#104e4c)!important;border-left:4px solid #35ba60!important}
 body:not(.playerTheme):not(.authMode) .workZoneTabs{background:#071b29!important;border:1px solid #28536a!important;border-radius:10px!important;padding:7px!important;gap:7px!important;box-shadow:0 5px 16px #0004!important}
-body:not(.playerTheme):not(.authMode) .workZoneTabs button{background:linear-gradient(#103951,#0a293c)!important;color:#dcecf5!important;border:1px solid #32627c!important;border-radius:8px!important;min-height:54px!important;font-weight:1000!important}
+body:not(.playerTheme):not(.authMode) .workZoneTabs button{background:linear-gradient(#104951,#0a293c)!important;color:#dcecf5!important;border:1px solid #32627c!important;border-radius:8px!important;min-height:54px!important;font-weight:1000!important}
 body:not(.playerTheme):not(.authMode) .workZoneTabs button.active{background:linear-gradient(#289748,#166e35)!important;color:#fff!important;border-color:#5bd27b!important}
 body:not(.playerTheme):not(.authMode) input,
 body:not(.playerTheme):not(.authMode) select,
@@ -4514,7 +4514,7 @@ body:not(.playerTheme):not(.authMode) th{background:#12364b!important;color:#fff
 body:not(.playerTheme):not(.authMode) td{border-color:#24475a!important}
 body:not(.playerTheme):not(.authMode) tbody tr:nth-child(even){background:#0f2b3c!important}
 body:not(.playerTheme):not(.authMode) tbody tr:hover{background:#15384b!important}
-body:not(.playerTheme):not(.authMode) .competitionDetailHead.adminDetailHead{border-left:4px solid #36bc61!important;background:linear-gradient(100deg,#0b2637,#10394a)!important}
+body:not(.playerTheme):not(.authMode) .competitionDetailHead.adminDetailHead{border-left:4px solid #36bc61!important;background:linear-gradient(100deg,#0b2637,#10494a)!important}
 .competitionDetailMeta{display:flex;align-items:center;gap:8px 18px;flex-wrap:wrap;margin-top:5px;font-size:13px;font-weight:800}
 .competitionDetailMeta span{display:inline-flex;align-items:center;gap:4px}.competitionDetailMeta .meetingStrong{color:#ffd36d!important;font-weight:1000}
 .adminTextPair{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:10px 0}.adminTextPair textarea{min-height:120px!important}.adminTextPair .rulesEditor{min-height:150px!important}
@@ -4898,7 +4898,7 @@ body.playerTheme .playerHistoryCard .muted{color:#a9c5d5!important}
   body.playerTheme .playerCompCardV97 .playerCompCountdown,
   body.playerTheme .playerCompCardV97 .playerCompStatus{font-size:6.8px!important;padding-left:4px!important;padding-right:4px!important}
   body.playerTheme .playerCompCardV97 .playerCompFishery{font-size:12.7px!important}
-  body.playerTheme .playerCompCardV97 .playerPresenceConfirm{font-size:6.3px!important;max-width:103px!important}
+  body.playerTheme .playerCompCardV97 .playerPresenceConfirm{font-size:6.3px!important;max-width:104px!important}
   body.playerTheme .playerCompCardV97 .playerCompBottomRow{grid-template-columns:66px minmax(0,1fr) minmax(0,.9fr)!important;gap:4px!important}
   body.playerTheme .playerCompCardV97 .playerCompBottomRow>button{font-size:8px!important;padding-left:2px!important;padding-right:2px!important}
 }
@@ -5245,7 +5245,7 @@ body.playerTheme .sectorMiniTitle{
 }
 
 
-/* V103 — mobilne wyniki admina: pełny kontrast dla sekcji wyników i klasyfikacji. */
+/* V104 — mobilne wyniki admina: pełny kontrast dla sekcji wyników i klasyfikacji. */
 @media(max-width:760px){
   body:not(.playerTheme):not(.authMode) #adminZone-results > .card{
     background:#0d2636!important;
@@ -5360,10 +5360,42 @@ body.playerTheme .sectorMiniTitle{
 }
 
 </style>
+<style>
+
+/* V104: explicit foreground/background pairs for admin cards on every screen. */
+body #app .adminZone .mobileAdminCard,
+body #app .adminZone .mobileStatsCard{background:#fff!important;color:#123827!important;border:1px solid #96afa3!important;text-shadow:none!important}
+body #app .adminZone .mobileAdminCard :is(b,strong,span,small,label),
+body #app .adminZone .mobileStatsCard :is(b,strong,span,small){color:#123827!important;text-shadow:none!important;opacity:1!important}
+body #app .adminZone .mobileAdminCard :is(.mobileAdminMeta>span,.mobileScoreGrid>span,.mobileDrawPair>div),
+body #app .adminZone .mobileStatsCard span{background:#edf4ef!important;border-color:#b7cbbf!important}
+body #app .adminZone .mobileAdminCard :is(small,.mobileResultFooter>span){color:#405b4b!important}
+body #app .adminZone .mobileAdminCard :is(.mobileLp,.mobileRank){background:#dcebe1!important;color:#123827!important}
+body #app .adminZone .mobileAdminCard .bfLine,
+body #app .adminZone .mobileAdminCard .bfLine *,
+body #app .adminZone .mobileScoreGrid em{color:#a61919!important}
+body #app .adminZone .mobileAdminCard .mobileResultFooter{border-color:#b7cbbf!important;color:#123827!important}
+body #app .adminZone .mobileAdminCard input{background:#fff!important;color:#123827!important;border-color:#8ca99a!important}
+body #app .adminZone .mobileAdminCard input::placeholder{color:#496353!important;opacity:1!important}
+body #app .adminZone .mobileAdminCard .weightTag button{color:#fff!important}
+body #app .adminZone :is(.mobileClassList,.mobileDrawSummary){gap:6px}
+@media(max-width:760px){
+ body #app .adminZone :is(.mobileClassList,.mobileDrawSummary){display:grid}
+ body #app .adminZone .mobileAdminCard{padding:8px!important}
+ body #app .adminZone .mobileAdminCardHead>b{font-size:14px!important;line-height:1.2}
+ body #app .adminZone :is(.mobileClassList,.mobileDrawSummary) .mobileAdminCardHead{margin-bottom:5px!important}
+ body #app .adminZone .mobileClassList .mobileAdminMeta>span{display:flex;align-items:center;gap:6px}
+ body #app .adminZone .mobileClassList .mobileAdminMeta small{font-size:10px!important}
+ body #app .adminZone .mobileClassList .mobileResultFooter{margin-top:4px;padding-top:4px}
+ body #app .adminZone .mobileDrawPair>div{display:grid;grid-template-columns:auto auto;align-items:center;gap:2px 8px;padding:5px 8px}
+ body #app .adminZone .mobileDrawPair span{grid-column:1/-1;font-size:11px}
+ body #app .adminZone .mobileDrawPair small{font-size:11px}
+}
+</style>
 </head>
 <body class="authMode">
 <div id="bootGuard"><img src="/icon-192.png" alt=""><b>Łowcy Methodowcy</b><span>Aktualizuję aplikację…</span></div>
-<header><div class="row"><h1><img class="brandIcon" src="/icon-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V103</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
+<header><div class="row"><h1><img class="brandIcon" src="/icon-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V104</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
 <main>
 <div id="msg"></div>
 <section id="auth" class="card">
@@ -5376,7 +5408,7 @@ body.playerTheme .sectorMiniTitle{
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="appVersionBadge">V103</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
+  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="appVersionBadge">V104</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-rules" class="hidden" onclick="showTab('rules')">Regulamin ogólny</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-profile" class="hidden" onclick="showTab('profile')">Mój profil</button><button id="btn-history" class="hidden" onclick="showTab('history')">Historia startów</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
     <div id="adminCreate" class="card hidden adminCreateV93"><h2>Utwórz zawody</h2><p class="small muted">Dane z tego formularza są później widoczne dla zawodnika.</p><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Zbiórka / godzina</label><input id="cMeetingTime" type="time" value="06:00"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div></div><div class="adminTextPair"><div><label>Informacje organizacyjne</label><textarea id="cNotes" placeholder="Parking, miejsce zbiórki, godzina losowania, dodatkowe informacje…"></textarea></div><div><label>Program / regulamin tych zawodów</label><textarea id="cRegulations" class="rulesEditor" placeholder="Np. 06:00 zbiórka, 06:15 losowanie, 07:00–15:00 zawody, ważne zasady tylko dla tego wydarzenia…"></textarea></div></div><button onclick="createCompetition(event)">Utwórz zawody</button></div>
@@ -5394,21 +5426,21 @@ body.playerTheme .sectorMiniTitle{
 <script>
 (function(){
   var retried=false,recovering=false;
-  try{retried=sessionStorage.getItem('lowcy_update_retry_103')==='1'}catch(e){}
-  window.__lowcyRecover103=function(){
+  try{retried=sessionStorage.getItem('lowcy_update_retry_104')==='1'}catch(e){}
+  window.__lowcyRecover104=function(){
     if(recovering)return;recovering=true;
     var g=document.getElementById('bootGuard'),sp=g&&g.querySelector('span');if(sp)sp.textContent='Naprawiam połączenie z aplikacją…';
     if(retried){if(sp)sp.textContent='Nie udało się uruchomić aplikacji. Sprawdź internet i odśwież.';recovering=false;return}
-    retried=true;try{sessionStorage.setItem('lowcy_update_retry_103','1')}catch(e){}
+    retried=true;try{sessionStorage.setItem('lowcy_update_retry_104','1')}catch(e){}
     var jobs=[];
     try{if('caches'in window)jobs.push(caches.keys().then(function(keys){return Promise.all(keys.filter(function(k){return k.indexOf('lowcy-shell-')===0}).map(function(k){return caches.delete(k)}))}))}catch(e){}
     try{if('serviceWorker'in navigator)jobs.push(navigator.serviceWorker.getRegistrations().then(function(rs){return Promise.all(rs.map(function(r){return r.unregister().catch(function(){})}))}))}catch(e){}
-    Promise.allSettled(jobs).finally(function(){setTimeout(function(){location.replace('/?recover=103&t='+Date.now())},80)});
+    Promise.allSettled(jobs).finally(function(){setTimeout(function(){location.replace('/?recover=104&t='+Date.now())},80)});
   };
-  setTimeout(function(){if(!window.__LOWCY_BOOT_OK_103)window.__lowcyRecover103()},8000);
+  setTimeout(function(){if(!window.__LOWCY_BOOT_OK_104)window.__lowcyRecover104()},8000);
 })();
 </script>
-<script src="/app.js?v=103" defer onerror="window.__lowcyRecover103&&window.__lowcyRecover103()"></script>
+<script src="/app.js?v=104" defer onerror="window.__lowcyRecover104&&window.__lowcyRecover104()"></script>
 </body>
 </html>`;
 
@@ -5419,5 +5451,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V103_MOBILE_RESULTS_CONTRAST_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V104_ADMIN_CARD_CONTRAST_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });
