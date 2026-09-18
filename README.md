@@ -62,3 +62,9 @@ V93 — Regulamin ogólny + naprawa edycji zawodów
 - Pole regulaminu w konkretnych zawodach pozostaje osobne i jest opisane jako „Program / regulamin tych zawodów” — na harmonogram i zasady danego wydarzenia.
 - Domyślna godzina zbiórki to 06:00; dotyczy nowych zawodów i wcześniejszych zawodów bez ustawionej godziny.
 - Zachowany ciemny wygląd panelu administratora z V92 oraz wcześniejsze funkcje V91/V90.
+
+
+V94 — delikatna poprawka wyłącznie menu stref admina na komputerze. Pięć kafelków (Lista zawodników, Losowanie i sektory, Wpisywanie wyników, Wyniki, Generowanie PDF) ma zawsze jeden rząd i nie znika przy przewijaniu krótszych paneli. Mobile pozostawiony bez zmian. Zachowane wszystkie funkcje V93.
+
+
+V95 — zachowano poprawkę desktopowego menu admina z V94. Naprawiono żółte tło nieprzeczytanych powiadomień w panelu admina: powiadomienia mają ciemny granatowy motyw, nieprzeczytane są lekko jaśniejsze z niebieskim paskiem. Zmiana jest ograniczona do zakładki Powiadomienia admina; nie zmienia kolorów własnego stanowiska, gwiazdek nowych treści ani widoku zawodnika.
