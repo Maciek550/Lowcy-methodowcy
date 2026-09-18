@@ -52,3 +52,6 @@ V91 — Historia startów zawodnika.
 - Przykład: Lasomin | 12.09.2026 | 1/7 + 5/7 = 6/37 | 45 950 g.
 - Układ desktop/mobile pozostaje jednowierszowy i oszczędza miejsce.
 - Zachowane wszystkie funkcje V90, w tym przyciski telefoniczne w panelu administratora.
+
+
+V92 — odświeżony ciemny panel administratora; nowe pola Zbiórka/godzina oraz Regulamin zawodów; dotychczasowe notatki są prezentowane zawodnikowi jako Informacje organizacyjne. Zawodnik ma nową zakładkę REGULAMIN oraz widzi godzinę zbiórki na listach i w szczegółach zawodów. Baza migruje automatycznie przez meeting_time i regulations.

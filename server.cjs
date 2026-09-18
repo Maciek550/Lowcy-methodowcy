@@ -17,7 +17,7 @@ let VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 let VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const APP_VERSION = '89';
-const APP_VERSION_NAME = 'V91_PLAYER_START_HISTORY';
+const APP_VERSION_NAME = 'V92_ADMIN_REFRESH_RULES_MEETING';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 const ICON_192 = fs.readFileSync(pathModule.join(__dirname, 'icon-192.png'));
 const ICON_512 = fs.readFileSync(pathModule.join(__dirname, 'icon-512.png'));
@@ -179,6 +179,8 @@ async function initDb() {
     alter table competitions add column if not exists sectors_count integer not null default 4;
     alter table competitions add column if not exists signup_open boolean not null default true;
     alter table competitions add column if not exists sector_layout jsonb;
+    alter table competitions add column if not exists meeting_time time;
+    alter table competitions add column if not exists regulations text not null default '';
   `);
   await pool.query(`
     alter table entries add column if not exists confirmed boolean not null default false;
@@ -1138,7 +1140,7 @@ async function route(req, res) {
   const path = url.pathname;
   const method = req.method;
 
-  if (path === '/__probe_js_v91' || path === '/__probe_boot_v91' || path === '/__probe_js_v90' || path === '/__probe_boot_v90' || path === '/__probe_js_v89' || path === '/__probe_boot_v89' || path === '/__probe_js_v88' || path === '/__probe_boot_v88' || path === '/__probe_js_v87' || path === '/__probe_boot_v87' || path === '/__probe_js_v86' || path === '/__probe_boot_v86' || path === '/__probe_js_v85' || path === '/__probe_boot_v85' || path === '/__probe_js_v84' || path === '/__probe_boot_v84' || path === '/__probe_js_v83' || path === '/__probe_boot_v83' || path === '/__probe_js_v82' || path === '/__probe_boot_v82' || path === '/__probe_js_v81' || path === '/__probe_boot_v81' || path === '/__probe_js_v80' || path === '/__probe_boot_v80' || path === '/__probe_js_v79' || path === '/__probe_boot_v79' || path === '/__probe_js_v78' || path === '/__probe_boot_v78' || path === '/__probe_js_v77' || path === '/__probe_boot_v77' || path === '/__probe_js_v76' || path === '/__probe_boot_v76' || path === '/__probe_js_v75' || path === '/__probe_boot_v75' || path === '/__probe_js_v74' || path === '/__probe_boot_v74' || path === '/__probe_js_v73' || path === '/__probe_boot_v73' || path === '/__probe_js_v72' || path === '/__probe_boot_v72' || path === '/__probe_js_v71' || path === '/__probe_boot_v71') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
+  if (path === '/__probe_js_v92' || path === '/__probe_boot_v92' || path === '/__probe_js_v91' || path === '/__probe_boot_v91' || path === '/__probe_js_v90' || path === '/__probe_boot_v90' || path === '/__probe_js_v89' || path === '/__probe_boot_v89' || path === '/__probe_js_v88' || path === '/__probe_boot_v88' || path === '/__probe_js_v87' || path === '/__probe_boot_v87' || path === '/__probe_js_v86' || path === '/__probe_boot_v86' || path === '/__probe_js_v85' || path === '/__probe_boot_v85' || path === '/__probe_js_v84' || path === '/__probe_boot_v84' || path === '/__probe_js_v83' || path === '/__probe_boot_v83' || path === '/__probe_js_v82' || path === '/__probe_boot_v82' || path === '/__probe_js_v81' || path === '/__probe_boot_v81' || path === '/__probe_js_v80' || path === '/__probe_boot_v80' || path === '/__probe_js_v79' || path === '/__probe_boot_v79' || path === '/__probe_js_v78' || path === '/__probe_boot_v78' || path === '/__probe_js_v77' || path === '/__probe_boot_v77' || path === '/__probe_js_v76' || path === '/__probe_boot_v76' || path === '/__probe_js_v75' || path === '/__probe_boot_v75' || path === '/__probe_js_v74' || path === '/__probe_boot_v74' || path === '/__probe_js_v73' || path === '/__probe_boot_v73' || path === '/__probe_js_v72' || path === '/__probe_boot_v72' || path === '/__probe_js_v71' || path === '/__probe_boot_v71') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
 
   if (path === '/__probe_js_v68' || path === '/__probe_boot_v68' || path === '/__probe_js_v67' || path === '/__probe_boot_v67' || path === '/__probe_js_v66' || path === '/__probe_boot_v66' || path === '/__probe_js_v65' || path === '/__probe_boot_v65' || path === '/__probe_js_v63' || path === '/__probe_boot_v63' || path === '/__probe_js_v62' || path === '/__probe_boot_v62' || path === '/__probe_js_v60' || path === '/__probe_boot_v60' || path === '/__probe_js_v59' || path === '/__probe_boot_v59' || path === '/__probe_js_v58' || path === '/__probe_boot_v58' || path === '/__probe_js_v57' || path === '/__probe_boot_v57' || path === '/__probe_js_v56' || path === '/__probe_boot_v56' || path === '/__probe_js_v55' || path === '/__probe_boot_v55' || path === '/__probe_js_v54' || path === '/__probe_boot_v54' || path === '/__probe_js_v53' || path === '/__probe_boot_v53' || path === '/__probe_js_v52' || path === '/__probe_boot_v52' || path === '/__probe_js_v51' || path === '/__probe_boot_v51' || path === '/__probe_js_v50' || path === '/__probe_boot_v50' || path === '/__probe_js_v49' || path === '/__probe_boot_v49' || path === '/__probe_js_v36' || path === '/__probe_boot_v36' || path === '/__probe_js_v35' || path === '/__probe_boot_v35' || path === '/__probe_js_v34' || path === '/__probe_boot_v34' || path === '/__probe_js_v33' || path === '/__probe_boot_v33' || path === '/__probe_js_v32' || path === '/__probe_boot_v32' || path === '/__probe_js_v30' || path === '/__probe_boot_v30' || path === '/__probe_js_v29' || path === '/__probe_boot_v29' || path === '/__probe_js_v27' || path === '/__probe_boot_v27' || path === '/__probe_inline_v26') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/api/version') return sendJson(res, 200, { ok:true, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
@@ -1211,9 +1213,9 @@ async function route(req, res) {
     ]
   }), {'Content-Type':'application/manifest+json; charset=utf-8','Cache-Control':'no-cache'});
   if (path === '/sw.js') return send(res, 200, `
-const SW_VERSION='lowcy-v91-player-start-history';
-const SHELL_CACHE='lowcy-shell-v91';
-const APP_SHELL_JS='/app.js?v=91';
+const SW_VERSION='lowcy-v92-admin-refresh-rules-meeting';
+const SHELL_CACHE='lowcy-shell-v92';
+const APP_SHELL_JS='/app.js?v=92';
 const SHELL=['/',APP_SHELL_JS,'/manifest.webmanifest','/icon-192.png','/icon-512.png','/apple-touch-icon.png'];
 self.addEventListener('install', event => event.waitUntil((async()=>{const c=await caches.open(SHELL_CACHE);await Promise.all(SHELL.map(async url=>{try{const r=await fetch(url,{cache:'no-store'});if(r&&r.ok)await c.put(url,r.clone())}catch(e){}}));await self.skipWaiting()})()));
 self.addEventListener('activate', event => event.waitUntil((async()=>{try{const keys=await caches.keys();await Promise.all(keys.filter(k=>k.startsWith('lowcy-shell-')&&k!==SHELL_CACHE).map(k=>caches.delete(k)))}catch(e){}await self.clients.claim()})()));
@@ -1356,9 +1358,9 @@ self.addEventListener('notificationclick', event => {
     const bank2 = clampInt(b.bank2Count, 0, 300, split.bank2);
     const sectors = clampInt(b.sectorsCount, 1, 26, Math.min(6, Math.max(1, Math.ceil((limit || 1) / 5))));
     const { rows } = await pool.query(
-      `insert into competitions(title,fishery,competition_date,limit_places,status,notes,created_by,map_mode,bank1_count,bank2_count,sectors_count,signup_open)
-       values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) returning *`,
-      [title, fishery, b.competitionDate || null, limit, b.status || 'OPEN', String(b.notes||''), user.id, mapMode, bank1, bank2, sectors, b.signupOpen !== false]
+      `insert into competitions(title,fishery,competition_date,meeting_time,limit_places,status,notes,regulations,created_by,map_mode,bank1_count,bank2_count,sectors_count,signup_open)
+       values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) returning *`,
+      [title, fishery, b.competitionDate || null, (/^\d{2}:\d{2}$/.test(String(b.meetingTime||''))?String(b.meetingTime):null), limit, b.status || 'OPEN', String(b.notes||''), String(b.regulations||''), user.id, mapMode, bank1, bank2, sectors, b.signupOpen !== false]
     );
     await notifyAdmins('COMPETITION_CREATE', 'Utworzono zawody', user.first_name + ' ' + user.last_name + ' utworzył zawody: ' + rows[0].title, { competitionId: rows[0].id });
     const players=await pool.query(`select id from users where role='PLAYER'`);
@@ -1398,9 +1400,9 @@ self.addEventListener('notificationclick', event => {
     try { sectorLayout = b.sectorLayout === undefined ? old.sector_layout : validateSectorLayout(b.sectorLayout, total, sectors); }
     catch (e) { return sendJson(res, 400, { ok:false, error:e.message }); }
     const { rows } = await pool.query(`
-      update competitions set title=$1, fishery=$2, competition_date=$3, limit_places=$4, status=$5, notes=$6, map_mode=$7, bank1_count=$8, bank2_count=$9, sectors_count=$10, sector_layout=$11, signup_open=$12
-      where id=$13 returning *
-    `, [String(b.title||old.title).trim(), String(b.fishery||'').trim(), b.competitionDate || null, limit, b.status || old.status || 'OPEN', String(b.notes||''), mapMode, bank1, bank2, sectors, sectorLayout === undefined ? old.sector_layout : sectorLayout, b.signupOpen !== false, id]);
+      update competitions set title=$1, fishery=$2, competition_date=$3, meeting_time=$4, limit_places=$5, status=$6, notes=$7, regulations=$8, map_mode=$9, bank1_count=$10, bank2_count=$11, sectors_count=$12, sector_layout=$13, signup_open=$14
+      where id=$15 returning *
+    `, [String(b.title||old.title).trim(), String(b.fishery||'').trim(), b.competitionDate || null, (/^\d{2}:\d{2}$/.test(String(b.meetingTime||''))?String(b.meetingTime):null), limit, b.status || old.status || 'OPEN', String(b.notes||''), String(b.regulations||''), mapMode, bank1, bank2, sectors, sectorLayout === undefined ? old.sector_layout : sectorLayout, b.signupOpen !== false, id]);
     await notifyAdmins('COMPETITION_UPDATE', 'Edytowano zawody', `${user.first_name} ${user.last_name} edytował zawody: ${rows[0].title}`, { competitionId:id });
     return sendJson(res, 200, { ok:true, competition:rows[0] });
   }
@@ -2002,7 +2004,7 @@ const HTML = `<!doctype html>
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
 <script>try{if(localStorage.getItem('carp_token'))document.documentElement.classList.add('hasSavedSession')}catch(e){}</script>
-<title>Łowcy Methodowcy — V91</title>
+<title>Łowcy Methodowcy — V92</title>
 <style>
 :root{--green:#114b2f;--green2:#17643f;--bg:#f3f6ef;--card:#fff;--line:#cfd8cc;--txt:#18251d;--muted:#68746d;--red:#b32020;--gold:#ffc400;--blue:#1057c8;--soft:#eaf2eb}
 *{box-sizing:border-box}html,body{height:auto!important;min-height:100%!important;overflow-y:auto!important;overscroll-behavior:auto!important}body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}header{position:sticky;top:0;z-index:5;background:var(--green);color:white;padding:12px 14px;box-shadow:0 2px 8px #0002}header .row{display:flex;justify-content:space-between;gap:12px;align-items:center;max-width:1180px;margin:auto}h1{font-size:18px;margin:0}h2{font-size:18px;margin:0 0 8px}h3{font-size:16px;margin:12px 0 8px}main{max-width:1180px;margin:0 auto;padding:12px}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin:12px 0;box-shadow:0 2px 8px #0000000d}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}input,select,textarea,button{width:100%;font:inherit;border-radius:12px;border:1px solid var(--line);padding:10px 11px;background:white}textarea{min-height:70px}button{border:0;background:var(--green);color:white;font-weight:900;cursor:pointer}button.secondary{background:#e7eee7;color:var(--green);border:1px solid #bfd0c2}button.warn{background:var(--red)}button.blue{background:var(--blue)}button:disabled{opacity:.55;cursor:not-allowed}label{display:block;font-size:12px;font-weight:900;color:var(--muted);margin:8px 0 4px}.tabs{display:flex;gap:8px;overflow:auto;padding:8px 0}.tabs button{white-space:nowrap;width:auto;padding:9px 13px}.tabs button.active{background:#072e1c}.tablewrap{width:100%;overflow:auto;border-radius:12px;border:1px solid var(--line)}table{width:100%;border-collapse:collapse;background:white}th,td{border:1px solid var(--line);padding:8px 7px;text-align:left;vertical-align:middle}th{background:#e6f0e8;color:#103b28;font-size:12px;text-transform:uppercase}.nowrap{white-space:nowrap}.muted{color:var(--muted)}.ok{color:var(--green);font-weight:900}.bad{color:var(--red);font-weight:900}.pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#e6f0e8;font-weight:900}.hidden{display:none!important}.top-actions{display:flex;gap:8px;align-items:center}.top-actions button{width:auto;padding:8px 11px;background:#ffffff22;border:1px solid #ffffff55}.small{font-size:12px}.right{text-align:right}.mine{background:#fff4b8!important;outline:3px solid var(--gold);outline-offset:-3px;font-weight:900}.mine td{font-weight:900}.danger-line{border-left:6px solid var(--red)}.success-line{border-left:6px solid var(--green)}.mapbox{background:#f7faf4;border:1px solid var(--line);border-radius:14px;padding:10px;overflow:auto}.banktitle{font-size:12px;font-weight:900;color:var(--muted);margin:8px 0 5px}.bank{display:grid;grid-template-columns:repeat(auto-fit,minmax(42px,1fr));gap:5px;min-width:320px}.stand{min-height:42px;border:1px solid #a8b7aa;border-radius:9px;background:white;display:flex;align-items:center;justify-content:center;flex-direction:column;font-weight:900;font-size:12px}.stand small{font-size:9px;font-weight:800;color:#555}.stand.occ{box-shadow:inset 0 -4px 0 #cbd8cc}.stand.t1{background:#ffe1e1;border:3px solid #d00000;color:#8e0000}.stand.t2{background:#dfeaff;border:3px solid #005bd8;color:#003c91}.stand.both{background:#f0dcff;border:3px solid #7a1fc2;color:#461078}.ownbox{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.ownitem{border:2px solid var(--line);border-radius:14px;padding:12px;background:#fff}.ownitem strong{font-size:24px}.twoCols{display:grid;grid-template-columns:1fr 1fr;gap:12px}.inlineBtns{display:flex;gap:6px;flex-wrap:wrap}.inlineBtns button{width:auto}.competitionActions{gap:22px;align-items:center}.competitionActions button{min-width:96px}.adminbar{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.tag{font-size:11px;border-radius:999px;padding:3px 7px;background:#f0f4ee;font-weight:900}.t1tag{background:#ffe1e1;color:#8e0000}.t2tag{background:#dfeaff;color:#003c91}.sector-A{box-shadow:inset 0 0 0 2px #b32020}.sector-B{box-shadow:inset 0 0 0 2px #1057c8}.sector-C{box-shadow:inset 0 0 0 2px #14803a}.sector-D{box-shadow:inset 0 0 0 2px #7a1fc2}.sector-E{box-shadow:inset 0 0 0 2px #b36b00}.sector-F{box-shadow:inset 0 0 0 2px #006b7a}.checkline{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--txt);font-weight:800}.checkline input{width:auto}.sectorMap{background:#fbfdf9;border:1px solid var(--line);border-radius:14px;padding:12px;overflow:auto}.mapTitle,.bankLabel{font-weight:1000;color:#204b38;margin:5px 0}.standRow{display:grid;gap:0;min-width:640px}.standCell{min-height:45px;border:2px solid #446b56;display:flex;align-items:center;justify-content:center;flex-direction:column;font-weight:1000;color:#123827;margin:-1px 0 0 -1px}.standCell small{font-size:10px}.standCell.empty{border:0;background:transparent}.sectorBand{display:grid;min-width:640px;gap:0}.sectorBlock{min-height:78px;border:3px solid #38664d;display:flex;align-items:center;justify-content:center;flex-direction:column;margin:-1px 0 0 -1px;text-align:center}.sectorBlock span{font-size:22px;font-weight:1000}.sectorSummary{background:#ecf2ed;border-radius:10px;padding:10px;margin-top:10px;font-size:13px}.water{text-align:center;background:#f2f6f1;color:#6a756d;font-weight:1000;padding:12px;min-width:640px}.sectorFill-A{background:#d8f1dd}.sectorFill-B{background:#dbe8fb}.sectorFill-C{background:#ffe7bd}.sectorFill-D{background:#f6d9e3}.sectorFill-E{background:#eadffb}.sectorFill-F{background:#dff4f4}.sectorFill-G{background:#f7e8ce}.sectorFill-H{background:#e5f0d0}.standCell.t1{background:#ffb5b5!important;border:4px solid #d00000!important;color:#7c0000}.standCell.t2{background:#b9d2ff!important;border:4px solid #005bd8!important;color:#002c70}.standCell.both{background:#e1b8ff!important;border:4px solid #7a1fc2!important;color:#3c0060}.standCell.occ{box-shadow:inset 0 -5px 0 #244f36}.weightItems{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:5px}.weightTag{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:3px 6px;font-size:11px;font-weight:900;background:#edf4ec;border:1px solid #bfd0c2}.weightTag button{width:auto;padding:0 4px;border-radius:8px;background:#b91c1c;color:#fff;line-height:1.1}.bfTag{background:#fff0d6;border-color:#e5b965}.netTag{background:#e7f5e7}.bfLine{font-size:12px;font-weight:1000;color:#b91c1c}.flashSave{background:#bff7c8!important;transition:background .25s}.resultInputTable input{min-width:120px}.sectorBand.clean{margin:0}.sectorFlexRow{display:flex;gap:0;min-width:640px}.sectorGroup{display:grid;gap:0;margin:0}.sectorGroup .standCell{border-radius:0;margin:-1px 0 0 -1px}.sectorFlexRow .sectorBlock{border-radius:0;margin:-1px 0 0 -1px}.standFlex{align-items:stretch}.sectorBand.clean .sectorBlock{min-height:72px}.pushBox{margin-top:6px;line-height:1.35}.bankLabelBottom{margin-top:8px}.quickScroll{position:fixed;right:10px;bottom:14px;z-index:30;display:flex;flex-direction:column;gap:7px}.quickScroll button{width:52px;padding:9px 0;border-radius:999px;background:#123827cc;box-shadow:0 3px 10px #0003}.quickScroll button:last-child{background:#e7eee7;color:#123827;border:1px solid #bfd0c2}
@@ -4338,11 +4340,67 @@ body.playerTheme #app>.tabs #btn-history.active{background:linear-gradient(#c987
   .playerHistoryDate,.playerHistoryScore,.playerHistoryWeight{font-size:8.8px}.playerHistoryScore strong{font-size:9.8px}
 }
 
+
+/* V92 — ciemny panel admina + regulamin + zbiórka. */
+body:not(.playerTheme):not(.authMode){background:#061824!important;color:#e7f2f8!important}
+body:not(.playerTheme):not(.authMode) header{background:linear-gradient(135deg,#071a28,#0b3445)!important;border-bottom:1px solid #1f5f74!important;box-shadow:0 5px 18px #0006!important}
+body:not(.playerTheme):not(.authMode) header h1{color:#fff!important}
+body:not(.playerTheme):not(.authMode) main{max-width:1500px!important}
+body:not(.playerTheme):not(.authMode) #app>.card,
+body:not(.playerTheme):not(.authMode) #tab-competitions>.card,
+body:not(.playerTheme):not(.authMode) #competitionDetail>.card,
+body:not(.playerTheme):not(.authMode) .adminZone>.card,
+body:not(.playerTheme):not(.authMode) #tab-notifications>.card,
+body:not(.playerTheme):not(.authMode) #tab-players>.card{background:#0d2636!important;color:#e8f3fa!important;border:1px solid #28536a!important;box-shadow:0 5px 18px #0003!important}
+body:not(.playerTheme):not(.authMode) .muted{color:#91adbd!important}
+body:not(.playerTheme):not(.authMode) #app>.tabs{display:flex!important;gap:10px!important;flex-wrap:wrap!important;margin:10px 0 12px!important;padding:0!important;background:transparent!important}
+body:not(.playerTheme):not(.authMode) #app>.tabs button{min-height:46px!important;padding:9px 20px!important;border-radius:8px!important;background:linear-gradient(#0b4562,#082c40)!important;color:#fff!important;border:1px solid #2d7da3!important;font-weight:1000!important;box-shadow:inset 0 1px 1px #ffffff24,0 3px 8px #0003!important}
+body:not(.playerTheme):not(.authMode) #app>.tabs button.active{background:linear-gradient(#2b9b4d,#177137)!important;border-color:#5bc87b!important;box-shadow:0 0 0 2px #87ec9d33!important}
+body:not(.playerTheme):not(.authMode) .compactUserBar{background:linear-gradient(90deg,#0a2535,#103e4c)!important;border-left:4px solid #35ba60!important}
+body:not(.playerTheme):not(.authMode) .workZoneTabs{background:#071b29!important;border:1px solid #28536a!important;border-radius:10px!important;padding:7px!important;gap:7px!important;box-shadow:0 5px 16px #0004!important}
+body:not(.playerTheme):not(.authMode) .workZoneTabs button{background:linear-gradient(#103951,#0a293c)!important;color:#dcecf5!important;border:1px solid #32627c!important;border-radius:8px!important;min-height:54px!important;font-weight:1000!important}
+body:not(.playerTheme):not(.authMode) .workZoneTabs button.active{background:linear-gradient(#289748,#166e35)!important;color:#fff!important;border-color:#5bd27b!important}
+body:not(.playerTheme):not(.authMode) input,
+body:not(.playerTheme):not(.authMode) select,
+body:not(.playerTheme):not(.authMode) textarea{background:#071c2a!important;color:#eef8ff!important;border:1px solid #35627a!important;box-shadow:inset 0 1px 4px #0005!important}
+body:not(.playerTheme):not(.authMode) input:focus,
+body:not(.playerTheme):not(.authMode) select:focus,
+body:not(.playerTheme):not(.authMode) textarea:focus{border-color:#4db6e7!important;outline:2px solid #4db6e733!important}
+body:not(.playerTheme):not(.authMode) table{background:#0a2130!important;color:#e6f2f8!important}
+body:not(.playerTheme):not(.authMode) th{background:#12364b!important;color:#fff!important;border-color:#31566b!important}
+body:not(.playerTheme):not(.authMode) td{border-color:#24475a!important}
+body:not(.playerTheme):not(.authMode) tbody tr:nth-child(even){background:#0f2b3c!important}
+body:not(.playerTheme):not(.authMode) tbody tr:hover{background:#15384b!important}
+body:not(.playerTheme):not(.authMode) .competitionDetailHead.adminDetailHead{border-left:4px solid #36bc61!important;background:linear-gradient(100deg,#0b2637,#10394a)!important}
+.competitionDetailMeta{display:flex;align-items:center;gap:8px 18px;flex-wrap:wrap;margin-top:5px;font-size:13px;font-weight:800}
+.competitionDetailMeta span{display:inline-flex;align-items:center;gap:4px}.competitionDetailMeta .meetingStrong{color:#ffd36d!important;font-weight:1000}
+.adminTextPair{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:10px 0}.adminTextPair textarea{min-height:120px!important}.adminTextPair .rulesEditor{min-height:150px!important}
+body:not(.playerTheme):not(.authMode) .competitionDesktopList table{border:1px solid #31566b!important;border-radius:8px!important;overflow:hidden!important}
+body:not(.playerTheme):not(.authMode) .pill{background:#174c63!important;color:#eaf8ff!important;border-color:#397d98!important}
+body:not(.playerTheme):not(.authMode) button:not(.warn):not(.secondary){background:linear-gradient(#279b4d,#166f35)!important;border-color:#57ca77!important;color:#fff!important}
+body:not(.playerTheme):not(.authMode) button.secondary{background:linear-gradient(#164d6c,#0c354f)!important;border-color:#3a82a7!important;color:#fff!important}
+body:not(.playerTheme):not(.authMode) button.warn{background:linear-gradient(#9b2836,#6c1723)!important;border-color:#dc5261!important;color:#fff!important}
+body.playerTheme #app>.tabs #btn-rules{background:linear-gradient(#1c6c78,#0f3c49)!important;border-color:#3ca8b8!important}
+body.playerTheme #app>.tabs #btn-rules.active{background:linear-gradient(#2a9aaa,#14606d)!important;border-color:#7de2ef!important}
+.playerCompMeeting{font-weight:1000;color:#ffd36d!important;white-space:nowrap}
+.playerEventInfo{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(230px,.8fr)!important;gap:8px!important;padding:8px!important;margin:7px 0!important;background:#0a2030!important}
+.playerEventNote,.playerEventRules{background:#102d40;border:1px solid #31566b;border-radius:8px;padding:8px;color:#e9f5fc;font-size:12px;line-height:1.35}
+.playerEventNote{display:flex;gap:8px;align-items:flex-start}.playerEventNote>b{color:#6fd68a;white-space:nowrap}.playerEventRules summary{cursor:pointer;color:#ffd36d;font-weight:1000}.playerEventRules>div{padding-top:7px}
+.playerRulesCard{padding:10px!important}.playerRulesHead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}.playerRulesHead h2{margin:0!important}.playerRulesHead span{font-size:11px;color:#91adbd;font-weight:900}
+.playerRuleItem{border:1px solid #31566b;border-radius:8px;background:#0c2232;margin-bottom:7px;overflow:hidden}.playerRuleItem summary{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;padding:9px 11px;color:#fff}.playerRuleItem summary span{display:flex;flex-direction:column;gap:3px;min-width:0}.playerRuleItem summary small{color:#9fb9ca}.playerRuleItem summary strong{color:#ffd36d;font-size:11px}.playerRuleBody{border-top:1px solid #29495c;padding:10px;color:#dfeef7;font-size:12.5px;line-height:1.45}.playerRuleInfo{margin-top:10px;padding-top:8px;border-top:1px solid #29495c;color:#b9cfdd}
+@media(max-width:760px){
+ .adminTextPair{grid-template-columns:1fr!important}.adminTextPair textarea,.adminTextPair .rulesEditor{min-height:105px!important}
+ body:not(.playerTheme):not(.authMode) #app>.tabs{gap:5px!important}body:not(.playerTheme):not(.authMode) #app>.tabs button{min-height:39px!important;padding:7px 10px!important;font-size:11px!important}
+ .competitionDetailMeta{font-size:10.5px!important;gap:5px 10px!important}.playerEventInfo{grid-template-columns:1fr!important}.playerEventNote{font-size:10.5px!important}.playerEventRules{font-size:10.5px!important}
+ .playerRuleItem summary{padding:8px!important}.playerRuleItem summary b{font-size:11px}.playerRuleItem summary small{font-size:9px}.playerRuleBody{font-size:10.5px}
+ .playerCompMeeting{font-size:9px!important}
+}
+
 </style>
 </head>
 <body class="authMode">
 <div id="bootGuard"><img src="/icon-192.png" alt=""><b>Łowcy Methodowcy</b><span>Aktualizuję aplikację…</span></div>
-<header><div class="row"><h1><img class="brandIcon" src="/icon-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V91</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
+<header><div class="row"><h1><img class="brandIcon" src="/icon-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V92</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
 <main>
 <div id="msg"></div>
 <section id="auth" class="card">
@@ -4355,14 +4413,15 @@ body.playerTheme #app>.tabs #btn-history.active{background:linear-gradient(#c987
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="appVersionBadge">V91</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
-  <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-profile" class="hidden" onclick="showTab('profile')">Mój profil</button><button id="btn-history" class="hidden" onclick="showTab('history')">Historia startów</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
+  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="appVersionBadge">V92</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
+  <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-rules" class="hidden" onclick="showTab('rules')">REGULAMIN</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-profile" class="hidden" onclick="showTab('profile')">Mój profil</button><button id="btn-history" class="hidden" onclick="showTab('history')">Historia startów</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
-    <div id="adminCreate" class="card hidden"><h2>Utwórz zawody</h2><p class="small muted">Nazwa zawodów jest używana także w nagłówkach PDF.</p><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div></div><label>Opis</label><textarea id="cNotes" placeholder="Opis zawodów, zasady, informacje organizacyjne."></textarea><button onclick="createCompetition(event)">Utwórz zawody</button></div>
+    <div id="adminCreate" class="card hidden adminCreateV92"><h2>Utwórz zawody</h2><p class="small muted">Dane z tego formularza są później widoczne dla zawodnika.</p><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Zbiórka / godzina</label><input id="cMeetingTime" type="time"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div></div><div class="adminTextPair"><div><label>Informacje organizacyjne</label><textarea id="cNotes" placeholder="Parking, miejsce zbiórki, godzina losowania, dodatkowe informacje…"></textarea></div><div><label>Regulamin zawodów</label><textarea id="cRegulations" class="rulesEditor" placeholder="Wpisz regulamin widoczny dla zawodników…"></textarea></div></div><button onclick="createCompetition(event)">Utwórz zawody</button></div>
     <div class="card"><h2>Lista zawodów</h2><div id="competitionsList"></div></div>
     <div id="competitionDetail" class="hidden"></div>
   </section>
   <section id="tab-notifications" class="hidden"><div class="card"><div class="notificationHeaderRow"><h2>Powiadomienia</h2><div class="phoneAlertControls"><span id="notifPushState" class="small muted">Alerty telefonu</span><button type="button" id="notifPushBtn" class="secondary" onclick="enablePush(event)">Włącz alerty telefonu</button></div></div><div id="notificationsList"></div></div></section>
+  <section id="tab-rules" class="hidden"><div id="playerRulesContent"></div></section>
   <section id="tab-profile" class="hidden"><div id="myProfileContent"></div></section>
   <section id="tab-history" class="hidden"><div id="playerHistoryContent"></div></section>
   <section id="tab-players" class="hidden"><div class="card"><h2>Zawodnicy</h2><div id="playersList"></div></div></section>
@@ -4372,19 +4431,19 @@ body.playerTheme #app>.tabs #btn-history.active{background:linear-gradient(#c987
 <script>
 (function(){
   var retried=false;
-  try{retried=sessionStorage.getItem('lowcy_update_retry_91')==='1'}catch(e){}
-  window.__lowcyRecover91=function(){
+  try{retried=sessionStorage.getItem('lowcy_update_retry_92')==='1'}catch(e){}
+  window.__lowcyRecover92=function(){
     if(retried){var g=document.getElementById('bootGuard');if(g){var s=g.querySelector('span');if(s)s.textContent='Nie udało się pobrać aktualizacji. Odśwież stronę.'}return}
-    retried=true;try{sessionStorage.setItem('lowcy_update_retry_91','1')}catch(e){}
+    retried=true;try{sessionStorage.setItem('lowcy_update_retry_92','1')}catch(e){}
     var jobs=[];
     try{if('caches'in window)jobs.push(caches.keys().then(function(keys){return Promise.all(keys.filter(function(k){return k.indexOf('lowcy-shell-')===0}).map(function(k){return caches.delete(k)}))}))}catch(e){}
     try{if('serviceWorker'in navigator)jobs.push(navigator.serviceWorker.getRegistration('/').then(function(r){return r?r.update():null}))}catch(e){}
-    Promise.allSettled(jobs).finally(function(){location.replace('/?update=91&t='+Date.now())});
+    Promise.allSettled(jobs).finally(function(){location.replace('/?update=92&t='+Date.now())});
   };
-  setTimeout(function(){if(!window.__LOWCY_BOOT_OK_91)window.__lowcyRecover91()},15000);
+  setTimeout(function(){if(!window.__LOWCY_BOOT_OK_92)window.__lowcyRecover92()},15000);
 })();
 </script>
-<script src="/app.js?v=91" defer onerror="window.__lowcyRecover91&&window.__lowcyRecover91()"></script>
+<script src="/app.js?v=92" defer onerror="window.__lowcyRecover92&&window.__lowcyRecover92()"></script>
 </body>
 </html>`;
 
@@ -4395,5 +4454,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V91_PLAYER_START_HISTORY_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V92_ADMIN_REFRESH_RULES_MEETING_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });
