@@ -88,3 +88,6 @@ V99 — odporność uruchamiania PWA po aktualizacjach. Bez zmian wizualnych wzg
 
 
 V100 — poprawa kontrastu w panelu administratora „Wpisywanie wyników”. Na mobile karty wpisów wyników mają spójne ciemne tło, jasne nazwiska i wartości, czytelne pola Stan./Sektor oraz etykiety. Tagi wag siatek i BF mają jawnie ustawione ciemne kolory tekstu na jasnych tłach również na desktopie. Placeholdery pól wag są czytelne. Zmiana jest ograniczona do strefy wpisywania wyników; zachowano odporność startu PWA z V99 i pozostałe funkcje bez zmian.
+
+
+V101 — zachowany dobry widok wpisywania wyników z V100. Poprawiono wyłącznie czytelność strefy „Losowanie i sektory” w panelu admina: zagnieżdżone karty są ciemne, mapy pozostają jasne z wymuszonym ciemnym tekstem, nazwy sektorów/stanowisk i opisy są ponownie czytelne. Bez zmian logiki losowania, panelu zawodnika i PWA.
