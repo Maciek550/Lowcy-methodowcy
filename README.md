@@ -71,3 +71,6 @@ V95 — zachowano poprawkę desktopowego menu admina z V94. Naprawiono żółte 
 
 
 V96 — odświeżenie kart zawodów zawodnika: numer zawodów w jednej linii z nazwą, godzina zbiórki w prawym górnym rogu, dzień tygodnia i licznik START ZA w jednym wierszu, większe łowisko, status „ZAWODY OTWARTE”, czytelniejsze zapis/potwierdzenie oraz przyciski. Regulamin ogólny i Historia startów pozostają tylko w górnych zakładkach — nie są dokładane pod listą zawodów. Zachowano poprawki V95 admina i powiadomień.
+
+
+V97 — zawodnik: górny przycisk Powiadomienia skrócony do NOWOŚCI; karty zawodów zagęszczone pionowo. Zawody Otwarte przeniesione do wiersza daty/odliczania, status zapisu i potwierdzenie obecności obok łowiska, a dół karty ma jeden wiersz: ZAPISANI | LOS/WYNIKI | ZAPISZ/REZYGNUJ. Poprawiony kontrast paneli Regulamin ogólny i Historia startów w ciemnym motywie.
