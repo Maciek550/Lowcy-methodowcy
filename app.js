@@ -1,4 +1,4 @@
-const CLIENT_VERSION='87';const CLIENT_VERSION_NAME='V87_DESKTOP_PANEL_FOCUS_STABLE';window.__LOWCY_APP_JS_87=1;try{fetch('/__probe_js_v87',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V87_DESKTOP_PANEL_FOCUS_STABLE_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='88';const CLIENT_VERSION_NAME='V88_PLAYER_PANEL_STABLE_CONTEXT';window.__LOWCY_APP_JS_88=1;try{fetch('/__probe_js_v88',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V88_PLAYER_PANEL_STABLE_CONTEXT_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let TOKEN = STORE.get('carp_token') || '';
 let ME = null;
@@ -283,7 +283,20 @@ async function deleteCompetition(id){try{if(!confirm('Usunąć te zawody?'))retu
 async function clearCompetitions(){try{if(!confirm('Usunąć WSZYSTKIE zawody testowe z bazy?'))return;if(!confirm('Na pewno? Operacji nie da się cofnąć.'))return;const d=await api('/api/admin/competitions/clear',{method:'POST',body:JSON.stringify({confirm:'USUN'})});q('competitionDetail').classList.add('hidden');msg('Usunięto zawody: '+d.deleted);await loadCompetitions();await loadNotifications()}catch(e){msg(e.message,'bad')}}
 async function joinComp(id){try{await api('/api/competitions/'+id+'/join',{method:'POST',body:'{}'});msg('Zapisano na zawody');await loadCompetitions();if(CURRENT_DETAIL?.competition?.id==id)await refreshCompetitionKeepScroll(id)}catch(e){msg(e.message,'bad')}}
 async function leaveComp(id){try{if(!confirm('Wysłać do administratora prośbę o wypisanie z tych zawodów?'))return;await api('/api/competitions/'+id+'/leave',{method:'POST',body:'{}'});msg('Prośba o wypisanie została wysłana do administratora');await loadCompetitions();await loadNotifications();if(CURRENT_DETAIL?.competition?.id==id)await refreshCompetitionKeepScroll(id)}catch(e){msg(e.message,'bad')}}
-async function openCompetition(id,preserve=false){try{const d=await api('/api/competitions/'+id);CURRENT_DETAIL=d;if(!preserve&&ME?.role!=='ADMIN')PLAYER_MOBILE_PANEL=null;renderDetail();q('competitionDetail').classList.remove('hidden');if(!preserve)q('competitionDetail').scrollIntoView({behavior:'smooth',block:'start'})}catch(e){msg(e.message,'bad')}}
+async function openCompetition(id,preserve=false){
+  try{
+    const d=await api('/api/competitions/'+id);
+    CURRENT_DETAIL=d;
+    if(!preserve&&ME?.role!=='ADMIN')PLAYER_MOBILE_PANEL=null;
+    renderDetail();
+    const detail=q('competitionDetail');
+    detail.classList.remove('hidden');
+    if(!preserve){
+      if(ME?.role==='ADMIN')detail.scrollIntoView({behavior:'smooth',block:'start'});
+      else focusPlayerNavOnOpen();
+    }
+  }catch(e){msg(e.message,'bad')}
+}
 function myDraw(round){return (CURRENT_DETAIL.draws||[]).find(d=>Number(d.user_id)===Number(ME.id)&&Number(d.round)===round)}
 function resMap(round){const m={};(CURRENT_DETAIL.results||[]).forEach(r=>{if(Number(r.round)===round)m[Number(r.user_id)]=r});return m}
 function resultItems(round,userId,kind){return (CURRENT_DETAIL.resultItems||[]).filter(x=>Number(x.round)===Number(round)&&Number(x.user_id)===Number(userId)&&(!kind||String(x.kind)===kind))}
@@ -414,6 +427,7 @@ function renderPlayerMobilePanelContent(d,panel){
     const round=panel==='draw2'?2:1;
     const mapView=PLAYER_DRAW_VIEW!=='table';
     return '<div class="playerMobileSelectedPanel playerMobileDrawSelected">'
+      +renderPlayerOwnSummary(d)
       +'<div class="playerMobileSectionTitle">ROZMIESZCZENIE W SEKTORACH — TURA '+round+'</div>'
       +'<div class="playerDrawViewSwitch" role="tablist"><button type="button" class="'+(mapView?'active':'')+'" onclick="setPlayerDrawView(\'map\',event)">MAPA</button><button type="button" class="'+(!mapView?'active':'')+'" onclick="setPlayerDrawView(\'table\',event)">TABELA</button></div>'
       +(mapView?renderPlayerSectorAccordion(d,round):'<div class="playerMobileSectorTables">'+renderDrawSectorTables(d,round)+'</div>')
@@ -443,7 +457,6 @@ function renderPlayerMobileDashboard(d){
     +'</div>'
     +'<div class="playerMapNav">'+b('map1','MAPA ŁOWISKA T1','mapTile')+b('map2','MAPA ŁOWISKA T2','mapTile')+'</div>'
     +'</div></div>'
-    +renderPlayerOwnSummary(d)
     +'<div id="playerMobilePanelContent">'+renderPlayerMobilePanelContent(d,p)+'</div>'
     +'<nav class="playerBottomNav" aria-label="Szybka nawigacja">'
     +'<button type="button" title="Początek" aria-label="Początek" onclick="scrollAppTop()">⌂</button>'
@@ -459,7 +472,9 @@ function renderPlayerDesktopPanelContent(d,panel){
   if(panel==='draw1'||panel==='draw2'){
     const round=panel==='draw2'?2:1;
     const mapView=PLAYER_DRAW_VIEW!=='table';
-    return '<div class="playerDesktopSelectedPanel playerDesktopDrawSelected"><div class="card playerDesktopPanelCard">'
+    return '<div class="playerDesktopSelectedPanel playerDesktopDrawSelected">'
+      +renderPlayerOwnSummary(d)
+      +'<div class="card playerDesktopPanelCard">'
       +'<div class="playerDesktopSectionTitle">ROZMIESZCZENIE W SEKTORACH — TURA '+round+'</div>'
       +'<div class="playerDrawViewSwitch" role="tablist"><button type="button" class="'+(mapView?'active':'')+'" onclick="setPlayerDrawView(\'map\',event)">MAPA</button><button type="button" class="'+(!mapView?'active':'')+'" onclick="setPlayerDrawView(\'table\',event)">TABELA</button></div>'
       +(mapView?renderPlayerSectorAccordion(d,round):'<div class="playerDesktopSectorTables">'+renderDrawSectorTables(d,round)+'</div>')
@@ -489,53 +504,19 @@ function renderPlayerDesktopDashboard(d){
     +'</div>'
     +'<div class="playerDesktopSubNav playerDesktopMapsOnly">'+b('map1','MAPA ŁOWISKA T1','mapTile')+b('map2','MAPA ŁOWISKA T2','mapTile')+'</div>'
     +'</div></div>'
-    +renderPlayerOwnSummary(d)
     +'<div id="playerDesktopPanelContent">'+renderPlayerDesktopPanelContent(d,p)+'</div>'
     +'</div>';
 }
-function playerPanelScrollTarget(panel,isMobile){
-  const drawLike=['draw1','draw2','map1','map2'].includes(panel);
-  if(isMobile){
-    return drawLike?document.querySelector('.playerMobileDashboard .playerOwnSummaryWrap'):q('playerMobilePanelContent');
-  }
-  return q('playerDesktopPanelContent');
-}
-function prepareDesktopPanelFocusSpace(nav,target){
-  if(!nav||!target)return 0;
-  const navH=Math.max(0,Math.ceil(nav.getBoundingClientRect().height||nav.offsetHeight||0));
-  /* Krótkie widoki (losowanie/mapa/statystyki) wcześniej nie dawały stronie dość wysokości,
-     żeby pasek mógł dojść do góry. GENERAL był długi i dlatego działał poprawnie.
-     Zapewniamy każdemu panelowi taki sam minimalny zapas wysokości jak GENERAL. */
-  const minH=Math.max(420,Math.ceil(window.innerHeight-navH+56));
-  target.style.minHeight=minH+'px';
-  target.style.setProperty('--player-desktop-nav-height',navH+'px');
-  return navH;
-}
-function scrollPlayerPanelIntoView(panel,isMobile){
+function focusPlayerNavOnOpen(){
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
-    syncPlayerStickyBars();
-    fitPlayerMobileFullMaps();
-    const nav=document.querySelector(isMobile?'.playerUnifiedNav':'.playerDesktopUnifiedNav');
-    const target=playerPanelScrollTarget(panel,isMobile);
-    if(!nav||!target)return;
-    const stickyTop=getPlayerStickyTop();
-    let navH=Math.max(0,Math.ceil(nav.getBoundingClientRect().height||nav.offsetHeight||0));
-    if(isMobile){
-      const top=window.scrollY+target.getBoundingClientRect().top-navH-stickyTop-8;
-      window.scrollTo({top:Math.max(0,top),behavior:'smooth'});
-      return;
-    }
-    navH=prepareDesktopPanelFocusSpace(nav,target)||navH;
-    /* V87: KAŻDY desktopowy kafel używa jednego, identycznego punktu docelowego.
-       Po nadaniu minimalnej wysokości przeglądarka nie blokuje przewinięcia dla krótkich paneli. */
-    const desired=Math.max(0,Math.round(window.scrollY+target.getBoundingClientRect().top-navH-8));
-    window.scrollTo({top:desired,left:0,behavior:'auto'});
-    /* Korekta po sticky-layout: pilnuje tego samego położenia z dokładnością do 2 px. */
+    const mobile=window.matchMedia&&window.matchMedia('(max-width:760px)').matches;
+    const slot=document.querySelector(mobile?'.playerMobileDashboard .playerDrawStickySlot':'.playerDesktopDashboardV56 .playerDesktopStickySlot');
+    if(!slot)return;
+    const docTop=Math.max(0,Math.round(window.scrollY+slot.getBoundingClientRect().top));
+    window.scrollTo({top:docTop,left:0,behavior:'auto'});
     requestAnimationFrame(()=>{
-      const actual=target.getBoundingClientRect().top;
-      const wanted=navH+8;
-      const delta=actual-wanted;
-      if(Math.abs(delta)>2)window.scrollBy({top:delta,left:0,behavior:'auto'});
+      syncPlayerStickyBars();
+      fitPlayerMobileFullMaps();
     });
   }));
 }
@@ -553,7 +534,6 @@ function showPlayerDesktopPanel(panel,ev){
   const mobileBox=q('playerMobilePanelContent');
   if(mobileBox&&CURRENT_DETAIL)mobileBox.innerHTML=renderPlayerMobilePanelContent(CURRENT_DETAIL,panel);
   document.querySelectorAll('.playerDesktopUnifiedNav button,.playerUnifiedNav button').forEach(btn=>btn.classList.toggle('active',btn.getAttribute('onclick')?.includes("'"+panel+"'")));
-  scrollPlayerPanelIntoView(panel,false);
 }
 function setPlayerDrawView(view,ev){
   if(ev){ev.preventDefault();ev.stopPropagation()}
@@ -585,7 +565,6 @@ function showPlayerMobilePanel(panel,ev){
   const desktopBox=q('playerDesktopPanelContent');
   if(desktopBox&&CURRENT_DETAIL)desktopBox.innerHTML=renderPlayerDesktopPanelContent(CURRENT_DETAIL,panel);
   document.querySelectorAll('.playerUnifiedNav button,.playerDesktopUnifiedNav button').forEach(btn=>btn.classList.toggle('active',btn.getAttribute('onclick')?.includes("'"+panel+"'")));
-  scrollPlayerPanelIntoView(panel,true);
 }
 function fitPlayerMobileFullMaps(){
   document.querySelectorAll('.playerMobileFullMapViewport').forEach(viewport=>{
@@ -962,7 +941,7 @@ function syncPlayerStickyBars(){
   });
 }
 window.addEventListener('scroll',syncPlayerStickyBars,{passive:true});
-window.addEventListener('resize',()=>{clearTimeout(window.__playerStickyResize);window.__playerStickyResize=setTimeout(()=>{syncPlayerStickyBars();fitPlayerMobileFullMaps();if(window.matchMedia&&window.matchMedia('(min-width:761px)').matches){const nav=document.querySelector('.playerDesktopUnifiedNav'),target=q('playerDesktopPanelContent');if(nav&&target)prepareDesktopPanelFocusSpace(nav,target)}},60)},{passive:true});
+window.addEventListener('resize',()=>{clearTimeout(window.__playerStickyResize);window.__playerStickyResize=setTimeout(()=>{syncPlayerStickyBars();fitPlayerMobileFullMaps()},60)},{passive:true});
 
 function bindAuthButtons(){
   const pairs=[['clearSessionBtn',clearSession],['regBtn',registerPlayer],['setupAdminBtn',setupAdmin],['pushBtn',enablePush],['logoutBtn',logout]];
@@ -972,6 +951,6 @@ function bindAuthButtons(){
 
 function scrollAppBottom(){window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})}
 Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,closePlayerCompetition,showAdminZone,loadCompetitions,createCompetition,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,editPlayerName,deletePlayer,deleteAllAdminPlayers,saveMyProfile,setPlayerCompetitionFilter,setPlayerCompetitionMonth,confirmPlayerPresence,enablePush,sendPushTest,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,setPlayerDrawView,openPlayerNotifications,fitPlayerMobileFullMaps,togglePlayerSectorAccordion,toggleFinalClub,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
-function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_87')}catch(_){}}
-function startBoot(){console.log('CLIENT_V87_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v87',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().then(()=>{window.__LOWCY_BOOT_OK_87=1;hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);hideBootGuard();try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
+function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_88')}catch(_){}}
+function startBoot(){console.log('CLIENT_V88_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v88',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().then(()=>{window.__LOWCY_BOOT_OK_88=1;hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);hideBootGuard();try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();
