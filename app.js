@@ -1,4 +1,4 @@
-const CLIENT_VERSION='90';const CLIENT_VERSION_NAME='V90_ADMIN_CLICK_TO_CALL';window.__LOWCY_APP_JS_90=1;try{fetch('/__probe_js_v90',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V90_ADMIN_CLICK_TO_CALL_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='91';const CLIENT_VERSION_NAME='V91_PLAYER_START_HISTORY';window.__LOWCY_APP_JS_91=1;try{fetch('/__probe_js_v91',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V91_PLAYER_START_HISTORY_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let TOKEN = STORE.get('carp_token') || '';
 let ME = null;
@@ -18,7 +18,7 @@ let PLAYER_MOBILE_PANEL = null;
 const UI_STATE_KEY='lowcy_player_ui_state_v2';
 try{if(STORE.get('lowcy_ui_fix_version')!=='78'){STORE.del(UI_STATE_KEY);STORE.set('lowcy_ui_fix_version','78')}}catch(_){}
 function readPersistentUiState(){try{return JSON.parse(STORE.get(UI_STATE_KEY)||'{}')||{}}catch(_){return {}}}
-function activeTopTab(){for(const n of ['competitions','notifications','profile']){const el=q('tab-'+n);if(el&&!el.classList.contains('hidden'))return n}return 'competitions'}
+function activeTopTab(){for(const n of ['competitions','notifications','profile','history']){const el=q('tab-'+n);if(el&&!el.classList.contains('hidden'))return n}return 'competitions'}
 function isRealPageReload(){
   try{
     const nav=performance.getEntriesByType&&performance.getEntriesByType('navigation')?.[0];
@@ -138,7 +138,7 @@ async function boot(){
   if(app)app.classList.remove('hidden');
   if(logout)logout.classList.remove('hidden');
   q('who').textContent=ME.first_name+' '+ME.last_name+' — Koło PZW '+(ME.pzw_club||'');q('role').textContent=ME.role==='ADMIN'?'Administrator':'Zawodnik';
-  const admin=ME.role==='ADMIN';document.body.classList.remove('authMode');document.body.classList.toggle('playerTheme',!admin);q('btn-players').classList.toggle('hidden',!admin);q('btn-profile')?.classList.toggle('hidden',admin);q('adminCreate').classList.toggle('hidden',!admin);
+  const admin=ME.role==='ADMIN';document.body.classList.remove('authMode');document.body.classList.toggle('playerTheme',!admin);q('btn-players').classList.toggle('hidden',!admin);q('btn-profile')?.classList.toggle('hidden',admin);q('btn-history')?.classList.toggle('hidden',admin);q('adminCreate').classList.toggle('hidden',!admin);
   renderPushStatus();
   showTab('competitions');
   if(!admin){const detail=q('competitionDetail');if(detail)detail.classList.add('hidden')}
@@ -170,7 +170,19 @@ async function saveMyProfile(ev){
     renderMyProfile();msg('Dane profilu zapisane');
   }catch(e){msg(e.message,'bad')}
 }
-function showTab(n){['competitions','notifications','players','profile'].forEach(x=>{q('tab-'+x)?.classList.toggle('hidden',x!==n);q('btn-'+x)?.classList.toggle('active',x===n)});if(n==='notifications')loadNotifications();if(n==='players')loadPlayers();if(n==='profile')renderMyProfile()}
+function renderPlayerHistory(rows){
+  const box=q('playerHistoryContent');if(!box)return;
+  rows=Array.isArray(rows)?rows:[];
+  if(!rows.length){box.innerHTML='<div class="card playerHistoryCard"><h2>Historia startów</h2><p class="muted">Brak zakończonych startów z pełnymi wynikami T1 i T2.</p></div>';return}
+  const line=r=>'<div class="playerHistoryRow" title="'+esc(r.title||'')+'"><span class="playerHistoryFishery">'+esc(r.fishery||r.title||'Zawody')+'</span><span class="playerHistoryDate">'+fmtDate(r.competition_date)+'</span><span class="playerHistoryScore"><b>'+placeText(r.t1_place)+'</b>/'+Number(r.t1_sector_size||0)+' + <b>'+placeText(r.t2_place)+'</b>/'+Number(r.t2_sector_size||0)+' = <strong>'+Number(r.general_rank||0)+'</strong>/'+Number(r.general_count||0)+'</span><span class="playerHistoryWeight">'+fmtGram(r.total_weight)+' g</span></div>';
+  box.innerHTML='<div class="card playerHistoryCard"><div class="playerHistoryHead"><h2>Historia startów</h2><span>'+rows.length+' '+(rows.length===1?'start':'startów')+'</span></div><div class="playerHistoryList">'+rows.map(line).join('')+'</div></div>';
+}
+async function loadPlayerHistory(){
+  if(!ME||ME.role==='ADMIN')return;
+  const box=q('playerHistoryContent');if(box)box.innerHTML='<div class="card"><p class="muted">Wczytuję historię startów…</p></div>';
+  try{const d=await api('/api/me/history');renderPlayerHistory(d.history||[])}catch(e){if(box)box.innerHTML='<div class="card bad danger-line">Nie udało się wczytać historii startów.</div>';msg(e.message,'bad')}
+}
+function showTab(n){['competitions','notifications','players','profile','history'].forEach(x=>{q('tab-'+x)?.classList.toggle('hidden',x!==n);q('btn-'+x)?.classList.toggle('active',x===n)});if(n==='notifications')loadNotifications();if(n==='players')loadPlayers();if(n==='profile')renderMyProfile();if(n==='history')loadPlayerHistory()}
 function competitionActionHtml(c,admin,mine,closed,cardMode=false){
   if(admin)return '<div class="inlineBtns '+(cardMode?'competitionCardActions adminCompetitionCardActions':'')+'"><button type="button" onclick="openCompetition('+c.id+')">Panel</button><button type="button" class="secondary" onclick="openCompetition('+c.id+')">Edytuj</button><button type="button" class="warn" onclick="deleteCompetition('+c.id+')">Usuń</button></div>';
   const leavePending=String(c.my_leave_request_status||'').toUpperCase()==='PENDING';
@@ -996,7 +1008,7 @@ function bindAuthButtons(){
 }
 
 function scrollAppBottom(){window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})}
-Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,closePlayerCompetition,showAdminZone,loadCompetitions,createCompetition,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,editPlayerName,deletePlayer,deleteAllAdminPlayers,saveMyProfile,setPlayerCompetitionFilter,setPlayerCompetitionMonth,confirmPlayerPresence,enablePush,sendPushTest,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,setPlayerDrawView,openPlayerNotifications,fitPlayerMobileFullMaps,togglePlayerSectorAccordion,toggleFinalClub,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
-function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_88')}catch(_){}}
-function startBoot(){console.log('CLIENT_V90_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v90',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().then(()=>{window.__LOWCY_BOOT_OK_90=1;hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);hideBootGuard();try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
+Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,loadPlayerHistory,closePlayerCompetition,showAdminZone,loadCompetitions,createCompetition,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,editPlayerName,deletePlayer,deleteAllAdminPlayers,saveMyProfile,setPlayerCompetitionFilter,setPlayerCompetitionMonth,confirmPlayerPresence,enablePush,sendPushTest,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,setPlayerDrawView,openPlayerNotifications,fitPlayerMobileFullMaps,togglePlayerSectorAccordion,toggleFinalClub,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
+function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_91')}catch(_){}}
+function startBoot(){console.log('CLIENT_V91_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v91',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().then(()=>{window.__LOWCY_BOOT_OK_91=1;hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);hideBootGuard();try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();

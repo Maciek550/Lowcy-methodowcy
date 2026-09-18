@@ -44,3 +44,11 @@ V89 — stabilizacja nawigacji zawodnika:
 
 
 V90 — ADMIN: numery telefonów na liście głównej i rezerwowej zawodów oraz na liście zarejestrowanych zawodników są przyciskami `tel:`. Kliknięcie na telefonie otwiera ekran połączenia z gotowym numerem; na komputerze uruchamia dostępną aplikację obsługującą połączenia telefoniczne. Wypisani pozostają zwykłym tekstem. Zachowano poprawki V89.
+
+V91 — Historia startów zawodnika.
+- Nowy przycisk „Historia startów” obok „Mój profil” (tylko zawodnik).
+- Historia jest liczona automatycznie z zakończonych startów, które mają komplet wyników T1 i T2.
+- Każdy start zajmuje jeden zwarty wiersz: łowisko | data | T1 miejsce/liczba w sektorze + T2 miejsce/liczba w sektorze = miejsce GENERAL/liczba zawodników | łączna waga.
+- Przykład: Lasomin | 12.09.2026 | 1/7 + 5/7 = 6/37 | 45 950 g.
+- Układ desktop/mobile pozostaje jednowierszowy i oszczędza miejsce.
+- Zachowane wszystkie funkcje V90, w tym przyciski telefoniczne w panelu administratora.
