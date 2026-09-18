@@ -1,3 +1,8 @@
+V105 — wyniki administratora w kolorystyce mobilnej
+
+Jasne tabele, ciemny tekst, czerwone BF. Poprawka obejmuje wyniki sektorowe, klasyfikacje T1/T2, General i statystyki na komputerze oraz telefonie.
+Wgraj całą paczkę i uruchom aplikację ponownie.
+
 Wersja V104 — czytelne karty administratora
 
 Wgraj wszystkie pliki paczki i uruchom ponownie aplikację.
