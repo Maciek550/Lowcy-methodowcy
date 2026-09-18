@@ -74,3 +74,11 @@ V96 — odświeżenie kart zawodów zawodnika: numer zawodów w jednej linii z n
 
 
 V97 — zawodnik: górny przycisk Powiadomienia skrócony do NOWOŚCI; karty zawodów zagęszczone pionowo. Zawody Otwarte przeniesione do wiersza daty/odliczania, status zapisu i potwierdzenie obecności obok łowiska, a dół karty ma jeden wiersz: ZAPISANI | LOS/WYNIKI | ZAPISZ/REZYGNUJ. Poprawiony kontrast paneli Regulamin ogólny i Historia startów w ciemnym motywie.
+
+
+## V98 — dopracowany kompaktowy panel zawodnika
+- Regulamin ogólny oraz Historia startów w górnym menu są jawnie łamane na dwa wiersze u zawodnika.
+- Karty zawodów zostały zagęszczone i uporządkowane w 4 stałych rzędach: numer/nazwa/godzina; data/dzień/start/status; łowisko/status zapisu/potwierdzenie; zapisani/LOS-WYNIKI/ZAPISZ-REZYGNUJ.
+- Status ZAPISANY i OBECNOŚĆ POTWIERDZONA są w jednym rzędzie obok łowiska.
+- Skrócono pusty panel „Brak zawodów w tej kategorii.”.
+- Zmiany mobilne są ograniczone do widoku zawodnika; logika zapisów, losowań, wyników i panel admina pozostała bez zmian.
