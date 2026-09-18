@@ -94,3 +94,6 @@ V101 — zachowany dobry widok wpisywania wyników z V100. Poprawiono wyłączni
 
 
 V102 — punktowa poprawka czytelności nazw sektorów (Sektor A/B/C...). Nagłówki tabel sektorowych mają mocny ciemnoniebieski pasek, biały pogrubiony tekst i wyższy kontrast. Bez zmian w układzie, wpisywaniu wyników, losowaniu, panelu zawodnika i PWA.
+
+
+V103 — punktowa naprawa czytelności mobilnego Admin → Wyniki. Formularz Wpisywanie wyników z V100 pozostaje bez zmian. Mobilne karty klasyfikacji są ciemne z jasnym tekstem, podium w tabelach sektorowych zachowuje jasne tła 1/2/3 ale ma jawnie ciemny tekst, nagłówki Sektor A/B/... mają ciemny pasek i biały tekst. Brak zmian logiki, desktopu i panelu zawodnika.
