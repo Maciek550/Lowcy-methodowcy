@@ -1,4 +1,4 @@
-const CLIENT_VERSION='88';const CLIENT_VERSION_NAME='V88_PLAYER_PANEL_STABLE_CONTEXT';window.__LOWCY_APP_JS_88=1;try{fetch('/__probe_js_v88',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V88_PLAYER_PANEL_STABLE_CONTEXT_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='89';const CLIENT_VERSION_NAME='V89_PLAYER_NAV_LOCK_AND_MAP_FIT';window.__LOWCY_APP_JS_89=1;try{fetch('/__probe_js_v89',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V89_PLAYER_NAV_LOCK_AND_MAP_FIT_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let TOKEN = STORE.get('carp_token') || '';
 let ME = null;
@@ -507,21 +507,49 @@ function renderPlayerDesktopDashboard(d){
     +'<div id="playerDesktopPanelContent">'+renderPlayerDesktopPanelContent(d,p)+'</div>'
     +'</div>';
 }
+function instantPlayerScrollTo(top){
+  const y=Math.max(0,Math.round(Number(top)||0));
+  const root=document.documentElement,body=document.body;
+  const oldRoot=root.style.scrollBehavior,oldBody=body.style.scrollBehavior;
+  root.style.scrollBehavior='auto';body.style.scrollBehavior='auto';
+  window.scrollTo(0,y);
+  root.style.scrollBehavior=oldRoot;body.style.scrollBehavior=oldBody;
+}
+function restorePlayerViewport(y){
+  const wanted=Math.max(0,Math.round(Number(y)||0));
+  requestAnimationFrame(()=>{
+    instantPlayerScrollTo(wanted);
+    syncPlayerStickyBars();
+    fitPlayerMobileFullMaps();
+    requestAnimationFrame(()=>{instantPlayerScrollTo(wanted);syncPlayerStickyBars()});
+  });
+}
 function focusPlayerNavOnOpen(){
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
     const mobile=window.matchMedia&&window.matchMedia('(max-width:760px)').matches;
     const slot=document.querySelector(mobile?'.playerMobileDashboard .playerDrawStickySlot':'.playerDesktopDashboardV56 .playerDesktopStickySlot');
     if(!slot)return;
-    const docTop=Math.max(0,Math.round(window.scrollY+slot.getBoundingClientRect().top));
-    window.scrollTo({top:docTop,left:0,behavior:'auto'});
+    /* +2 px: slot przechodzi minimalnie ponad krawędź viewportu, więc pasek od razu
+       wchodzi w tryb fixed/sticky dokładnie na top:0 — bez resztek listy zawodów nad nim. */
+    const docTop=Math.max(0,Math.round(window.scrollY+slot.getBoundingClientRect().top+2));
+    instantPlayerScrollTo(docTop);
     requestAnimationFrame(()=>{
       syncPlayerStickyBars();
       fitPlayerMobileFullMaps();
+      requestAnimationFrame(()=>{
+        const bar=document.querySelector(mobile?'.playerMobileDashboard .playerUnifiedNav':'.playerDesktopDashboardV56 .playerDesktopUnifiedNav');
+        if(bar){
+          const delta=Math.round(bar.getBoundingClientRect().top);
+          if(Math.abs(delta)>1)instantPlayerScrollTo(window.scrollY+delta+1);
+        }
+        syncPlayerStickyBars();
+      });
     });
   }));
 }
 function showPlayerDesktopPanel(panel,ev){
   if(ev){ev.preventDefault();ev.stopPropagation()}
+  const keepY=Math.round(window.scrollY||0);
   const allowed=['draw1','draw2','map1','map2','t1','t2','general','stats'];
   if(!allowed.includes(panel))return;
   if(panel==='t1'||panel==='t2')markPlayerResultSeen(panel==='t1'?1:2);
@@ -534,6 +562,7 @@ function showPlayerDesktopPanel(panel,ev){
   const mobileBox=q('playerMobilePanelContent');
   if(mobileBox&&CURRENT_DETAIL)mobileBox.innerHTML=renderPlayerMobilePanelContent(CURRENT_DETAIL,panel);
   document.querySelectorAll('.playerDesktopUnifiedNav button,.playerUnifiedNav button').forEach(btn=>btn.classList.toggle('active',btn.getAttribute('onclick')?.includes("'"+panel+"'")));
+  restorePlayerViewport(keepY);
 }
 function setPlayerDrawView(view,ev){
   if(ev){ev.preventDefault();ev.stopPropagation()}
@@ -553,6 +582,7 @@ function renderPlayerDetail(d){
 }
 function showPlayerMobilePanel(panel,ev){
   if(ev){ev.preventDefault();ev.stopPropagation()}
+  const keepY=Math.round(window.scrollY||0);
   const allowed=['draw1','draw2','map1','map2','t1','t2','general','stats'];
   if(!allowed.includes(panel))return;
   if(panel==='t1'||panel==='t2')markPlayerResultSeen(panel==='t1'?1:2);
@@ -565,6 +595,7 @@ function showPlayerMobilePanel(panel,ev){
   const desktopBox=q('playerDesktopPanelContent');
   if(desktopBox&&CURRENT_DETAIL)desktopBox.innerHTML=renderPlayerDesktopPanelContent(CURRENT_DETAIL,panel);
   document.querySelectorAll('.playerUnifiedNav button,.playerDesktopUnifiedNav button').forEach(btn=>btn.classList.toggle('active',btn.getAttribute('onclick')?.includes("'"+panel+"'")));
+  restorePlayerViewport(keepY);
 }
 function fitPlayerMobileFullMaps(){
   document.querySelectorAll('.playerMobileFullMapViewport').forEach(viewport=>{
@@ -573,15 +604,18 @@ function fitPlayerMobileFullMaps(){
     if(!canvas||!map)return;
     canvas.style.transform='none';canvas.style.width='auto';canvas.style.height='auto';
     map.style.transform='none';
-    const available=Math.max(280,viewport.clientWidth-4);
+    const available=Math.max(1,viewport.clientWidth-8);
     const naturalW=Math.max(map.scrollWidth,map.offsetWidth,640);
     const naturalH=Math.max(map.scrollHeight,map.offsetHeight,1);
     const scale=Math.min(1,available/naturalW);
+    canvas.style.position='absolute';
+    canvas.style.left='4px';
+    canvas.style.top='4px';
     canvas.style.width=naturalW+'px';
     canvas.style.height=naturalH+'px';
     canvas.style.transformOrigin='top left';
     canvas.style.transform='scale('+scale+')';
-    viewport.style.height=Math.ceil(naturalH*scale)+'px';
+    viewport.style.height=Math.ceil(naturalH*scale+8)+'px';
   });
 }
 function openPlayerNotifications(ev){
@@ -952,5 +986,5 @@ function bindAuthButtons(){
 function scrollAppBottom(){window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})}
 Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,closePlayerCompetition,showAdminZone,loadCompetitions,createCompetition,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,editPlayerName,deletePlayer,deleteAllAdminPlayers,saveMyProfile,setPlayerCompetitionFilter,setPlayerCompetitionMonth,confirmPlayerPresence,enablePush,sendPushTest,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,setPlayerDrawView,openPlayerNotifications,fitPlayerMobileFullMaps,togglePlayerSectorAccordion,toggleFinalClub,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
 function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_88')}catch(_){}}
-function startBoot(){console.log('CLIENT_V88_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v88',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().then(()=>{window.__LOWCY_BOOT_OK_88=1;hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);hideBootGuard();try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
+function startBoot(){console.log('CLIENT_V89_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v89',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().then(()=>{window.__LOWCY_BOOT_OK_89=1;hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);hideBootGuard();try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();

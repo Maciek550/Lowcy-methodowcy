@@ -34,3 +34,10 @@ V87 — poprawka widoku zawodnika na komputerze: wszystkie kafelki (Losowanie T1
 
 
 V88 — panel zawodnika stabilny po wejściu w szczegóły: pasek kafelków jest ustawiany na górze tylko raz przy otwarciu zawodów; kliknięcia Losowanie/Wyniki/General/Statystyki/Mapy nie przewijają strony. „Moje stanowiska” są wyświetlane wyłącznie w Losowaniu T1/T2; wyniki, General, Statystyki i mapy nie pokazują już elementów losowania. Zmiana obejmuje desktop i mobile. Usunięto obejście V87 z wymuszoną wysokością panelu.
+
+
+V89 — stabilizacja nawigacji zawodnika:
+- po wejściu w szczegóły pasek kafelków jest automatycznie dociągany do samej górnej krawędzi i od razu działa jako sticky/fixed,
+- przełączanie Losowanie/Wyniki/GENERAL/Statystyki/Mapy zachowuje dokładnie tę samą pozycję scrolla (GENERAL nie może już obniżyć widoku),
+- mapy mobilne są izolowane w kontenerze i skalowane do realnej szerokości ekranu, bez poszerzania dokumentu poza viewport,
+- kontekst paneli pozostaje z V88: wyniki pokazują tylko wyniki, mapy tylko mapę, losowanie pokazuje moje stanowiska + sektory.
