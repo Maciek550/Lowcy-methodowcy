@@ -91,3 +91,6 @@ V100 — poprawa kontrastu w panelu administratora „Wpisywanie wyników”. Na
 
 
 V101 — zachowany dobry widok wpisywania wyników z V100. Poprawiono wyłącznie czytelność strefy „Losowanie i sektory” w panelu admina: zagnieżdżone karty są ciemne, mapy pozostają jasne z wymuszonym ciemnym tekstem, nazwy sektorów/stanowisk i opisy są ponownie czytelne. Bez zmian logiki losowania, panelu zawodnika i PWA.
+
+
+V102 — punktowa poprawka czytelności nazw sektorów (Sektor A/B/C...). Nagłówki tabel sektorowych mają mocny ciemnoniebieski pasek, biały pogrubiony tekst i wyższy kontrast. Bez zmian w układzie, wpisywaniu wyników, losowaniu, panelu zawodnika i PWA.
