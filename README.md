@@ -41,3 +41,6 @@ V89 — stabilizacja nawigacji zawodnika:
 - przełączanie Losowanie/Wyniki/GENERAL/Statystyki/Mapy zachowuje dokładnie tę samą pozycję scrolla (GENERAL nie może już obniżyć widoku),
 - mapy mobilne są izolowane w kontenerze i skalowane do realnej szerokości ekranu, bez poszerzania dokumentu poza viewport,
 - kontekst paneli pozostaje z V88: wyniki pokazują tylko wyniki, mapy tylko mapę, losowanie pokazuje moje stanowiska + sektory.
+
+
+V90 — ADMIN: numery telefonów na liście głównej i rezerwowej zawodów oraz na liście zarejestrowanych zawodników są przyciskami `tel:`. Kliknięcie na telefonie otwiera ekran połączenia z gotowym numerem; na komputerze uruchamia dostępną aplikację obsługującą połączenia telefoniczne. Wypisani pozostają zwykłym tekstem. Zachowano poprawki V89.
