@@ -55,3 +55,10 @@ V91 — Historia startów zawodnika.
 
 
 V92 — odświeżony ciemny panel administratora; nowe pola Zbiórka/godzina oraz Regulamin zawodów; dotychczasowe notatki są prezentowane zawodnikowi jako Informacje organizacyjne. Zawodnik ma nową zakładkę REGULAMIN oraz widzi godzinę zbiórki na listach i w szczegółach zawodów. Baza migruje automatycznie przez meeting_time i regulations.
+
+V93 — Regulamin ogólny + naprawa edycji zawodów
+- „Edytuj” przy zawodach otwiera bezpośrednio panel danych zawodów zamiast zwykłego panelu listy zawodników.
+- Regulamin ogólny jest osobnym panelem dla zawodnika i administratora; admin może go edytować i zapisać globalnie.
+- Pole regulaminu w konkretnych zawodach pozostaje osobne i jest opisane jako „Program / regulamin tych zawodów” — na harmonogram i zasady danego wydarzenia.
+- Domyślna godzina zbiórki to 06:00; dotyczy nowych zawodów i wcześniejszych zawodów bez ustawionej godziny.
+- Zachowany ciemny wygląd panelu administratora z V92 oraz wcześniejsze funkcje V91/V90.
