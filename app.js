@@ -1,4 +1,4 @@
-const CLIENT_VERSION='85';const CLIENT_VERSION_NAME='V85_DESKTOP_GENERAL_PARITY_LOGIN_DARK';window.__LOWCY_APP_JS_85=1;try{fetch('/__probe_js_v85',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V85_DESKTOP_GENERAL_PARITY_LOGIN_DARK_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='87';const CLIENT_VERSION_NAME='V87_DESKTOP_PANEL_FOCUS_STABLE';window.__LOWCY_APP_JS_87=1;try{fetch('/__probe_js_v87',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V87_DESKTOP_PANEL_FOCUS_STABLE_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let TOKEN = STORE.get('carp_token') || '';
 let ME = null;
@@ -472,7 +472,7 @@ function renderPlayerDesktopPanelContent(d,panel){
   if(panel==='t1')return '<div class="playerDesktopSelectedPanel"><div class="card playerDesktopPanelCard playerResultCard"><h2>Wyniki sektorowe — Tura 1</h2>'+renderSectorResultsColumn(d.classification.round1,'')+'<h2 class="playerWholeRoundTitle">Cała Tura 1</h2>'+renderClassTable(d.classification.round1)+'</div></div>';
   if(panel==='t2')return '<div class="playerDesktopSelectedPanel"><div class="card playerDesktopPanelCard playerResultCard"><h2>Wyniki sektorowe — Tura 2</h2>'+renderSectorResultsColumn(d.classification.round2,'')+'<h2 class="playerWholeRoundTitle">Cała Tura 2</h2>'+renderClassTable(d.classification.round2)+'</div></div>';
   if(panel==='general')return '<div class="playerDesktopSelectedPanel"><div class="card playerDesktopPanelCard playerResultCard"><h2>Klasyfikacja końcowa</h2>'+renderFinalClubToggle()+renderGeneralTable(d.classification.general)+'</div></div>';
-  if(panel==='stats')return '<div class="playerDesktopSelectedPanel">'+renderStationStatistics(d)+'</div>';
+  if(panel==='stats')return '<div class="playerDesktopSelectedPanel"><div class="card playerDesktopPanelCard playerStatsPanelCard">'+renderStationStatistics(d)+'</div></div>';
   return '';
 }
 function renderPlayerDesktopDashboard(d){
@@ -498,8 +498,18 @@ function playerPanelScrollTarget(panel,isMobile){
   if(isMobile){
     return drawLike?document.querySelector('.playerMobileDashboard .playerOwnSummaryWrap'):q('playerMobilePanelContent');
   }
-  /* V84 desktop: każdy kafel prowadzi dokładnie do tego samego miejsca — początku wybranego panelu. */
   return q('playerDesktopPanelContent');
+}
+function prepareDesktopPanelFocusSpace(nav,target){
+  if(!nav||!target)return 0;
+  const navH=Math.max(0,Math.ceil(nav.getBoundingClientRect().height||nav.offsetHeight||0));
+  /* Krótkie widoki (losowanie/mapa/statystyki) wcześniej nie dawały stronie dość wysokości,
+     żeby pasek mógł dojść do góry. GENERAL był długi i dlatego działał poprawnie.
+     Zapewniamy każdemu panelowi taki sam minimalny zapas wysokości jak GENERAL. */
+  const minH=Math.max(420,Math.ceil(window.innerHeight-navH+56));
+  target.style.minHeight=minH+'px';
+  target.style.setProperty('--player-desktop-nav-height',navH+'px');
+  return navH;
 }
 function scrollPlayerPanelIntoView(panel,isMobile){
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
@@ -509,16 +519,24 @@ function scrollPlayerPanelIntoView(panel,isMobile){
     const target=playerPanelScrollTarget(panel,isMobile);
     if(!nav||!target)return;
     const stickyTop=getPlayerStickyTop();
-    const navH=Math.max(0,Math.ceil(nav.getBoundingClientRect().height||nav.offsetHeight||0));
+    let navH=Math.max(0,Math.ceil(nav.getBoundingClientRect().height||nav.offsetHeight||0));
     if(isMobile){
       const top=window.scrollY+target.getBoundingClientRect().top-navH-stickyTop-8;
       window.scrollTo({top:Math.max(0,top),behavior:'smooth'});
       return;
     }
-    /* V85 desktop: wszystkie kafle zachowują się jak GENERAL — jeden stały punkt startu,
-       bez zależności od wysokości poprzedniego panelu. */
-    target.style.scrollMarginTop=(stickyTop+navH+16)+'px';
-    target.scrollIntoView({behavior:'auto',block:'start',inline:'nearest'});
+    navH=prepareDesktopPanelFocusSpace(nav,target)||navH;
+    /* V87: KAŻDY desktopowy kafel używa jednego, identycznego punktu docelowego.
+       Po nadaniu minimalnej wysokości przeglądarka nie blokuje przewinięcia dla krótkich paneli. */
+    const desired=Math.max(0,Math.round(window.scrollY+target.getBoundingClientRect().top-navH-8));
+    window.scrollTo({top:desired,left:0,behavior:'auto'});
+    /* Korekta po sticky-layout: pilnuje tego samego położenia z dokładnością do 2 px. */
+    requestAnimationFrame(()=>{
+      const actual=target.getBoundingClientRect().top;
+      const wanted=navH+8;
+      const delta=actual-wanted;
+      if(Math.abs(delta)>2)window.scrollBy({top:delta,left:0,behavior:'auto'});
+    });
   }));
 }
 function showPlayerDesktopPanel(panel,ev){
@@ -944,7 +962,7 @@ function syncPlayerStickyBars(){
   });
 }
 window.addEventListener('scroll',syncPlayerStickyBars,{passive:true});
-window.addEventListener('resize',()=>{clearTimeout(window.__playerStickyResize);window.__playerStickyResize=setTimeout(()=>{syncPlayerStickyBars();fitPlayerMobileFullMaps()},60)},{passive:true});
+window.addEventListener('resize',()=>{clearTimeout(window.__playerStickyResize);window.__playerStickyResize=setTimeout(()=>{syncPlayerStickyBars();fitPlayerMobileFullMaps();if(window.matchMedia&&window.matchMedia('(min-width:761px)').matches){const nav=document.querySelector('.playerDesktopUnifiedNav'),target=q('playerDesktopPanelContent');if(nav&&target)prepareDesktopPanelFocusSpace(nav,target)}},60)},{passive:true});
 
 function bindAuthButtons(){
   const pairs=[['clearSessionBtn',clearSession],['regBtn',registerPlayer],['setupAdminBtn',setupAdmin],['pushBtn',enablePush],['logoutBtn',logout]];
@@ -954,6 +972,6 @@ function bindAuthButtons(){
 
 function scrollAppBottom(){window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})}
 Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,closePlayerCompetition,showAdminZone,loadCompetitions,createCompetition,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,editPlayerName,deletePlayer,deleteAllAdminPlayers,saveMyProfile,setPlayerCompetitionFilter,setPlayerCompetitionMonth,confirmPlayerPresence,enablePush,sendPushTest,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,setPlayerDrawView,openPlayerNotifications,fitPlayerMobileFullMaps,togglePlayerSectorAccordion,toggleFinalClub,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
-function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_85')}catch(_){}}
-function startBoot(){console.log('CLIENT_V85_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v85',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().then(()=>{window.__LOWCY_BOOT_OK_85=1;hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);hideBootGuard();try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
+function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_87')}catch(_){}}
+function startBoot(){console.log('CLIENT_V87_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v87',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().then(()=>{window.__LOWCY_BOOT_OK_87=1;hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);hideBootGuard();try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();
