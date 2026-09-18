@@ -85,3 +85,6 @@ V97 — zawodnik: górny przycisk Powiadomienia skrócony do NOWOŚCI; karty zaw
 
 
 V99 — odporność uruchamiania PWA po aktualizacjach. Bez zmian wizualnych względem V98. Service Worker ma limit czasu dla nawigacji i app.js, navigation preload, natychmiastowy fallback z cache lub czytelny ekran offline. Boot watchdog po 8 s automatycznie usuwa tylko cache aplikacji i rejestrację Service Workera, zachowując token logowania, po czym wykonuje jeden czysty restart. Naprawiono klucz retry wersji. Manifest zachowuje id='/' i start_url='/', więc istniejącego skrótu z pulpitu nie trzeba tworzyć ponownie.
+
+
+V100 — poprawa kontrastu w panelu administratora „Wpisywanie wyników”. Na mobile karty wpisów wyników mają spójne ciemne tło, jasne nazwiska i wartości, czytelne pola Stan./Sektor oraz etykiety. Tagi wag siatek i BF mają jawnie ustawione ciemne kolory tekstu na jasnych tłach również na desktopie. Placeholdery pól wag są czytelne. Zmiana jest ograniczona do strefy wpisywania wyników; zachowano odporność startu PWA z V99 i pozostałe funkcje bez zmian.
