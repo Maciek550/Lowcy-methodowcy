@@ -1,4 +1,4 @@
-const CLIENT_VERSION='98';const CLIENT_VERSION_NAME='V98_COMPACT_PLAYER_CARDS_POLISH';window.__LOWCY_APP_JS_98=1;try{fetch('/__probe_js_v98',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V98_COMPACT_PLAYER_CARDS_POLISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='99';const CLIENT_VERSION_NAME='V99_PWA_STARTUP_RESILIENCE';window.__LOWCY_APP_JS_99=1;try{fetch('/__probe_js_v99',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V99_PWA_STARTUP_RESILIENCE_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let TOKEN = STORE.get('carp_token') || '';
 let ME = null;
@@ -144,7 +144,7 @@ async function boot(){
   if(!admin){const detail=q('competitionDetail');if(detail)detail.classList.add('hidden')}
   await Promise.allSettled([loadCompetitions(),loadNotifications(),admin?loadPlayers():Promise.resolve()]);
   if(!admin)await restorePersistentUiState();
-  if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js',{scope:'/'}).then(reg=>{try{reg.update()}catch(_){ }if('Notification' in window&&Notification.permission==='granted')ensurePushSubscription(true,false).catch(()=>{})}).catch(()=>{})}
+  if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'}).then(reg=>{try{reg.update()}catch(_){ }if('Notification' in window&&Notification.permission==='granted')ensurePushSubscription(true,false).catch(()=>{})}).catch(()=>{})}
 }
 async function login(){try{const phone=q('loginPhone')?.value||'';const password=q('loginPassword')?.value||'';if(!phone.trim()||!password)throw new Error('Wpisz telefon i hasło');const d=await api('/api/login',{method:'POST',body:JSON.stringify({phone,password})});TOKEN=d.token;STORE.set('carp_token',TOKEN);msg('Zalogowano');await boot()}catch(e){msg(e.message,'bad')}}
 async function registerPlayer(ev){if(ev){ev.preventDefault&&ev.preventDefault();ev.stopPropagation&&ev.stopPropagation()}try{const d=await api('/api/register',{method:'POST',body:JSON.stringify({phone:q('regPhone').value,password:q('regPassword').value,firstName:q('regFirst').value,lastName:q('regLast').value,pzwClub:q('regClub').value})});TOKEN=d.token;STORE.set('carp_token',TOKEN);msg('Konto zawodnika utworzone');await boot()}catch(e){msg(e.message,'bad')}}
@@ -916,7 +916,7 @@ async function ensurePushSubscription(silent=false,sendTest=false){
   let permission=Notification.permission;
   if(permission==='default'&&!silent)permission=await Notification.requestPermission();
   if(permission!=='granted'){if(!silent)msg(permission==='denied'?'Powiadomienia są zablokowane w ustawieniach tej strony.':'Nie włączono powiadomień telefonu.','bad');renderPushStatus();return false}
-  const reg=await navigator.serviceWorker.register('/sw.js',{scope:'/'});
+  const reg=await navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'});
   await navigator.serviceWorker.ready;
   let sub=await reg.pushManager.getSubscription();
   if(sub&&sendTest){await sub.unsubscribe().catch(()=>{});sub=null}
@@ -1053,6 +1053,6 @@ function bindAuthButtons(){
 
 function scrollAppBottom(){window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})}
 Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,loadPlayerHistory,saveGeneralRules,closePlayerCompetition,showAdminZone,loadCompetitions,createCompetition,openCompetitionEdit,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,editPlayerName,deletePlayer,deleteAllAdminPlayers,saveMyProfile,setPlayerCompetitionFilter,setPlayerCompetitionMonth,confirmPlayerPresence,enablePush,sendPushTest,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,setPlayerDrawView,openPlayerNotifications,fitPlayerMobileFullMaps,togglePlayerSectorAccordion,toggleFinalClub,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
-function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_97')}catch(_){}}
-function startBoot(){console.log('CLIENT_V98_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v98',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().then(()=>{window.__LOWCY_BOOT_OK_98=1;hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);hideBootGuard();try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(_){}})}
+function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_99')}catch(_){}}
+function startBoot(){console.log('CLIENT_V99_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v99',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().then(()=>{window.__LOWCY_BOOT_OK_99=1;hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);try{window.__lowcyRecover99&&window.__lowcyRecover99()}catch(_){hideBootGuard();try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(__){}}})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();

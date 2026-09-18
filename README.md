@@ -82,3 +82,6 @@ V97 — zawodnik: górny przycisk Powiadomienia skrócony do NOWOŚCI; karty zaw
 - Status ZAPISANY i OBECNOŚĆ POTWIERDZONA są w jednym rzędzie obok łowiska.
 - Skrócono pusty panel „Brak zawodów w tej kategorii.”.
 - Zmiany mobilne są ograniczone do widoku zawodnika; logika zapisów, losowań, wyników i panel admina pozostała bez zmian.
+
+
+V99 — odporność uruchamiania PWA po aktualizacjach. Bez zmian wizualnych względem V98. Service Worker ma limit czasu dla nawigacji i app.js, navigation preload, natychmiastowy fallback z cache lub czytelny ekran offline. Boot watchdog po 8 s automatycznie usuwa tylko cache aplikacji i rejestrację Service Workera, zachowując token logowania, po czym wykonuje jeden czysty restart. Naprawiono klucz retry wersji. Manifest zachowuje id='/' i start_url='/', więc istniejącego skrótu z pulpitu nie trzeba tworzyć ponownie.
