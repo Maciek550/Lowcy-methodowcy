@@ -68,3 +68,6 @@ V94 — delikatna poprawka wyłącznie menu stref admina na komputerze. Pięć k
 
 
 V95 — zachowano poprawkę desktopowego menu admina z V94. Naprawiono żółte tło nieprzeczytanych powiadomień w panelu admina: powiadomienia mają ciemny granatowy motyw, nieprzeczytane są lekko jaśniejsze z niebieskim paskiem. Zmiana jest ograniczona do zakładki Powiadomienia admina; nie zmienia kolorów własnego stanowiska, gwiazdek nowych treści ani widoku zawodnika.
+
+
+V96 — odświeżenie kart zawodów zawodnika: numer zawodów w jednej linii z nazwą, godzina zbiórki w prawym górnym rogu, dzień tygodnia i licznik START ZA w jednym wierszu, większe łowisko, status „ZAWODY OTWARTE”, czytelniejsze zapis/potwierdzenie oraz przyciski. Regulamin ogólny i Historia startów pozostają tylko w górnych zakładkach — nie są dokładane pod listą zawodów. Zachowano poprawki V95 admina i powiadomień.
