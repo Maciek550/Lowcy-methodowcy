@@ -1,3 +1,5 @@
+V117 — Zapis dymków przed powiadomieniami push, wysyłka push wyników nie blokuje publikacji. Awaria grafiki karpia pokazuje tekst zamiast zatrzymać kolejkę. Liczniki dymków T1/T2. Osobne Ponów dymki T1/T2/general z potwierdzeniem; standardowa publikacja nadal nie powtarza obejrzanych.
+
 V116 — Realistyczna grafika karpia zamiast wektorowego rysunku, animowany wyskok z kroplami i falami. Grafika dołączona w paczce, cache przeglądarki; dymek startuje dopiero po wczytaniu ryby. Zasady publikacji i 8 sekund pozostają bez zmian.
 
 V115 — Animowany karp wyskakujący z wody, krople, fale i POWODZENIA W 2 TURZE! po publikacji T1 dla ostatniego miejsca każdego sektora (także remisy). Pomija sektory jednoosobowe i bez przypisanego sektora. Dymek 8 s, raz na sektor/T1/zawodnika; pozostałe gratulacje zachowane. Lekka animacja SVG/CSS, z obsługą ograniczenia ruchu.
