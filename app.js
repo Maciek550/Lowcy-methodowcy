@@ -1,10 +1,16 @@
-const CLIENT_VERSION='113';const CLIENT_VERSION_NAME='V113_GENERAL_ACHIEVEMENTS';window.__LOWCY_APP_JS_113=1;try{fetch('/__probe_js_v113',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V113_GENERAL_ACHIEVEMENTS_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='114';const CLIENT_VERSION_NAME='V114_ACHIEVEMENTS_8_SECONDS';window.__LOWCY_APP_JS_114=1;try{fetch('/__probe_js_v114',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V114_ACHIEVEMENTS_8_SECONDS_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
-let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null;
+let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
-function stopAchievements(){clearInterval(ACHIEVEMENT_POLL);ACHIEVEMENT_POLL=null;clearTimeout(ACHIEVEMENT_TIMEOUT);document.getElementById('achievementToast')?.remove()}
+function stopAchievements(){ACHIEVEMENT_ACK=null;clearInterval(ACHIEVEMENT_POLL);ACHIEVEMENT_POLL=null;clearTimeout(ACHIEVEMENT_TIMEOUT);document.getElementById('achievementToast')?.remove()}
 function startAchievements(){stopAchievements();if(!ME||ME.role==='ADMIN')return;pollAchievements();ACHIEVEMENT_POLL=setInterval(pollAchievements,12000)}
-function closeAchievementToast(){clearTimeout(ACHIEVEMENT_TIMEOUT);const el=document.getElementById('achievementToast');if(el){el.classList.add('closing');setTimeout(()=>el.remove(),180)}}
+function closeAchievementToast(){
+  clearTimeout(ACHIEVEMENT_TIMEOUT);
+  const ack=ACHIEVEMENT_ACK;ACHIEVEMENT_ACK=null;
+  if(ack)ack();
+  const el=document.getElementById('achievementToast');
+  if(el){el.classList.add('closing');setTimeout(()=>{el.remove();pollAchievements()},180)}
+}
 async function pollAchievements(){
   if(ACHIEVEMENT_BUSY||!ME||ME.role==='ADMIN'||document.hidden||document.getElementById('achievementToast'))return;
   const uid=ME.id;ACHIEVEMENT_BUSY=true;
@@ -18,16 +24,19 @@ async function pollAchievements(){
       fresh.push(a);
     }
     if(!fresh.length)return;
-    const group=fresh.filter(a=>a.competition_id===fresh[0].competition_id).slice(0,3);
+    const group=[fresh.find(a=>String(a.payload.key||'').startsWith('GENERAL:'))||fresh[0]];
     const el=document.createElement('aside');el.id='achievementToast';el.setAttribute('role','status');el.setAttribute('aria-live','polite');
     el.innerHTML='<button type="button" class="achievementClose" aria-label="Zamknij gratulacje">×</button><h3>🏆 Brawo TY! 😄</h3><small>'+esc(group[0].payload.title)+'</small>'+group.map(a=>'<p><strong>'+esc(a.payload.label)+'</strong><br><small>'+esc(a.payload.context)+' · '+esc(Number(a.payload.weight).toLocaleString('pl-PL'))+' g</small></p>').join('')+'<div class="achievementTimer"></div>';
     el.querySelector('button').onclick=closeAchievementToast;
     document.body.appendChild(el);
-    ACHIEVEMENT_TIMEOUT=setTimeout(closeAchievementToast,4000);
-    for(const a of group){const key='achievement:'+uid+':'+a.id;ACHIEVEMENT_SESSION_SEEN.add(key);STORE.set(key,'1');await api('/api/achievements/'+a.id+'/seen',{method:'POST',body:'{}'})}
+    ACHIEVEMENT_TIMEOUT=setTimeout(closeAchievementToast,8000);
+    ACHIEVEMENT_ACK=()=>{
+      if(!ME||ME.id!==uid)return;
+      for(const a of group){const key='achievement:'+uid+':'+a.id;ACHIEVEMENT_SESSION_SEEN.add(key);STORE.set(key,'1');api('/api/achievements/'+a.id+'/seen',{method:'POST',body:'{}'}).catch(()=>{})}
+    };
   }catch(_){ }finally{ACHIEVEMENT_BUSY=false}
 }
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)pollAchievements()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){clearTimeout(ACHIEVEMENT_TIMEOUT);ACHIEVEMENT_ACK=null;document.getElementById('achievementToast')?.remove()}else pollAchievements()});
 let TOKEN = STORE.get('carp_token') || '';
 let ME = null;
 let CURRENT_DETAIL = null;
@@ -933,7 +942,7 @@ function sectorLayoutPayloadForSave(){if(SECTOR_MANUAL_DRAFT===undefined)return 
 function resetSectorLayout(ev){if(ev){ev.preventDefault();ev.stopPropagation()}SECTOR_MANUAL_DRAFT=null;updateStructurePreview(true)}
 
 function renderResultsEntryPanel(d){const c=d.competition;return '<div class="card"><h2>Wpisywanie wyników</h2><p class="small muted"><b>Przeliczanie jest automatyczne.</b> Po zapisaniu lub usunięciu każdej wagi klasyfikacje T1, T2 i końcowa są liczone ponownie. Wpisz wagę siatki albo dużej ryby i przejdź do innego pola.</p><div class="grid3"><button type="button" class="secondary" onclick="generateResults('+c.id+',1,event)">Generuj wyniki T1</button><button type="button" class="secondary" onclick="generateResults('+c.id+',2,event)">Generuj wyniki T2</button><button type="button" class="blue" onclick="generateResultsAll('+c.id+',event)">Generuj T1 + T2</button></div><button type="button" class="warn" style="margin-top:10px" onclick="clearResults('+c.id+',event)">Wyczyść wszystkie wyniki T1 i T2</button><div class="resultEntryRounds"><div class="resultRoundPanel"><h3>T1</h3>'+renderResultForm(d,1)+'</div><div class="resultRoundPanel"><h3>T2</h3>'+renderResultForm(d,2)+'</div></div></div>'}
-function renderResultsSummaryPanel(d){const c=d.competition;return '<div class="card"><h2>Wyniki i klasyfikacja</h2><div class="grid"><button type="button" class="blue" onclick="notifyResults('+c.id+',1)">Powiadom o wynikach T1</button><button type="button" class="blue" onclick="notifyResults('+c.id+',2)">Powiadom o wynikach T2</button></div>'+renderSectorResultsBoard(d)+'<h3>Klasyfikacja T1</h3>'+renderClassTable(d.classification.round1)+'<h3>Klasyfikacja T2</h3>'+renderClassTable(d.classification.round2)+'<h3>Klasyfikacja końcowa</h3><button type="button" class="blue" onclick="notifyGeneralResults('+c.id+',this)">Powiadom o klasyfikacji końcowej</button>'+renderFinalClubToggle()+renderGeneralTable(d.classification.general)+renderStationStatistics(d)+'</div>'}
+function renderResultsSummaryPanel(d){const c=d.competition;return '<div class="card"><h2>Wyniki i klasyfikacja</h2><div class="grid"><button type="button" class="blue" onclick="notifyResults('+c.id+',1)">Powiadom o wynikach T1</button><button type="button" class="blue" onclick="notifyResults('+c.id+',2)">Powiadom o wynikach T2</button></div>'+renderSectorResultsBoard(d)+'<h3>Klasyfikacja T1</h3>'+renderClassTable(d.classification.round1)+'<h3>Klasyfikacja T2</h3>'+renderClassTable(d.classification.round2)+'<h3>Klasyfikacja końcowa</h3><button type="button" class="blue" onclick="notifyGeneralResults('+c.id+',this)">Powiadom o klasyfikacji końcowej</button><p id="generalPublishStatus" role="status"></p>'+renderFinalClubToggle()+renderGeneralTable(d.classification.general)+renderStationStatistics(d)+'</div>'}
 function placeRowClass(rank){const r=Number(rank);return r===1?'place1':r===2?'place2':r===3?'place3':''}
 function sortRowsBySectorPlace(rows){return [...(rows||[])].sort((a,b)=>Number(a.points||999)-Number(b.points||999)||Number(b.weight||0)-Number(a.weight||0)||String(a.name||'').localeCompare(String(b.name||''),'pl'))}
 function groupRowsBySector(rows){const box={};for(const r of (rows||[])){const sec=String(r.sector||'—').trim()||'—';(box[sec]=box[sec]||[]).push(r)}return Object.keys(box).sort((a,b)=>a.localeCompare(b,'pl')).map(sec=>({sector:sec,rows:sortRowsBySectorPlace(box[sec])}))}
@@ -958,7 +967,7 @@ async function notifyGeneralResults(id,button){
   if(button?.disabled)return;
   if(!confirm('Opublikować klasyfikację końcową i wysłać gratulacje pierwszej trójce? Niewpisane wagi będą liczone jako zero.'))return;
   if(button)button.disabled=true;
-  try{const d=await api('/api/admin/competitions/'+id+'/results/general/notify',{method:'POST',body:'{}'});msg('Opublikowano klasyfikację końcową. Powiadomiono: '+d.notified);await loadNotifications()}
+  try{const d=await api('/api/admin/competitions/'+id+'/results/general/notify',{method:'POST',body:'{}'});const report='Powiadomiono: '+d.notified+'. Gratulacje generalne — oczekują: '+d.achievementsPending+', już pokazane: '+d.achievementsSeen+'.';msg(report);if(q('generalPublishStatus'))q('generalPublishStatus').textContent=report;await loadNotifications()}
   catch(e){msg(e.message,'bad')}
   finally{if(button)button.disabled=false}
 }
@@ -1188,6 +1197,6 @@ function bindAuthButtons(){
 
 function scrollAppBottom(){window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})}
 Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,loadPlayerHistory,saveGeneralRules,closePlayerCompetition,showAdminZone,loadCompetitions,createCompetition,openCompetitionEdit,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,editPlayerName,deletePlayer,deleteAllAdminPlayers,saveMyProfile,setPlayerCompetitionFilter,setPlayerCompetitionMonth,confirmPlayerPresence,enablePush,sendPushTest,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,setPlayerDrawView,openPlayerNotifications,fitPlayerMobileFullMaps,togglePlayerSectorAccordion,toggleFinalClub,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
-function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_113');sessionStorage.removeItem('lowcy_update_retry_102')}catch(_){}}
-function startBoot(){console.log('CLIENT_V113_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v113',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().then(()=>{window.__LOWCY_BOOT_OK_113=1;hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);try{window.__lowcyRecover113&&window.__lowcyRecover113()}catch(_){hideBootGuard();try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(__){}}})}
+function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_114');sessionStorage.removeItem('lowcy_update_retry_102')}catch(_){}}
+function startBoot(){console.log('CLIENT_V114_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v114',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().then(()=>{window.__LOWCY_BOOT_OK_114=1;hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);try{window.__lowcyRecover114&&window.__lowcyRecover114()}catch(_){hideBootGuard();try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(__){}}})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();

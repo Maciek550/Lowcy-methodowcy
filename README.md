@@ -1,3 +1,5 @@
+V114 — Dymki przez 8 sekund. Generalna osobno, z priorytetem przed turami. Potwierdzenie obejrzenia dopiero po wyświetleniu lub zamknięciu; ukrycie karty nie zużywa dymka. Publikacja generalnej pokazuje licznik oczekujących i już pokazanych gratulacji. Powtórna publikacja nie powtarza tego samego osiągnięcia.
+
 V113 — Dymek na środku ekranu. Osobna publikacja klasyfikacji końcowej z przycisku w Wynikach admina; T1/T2 publikują wyłącznie swoje tury. Publikacja generalnej wymaga wyników obu tur, nie wymaga osobnego wpisu zerowej wagi każdemu zawodnikowi.
 
 V112 — Gratulacje 1–3 po Powiadom o wynikach T1/T2. T2 publikuje także generalną; gratulacje generalne wymagają zapisanych wyników obu tur wszystkich aktywnych zawodników. Dymek 4 s, bez blokowania strony, raz dla osiągnięcia, przechowywany do zalogowania.
