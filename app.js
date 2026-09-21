@@ -1,4 +1,4 @@
-const CLIENT_VERSION='118';const CLIENT_VERSION_NAME='V118_AVERAGE_TIED_PLACES';window.__LOWCY_APP_JS_118=1;try{fetch('/__probe_js_v118',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V118_AVERAGE_TIED_PLACES_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='119';const CLIENT_VERSION_NAME='V119_LARGE_TROPHIES';window.__LOWCY_APP_JS_119=1;try{fetch('/__probe_js_v119',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V119_LARGE_TROPHIES_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -24,6 +24,14 @@ function preloadRealCarp(){
   return CARP_IMAGE_READY;
 }
 function achievementDeliveryKey(uid,a){return 'achievement:'+uid+':'+a.id+(Number(a.delivery||1)>1?':delivery:'+a.delivery:'')}
+function renderPodiumAchievement(a){
+  const general=String(a.key||'').startsWith('GENERAL:');
+  const match=String(a.label||'').match(/^([0-9]+(?:[.,][0-9]+)?)/);
+  const place=a.place??(match?match[1]:'');
+  const sector=a.sector??String(a.label||'').split(' w sektorze ')[1]??'';
+  const category=general?'Klasyfikacja generalna':'Sektor '+sector+(a.context?' · '+a.context:'');
+  return '<button type="button" class="achievementClose" aria-label="Zamknij gratulacje">×</button><div class="achievementTrophy" aria-hidden="true">🏆</div><h3 class="achievementPlace">'+esc(String(place).replace('.',','))+'. miejsce</h3><p class="achievementCategory">'+esc(category)+'</p><p class="achievementWeight">Waga <strong>'+esc(Number(a.weight||0).toLocaleString('pl-PL'))+' g</strong></p><small>'+esc(a.title||'')+'</small><div class="achievementTimer"></div>';
+}
 async function pollAchievements(){
   if(ACHIEVEMENT_BUSY||!ME||ME.role==='ADMIN'||document.hidden||document.getElementById('achievementToast'))return;
   const uid=ME.id;ACHIEVEMENT_BUSY=true;
@@ -42,7 +50,7 @@ async function pollAchievements(){
     if(group[0].payload.kind==='ENCOURAGEMENT')try{await preloadRealCarp()}catch(e){carpReady=false;console.warn(e.message)}
     if(!ME||ME.id!==uid||document.hidden)return;
     const el=document.createElement('aside');el.id='achievementToast';el.setAttribute('role','status');el.setAttribute('aria-live','polite');
-    el.innerHTML='<button type="button" class="achievementClose" aria-label="Zamknij gratulacje">×</button><h3>🏆 Brawo TY! 😄</h3><small>'+esc(group[0].payload.title)+'</small>'+group.map(a=>'<p><strong>'+esc(a.payload.label)+'</strong><br><small>'+esc(a.payload.context)+' · '+esc(Number(a.payload.weight).toLocaleString('pl-PL'))+' g</small></p>').join('')+'<div class="achievementTimer"></div>';
+    el.innerHTML=renderPodiumAchievement(group[0].payload);
     if(group[0].payload.kind==='ENCOURAGEMENT'){el.classList.add('carpEncouragement');el.innerHTML=renderCarpEncouragement(group[0].payload);if(!carpReady)el.querySelector('.carpScene')?.remove()}
     el.querySelector('button').onclick=closeAchievementToast;
     document.body.appendChild(el);
@@ -1222,6 +1230,6 @@ function bindAuthButtons(){
 
 function scrollAppBottom(){window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})}
 Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,loadPlayerHistory,saveGeneralRules,closePlayerCompetition,showAdminZone,loadCompetitions,createCompetition,openCompetitionEdit,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,editPlayerName,deletePlayer,deleteAllAdminPlayers,saveMyProfile,setPlayerCompetitionFilter,setPlayerCompetitionMonth,confirmPlayerPresence,enablePush,sendPushTest,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,setPlayerDrawView,openPlayerNotifications,fitPlayerMobileFullMaps,togglePlayerSectorAccordion,toggleFinalClub,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
-function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_118');sessionStorage.removeItem('lowcy_update_retry_102')}catch(_){}}
-function startBoot(){console.log('CLIENT_V118_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v118',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().then(()=>{window.__LOWCY_BOOT_OK_118=1;hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);try{window.__lowcyRecover118&&window.__lowcyRecover118()}catch(_){hideBootGuard();try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(__){}}})}
+function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_119');sessionStorage.removeItem('lowcy_update_retry_102')}catch(_){}}
+function startBoot(){console.log('CLIENT_V119_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v119',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().then(()=>{window.__LOWCY_BOOT_OK_119=1;hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);try{window.__lowcyRecover119&&window.__lowcyRecover119()}catch(_){hideBootGuard();try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(__){}}})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();

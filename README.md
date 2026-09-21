@@ -1,3 +1,7 @@
+Układ dymka V119: wielki puchar, miejsce, sektor/tura lub Klasyfikacja generalna, waga. Obsługuje również wcześniej zapisane gratulacje.
+
+V119 — Duży puchar 104–144 px nad napisem Brawo TY! w dymkach sektorowych i generalnych, na telefonie i komputerze. W niskim widoku poziomym 72 px. Czas i zasady publikacji bez zmian.
+
 V118 — Dodatkowo karp po publikacji T2 dla ostatnich miejsc w sektorach, także przy remisie; tekst TEN KARP CZEKA NA REWANŻ! Do zobaczenia na kolejnych zawodach! Obsługuje Ponów dymki T2.
 
 V118 — Remisy dodatnich wag w sektorach T1 i T2: średnia zajmowanych miejsc, np. 1–2 = po 1,5 pkt, 2–4 = po 3 pkt. Ułamki zachowane w sumie miejsc i wyświetlane z przecinkiem w tabelach, historii, PDF i komunikatach. Dotychczasowa szczególna punktacja zerowych wag zachowana.
