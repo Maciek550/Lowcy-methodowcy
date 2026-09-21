@@ -1,3 +1,7 @@
+V118 — Dodatkowo karp po publikacji T2 dla ostatnich miejsc w sektorach, także przy remisie; tekst TEN KARP CZEKA NA REWANŻ! Do zobaczenia na kolejnych zawodach! Obsługuje Ponów dymki T2.
+
+V118 — Remisy dodatnich wag w sektorach T1 i T2: średnia zajmowanych miejsc, np. 1–2 = po 1,5 pkt, 2–4 = po 3 pkt. Ułamki zachowane w sumie miejsc i wyświetlane z przecinkiem w tabelach, historii, PDF i komunikatach. Dotychczasowa szczególna punktacja zerowych wag zachowana.
+
 V117 — Zapis dymków przed powiadomieniami push, wysyłka push wyników nie blokuje publikacji. Awaria grafiki karpia pokazuje tekst zamiast zatrzymać kolejkę. Liczniki dymków T1/T2. Osobne Ponów dymki T1/T2/general z potwierdzeniem; standardowa publikacja nadal nie powtarza obejrzanych.
 
 V116 — Realistyczna grafika karpia zamiast wektorowego rysunku, animowany wyskok z kroplami i falami. Grafika dołączona w paczce, cache przeglądarki; dymek startuje dopiero po wczytaniu ryby. Zasady publikacji i 8 sekund pozostają bez zmian.
