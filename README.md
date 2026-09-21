@@ -1,3 +1,5 @@
+V113 — Dymek na środku ekranu. Osobna publikacja klasyfikacji końcowej z przycisku w Wynikach admina; T1/T2 publikują wyłącznie swoje tury. Publikacja generalnej wymaga wyników obu tur, nie wymaga osobnego wpisu zerowej wagi każdemu zawodnikowi.
+
 V112 — Gratulacje 1–3 po Powiadom o wynikach T1/T2. T2 publikuje także generalną; gratulacje generalne wymagają zapisanych wyników obu tur wszystkich aktywnych zawodników. Dymek 4 s, bez blokowania strony, raz dla osiągnięcia, przechowywany do zalogowania.
 
 V111 — Czytelne, większe nazwiska i numeracja na białych kartach mobilnej listy zapisów admina. Przycisk Usuń obok Przywróć dla wypisanych, na komputerze i telefonie; usuwa wyłącznie zapis do danych zawodów, zachowuje konto.
