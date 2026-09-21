@@ -16,8 +16,8 @@ const ADMIN_SETUP_CODE = process.env.ADMIN_SETUP_CODE || '';
 let VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 let VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
-const APP_VERSION = '111';
-const APP_VERSION_NAME = 'V111_ROSTER_READABILITY_DELETE';
+const APP_VERSION = '112';
+const APP_VERSION_NAME = 'V112_PUBLISHED_ACHIEVEMENTS';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 const ICON_192 = fs.readFileSync(pathModule.join(__dirname, 'icon-192.png'));
 const ICON_512 = fs.readFileSync(pathModule.join(__dirname, 'icon-512.png'));
@@ -133,6 +133,16 @@ async function initDb() {
       joined_at timestamptz not null default now(),
       cancelled_at timestamptz,
       unique(competition_id, user_id)
+    );
+    create table if not exists player_achievements (
+      id bigserial primary key,
+      competition_id bigint not null references competitions(id) on delete cascade,
+      user_id bigint not null references users(id) on delete cascade,
+      achievement_key text not null,
+      payload jsonb not null,
+      seen_at timestamptz,
+      created_at timestamptz not null default now(),
+      unique(competition_id,user_id,achievement_key)
     );
     create table if not exists notifications (
       id bigserial primary key,
@@ -1079,6 +1089,23 @@ async function importZawodyProList(competitionId, rawUrl, actor) {
 }
 
 
+function publishedAchievements(detail, round, userId) {
+  const c=detail.competition, rr=round===1?detail.classification.round1:detail.classification.round2;
+  const r=rr.find(x=>Number(x.user_id)===Number(userId)), out=[];
+  if(r && r.weight>0 && r.sector!=='-' && r.points>=1 && r.points<=3)
+    out.push({key:'T'+round+':'+r.sector+':'+r.points,title:c.title,label:r.points+'. miejsce w sektorze '+r.sector,context:'Tura '+round,weight:r.weight});
+  // General is published together with T2, only when both rounds have recorded results for every active player.
+  const complete=[1,2].every(t=>detail.activeEntries.length>0 && detail.activeEntries.every(e=>(detail.results||[]).some(x=>Number(x.round)===t && Number(x.user_id)===Number(e.user_id))));
+  const g=detail.classification.general.find(x=>Number(x.user_id)===Number(userId));
+  if(round===2 && complete && g && g.total_weight>0 && g.rank>=1 && g.rank<=3)
+    out.push({key:'GENERAL:'+g.rank,title:c.title,label:g.rank+'. miejsce w klasyfikacji generalnej',context:'Klasyfikacja końcowa',weight:g.total_weight});
+  return out;
+}
+async function savePublishedAchievements(detail,round,userId){
+  for(const a of publishedAchievements(detail,round,userId))
+    await pool.query('insert into player_achievements(competition_id,user_id,achievement_key,payload) values($1,$2,$3,$4::jsonb) on conflict(competition_id,user_id,achievement_key) do nothing',[detail.competition.id,userId,a.key,JSON.stringify(a)]);
+}
+
 async function buildDetail(competitionId, user) {
   const comp = await getCompetition(competitionId);
   if (!comp) return null;
@@ -1147,7 +1174,7 @@ async function route(req, res) {
   const path = url.pathname;
   const method = req.method;
 
-  if (path === '/__probe_js_v111' || path === '/__probe_boot_v111' || path === '/__probe_js_v102' || path === '/__probe_boot_v102' || path === '/__probe_js_v101' || path === '/__probe_boot_v101' || path === '/__probe_js_v100' || path === '/__probe_boot_v100' || path === '/__probe_js_v99' || path === '/__probe_boot_v99' || path === '/__probe_js_v98' || path === '/__probe_boot_v98' || path === '/__probe_js_v97' || path === '/__probe_boot_v97' || path === '/__probe_js_v96' || path === '/__probe_boot_v96' || path === '/__probe_js_v95' || path === '/__probe_boot_v95' || path === '/__probe_js_v94' || path === '/__probe_boot_v94' || path === '/__probe_js_v93' || path === '/__probe_boot_v93' || path === '/__probe_js_v91' || path === '/__probe_boot_v91' || path === '/__probe_js_v90' || path === '/__probe_boot_v90' || path === '/__probe_js_v89' || path === '/__probe_boot_v89' || path === '/__probe_js_v88' || path === '/__probe_boot_v88' || path === '/__probe_js_v87' || path === '/__probe_boot_v87' || path === '/__probe_js_v86' || path === '/__probe_boot_v86' || path === '/__probe_js_v85' || path === '/__probe_boot_v85' || path === '/__probe_js_v84' || path === '/__probe_boot_v84' || path === '/__probe_js_v83' || path === '/__probe_boot_v83' || path === '/__probe_js_v82' || path === '/__probe_boot_v82' || path === '/__probe_js_v81' || path === '/__probe_boot_v81' || path === '/__probe_js_v80' || path === '/__probe_boot_v80' || path === '/__probe_js_v79' || path === '/__probe_boot_v79' || path === '/__probe_js_v78' || path === '/__probe_boot_v78' || path === '/__probe_js_v77' || path === '/__probe_boot_v77' || path === '/__probe_js_v76' || path === '/__probe_boot_v76' || path === '/__probe_js_v75' || path === '/__probe_boot_v75' || path === '/__probe_js_v74' || path === '/__probe_boot_v74' || path === '/__probe_js_v73' || path === '/__probe_boot_v73' || path === '/__probe_js_v72' || path === '/__probe_boot_v72' || path === '/__probe_js_v71' || path === '/__probe_boot_v71') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
+  if (path === '/__probe_js_v112' || path === '/__probe_boot_v112' || path === '/__probe_js_v102' || path === '/__probe_boot_v102' || path === '/__probe_js_v101' || path === '/__probe_boot_v101' || path === '/__probe_js_v100' || path === '/__probe_boot_v100' || path === '/__probe_js_v99' || path === '/__probe_boot_v99' || path === '/__probe_js_v98' || path === '/__probe_boot_v98' || path === '/__probe_js_v97' || path === '/__probe_boot_v97' || path === '/__probe_js_v96' || path === '/__probe_boot_v96' || path === '/__probe_js_v95' || path === '/__probe_boot_v95' || path === '/__probe_js_v94' || path === '/__probe_boot_v94' || path === '/__probe_js_v93' || path === '/__probe_boot_v93' || path === '/__probe_js_v91' || path === '/__probe_boot_v91' || path === '/__probe_js_v90' || path === '/__probe_boot_v90' || path === '/__probe_js_v89' || path === '/__probe_boot_v89' || path === '/__probe_js_v88' || path === '/__probe_boot_v88' || path === '/__probe_js_v87' || path === '/__probe_boot_v87' || path === '/__probe_js_v86' || path === '/__probe_boot_v86' || path === '/__probe_js_v85' || path === '/__probe_boot_v85' || path === '/__probe_js_v84' || path === '/__probe_boot_v84' || path === '/__probe_js_v83' || path === '/__probe_boot_v83' || path === '/__probe_js_v82' || path === '/__probe_boot_v82' || path === '/__probe_js_v81' || path === '/__probe_boot_v81' || path === '/__probe_js_v80' || path === '/__probe_boot_v80' || path === '/__probe_js_v79' || path === '/__probe_boot_v79' || path === '/__probe_js_v78' || path === '/__probe_boot_v78' || path === '/__probe_js_v77' || path === '/__probe_boot_v77' || path === '/__probe_js_v76' || path === '/__probe_boot_v76' || path === '/__probe_js_v75' || path === '/__probe_boot_v75' || path === '/__probe_js_v74' || path === '/__probe_boot_v74' || path === '/__probe_js_v73' || path === '/__probe_boot_v73' || path === '/__probe_js_v72' || path === '/__probe_boot_v72' || path === '/__probe_js_v71' || path === '/__probe_boot_v71') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
 
   if (path === '/__probe_js_v68' || path === '/__probe_boot_v68' || path === '/__probe_js_v67' || path === '/__probe_boot_v67' || path === '/__probe_js_v66' || path === '/__probe_boot_v66' || path === '/__probe_js_v65' || path === '/__probe_boot_v65' || path === '/__probe_js_v63' || path === '/__probe_boot_v63' || path === '/__probe_js_v62' || path === '/__probe_boot_v62' || path === '/__probe_js_v60' || path === '/__probe_boot_v60' || path === '/__probe_js_v59' || path === '/__probe_boot_v59' || path === '/__probe_js_v58' || path === '/__probe_boot_v58' || path === '/__probe_js_v57' || path === '/__probe_boot_v57' || path === '/__probe_js_v56' || path === '/__probe_boot_v56' || path === '/__probe_js_v55' || path === '/__probe_boot_v55' || path === '/__probe_js_v54' || path === '/__probe_boot_v54' || path === '/__probe_js_v53' || path === '/__probe_boot_v53' || path === '/__probe_js_v52' || path === '/__probe_boot_v52' || path === '/__probe_js_v51' || path === '/__probe_boot_v51' || path === '/__probe_js_v50' || path === '/__probe_boot_v50' || path === '/__probe_js_v49' || path === '/__probe_boot_v49' || path === '/__probe_js_v36' || path === '/__probe_boot_v36' || path === '/__probe_js_v35' || path === '/__probe_boot_v35' || path === '/__probe_js_v34' || path === '/__probe_boot_v34' || path === '/__probe_js_v33' || path === '/__probe_boot_v33' || path === '/__probe_js_v32' || path === '/__probe_boot_v32' || path === '/__probe_js_v30' || path === '/__probe_boot_v30' || path === '/__probe_js_v29' || path === '/__probe_boot_v29' || path === '/__probe_js_v27' || path === '/__probe_boot_v27' || path === '/__probe_inline_v26') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/api/version') return sendJson(res, 200, { ok:true, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
@@ -1319,7 +1346,7 @@ async function route(req, res) {
 }
 
 
-/* V111: pending withdrawal action at the end of the roster row. */
+/* V112: pending withdrawal action at the end of the roster row. */
 body #app .rosterLeaveActions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 body #app button.rosterLeaveRequest{background:#ffce54!important;color:#302100!important;border:2px solid #ffe49a!important;border-radius:9px;padding:8px 12px!important;min-height:44px;font-weight:800;line-height:1.2;white-space:normal}
 body #app button.rosterLeaveRequest small{display:block;color:#302100!important;font-size:11px;margin-top:3px}
@@ -1342,9 +1369,9 @@ body #app button.rosterLeaveRequest:disabled{opacity:.65;cursor:wait}
     ]
   }), {'Content-Type':'application/manifest+json; charset=utf-8','Cache-Control':'no-cache'});
   if (path === '/sw.js') return send(res, 200, `
-const SW_VERSION='lowcy-v111-mobile-results-contrast';
-const SHELL_CACHE='lowcy-shell-v111';
-const APP_SHELL_JS='/app.js?v=111';
+const SW_VERSION='lowcy-v112-mobile-results-contrast';
+const SHELL_CACHE='lowcy-shell-v112';
+const APP_SHELL_JS='/app.js?v=112';
 const SHELL=['/',APP_SHELL_JS,'/manifest.webmanifest','/icon-192.png','/icon-512.png','/apple-touch-icon.png'];
 const NET_TIMEOUT_MS=4500;
 async function fetchWithTimeout(req,ms=NET_TIMEOUT_MS){
@@ -1353,7 +1380,7 @@ async function fetchWithTimeout(req,ms=NET_TIMEOUT_MS){
   try{return await fetch(req,{cache:'no-store',signal:ctrl?ctrl.signal:undefined})}finally{if(timer)clearTimeout(timer)}
 }
 function offlineShell(){return new Response('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#061521"><style>html,body{margin:0;height:100%;background:#061521;color:#eef8ff;font:16px system-ui}body{display:grid;place-items:center;text-align:center;padding:24px;box-sizing:border-box}button{padding:12px 18px;border:0;border-radius:10px;background:#16834a;color:white;font-weight:800}
-/* V111: pending withdrawal action at the end of the roster row. */
+/* V112: pending withdrawal action at the end of the roster row. */
 body #app .rosterLeaveActions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 body #app button.rosterLeaveRequest{background:#ffce54!important;color:#302100!important;border:2px solid #ffe49a!important;border-radius:9px;padding:8px 12px!important;min-height:44px;font-weight:800;line-height:1.2;white-space:normal}
 body #app button.rosterLeaveRequest small{display:block;color:#302100!important;font-size:11px;margin-top:3px}
@@ -1887,8 +1914,21 @@ self.addEventListener('notificationclick', event => {
         if(g)await notifyUser(e.user_id,'RESULTS_GENERAL','Klasyfikacja końcowa',`${comp.title}: ${g.rank}. miejsce, ${g.sum_points} pkt, ${fmtW(g.total_weight)} g${Number(g.biggest_fish||0)>0?', BF '+fmtW(g.biggest_fish)+' g':''}`,{competitionId:compId,url:'/'});
       }
     }
+    for (const e of active) await savePublishedAchievements(detail,round,e.user_id);
     await notifyAdmins('RESULTS_NOTIFY_T'+round,'Powiadomiono o wynikach T'+round,`Wysłano indywidualne powiadomienia o wynikach T${round}: ${comp.title}`,{competitionId:compId,round});
     return sendJson(res, 200, { ok:true, notified: active.length });
+  }
+
+  if(path==='/api/achievements' && method==='GET'){
+    if(!requireUser(user,res))return;
+    const rows=user.role==='ADMIN'?[]:(await pool.query('select id, competition_id, payload from player_achievements where user_id=$1 and seen_at is null order by created_at,id limit 30',[user.id])).rows;
+    return sendJson(res,200,{ok:true,achievements:rows});
+  }
+  m=path.match(/^\/api\/achievements\/(\d+)\/seen$/);
+  if(m && method==='POST'){
+    if(!requireUser(user,res))return;
+    await pool.query('update player_achievements set seen_at=coalesce(seen_at,now()) where id=$1 and user_id=$2',[Number(m[1]),user.id]);
+    return sendJson(res,200,{ok:true});
   }
 
   if ((path === '/api/notifications' || path === '/api/admin/notifications') && method === 'GET') {
@@ -5388,7 +5428,7 @@ body.playerTheme .sectorMiniTitle{
 }
 
 
-/* V111: pending withdrawal action at the end of the roster row. */
+/* V112: pending withdrawal action at the end of the roster row. */
 body #app .rosterLeaveActions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 body #app button.rosterLeaveRequest{background:#ffce54!important;color:#302100!important;border:2px solid #ffe49a!important;border-radius:9px;padding:8px 12px!important;min-height:44px;font-weight:800;line-height:1.2;white-space:normal}
 body #app button.rosterLeaveRequest small{display:block;color:#302100!important;font-size:11px;margin-top:3px}
@@ -5534,7 +5574,7 @@ body #app .pendingLeaveCard :is(strong,div,small){color:#123827}
 body #app .pendingLeaveCard .leaveRequestActions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 body #app .pendingLeaveCard button{min-height:44px;flex:1}
 
-/* V111: same whole-fishery overview in mobile admin structure settings. */
+/* V112: same whole-fishery overview in mobile admin structure settings. */
 body #app #structurePreviewMobile .adminMobileOverviewScroll{width:100%;max-width:100%;overflow-x:auto;border:1px solid #8ba995;border-radius:9px;background:#f8fbf7;-webkit-overflow-scrolling:touch}
 body #app #structurePreviewMobile .adminMobileOverviewCanvas .sectorMap{width:100%!important;max-width:none!important;min-width:0!important;padding:5px!important;margin:0!important;background:#f8fbf7!important;overflow:visible!important;color:#123827!important;border:0!important}
 body #app #structurePreviewMobile .sectorMap :is(.sectorFlexRow,.water){min-width:0!important;width:100%!important}
@@ -5552,14 +5592,14 @@ body #app #structurePreviewMobile .sectorMap>p{display:none!important}
 body #app #structurePreviewMobile .adminOverviewHint{color:#c8deea!important;font-size:11px;margin:6px 0}
 body #app #structurePreviewMobile .adminSectorDetailToggle>summary{color:#fff;background:#174d65;cursor:pointer;padding:9px;border-radius:6px;font-weight:700}
 
-/* V111: pending withdrawal action at the end of the roster row. */
+/* V112: pending withdrawal action at the end of the roster row. */
 body #app .rosterLeaveActions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 body #app button.rosterLeaveRequest{background:#ffce54!important;color:#302100!important;border:2px solid #ffe49a!important;border-radius:9px;padding:8px 12px!important;min-height:44px;font-weight:800;line-height:1.2;white-space:normal}
 body #app button.rosterLeaveRequest small{display:block;color:#302100!important;font-size:11px;margin-top:3px}
 body #app button.rosterLeaveRequest:disabled{opacity:.65;cursor:wait}
 @media(max-width:760px){body #app .mobileRosterCompactActions .rosterLeaveActions{width:100%}body #app .mobileRosterCompactActions .rosterLeaveRequest{flex:1;min-width:140px}}
 
-/* V111: explicit readable colors for white admin roster cards. */
+/* V112: explicit readable colors for white admin roster cards. */
 body:not(.playerTheme) #app #competitionDetail .mobileRosterCompactRow{background:#fff!important;color:#173b2c!important}
 body:not(.playerTheme) #app #competitionDetail .mobileRosterCompactHead>b{color:#173b2c!important;-webkit-text-fill-color:#173b2c!important;font-size:15px!important;line-height:1.25!important;font-weight:800!important;white-space:normal!important;overflow:visible!important;overflow-wrap:anywhere;text-shadow:none!important;opacity:1!important}
 body:not(.playerTheme) #app #competitionDetail .mobileRosterCompactLp{background:#e4eee7!important;color:#173b2c!important;font-size:12px!important}
@@ -5567,11 +5607,17 @@ body:not(.playerTheme) #app #competitionDetail .mobileRosterCompactStatus,body:n
 body:not(.playerTheme) #app #competitionDetail .mobileRosterCompactStatus{grid-column:2 / -1}
 body:not(.playerTheme) #app #competitionDetail .mobileRosterCompactActions .rosterLeaveActions{align-items:stretch}
 body:not(.playerTheme) #app #competitionDetail .mobileRosterCompactActions .rosterLeaveActions>.inlineBtns{display:flex!important;flex-wrap:wrap;flex:1;gap:3px}
+
+/* V112: non-modal, four-second achievement toast. */
+#achievementToast{position:fixed;z-index:6000;bottom:calc(58px + env(safe-area-inset-bottom));right:12px;width:min(420px,calc(100vw - 24px));box-sizing:border-box;padding:16px 34px 12px 16px;border:2px solid #efc354;border-radius:18px;background:linear-gradient(120deg,#143e30,#062a24);color:#fff;box-shadow:0 5px 24px #0006;pointer-events:none;animation:achievementIn .2s ease-out;font-family:system-ui,sans-serif}
+#achievementToast h3{color:#fff!important;font-size:23px;margin:0 0 8px}#achievementToast p{color:#fff!important;margin:5px 0;font-size:15px;line-height:1.3}#achievementToast small{color:#e4dfc4!important;font-size:12px}#achievementToast .achievementClose{pointer-events:auto;position:absolute;top:7px;right:7px;border:0;background:transparent;color:white;width:28px;min-height:28px;padding:0;font-size:24px}#achievementToast .achievementTimer{height:3px;background:#efc354;margin-top:9px;transform-origin:left;animation:achievementCountdown 4s linear forwards}#achievementToast.closing{opacity:0;transition:opacity .18s}
+@keyframes achievementIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes achievementCountdown{to{transform:scaleX(0)}}
+@media(prefers-reduced-motion:reduce){#achievementToast,#achievementToast .achievementTimer{animation:none}#achievementToast.closing{transition:none}}
 </style>
 </head>
 <body class="authMode">
 <div id="bootGuard"><img src="/icon-192.png" alt=""><b>Łowcy Methodowcy</b><span>Aktualizuję aplikację…</span></div>
-<header><div class="row"><h1><img class="brandIcon" src="/icon-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V111</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
+<header><div class="row"><h1><img class="brandIcon" src="/icon-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V112</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
 <main>
 <div id="msg"></div>
 <section id="auth" class="card">
@@ -5584,7 +5630,7 @@ body:not(.playerTheme) #app #competitionDetail .mobileRosterCompactActions .rost
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="appVersionBadge">V111</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
+  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="appVersionBadge">V112</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-rules" class="hidden" onclick="showTab('rules')">Regulamin ogólny</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-profile" class="hidden" onclick="showTab('profile')">Mój profil</button><button id="btn-history" class="hidden" onclick="showTab('history')">Historia startów</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
     <details id="adminCreate" class="card hidden adminCreateV93"><summary class="adminCreateToggle">Robimy zawody</summary><div class="adminCreateBody"><h2>Utwórz zawody</h2><p class="small muted">Dane z tego formularza są później widoczne dla zawodnika.</p><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Zbiórka / godzina</label><input id="cMeetingTime" type="time" value="06:00"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div></div><div class="adminTextPair"><div><label>Informacje organizacyjne</label><textarea id="cNotes" placeholder="Parking, miejsce zbiórki, godzina losowania, dodatkowe informacje…"></textarea></div><div><label>Program / regulamin tych zawodów</label><textarea id="cRegulations" class="rulesEditor" placeholder="Np. 06:00 zbiórka, 06:15 losowanie, 07:00–15:00 zawody, ważne zasady tylko dla tego wydarzenia…"></textarea></div></div><button onclick="createCompetition(event)">Utwórz zawody</button></div></details>
@@ -5602,21 +5648,21 @@ body:not(.playerTheme) #app #competitionDetail .mobileRosterCompactActions .rost
 <script>
 (function(){
   var retried=false,recovering=false;
-  try{retried=sessionStorage.getItem('lowcy_update_retry_111')==='1'}catch(e){}
-  window.__lowcyRecover111=function(){
+  try{retried=sessionStorage.getItem('lowcy_update_retry_112')==='1'}catch(e){}
+  window.__lowcyRecover112=function(){
     if(recovering)return;recovering=true;
     var g=document.getElementById('bootGuard'),sp=g&&g.querySelector('span');if(sp)sp.textContent='Naprawiam połączenie z aplikacją…';
     if(retried){if(sp)sp.textContent='Nie udało się uruchomić aplikacji. Sprawdź internet i odśwież.';recovering=false;return}
-    retried=true;try{sessionStorage.setItem('lowcy_update_retry_111','1')}catch(e){}
+    retried=true;try{sessionStorage.setItem('lowcy_update_retry_112','1')}catch(e){}
     var jobs=[];
     try{if('caches'in window)jobs.push(caches.keys().then(function(keys){return Promise.all(keys.filter(function(k){return k.indexOf('lowcy-shell-')===0}).map(function(k){return caches.delete(k)}))}))}catch(e){}
     try{if('serviceWorker'in navigator)jobs.push(navigator.serviceWorker.getRegistrations().then(function(rs){return Promise.all(rs.map(function(r){return r.unregister().catch(function(){})}))}))}catch(e){}
-    Promise.allSettled(jobs).finally(function(){setTimeout(function(){location.replace('/?recover=111&t='+Date.now())},80)});
+    Promise.allSettled(jobs).finally(function(){setTimeout(function(){location.replace('/?recover=112&t='+Date.now())},80)});
   };
-  setTimeout(function(){if(!window.__LOWCY_BOOT_OK_111)window.__lowcyRecover111()},8000);
+  setTimeout(function(){if(!window.__LOWCY_BOOT_OK_112)window.__lowcyRecover112()},8000);
 })();
 </script>
-<script src="/app.js?v=111" defer onerror="window.__lowcyRecover111&&window.__lowcyRecover111()"></script>
+<script src="/app.js?v=112" defer onerror="window.__lowcyRecover112&&window.__lowcyRecover112()"></script>
 </body>
 </html>`;
 
@@ -5627,5 +5673,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V111_ROSTER_READABILITY_DELETE_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V112_PUBLISHED_ACHIEVEMENTS_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });

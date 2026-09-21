@@ -1,5 +1,33 @@
-const CLIENT_VERSION='111';const CLIENT_VERSION_NAME='V111_ROSTER_READABILITY_DELETE';window.__LOWCY_APP_JS_111=1;try{fetch('/__probe_js_v111',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V111_ROSTER_READABILITY_DELETE_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='112';const CLIENT_VERSION_NAME='V112_PUBLISHED_ACHIEVEMENTS';window.__LOWCY_APP_JS_112=1;try{fetch('/__probe_js_v112',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V112_PUBLISHED_ACHIEVEMENTS_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
+let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null;
+const ACHIEVEMENT_SESSION_SEEN=new Set();
+function stopAchievements(){clearInterval(ACHIEVEMENT_POLL);ACHIEVEMENT_POLL=null;clearTimeout(ACHIEVEMENT_TIMEOUT);document.getElementById('achievementToast')?.remove()}
+function startAchievements(){stopAchievements();if(!ME||ME.role==='ADMIN')return;pollAchievements();ACHIEVEMENT_POLL=setInterval(pollAchievements,12000)}
+function closeAchievementToast(){clearTimeout(ACHIEVEMENT_TIMEOUT);const el=document.getElementById('achievementToast');if(el){el.classList.add('closing');setTimeout(()=>el.remove(),180)}}
+async function pollAchievements(){
+  if(ACHIEVEMENT_BUSY||!ME||ME.role==='ADMIN'||document.hidden||document.getElementById('achievementToast'))return;
+  const uid=ME.id;ACHIEVEMENT_BUSY=true;
+  try{
+    const d=await api('/api/achievements');
+    if(!ME||ME.id!==uid||document.hidden)return;
+    const fresh=[];
+    for(const a of d.achievements||[]){
+      const key='achievement:'+uid+':'+a.id;
+      if(ACHIEVEMENT_SESSION_SEEN.has(key)||STORE.get(key)){await api('/api/achievements/'+a.id+'/seen',{method:'POST',body:'{}'});continue}
+      fresh.push(a);
+    }
+    if(!fresh.length)return;
+    const group=fresh.filter(a=>a.competition_id===fresh[0].competition_id).slice(0,3);
+    const el=document.createElement('aside');el.id='achievementToast';el.setAttribute('role','status');el.setAttribute('aria-live','polite');
+    el.innerHTML='<button type="button" class="achievementClose" aria-label="Zamknij gratulacje">×</button><h3>🏆 Brawo TY! 😄</h3><small>'+esc(group[0].payload.title)+'</small>'+group.map(a=>'<p><strong>'+esc(a.payload.label)+'</strong><br><small>'+esc(a.payload.context)+' · '+esc(Number(a.payload.weight).toLocaleString('pl-PL'))+' g</small></p>').join('')+'<div class="achievementTimer"></div>';
+    el.querySelector('button').onclick=closeAchievementToast;
+    document.body.appendChild(el);
+    ACHIEVEMENT_TIMEOUT=setTimeout(closeAchievementToast,4000);
+    for(const a of group){const key='achievement:'+uid+':'+a.id;ACHIEVEMENT_SESSION_SEEN.add(key);STORE.set(key,'1');await api('/api/achievements/'+a.id+'/seen',{method:'POST',body:'{}'})}
+  }catch(_){ }finally{ACHIEVEMENT_BUSY=false}
+}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)pollAchievements()});
 let TOKEN = STORE.get('carp_token') || '';
 let ME = null;
 let CURRENT_DETAIL = null;
@@ -115,7 +143,7 @@ function stopPlayerResultPolling(){if(PLAYER_RESULT_POLL_TIMER){clearInterval(PL
 function startPlayerResultPolling(){if(PLAYER_RESULT_POLL_TIMER)return;PLAYER_RESULT_POLL_TIMER=setInterval(()=>pollPlayerCompetitionResults(),12000)}
 async function pollPlayerCompetitionResults(){if(PLAYER_RESULT_POLL_BUSY||!ME||ME.role==='ADMIN'||!CURRENT_DETAIL?.competition?.id||q('competitionDetail')?.classList.contains('hidden'))return;PLAYER_RESULT_POLL_BUSY=true;try{const id=CURRENT_DETAIL.competition.id,d=await api('/api/competitions/'+id);if(playerContentSignature(d)===playerContentSignature(CURRENT_DETAIL))return;CURRENT_DETAIL=d;const active=PLAYER_MOBILE_PANEL;if(active==='t1'||active==='t2')markPlayerResultSeen(active==='t1'?1:2);if(active==='draw1'||active==='draw2')markPlayerDrawSeen(active==='draw1'?1:2);const mobile=q('playerMobilePanelContent'),desktop=q('playerDesktopPanelContent');if(mobile)mobile.innerHTML=renderPlayerMobilePanelContent(d,active);if(desktop)desktop.innerHTML=renderPlayerDesktopPanelContent(d,active);syncPlayerContentStars(d);requestAnimationFrame(()=>{syncPlayerStickyBars();fitPlayerMobileFullMaps()})}catch(_){ }finally{PLAYER_RESULT_POLL_BUSY=false}}
 function syncNotificationBadges(unread=PLAYER_UNREAD_NOTIFICATIONS){const n=Math.max(0,Number(unread||0));document.querySelectorAll('#playerNotifBtn,.notificationTile').forEach(btn=>{btn.innerHTML=playerNotifLabel(n)});const top=q('btn-notifications');if(top){let b=top.querySelector('.topNotifBadge');if(n){if(!b){b=document.createElement('span');b.className='topNotifBadge';top.appendChild(b)}b.textContent=n>99?'99+':String(n)}else if(b)b.remove()}}
-function setLoggedOut(showMsg){
+function setLoggedOut(showMsg){stopAchievements();
   try{document.documentElement.classList.remove('hasSavedSession');document.body.classList.add('authMode')}catch(_){}
   stopPlayerResultPolling();
   q('playerGlobalBottomNav')?.remove();
@@ -146,12 +174,13 @@ async function boot(){
   if(!admin){const detail=q('competitionDetail');if(detail)detail.classList.add('hidden')}
   await Promise.allSettled([loadCompetitions(),loadNotifications(),admin?loadPlayers():Promise.resolve()]);
   if(!admin)await restorePersistentUiState();
+  startAchievements();
   if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'}).then(reg=>{try{reg.update()}catch(_){ }if('Notification' in window&&Notification.permission==='granted')ensurePushSubscription(true,false).catch(()=>{})}).catch(()=>{})}
 }
 async function login(){try{const phone=q('loginPhone')?.value||'';const password=q('loginPassword')?.value||'';if(!phone.trim()||!password)throw new Error('Wpisz telefon i hasło');const d=await api('/api/login',{method:'POST',body:JSON.stringify({phone,password})});TOKEN=d.token;STORE.set('carp_token',TOKEN);msg('Zalogowano');await boot()}catch(e){msg(e.message,'bad')}}
 async function registerPlayer(ev){if(ev){ev.preventDefault&&ev.preventDefault();ev.stopPropagation&&ev.stopPropagation()}try{const d=await api('/api/register',{method:'POST',body:JSON.stringify({phone:q('regPhone').value,password:q('regPassword').value,firstName:q('regFirst').value,lastName:q('regLast').value,pzwClub:q('regClub').value})});TOKEN=d.token;STORE.set('carp_token',TOKEN);msg('Konto zawodnika utworzone');await boot()}catch(e){msg(e.message,'bad')}}
 async function setupAdmin(ev){if(ev){ev.preventDefault&&ev.preventDefault();ev.stopPropagation&&ev.stopPropagation()}try{const d=await api('/api/setup-admin',{method:'POST',body:JSON.stringify({setupCode:q('setupCode').value,phone:q('setupPhone').value,password:q('setupPassword').value,firstName:q('setupFirst').value,lastName:q('setupLast').value,pzwClub:q('setupClub').value})});TOKEN=d.token;STORE.set('carp_token',TOKEN);msg('Admin utworzony');await boot()}catch(e){msg(e.message,'bad')}}
-async function logout(){try{await disablePushSubscription(false)}catch(_){}STORE.del('carp_token');TOKEN='';ME=null;setLoggedOut(true)}
+async function logout(){stopAchievements();try{await disablePushSubscription(false)}catch(_){}STORE.del('carp_token');TOKEN='';ME=null;setLoggedOut(true)}
 async function clearSession(){try{await disablePushSubscription(true);if('caches'in window){const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k).catch(()=>{})));}}catch(_){}setLoggedOut(true)}
 function renderMyProfile(){
   const box=q('myProfileContent');if(!box||!ME)return;
@@ -1151,6 +1180,6 @@ function bindAuthButtons(){
 
 function scrollAppBottom(){window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})}
 Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,loadPlayerHistory,saveGeneralRules,closePlayerCompetition,showAdminZone,loadCompetitions,createCompetition,openCompetitionEdit,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,editPlayerName,deletePlayer,deleteAllAdminPlayers,saveMyProfile,setPlayerCompetitionFilter,setPlayerCompetitionMonth,confirmPlayerPresence,enablePush,sendPushTest,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,setPlayerDrawView,openPlayerNotifications,fitPlayerMobileFullMaps,togglePlayerSectorAccordion,toggleFinalClub,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
-function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_111');sessionStorage.removeItem('lowcy_update_retry_102')}catch(_){}}
-function startBoot(){console.log('CLIENT_V111_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v111',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().then(()=>{window.__LOWCY_BOOT_OK_111=1;hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);try{window.__lowcyRecover111&&window.__lowcyRecover111()}catch(_){hideBootGuard();try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(__){}}})}
+function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_112');sessionStorage.removeItem('lowcy_update_retry_102')}catch(_){}}
+function startBoot(){console.log('CLIENT_V112_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v112',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().then(()=>{window.__LOWCY_BOOT_OK_112=1;hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);try{window.__lowcyRecover112&&window.__lowcyRecover112()}catch(_){hideBootGuard();try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(__){}}})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();
