@@ -1,4 +1,4 @@
-const CLIENT_VERSION='107';const CLIENT_VERSION_NAME='V107_SIMPLE_LIST_CREATE';window.__LOWCY_APP_JS_107=1;try{fetch('/__probe_js_v107',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V107_SIMPLE_LIST_CREATE_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='108';const CLIENT_VERSION_NAME='V108_PANELS_LEAVE_REQUESTS';window.__LOWCY_APP_JS_108=1;try{fetch('/__probe_js_v108',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V108_PANELS_LEAVE_REQUESTS_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let TOKEN = STORE.get('carp_token') || '';
 let ME = null;
@@ -208,7 +208,7 @@ async function loadPlayerHistory(){
   const box=q('playerHistoryContent');if(box)box.innerHTML='<div class="card"><p class="muted">Wczytuję historię startów…</p></div>';
   try{const d=await api('/api/me/history');renderPlayerHistory(d.history||[])}catch(e){if(box)box.innerHTML='<div class="card bad danger-line">Nie udało się wczytać historii startów.</div>';msg(e.message,'bad')}
 }
-function showTab(n){['competitions','rules','notifications','players','profile','history'].forEach(x=>{q('tab-'+x)?.classList.toggle('hidden',x!==n);q('btn-'+x)?.classList.toggle('active',x===n)});if(n==='rules')renderPlayerRules();if(n==='notifications')loadNotifications();if(n==='players')loadPlayers();if(n==='profile')renderMyProfile();if(n==='history')loadPlayerHistory()}
+function showTab(n){syncPlayerStickyBars();['competitions','rules','notifications','players','profile','history'].forEach(x=>{q('tab-'+x)?.classList.toggle('hidden',x!==n);q('btn-'+x)?.classList.toggle('active',x===n)});if(n==='rules')renderPlayerRules();if(n==='notifications')loadNotifications();if(n==='players')loadPlayers();if(n==='profile')renderMyProfile();if(n==='history')loadPlayerHistory()}
 function competitionActionHtml(c,admin,mine,closed,cardMode=false){
   if(admin)return '<div class="inlineBtns '+(cardMode?'competitionCardActions adminCompetitionCardActions':'')+'"><button type="button" onclick="openCompetition('+c.id+')">Panel</button><button type="button" class="secondary" onclick="openCompetitionEdit('+c.id+')">Edytuj</button><button type="button" class="warn" onclick="deleteCompetition('+c.id+')">Usuń</button></div>';
   const leavePending=String(c.my_leave_request_status||'').toUpperCase()==='PENDING';
@@ -356,7 +356,8 @@ async function openCompetition(id,preserve=false){
       if(ME?.role==='ADMIN')detail.scrollIntoView({behavior:'smooth',block:'start'});
       else focusPlayerNavOnOpen();
     }
-  }catch(e){msg(e.message,'bad')}
+    return true;
+  }catch(e){msg(e.message,'bad');return false}
 }
 async function openCompetitionEdit(id){
   if(ME?.role!=='ADMIN')return openCompetition(id);
@@ -502,6 +503,7 @@ function renderPlayerMobilePanelContent(d,panel){
   }
   if(panel==='map1'||panel==='map2'){
     const round=panel==='map2'?2:1;
+    if(!(d.draws||[]).some(x=>Number(x.round)===round))return '<div class="card"><p>Losowanie Tury '+round+' nie zostało jeszcze opublikowane.</p></div>';
     return '<div class="playerMobileSelectedPanel"><div class="playerMobileFullMapWrap"><div class="playerMobileFullMapTitle">MAPA ŁOWISKA — TURA '+round+'</div><div class="playerMobileFullMapViewport"><div class="playerMobileFullMapCanvas">'+renderRoundDrawMap(d,round)+'</div></div><div class="playerMobileMapHint">Pełna mapa dopasowana do szerokości ekranu.</div></div></div>';
   }
   if(panel==='t1')return '<div class="playerMobileSelectedPanel"><div class="card playerDesktopPanelCard playerResultCard"><h2>Wyniki sektorowe — Tura 1</h2>'+renderSectorResultsColumn(d.classification.round1,'')+'<h2 class="playerWholeRoundTitle">Cała Tura 1</h2>'+renderPlayerRoundCompact(d.classification.round1,1)+'</div></div>';
@@ -541,6 +543,7 @@ function renderPlayerDesktopPanelContent(d,panel){
   }
   if(panel==='map1'||panel==='map2'){
     const round=panel==='map2'?2:1;
+    if(!(d.draws||[]).some(x=>Number(x.round)===round))return '<div class="card"><p>Losowanie Tury '+round+' nie zostało jeszcze opublikowane.</p></div>';
     return '<div class="playerDesktopSelectedPanel"><div class="card playerDesktopPanelCard playerDesktopFullMap"><h2>MAPA ŁOWISKA — TURA '+round+'</h2>'+renderRoundDrawMap(d,round)+'</div></div>';
   }
   if(panel==='t1')return '<div class="playerDesktopSelectedPanel"><div class="card playerDesktopPanelCard playerResultCard"><h2>Wyniki sektorowe — Tura 1</h2>'+renderSectorResultsColumn(d.classification.round1,'')+'<h2 class="playerWholeRoundTitle">Cała Tura 1</h2>'+renderClassTable(d.classification.round1)+'</div></div>';
@@ -646,20 +649,32 @@ function mountPlayerBottomNav(){
   const icons={top:'<path d="m3 11 9-8 9 8M5 10v11h14V10M9 21v-7h6v7"/>',map1:'<path d="m3 5 6-2 6 2 6-2v16l-6 2-6-2-6 2ZM9 3v16M15 5v16"/>',t1:'<path d="M7 3h10v6a5 5 0 0 1-10 0ZM7 5H3v3a4 4 0 0 0 5 4M17 5h4v3a4 4 0 0 1-5 4M12 14v6M7 21h10"/>',stats:'<path d="M4 20V10h4v10ZM10 20V4h4v16ZM16 20v-7h4v7Z"/>',notifications:'<path d="M6 8a6 6 0 0 1 12 0c0 8 3 8 3 10H3c0-2 3-2 3-10M10 21h4"/>',bottom:'<path d="M12 3v16m-7-7 7 7 7-7M4 22h16"/>'};
   const labels={top:'Góra',map1:'Mapa T1',t1:'Wyniki T1',stats:'Statystyki',notifications:'Nowości',bottom:'Dół'};
   const nav=document.createElement('nav');nav.id='playerGlobalBottomNav';nav.className='playerBottomNav';nav.setAttribute('aria-label','Szybka nawigacja');
-  nav.innerHTML=Object.keys(icons).map(key=>'<button type="button" data-action="'+key+'" aria-label="'+labels[key]+'"><svg viewBox="0 0 24 24" aria-hidden="true">'+icons[key]+'</svg><span>'+labels[key]+'</span></button>').join('');
+  nav.innerHTML=Object.keys(icons).map(key=>'<button type="button" data-action="'+key+'" aria-label="'+labels[key]+'"><svg viewBox="0 0 24 24" aria-hidden="true">'+icons[key]+'</svg></button>').join('');
   nav.addEventListener('click',ev=>{const btn=ev.target.closest('button[data-action]');if(btn)playerDockAction(btn.dataset.action)});
   document.body.appendChild(nav);
 }
-function playerDockAction(action){
-  if(action==='top'){scrollAppTop();return}
+let PLAYER_DOCK_BUSY=false;
+async function playerDockAction(action){
+  if(action==='top'){showTab('competitions');closePlayerCompetition();scrollAppTop();return}
   if(action==='bottom'){scrollAppBottom();return}
   if(action==='notifications'){openPlayerNotifications();return}
-  if(!['map1','t1','stats'].includes(action))return;
-  showTab('competitions');
-  if(!CURRENT_DETAIL||!q('playerMobilePanelContent')){msg('Wybierz zawody i otwórz Losowanie/Wyniki.');q('competitionsList')?.scrollIntoView({behavior:'smooth',block:'start'});return}
-  q('competitionDetail')?.classList.remove('hidden');
-  showPlayerMobilePanel(action);
-  requestAnimationFrame(()=>{focusPlayerNavOnOpen()});
+  if(!['map1','t1','stats'].includes(action)||PLAYER_DOCK_BUSY)return;
+  PLAYER_DOCK_BUSY=true;
+  try{
+    const detail=q('competitionDetail');
+    const inCompetition=!!CURRENT_DETAIL&&detail&&!detail.classList.contains('hidden')&&!q('tab-competitions')?.classList.contains('hidden');
+    if(!inCompetition){
+      await loadCompetitions();
+      const nearest=getPlayerNearestThree(PLAYER_COMPETITIONS_CACHE)[0];
+      if(!nearest){showTab('competitions');msg('Brak nadchodzących zawodów.');return}
+      showTab('competitions');
+      if(!await openCompetition(nearest.id,true))return;
+      if(Number(CURRENT_DETAIL?.competition?.id)!==Number(nearest.id)||q('competitionDetail')?.classList.contains('hidden'))return;
+    }
+    showTab('competitions');showPlayerMobilePanel(action);
+    requestAnimationFrame(()=>focusPlayerNavOnOpen());
+  }catch(e){msg(e.message||'Nie udało się otworzyć zawodów.','bad')}
+  finally{PLAYER_DOCK_BUSY=false}
 }
 
 function showPlayerMobilePanel(panel,ev){
@@ -900,7 +915,35 @@ function drawStartListPdfPage(rows){const o=pdfCanvas(2),ctx=o.ctx;let y=drawPdf
 function generateStartListPdf(){const d=CURRENT_DETAIL;if(!d)return;const rows=(d.activeEntries||[]).map((e,i)=>[i+1,e.first_name+' '+e.last_name,e.confirmed?'✓':'','','','']);downloadPdfPages([drawStartListPdfPage(rows)],'lista_startowa_'+pdfSafeName(d.competition.title)+'.pdf')}
 function notifData(n){return n&&n.data&&typeof n.data==='object'?n.data:{}}
 function notificationStatusHtml(n){const data=notifData(n);if(ME?.role==='ADMIN'&&String(n.type)==='LEAVE_REQUEST'){const status=String(data.status||'PENDING').toUpperCase();if(status==='PENDING')return '<div class="leaveRequestActions"><button type="button" onclick="decideLeaveRequest('+Number(data.requestId||0)+',\'approve\','+n.id+')">Akceptuj</button><button type="button" class="warn" onclick="decideLeaveRequest('+Number(data.requestId||0)+',\'reject\','+n.id+')">Odrzuć</button></div>';if(status==='APPROVED')return '<span class="tag ok">Zaakceptowano</span>';if(status==='REJECTED')return '<span class="tag bad">Odrzucono</span>'}return n.read_at?'Przecz.':'<button type="button" onclick="readNotif('+n.id+')">OK</button>'}
-async function loadNotifications(){if(!ME)return;const d=await api('/api/notifications');const arr=d.notifications||[];const unread=arr.filter(n=>!n.read_at).length;PLAYER_UNREAD_NOTIFICATIONS=unread;const counter=q('notifCounter');if(counter)counter.textContent=unread?'🔔 '+unread:'';syncNotificationBadges(unread);const actions='<div class="notificationBulkActions"><button type="button" onclick="confirmAllNotifications()">✓ Potwierdź wszystkie</button><button type="button" class="warn" onclick="deleteAllNotifications()">Usuń powiadomienia</button></div>';q('notificationsList').innerHTML=actions+(arr.length?'<div class="tablewrap notificationWrap"><table class="notificationTable"><thead><tr><th>Zdarzenie</th><th>Czas</th><th>Status / decyzja</th></tr></thead><tbody>'+arr.map(n=>'<tr class="'+(!n.read_at?'mine':'')+' '+(String(n.type)==='LEAVE_REQUEST'?'leaveRequestRow':'')+'"><td><b>'+esc(n.title)+'</b><br>'+esc(n.body)+'</td><td class="nowrap small">'+new Date(n.created_at).toLocaleString('pl-PL')+'</td><td>'+notificationStatusHtml(n)+'</td></tr>').join('')+'</tbody></table></div>':'<p class="muted">Brak powiadomień.</p>')}
+let ADMIN_NOTIFICATION_TAB='requests';
+let NOTIFICATION_CACHE=[];
+let ADMIN_PENDING_REQUESTS=[];
+function setAdminNotificationTab(tab){
+  if(!['requests','all'].includes(tab))return;
+  ADMIN_NOTIFICATION_TAB=tab;renderNotificationContent();
+}
+window.setAdminNotificationTab=setAdminNotificationTab;
+function renderNotificationContent(){
+  const arr=NOTIFICATION_CACHE,admin=ME?.role==='ADMIN';
+  const actions='<div class="notificationBulkActions"><button type="button" onclick="confirmAllNotifications()">✓ Potwierdź wszystkie</button><button type="button" class="warn" onclick="deleteAllNotifications()">Usuń powiadomienia</button></div>';
+  const tabs=admin?'<div class="adminNotificationTabs" role="tablist"><button type="button" role="tab" aria-selected="'+(ADMIN_NOTIFICATION_TAB==='requests')+'" onclick="setAdminNotificationTab(\'requests\')">Prośby o wypisanie <b class="pendingLeaveBadge">'+ADMIN_PENDING_REQUESTS.length+'</b></button><button type="button" role="tab" aria-selected="'+(ADMIN_NOTIFICATION_TAB==='all')+'" onclick="setAdminNotificationTab(\'all\')">Pozostałe powiadomienia</button></div>':'';
+  if(admin&&ADMIN_NOTIFICATION_TAB==='requests'){
+    q('notificationsList').innerHTML=tabs+'<p>Prośby pozostają tutaj do zatwierdzenia lub odrzucenia.</p>'+(ADMIN_PENDING_REQUESTS.length?ADMIN_PENDING_REQUESTS.map(r=>'<article class="pendingLeaveCard"><strong>'+esc(r.first_name+' '+r.last_name)+'</strong><div>'+esc(r.title)+' · '+fmtDate(r.competition_date)+'</div><small>'+new Date(r.created_at).toLocaleString('pl-PL')+'</small><div class="leaveRequestActions"><button type="button" onclick="decideLeaveRequest('+Number(r.id)+',\'approve\')">Zatwierdź wypisanie</button><button type="button" class="warn" onclick="decideLeaveRequest('+Number(r.id)+',\'reject\')">Odrzuć</button></div></article>').join(''):'<p>Brak oczekujących próśb o wypisanie.</p>');return;
+  }
+  const visible=admin?arr.filter(n=>n.type!=='LEAVE_REQUEST'||String(notifData(n).status||'PENDING').toUpperCase()!=='PENDING'):arr;
+  q('notificationsList').innerHTML=tabs+actions+(visible.length?'<div class="tablewrap notificationWrap"><table class="notificationTable"><thead><tr><th>Zdarzenie</th><th>Czas</th><th>Status / decyzja</th></tr></thead><tbody>'+visible.map(n=>'<tr class="'+(!n.read_at?'mine':'')+'"><td><b>'+esc(n.title)+'</b><br>'+esc(n.body)+'</td><td class="nowrap small">'+new Date(n.created_at).toLocaleString('pl-PL')+'</td><td>'+notificationStatusHtml(n)+'</td></tr>').join('')+'</tbody></table></div>':'<p class="muted">Brak powiadomień.</p>');
+}
+async function loadNotifications(){
+  if(!ME)return;
+  const d=await api('/api/notifications');
+  NOTIFICATION_CACHE=d.notifications||[];ADMIN_PENDING_REQUESTS=d.pendingLeaveRequests||[];
+  const unread=NOTIFICATION_CACHE.filter(n=>!n.read_at).length;
+  PLAYER_UNREAD_NOTIFICATIONS=unread;
+  const counter=q('notifCounter');if(counter)counter.textContent=ME.role==='ADMIN'&&ADMIN_PENDING_REQUESTS.length?'Prośby o wypisanie: '+ADMIN_PENDING_REQUESTS.length:(unread?'🔔 '+unread:'');
+  syncNotificationBadges(unread);
+  const top=q('btn-notifications');if(top){top.querySelector('.pendingLeaveTopBadge')?.remove();if(ME.role==='ADMIN'&&ADMIN_PENDING_REQUESTS.length){const badge=document.createElement('b');badge.className='pendingLeaveTopBadge';badge.textContent='Wypisanie: '+ADMIN_PENDING_REQUESTS.length;top.appendChild(badge)}}
+  renderNotificationContent();
+}
 
 async function confirmAllNotifications(){try{const path=ME?.role==='ADMIN'?'/api/admin/notifications/read-all':'/api/notifications/read-all';const d=await api(path,{method:'POST',body:'{}'});msg('Potwierdzono powiadomienia: '+Number(d.updated||0));await loadNotifications()}catch(e){msg(e.message,'bad')}}
 async function deleteAllNotifications(){try{const admin=ME?.role==='ADMIN';const question=admin?'Usunąć wszystkie zwykłe i zakończone powiadomienia? Oczekujące prośby o wypisanie pozostaną.':'Usunąć wszystkie swoje powiadomienia?';if(!confirm(question))return;const path=admin?'/api/admin/notifications':'/api/notifications';const d=await api(path,{method:'DELETE',body:'{}'});msg('Usunięto powiadomienia: '+Number(d.deleted||0)+(Number(d.keptPending||0)?'. Oczekujące prośby: '+Number(d.keptPending):''));await loadNotifications()}catch(e){msg(e.message,'bad')}}
@@ -1012,7 +1055,7 @@ function getPlayerStickyTop(){
 }
 function syncOnePlayerBar(slot,bar,boundary){
   if(!slot||!bar||!boundary){clearPlayerFixed(bar,slot);return}
-  const top=0;
+  const top=window.matchMedia('(min-width:761px)').matches?getPlayerStickyTop():0;
   const slotRect=slot.getBoundingClientRect();
   const boundaryRect=boundary.getBoundingClientRect();
   const wasFixed=bar.classList.contains('fixedPlayerBar');
@@ -1021,14 +1064,15 @@ function syncOnePlayerBar(slot,bar,boundary){
     bar.style.left='';bar.style.width='';bar.style.top='';
   }
   const barH=Math.ceil(bar.getBoundingClientRect().height||bar.offsetHeight||44);
-  const shouldFix=slotRect.top<=top && boundaryRect.bottom>top+barH+6;
+  const shouldFix=slotRect.top<=top && (window.matchMedia('(min-width:761px)').matches||boundaryRect.bottom>top+barH+6);
   if(shouldFix){
-    slot.style.height=barH+'px';
+    slot.style.setProperty('height',barH+'px','important');
     bar.classList.add('fixedPlayerBar');
     const r=slot.getBoundingClientRect();
     bar.style.left=Math.round(r.left)+'px';
     bar.style.width=Math.round(r.width)+'px';
     bar.style.top=top+'px';
+    bar.style.setProperty('--desktop-nav-top',top+'px');bar.style.setProperty('--desktop-nav-left',Math.round(r.left)+'px');bar.style.setProperty('--desktop-nav-width',Math.round(r.width)+'px');
   }else{
     clearPlayerFixed(bar,slot);
   }
@@ -1047,7 +1091,7 @@ function syncPlayerStickyBars(){
     const desktopSlot=document.querySelector('.playerDesktopDashboardV56 .playerDesktopStickySlot');
     const desktopBar=document.querySelector('.playerDesktopDashboardV56 .playerDesktopUnifiedNav');
     const desktopBoundary=document.querySelector('.playerDesktopDashboardV56');
-    if(!player||!detail||detail.classList.contains('hidden')){
+    if(!player||!detail||detail.classList.contains('hidden')||q('tab-competitions')?.classList.contains('hidden')){
       clearPlayerFixed(mobileBar,mobileSlot);clearPlayerFixed(desktopBar,desktopSlot);return;
     }
     if(mobile){
@@ -1055,9 +1099,7 @@ function syncPlayerStickyBars(){
       syncOnePlayerBar(mobileSlot,mobileBar,mobileBoundary);
     }else{
       clearPlayerFixed(mobileBar,mobileSlot);
-      /* V84 desktop: bez ręcznego fixed/left/width. Pasek jest stabilnym sticky slotem w CSS. */
-      clearPlayerFixed(desktopBar,desktopSlot);
-      if(desktopSlot)desktopSlot.style.height='';
+      syncOnePlayerBar(desktopSlot,desktopBar,desktopBoundary);
     }
   });
 }
@@ -1072,6 +1114,6 @@ function bindAuthButtons(){
 
 function scrollAppBottom(){window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})}
 Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,loadPlayerHistory,saveGeneralRules,closePlayerCompetition,showAdminZone,loadCompetitions,createCompetition,openCompetitionEdit,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,editPlayerName,deletePlayer,deleteAllAdminPlayers,saveMyProfile,setPlayerCompetitionFilter,setPlayerCompetitionMonth,confirmPlayerPresence,enablePush,sendPushTest,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,setPlayerDrawView,openPlayerNotifications,fitPlayerMobileFullMaps,togglePlayerSectorAccordion,toggleFinalClub,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
-function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_107');sessionStorage.removeItem('lowcy_update_retry_102')}catch(_){}}
-function startBoot(){console.log('CLIENT_V107_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v107',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().then(()=>{window.__LOWCY_BOOT_OK_107=1;hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);try{window.__lowcyRecover107&&window.__lowcyRecover107()}catch(_){hideBootGuard();try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(__){}}})}
+function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_108');sessionStorage.removeItem('lowcy_update_retry_102')}catch(_){}}
+function startBoot(){console.log('CLIENT_V108_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v108',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().then(()=>{window.__LOWCY_BOOT_OK_108=1;hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);try{window.__lowcyRecover108&&window.__lowcyRecover108()}catch(_){hideBootGuard();try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(__){}}})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();
