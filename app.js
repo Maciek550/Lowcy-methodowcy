@@ -1,4 +1,4 @@
-const CLIENT_VERSION='114';const CLIENT_VERSION_NAME='V114_ACHIEVEMENTS_8_SECONDS';window.__LOWCY_APP_JS_114=1;try{fetch('/__probe_js_v114',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V114_ACHIEVEMENTS_8_SECONDS_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='116';const CLIENT_VERSION_NAME='V116_REALISTIC_CARP';window.__LOWCY_APP_JS_116=1;try{fetch('/__probe_js_v116',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V116_REALISTIC_CARP_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -10,6 +10,18 @@ function closeAchievementToast(){
   if(ack)ack();
   const el=document.getElementById('achievementToast');
   if(el){el.classList.add('closing');setTimeout(()=>{el.remove();pollAchievements()},180)}
+}
+function renderCarpEncouragement(a){return '<button type="button" class="achievementClose" aria-label="Zamknij">×</button><svg class="carpScene" viewBox="0 0 400 260" aria-hidden="true"><defs><linearGradient id="carpGold" x2=".3" y2="1"><stop stop-color="#fff1a5"/><stop offset=".45" stop-color="#d6a548"/><stop offset="1" stop-color="#74451e"/></linearGradient><linearGradient id="carpFin"><stop stop-color="#d8a353"/><stop offset="1" stop-color="#6f3e20"/></linearGradient><radialGradient id="carpGlow"><stop stop-color="#73cfc4" stop-opacity=".35"/><stop offset="1" stop-color="#73cfc4" stop-opacity="0"/></radialGradient></defs><ellipse cx="200" cy="140" rx="180" ry="120" fill="url(#carpGlow)"/><g class="carpWater"><path d="M0 216 Q50 200 100 216T200 216T300 216T400 216V260H0Z" fill="#166d72" opacity=".7"/><path d="M0 223 Q50 207 100 223T200 223T300 223T400 223" fill="none" stroke="#85ddd3" stroke-width="2" opacity=".65"/></g><g class="carpRipple" fill="none" stroke="#9be9e0"><ellipse cx="200" cy="220" rx="48" ry="8" stroke-width="3"/><ellipse cx="200" cy="220" rx="72" ry="13" opacity=".55"/></g><g class="carpLeap"><g class="carpFish"><defs><clipPath id="carpBodyClip"><path d="M144 0H400V260H134L143 157L144 135Z"/></clipPath><clipPath id="carpTailClip"><path d="M0 0H146V135L145 157L136 260H0Z"/></clipPath></defs><g clip-path="url(#carpBodyClip)"><image href="/carp-real-v116.png" x="16" y="12" width="368" height="214" preserveAspectRatio="xMidYMid meet"/></g><g class="carpTailSwing"><g clip-path="url(#carpTailClip)"><image href="/carp-real-v116.png" x="16" y="12" width="368" height="214" preserveAspectRatio="xMidYMid meet"/></g></g></g></g><circle class="carpDrop" style="--dx:-110px;--dy:-85px;--delay:0s" cx="200" cy="218" r="4" fill="#b0f4ed"/><circle class="carpDrop" style="--dx:-70px;--dy:-125px;--delay:0.08s" cx="200" cy="218" r="3" fill="#b0f4ed"/><circle class="carpDrop" style="--dx:-135px;--dy:-50px;--delay:0.12s" cx="200" cy="218" r="3" fill="#b0f4ed"/><circle class="carpDrop" style="--dx:90px;--dy:-105px;--delay:0.04s" cx="200" cy="218" r="5" fill="#b0f4ed"/><circle class="carpDrop" style="--dx:130px;--dy:-65px;--delay:0.1s" cx="200" cy="218" r="3" fill="#b0f4ed"/><circle class="carpDrop" style="--dx:45px;--dy:-145px;--delay:0.15s" cx="200" cy="218" r="3" fill="#b0f4ed"/><circle class="carpDrop" style="--dx:-30px;--dy:-150px;--delay:0.18s" cx="200" cy="218" r="2" fill="#b0f4ed"/><circle class="carpDrop" style="--dx:70px;--dy:-70px;--delay:0.2s" cx="200" cy="218" r="2" fill="#b0f4ed"/><path class="carpSplash" d="M145 219L130 199L167 210L159 185L189 210L201 187L214 210L247 188L239 214L270 203L253 224" fill="#7fdbd2" opacity=".8"/></svg><div class="carpMessage"><h3>POWODZENIA<br>W 2 TURZE!</h3><p>Nowa tura, nowa szansa! 💪</p><small>'+esc(a.title)+'</small></div><div class="achievementTimer"></div>'}
+let CARP_IMAGE_READY=null;
+function preloadRealCarp(){
+  if(!CARP_IMAGE_READY)CARP_IMAGE_READY=new Promise((resolve,reject)=>{
+    const img=new Image();
+    const timeout=setTimeout(()=>{CARP_IMAGE_READY=null;reject(new Error('Nie wczytano grafiki karpia'))},15000);
+    img.onload=()=>{clearTimeout(timeout);resolve()};
+    img.onerror=()=>{clearTimeout(timeout);CARP_IMAGE_READY=null;reject(new Error('Nie wczytano grafiki karpia'))};
+    img.src='/carp-real-v116.png';
+  });
+  return CARP_IMAGE_READY;
 }
 async function pollAchievements(){
   if(ACHIEVEMENT_BUSY||!ME||ME.role==='ADMIN'||document.hidden||document.getElementById('achievementToast'))return;
@@ -25,8 +37,11 @@ async function pollAchievements(){
     }
     if(!fresh.length)return;
     const group=[fresh.find(a=>String(a.payload.key||'').startsWith('GENERAL:'))||fresh[0]];
+    if(group[0].payload.kind==='ENCOURAGEMENT')await preloadRealCarp();
+    if(!ME||ME.id!==uid||document.hidden)return;
     const el=document.createElement('aside');el.id='achievementToast';el.setAttribute('role','status');el.setAttribute('aria-live','polite');
     el.innerHTML='<button type="button" class="achievementClose" aria-label="Zamknij gratulacje">×</button><h3>🏆 Brawo TY! 😄</h3><small>'+esc(group[0].payload.title)+'</small>'+group.map(a=>'<p><strong>'+esc(a.payload.label)+'</strong><br><small>'+esc(a.payload.context)+' · '+esc(Number(a.payload.weight).toLocaleString('pl-PL'))+' g</small></p>').join('')+'<div class="achievementTimer"></div>';
+    if(group[0].payload.kind==='ENCOURAGEMENT'){el.classList.add('carpEncouragement');el.innerHTML=renderCarpEncouragement(group[0].payload)}
     el.querySelector('button').onclick=closeAchievementToast;
     document.body.appendChild(el);
     ACHIEVEMENT_TIMEOUT=setTimeout(closeAchievementToast,8000);
@@ -1197,6 +1212,6 @@ function bindAuthButtons(){
 
 function scrollAppBottom(){window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})}
 Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,loadPlayerHistory,saveGeneralRules,closePlayerCompetition,showAdminZone,loadCompetitions,createCompetition,openCompetitionEdit,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,editPlayerName,deletePlayer,deleteAllAdminPlayers,saveMyProfile,setPlayerCompetitionFilter,setPlayerCompetitionMonth,confirmPlayerPresence,enablePush,sendPushTest,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,setPlayerDrawView,openPlayerNotifications,fitPlayerMobileFullMaps,togglePlayerSectorAccordion,toggleFinalClub,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
-function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_114');sessionStorage.removeItem('lowcy_update_retry_102')}catch(_){}}
-function startBoot(){console.log('CLIENT_V114_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v114',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().then(()=>{window.__LOWCY_BOOT_OK_114=1;hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);try{window.__lowcyRecover114&&window.__lowcyRecover114()}catch(_){hideBootGuard();try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(__){}}})}
+function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_116');sessionStorage.removeItem('lowcy_update_retry_102')}catch(_){}}
+function startBoot(){console.log('CLIENT_V116_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v116',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().then(()=>{window.__LOWCY_BOOT_OK_116=1;hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);try{window.__lowcyRecover116&&window.__lowcyRecover116()}catch(_){hideBootGuard();try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(__){}}})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();
