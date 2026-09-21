@@ -1,4 +1,4 @@
-const CLIENT_VERSION='110';const CLIENT_VERSION_NAME='V110_ROSTER_LEAVE_REQUEST';window.__LOWCY_APP_JS_110=1;try{fetch('/__probe_js_v110',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V110_ROSTER_LEAVE_REQUEST_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='111';const CLIENT_VERSION_NAME='V111_ROSTER_READABILITY_DELETE';window.__LOWCY_APP_JS_111=1;try{fetch('/__probe_js_v111',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V111_ROSTER_READABILITY_DELETE_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let TOKEN = STORE.get('carp_token') || '';
 let ME = null;
@@ -750,6 +750,18 @@ async function approveRosterLeaveRequest(requestId,button){
   }catch(e){msg(e.message,'bad')}
   finally{if(button)button.disabled=false}
 }
+async function deleteCancelledEntry(compId,entryId,button){
+  if(button?.disabled)return;
+  if(!confirm('Usunąć wypisanego zawodnika z listy tych zawodów? Konto zawodnika pozostanie.'))return;
+  if(button)button.disabled=true;
+  try{
+    await api('/api/admin/competitions/'+compId+'/entries/'+entryId,{method:'DELETE'});
+    await refreshCompetitionKeepScroll(compId);
+    await loadCompetitions();
+    msg('Usunięto z listy wypisanych');
+  }catch(e){msg(e.message,'bad')}
+  finally{if(button)button.disabled=false}
+}
 function rosterTable(title,rows,compId,kind){
   rows=rows||[];
   let html='<h3 class="rosterSectionTitle">'+title+' <span class="pill">'+rows.length+'</span></h3>';
@@ -757,7 +769,7 @@ function rosterTable(title,rows,compId,kind){
   const baseButtons=e=>{
     if(kind==='ACTIVE')return '<div class="inlineBtns"><button type="button" class="secondary" onclick="setEntryStatus('+compId+','+e.id+',\'reserve\')">↓ Rezerwa</button><button type="button" class="warn" onclick="setEntryStatus('+compId+','+e.id+',\'cancel\')">Zrezygnuj</button></div>';
     if(kind==='RESERVE')return '<div class="inlineBtns"><button type="button" onclick="setEntryStatus('+compId+','+e.id+',\'promote\')">↑ Główna</button><button type="button" class="warn" onclick="setEntryStatus('+compId+','+e.id+',\'cancel\')">Zrezygnuj</button></div>';
-    return '<button type="button" class="secondary" onclick="setEntryStatus('+compId+','+e.id+',\'promote\')">Przywróć</button>';
+    return '<div class="inlineBtns"><button type="button" class="secondary" onclick="setEntryStatus('+compId+','+e.id+',\'promote\')">Przywróć</button><button type="button" class="warn" onclick="deleteCancelledEntry('+compId+','+e.id+',this)">Usuń</button></div>';
   };
   const makeButtons=e=>{
     const requestId=Number(e.pending_leave_request_id);
@@ -1139,6 +1151,6 @@ function bindAuthButtons(){
 
 function scrollAppBottom(){window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})}
 Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,loadPlayerHistory,saveGeneralRules,closePlayerCompetition,showAdminZone,loadCompetitions,createCompetition,openCompetitionEdit,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,editPlayerName,deletePlayer,deleteAllAdminPlayers,saveMyProfile,setPlayerCompetitionFilter,setPlayerCompetitionMonth,confirmPlayerPresence,enablePush,sendPushTest,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,setPlayerDrawView,openPlayerNotifications,fitPlayerMobileFullMaps,togglePlayerSectorAccordion,toggleFinalClub,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
-function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_110');sessionStorage.removeItem('lowcy_update_retry_102')}catch(_){}}
-function startBoot(){console.log('CLIENT_V110_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v110',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().then(()=>{window.__LOWCY_BOOT_OK_110=1;hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);try{window.__lowcyRecover110&&window.__lowcyRecover110()}catch(_){hideBootGuard();try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(__){}}})}
+function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_111');sessionStorage.removeItem('lowcy_update_retry_102')}catch(_){}}
+function startBoot(){console.log('CLIENT_V111_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v111',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().then(()=>{window.__LOWCY_BOOT_OK_111=1;hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);try{window.__lowcyRecover111&&window.__lowcyRecover111()}catch(_){hideBootGuard();try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(__){}}})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();
