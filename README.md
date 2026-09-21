@@ -1,3 +1,7 @@
+V106 — stały dolny panel, czytelna lista zawodników admina, filtry zawodów
+
+Dolne skróty zawodnika są większe, podpisane i widoczne we wszystkich zakładkach. Najbliższe 3 zawody pozostają przypięte, a poniżej pełna lista wybranej kategorii. Kliknięcie filtra przewija do tej listy.
+
 V105 — wyniki administratora w kolorystyce mobilnej
 
 Jasne tabele, ciemny tekst, czerwone BF. Poprawka obejmuje wyniki sektorowe, klasyfikacje T1/T2, General i statystyki na komputerze oraz telefonie.
