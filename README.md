@@ -1,3 +1,8 @@
+V110 — Prośba o wypisanie na końcu wiersza zawodnika (komputer i telefon). Żółty kafelek widoczny tylko dla oczekujących próśb; jedno kliknięcie zatwierdza wypisanie i odświeża listy oraz powiadomienia.
+
+V109 — mobilny podgląd całego łowiska w ustawieniach sektorów administratora.
+Podgląd aktualizuje się podczas edycji. Sektory osobno dostępne po rozwinięciu. Duże mapy można przewijać poziomo.
+
 ŁOWCY METHODOWCY — V108
 
 Wgraj całą zawartość paczki, zastępując pliki aplikacji, i uruchom ją ponownie.
