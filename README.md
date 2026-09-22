@@ -1,3 +1,15 @@
+V121 — Czytelne tury, kompaktowy panel admina, jednostronicowe PDF-y
+
+• Sędzia: T1 niebieska, T2 pomarańczowa; aktywna tura ma białą ramkę i ✓, a formularz pasek w kolorze tury. Telefon i komputer.
+• Usunięto powtórzony nagłówek pod filtrami zawodów (np. „Nadchodzące — 1”). Liczniki w przyciskach filtrów pozostają.
+• Małe przyciski „Robimy zawody” i „Sędziowie wagowi” w jednym wierszu. Formularze domyślnie zwinięte.
+• Lista startowa: jedna strona A4, wysokość wierszy dopasowana do liczby osób.
+• Losowanie: mapa i kompletna lista na jednej stronie A4 dla każdej tury. Pakiet T1 + T2 ma łącznie dwie strony. Przy dłuższej liście tabela ma dwie kolumny.
+
+Weryfikacja: rzeczywiście wygenerowane PDF-y dla 21, 40, 60 i 100 osób, jeden i dwa brzegi; kontrola liczby stron i obecności wszystkich nazwisk, podgląd graficzny wydruków dla 40 osób. Przy bardzo dużej liczbie osób tekst jest pomniejszany. Testy logiki sędziego i uprawnień przeszły. Interfejs nie był testowany wizualnie w przeglądarce.
+
+Wgraj cały komplet plików i uruchom ponownie aplikację.
+
 V120 — Sędzia wagowy
 
 Tworzenie konta: zaloguj się jako administrator → Zawody → Sędziowie wagowi → Utwórz konto sędziego. Podaj imię, nazwisko, osobny nieużywany numer telefonu i hasło (minimum 8 znaków). Zaznacz zawody i zapisz.

@@ -16,8 +16,8 @@ const ADMIN_SETUP_CODE = process.env.ADMIN_SETUP_CODE || '';
 let VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 let VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
-const APP_VERSION = '120';
-const APP_VERSION_NAME = 'V120_JUDGE_PANEL';
+const APP_VERSION = '121';
+const APP_VERSION_NAME = 'V121_COMPACT_ROUNDS_PDF';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 const CARP_REAL = fs.readFileSync(pathModule.join(__dirname, 'carp-real-v116.png'));
 const ICON_192 = fs.readFileSync(pathModule.join(__dirname, 'icon-192.png'));
@@ -1192,7 +1192,7 @@ async function route(req, res) {
   const path = url.pathname;
   const method = req.method;
 
-  if (path === '/__probe_js_v120' || path === '/__probe_boot_v120' || path === '/__probe_js_v102' || path === '/__probe_boot_v102' || path === '/__probe_js_v101' || path === '/__probe_boot_v101' || path === '/__probe_js_v100' || path === '/__probe_boot_v100' || path === '/__probe_js_v99' || path === '/__probe_boot_v99' || path === '/__probe_js_v98' || path === '/__probe_boot_v98' || path === '/__probe_js_v97' || path === '/__probe_boot_v97' || path === '/__probe_js_v96' || path === '/__probe_boot_v96' || path === '/__probe_js_v95' || path === '/__probe_boot_v95' || path === '/__probe_js_v94' || path === '/__probe_boot_v94' || path === '/__probe_js_v93' || path === '/__probe_boot_v93' || path === '/__probe_js_v91' || path === '/__probe_boot_v91' || path === '/__probe_js_v90' || path === '/__probe_boot_v90' || path === '/__probe_js_v89' || path === '/__probe_boot_v89' || path === '/__probe_js_v88' || path === '/__probe_boot_v88' || path === '/__probe_js_v87' || path === '/__probe_boot_v87' || path === '/__probe_js_v86' || path === '/__probe_boot_v86' || path === '/__probe_js_v85' || path === '/__probe_boot_v85' || path === '/__probe_js_v84' || path === '/__probe_boot_v84' || path === '/__probe_js_v83' || path === '/__probe_boot_v83' || path === '/__probe_js_v82' || path === '/__probe_boot_v82' || path === '/__probe_js_v81' || path === '/__probe_boot_v81' || path === '/__probe_js_v80' || path === '/__probe_boot_v80' || path === '/__probe_js_v79' || path === '/__probe_boot_v79' || path === '/__probe_js_v78' || path === '/__probe_boot_v78' || path === '/__probe_js_v77' || path === '/__probe_boot_v77' || path === '/__probe_js_v76' || path === '/__probe_boot_v76' || path === '/__probe_js_v75' || path === '/__probe_boot_v75' || path === '/__probe_js_v74' || path === '/__probe_boot_v74' || path === '/__probe_js_v73' || path === '/__probe_boot_v73' || path === '/__probe_js_v72' || path === '/__probe_boot_v72' || path === '/__probe_js_v71' || path === '/__probe_boot_v71') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
+  if (path === '/__probe_js_v121' || path === '/__probe_boot_v121' || path === '/__probe_js_v102' || path === '/__probe_boot_v102' || path === '/__probe_js_v101' || path === '/__probe_boot_v101' || path === '/__probe_js_v100' || path === '/__probe_boot_v100' || path === '/__probe_js_v99' || path === '/__probe_boot_v99' || path === '/__probe_js_v98' || path === '/__probe_boot_v98' || path === '/__probe_js_v97' || path === '/__probe_boot_v97' || path === '/__probe_js_v96' || path === '/__probe_boot_v96' || path === '/__probe_js_v95' || path === '/__probe_boot_v95' || path === '/__probe_js_v94' || path === '/__probe_boot_v94' || path === '/__probe_js_v93' || path === '/__probe_boot_v93' || path === '/__probe_js_v91' || path === '/__probe_boot_v91' || path === '/__probe_js_v90' || path === '/__probe_boot_v90' || path === '/__probe_js_v89' || path === '/__probe_boot_v89' || path === '/__probe_js_v88' || path === '/__probe_boot_v88' || path === '/__probe_js_v87' || path === '/__probe_boot_v87' || path === '/__probe_js_v86' || path === '/__probe_boot_v86' || path === '/__probe_js_v85' || path === '/__probe_boot_v85' || path === '/__probe_js_v84' || path === '/__probe_boot_v84' || path === '/__probe_js_v83' || path === '/__probe_boot_v83' || path === '/__probe_js_v82' || path === '/__probe_boot_v82' || path === '/__probe_js_v81' || path === '/__probe_boot_v81' || path === '/__probe_js_v80' || path === '/__probe_boot_v80' || path === '/__probe_js_v79' || path === '/__probe_boot_v79' || path === '/__probe_js_v78' || path === '/__probe_boot_v78' || path === '/__probe_js_v77' || path === '/__probe_boot_v77' || path === '/__probe_js_v76' || path === '/__probe_boot_v76' || path === '/__probe_js_v75' || path === '/__probe_boot_v75' || path === '/__probe_js_v74' || path === '/__probe_boot_v74' || path === '/__probe_js_v73' || path === '/__probe_boot_v73' || path === '/__probe_js_v72' || path === '/__probe_boot_v72' || path === '/__probe_js_v71' || path === '/__probe_boot_v71') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
 
   if (path === '/__probe_js_v68' || path === '/__probe_boot_v68' || path === '/__probe_js_v67' || path === '/__probe_boot_v67' || path === '/__probe_js_v66' || path === '/__probe_boot_v66' || path === '/__probe_js_v65' || path === '/__probe_boot_v65' || path === '/__probe_js_v63' || path === '/__probe_boot_v63' || path === '/__probe_js_v62' || path === '/__probe_boot_v62' || path === '/__probe_js_v60' || path === '/__probe_boot_v60' || path === '/__probe_js_v59' || path === '/__probe_boot_v59' || path === '/__probe_js_v58' || path === '/__probe_boot_v58' || path === '/__probe_js_v57' || path === '/__probe_boot_v57' || path === '/__probe_js_v56' || path === '/__probe_boot_v56' || path === '/__probe_js_v55' || path === '/__probe_boot_v55' || path === '/__probe_js_v54' || path === '/__probe_boot_v54' || path === '/__probe_js_v53' || path === '/__probe_boot_v53' || path === '/__probe_js_v52' || path === '/__probe_boot_v52' || path === '/__probe_js_v51' || path === '/__probe_boot_v51' || path === '/__probe_js_v50' || path === '/__probe_boot_v50' || path === '/__probe_js_v49' || path === '/__probe_boot_v49' || path === '/__probe_js_v36' || path === '/__probe_boot_v36' || path === '/__probe_js_v35' || path === '/__probe_boot_v35' || path === '/__probe_js_v34' || path === '/__probe_boot_v34' || path === '/__probe_js_v33' || path === '/__probe_boot_v33' || path === '/__probe_js_v32' || path === '/__probe_boot_v32' || path === '/__probe_js_v30' || path === '/__probe_boot_v30' || path === '/__probe_js_v29' || path === '/__probe_boot_v29' || path === '/__probe_js_v27' || path === '/__probe_boot_v27' || path === '/__probe_inline_v26') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/api/version') return sendJson(res, 200, { ok:true, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
@@ -1388,9 +1388,9 @@ body #app button.rosterLeaveRequest:disabled{opacity:.65;cursor:wait}
     ]
   }), {'Content-Type':'application/manifest+json; charset=utf-8','Cache-Control':'no-cache'});
   if (path === '/sw.js') return send(res, 200, `
-const SW_VERSION='lowcy-v120-mobile-results-contrast';
-const SHELL_CACHE='lowcy-shell-v120';
-const APP_SHELL_JS='/app.js?v=120';
+const SW_VERSION='lowcy-v121-mobile-results-contrast';
+const SHELL_CACHE='lowcy-shell-v121';
+const APP_SHELL_JS='/app.js?v=121';
 const SHELL=['/',APP_SHELL_JS,'/manifest.webmanifest','/icon-192.png','/icon-512.png','/apple-touch-icon.png'];
 const NET_TIMEOUT_MS=4500;
 async function fetchWithTimeout(req,ms=NET_TIMEOUT_MS){
@@ -5730,11 +5730,26 @@ body.judgeTheme .playerBottomNav,body.judgeTheme #playerGlobalBottomNav,body.jud
 #judgeManagement .judgeAssignments{max-height:250px;overflow:auto;padding:6px;border:1px solid #456b7d;border-radius:8px;margin-bottom:12px}
 #judgeManagement form>button{margin-top:12px}
 @media(max-width:760px){#judgeShell .judgeMenu button{flex-direction:column;gap:2px;min-height:64px}#judgeShell .judgeMenu button span{font-size:13px}#judgeShell .card{padding:10px}#judgeShell .mobileWeightBlock label{font-size:14px!important}}
+
+/* V121: compact admin actions and unmistakable judge rounds. */
+#adminQuickActions{display:flex;gap:8px;align-items:center;margin:8px 0}
+#adminQuickActions button{width:auto!important;min-height:40px;padding:8px 14px;font-size:14px;flex:0 1 auto}
+#adminQuickActions~#adminCreate>summary,#judgeManagement>summary{display:none!important}
+#adminQuickActions~#adminCreate:not([open]),#judgeManagement:not([open]){display:none!important}
+#judgeManagement[open]{margin-top:8px}
+#judgeShell .judgeRoundTabs .judgeT1{background:#124e85!important;border:2px solid #61b8ff;color:#fff}
+#judgeShell .judgeRoundTabs .judgeT2{background:#73370b!important;border:2px solid #ffb956;color:#fff}
+#judgeShell .judgeRoundTabs button.active{outline:3px solid #fff;outline-offset:1px;box-shadow:inset 0 -5px 0 #fff;font-weight:900}
+#judgeShell .judgeRoundTabs button.active::before{content:'✓ ';font-weight:900}
+#judgeShell .judgeRoundTabs{padding:4px;gap:14px}
+#judgeShell .judgeEntryRound1{border-top:5px solid #61b8ff}
+#judgeShell .judgeEntryRound2{border-top:5px solid #ffb956}
+@media(max-width:600px){#adminQuickActions button{flex:1;min-width:0;padding:8px 6px;font-size:13px}}
 </style>
 </head>
 <body class="authMode">
 <div id="bootGuard"><img src="/icon-192.png" alt=""><b>Łowcy Methodowcy</b><span>Aktualizuję aplikację…</span></div>
-<header><div class="row"><h1><img class="brandIcon" src="/icon-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V120</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
+<header><div class="row"><h1><img class="brandIcon" src="/icon-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V121</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
 <main>
 <div id="msg"></div>
 <section id="auth" class="card">
@@ -5747,7 +5762,7 @@ body.judgeTheme .playerBottomNav,body.judgeTheme #playerGlobalBottomNav,body.jud
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="appVersionBadge">V120</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
+  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="appVersionBadge">V121</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-rules" class="hidden" onclick="showTab('rules')">Regulamin ogólny</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-profile" class="hidden" onclick="showTab('profile')">Mój profil</button><button id="btn-history" class="hidden" onclick="showTab('history')">Historia startów</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
     <details id="adminCreate" class="card hidden adminCreateV93"><summary class="adminCreateToggle">Robimy zawody</summary><div class="adminCreateBody"><h2>Utwórz zawody</h2><p class="small muted">Dane z tego formularza są później widoczne dla zawodnika.</p><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Zbiórka / godzina</label><input id="cMeetingTime" type="time" value="06:00"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div></div><div class="adminTextPair"><div><label>Informacje organizacyjne</label><textarea id="cNotes" placeholder="Parking, miejsce zbiórki, godzina losowania, dodatkowe informacje…"></textarea></div><div><label>Program / regulamin tych zawodów</label><textarea id="cRegulations" class="rulesEditor" placeholder="Np. 06:00 zbiórka, 06:15 losowanie, 07:00–15:00 zawody, ważne zasady tylko dla tego wydarzenia…"></textarea></div></div><button onclick="createCompetition(event)">Utwórz zawody</button></div></details>
@@ -5765,21 +5780,21 @@ body.judgeTheme .playerBottomNav,body.judgeTheme #playerGlobalBottomNav,body.jud
 <script>
 (function(){
   var retried=false,recovering=false;
-  try{retried=sessionStorage.getItem('lowcy_update_retry_120')==='1'}catch(e){}
-  window.__lowcyRecover120=function(){
+  try{retried=sessionStorage.getItem('lowcy_update_retry_121')==='1'}catch(e){}
+  window.__lowcyRecover121=function(){
     if(recovering)return;recovering=true;
     var g=document.getElementById('bootGuard'),sp=g&&g.querySelector('span');if(sp)sp.textContent='Naprawiam połączenie z aplikacją…';
     if(retried){if(sp)sp.textContent='Nie udało się uruchomić aplikacji. Sprawdź internet i odśwież.';recovering=false;return}
-    retried=true;try{sessionStorage.setItem('lowcy_update_retry_120','1')}catch(e){}
+    retried=true;try{sessionStorage.setItem('lowcy_update_retry_121','1')}catch(e){}
     var jobs=[];
     try{if('caches'in window)jobs.push(caches.keys().then(function(keys){return Promise.all(keys.filter(function(k){return k.indexOf('lowcy-shell-')===0}).map(function(k){return caches.delete(k)}))}))}catch(e){}
     try{if('serviceWorker'in navigator)jobs.push(navigator.serviceWorker.getRegistrations().then(function(rs){return Promise.all(rs.map(function(r){return r.unregister().catch(function(){})}))}))}catch(e){}
-    Promise.allSettled(jobs).finally(function(){setTimeout(function(){location.replace('/?recover=120&t='+Date.now())},80)});
+    Promise.allSettled(jobs).finally(function(){setTimeout(function(){location.replace('/?recover=121&t='+Date.now())},80)});
   };
-  setTimeout(function(){if(!window.__LOWCY_BOOT_OK_120)window.__lowcyRecover120()},8000);
+  setTimeout(function(){if(!window.__LOWCY_BOOT_OK_121)window.__lowcyRecover121()},8000);
 })();
 </script>
-<script src="/app.js?v=120" defer onerror="window.__lowcyRecover120&&window.__lowcyRecover120()"></script>
+<script src="/app.js?v=121" defer onerror="window.__lowcyRecover121&&window.__lowcyRecover121()"></script>
 </body>
 </html>`;
 
@@ -5790,5 +5805,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V120_JUDGE_PANEL_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V121_COMPACT_ROUNDS_PDF_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });
