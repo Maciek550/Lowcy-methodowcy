@@ -1,4 +1,4 @@
-const CLIENT_VERSION='119';const CLIENT_VERSION_NAME='V119_LARGE_TROPHIES';window.__LOWCY_APP_JS_119=1;try{fetch('/__probe_js_v119',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V119_LARGE_TROPHIES_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='120';const CLIENT_VERSION_NAME='V120_JUDGE_PANEL';window.__LOWCY_APP_JS_120=1;try{fetch('/__probe_js_v120',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V120_JUDGE_PANEL_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -177,7 +177,7 @@ function stopPlayerResultPolling(){if(PLAYER_RESULT_POLL_TIMER){clearInterval(PL
 function startPlayerResultPolling(){if(PLAYER_RESULT_POLL_TIMER)return;PLAYER_RESULT_POLL_TIMER=setInterval(()=>pollPlayerCompetitionResults(),12000)}
 async function pollPlayerCompetitionResults(){if(PLAYER_RESULT_POLL_BUSY||!ME||ME.role==='ADMIN'||!CURRENT_DETAIL?.competition?.id||q('competitionDetail')?.classList.contains('hidden'))return;PLAYER_RESULT_POLL_BUSY=true;try{const id=CURRENT_DETAIL.competition.id,d=await api('/api/competitions/'+id);if(playerContentSignature(d)===playerContentSignature(CURRENT_DETAIL))return;CURRENT_DETAIL=d;const active=PLAYER_MOBILE_PANEL;if(active==='t1'||active==='t2')markPlayerResultSeen(active==='t1'?1:2);if(active==='draw1'||active==='draw2')markPlayerDrawSeen(active==='draw1'?1:2);const mobile=q('playerMobilePanelContent'),desktop=q('playerDesktopPanelContent');if(mobile)mobile.innerHTML=renderPlayerMobilePanelContent(d,active);if(desktop)desktop.innerHTML=renderPlayerDesktopPanelContent(d,active);syncPlayerContentStars(d);requestAnimationFrame(()=>{syncPlayerStickyBars();fitPlayerMobileFullMaps()})}catch(_){ }finally{PLAYER_RESULT_POLL_BUSY=false}}
 function syncNotificationBadges(unread=PLAYER_UNREAD_NOTIFICATIONS){const n=Math.max(0,Number(unread||0));document.querySelectorAll('#playerNotifBtn,.notificationTile').forEach(btn=>{btn.innerHTML=playerNotifLabel(n)});const top=q('btn-notifications');if(top){let b=top.querySelector('.topNotifBadge');if(n){if(!b){b=document.createElement('span');b.className='topNotifBadge';top.appendChild(b)}b.textContent=n>99?'99+':String(n)}else if(b)b.remove()}}
-function setLoggedOut(showMsg){stopAchievements();
+function setLoggedOut(showMsg){document.body.classList.remove('judgeTheme');q('judgeShell')?.remove();stopAchievements();
   try{document.documentElement.classList.remove('hasSavedSession');document.body.classList.add('authMode')}catch(_){}
   stopPlayerResultPolling();
   q('playerGlobalBottomNav')?.remove();
@@ -200,6 +200,10 @@ async function boot(){
   if(auth)auth.classList.add('hidden');
   if(app)app.classList.remove('hidden');
   if(logout)logout.classList.remove('hidden');
+  document.body.classList.toggle('judgeTheme',ME.role==='JUDGE');
+  if(ME.role==='JUDGE'){mountJudgeShell();await judgeLoadCompetitions();return}
+  q('judgeShell')?.remove();
+  if(ME.role==='ADMIN')await loadJudgeManagement();else q('judgeManagement')?.remove();
   q('who').textContent=ME.first_name+' '+ME.last_name+' — Koło PZW '+(ME.pzw_club||'');q('role').textContent=ME.role==='ADMIN'?'Administrator':'Zawodnik';
   const admin=ME.role==='ADMIN';document.body.classList.remove('authMode');document.body.classList.toggle('playerTheme',!admin);q('btn-players').classList.toggle('hidden',!admin);q('btn-profile')?.classList.toggle('hidden',admin);q('btn-history')?.classList.toggle('hidden',admin);q('btn-rules')?.classList.remove('hidden');q('adminCreate').classList.toggle('hidden',!admin);if(q('adminCreate'))q('adminCreate').open=false;const notifTop=q('btn-notifications');if(notifTop)notifTop.textContent=admin?'Powiadomienia':'NOWOŚCI';const rulesTop=q('btn-rules');if(rulesTop)rulesTop.innerHTML=admin?'Regulamin ogólny':'Regulamin<br>ogólny';const historyTop=q('btn-history');if(historyTop&&!admin)historyTop.innerHTML='Historia<br>startów';
   mountPlayerBottomNav();
@@ -388,6 +392,7 @@ function renderPlayerCompetitionList(){
     +'<div class="playerCompetitionMobileOnly">'+filteredView('mobile')+'</div>';
 }
 async function loadCompetitions(){
+  if(ME?.role==='JUDGE')return judgeLoadCompetitions();
   const d=await api('/api/competitions'); const arr=d.competitions||[]; const admin=ME&&ME.role==='ADMIN'; let html='';
   if(admin){
     html+='<div class="small muted" style="margin-bottom:8px">Liczba zawodów w bazie: <b>'+arr.length+'</b></div>'; if(arr.length)html+='<button type="button" class="warn" style="margin-bottom:10px" onclick="clearCompetitions()">Usuń wszystkie zawody testowe</button>';
@@ -408,6 +413,7 @@ async function clearCompetitions(){try{if(!confirm('Usunąć WSZYSTKIE zawody te
 async function joinComp(id){try{await api('/api/competitions/'+id+'/join',{method:'POST',body:'{}'});msg('Zapisano na zawody');await loadCompetitions();if(CURRENT_DETAIL?.competition?.id==id)await refreshCompetitionKeepScroll(id)}catch(e){msg(e.message,'bad')}}
 async function leaveComp(id){try{if(!confirm('Wysłać do administratora prośbę o wypisanie z tych zawodów?'))return;await api('/api/competitions/'+id+'/leave',{method:'POST',body:'{}'});msg('Prośba o wypisanie została wysłana do administratora');await loadCompetitions();await loadNotifications();if(CURRENT_DETAIL?.competition?.id==id)await refreshCompetitionKeepScroll(id)}catch(e){msg(e.message,'bad')}}
 async function openCompetition(id,preserve=false){
+  if(ME?.role==='JUDGE')return judgeOpenCompetition(id);
   try{
     const d=await api('/api/competitions/'+id);
     CURRENT_DETAIL=d;
@@ -433,6 +439,7 @@ function resMap(round){const m={};(CURRENT_DETAIL.results||[]).forEach(r=>{if(Nu
 function resultItems(round,userId,kind){return (CURRENT_DETAIL.resultItems||[]).filter(x=>Number(x.round)===Number(round)&&Number(x.user_id)===Number(userId)&&(!kind||String(x.kind)===kind))}
 function drawMap(round){const m={};(CURRENT_DETAIL.draws||[]).forEach(r=>{if(Number(r.round)===round)m[Number(r.user_id)]=r});return m}
 function renderDetail(){
+  if(ME?.role==='JUDGE'){renderJudgeWork();return}
   const d=CURRENT_DETAIL;const c=d.competition;const admin=ME.role==='ADMIN';const confirmed=(d.activeEntries||[]).filter(e=>e.confirmed===true||String(e.confirmed).toLowerCase()==='true').length;let html='<div class="card competitionDetailHead '+(admin?'adminDetailHead':'playerDetailHead')+'"><div class="inlineBtns"><button type="button" class="secondary" onclick="q(\'competitionDetail\').classList.add(\'hidden\')">Zamknij panel zawodów</button><button type="button" onclick="openCompetition('+c.id+')">Odśwież</button></div><h2>'+esc(c.title)+'</h2><div class="competitionDetailMeta"><span>📅 '+fmtDate(c.competition_date)+'</span><span>📍 '+esc(c.fishery||'—')+'</span><span class="meetingStrong">⏰ Zbiórka '+esc(meetingTimeText(c))+'</span>'+(admin?'<span>👥 '+Number(d.rosterCounts?.active_count||0)+' + R'+Number(d.rosterCounts?.reserve_count||0)+'</span><span>✓ '+confirmed+' potwierdzonych</span>':'')+'</div></div>';if(!admin&&(String(c.notes||'').trim()||String(c.regulations||'').trim()))html+='<div class="playerEventInfo card">'+(String(c.notes||'').trim()?'<div class="playerEventNote"><b>INFORMACJE</b><span>'+esc(c.notes).replace(/\n/g,'<br>')+'</span></div>':'')+(String(c.regulations||'').trim()?'<details class="playerEventRules"><summary>PROGRAM / REGULAMIN ZAWODÓW</summary><div>'+esc(c.regulations).replace(/\n/g,'<br>')+'</div></details>':'')+'</div>';
   SECTOR_MANUAL_DRAFT=undefined;
   if(admin) html+=renderAdminDetail(d); else html+=renderPlayerDetail(d);
@@ -1050,6 +1057,7 @@ function renderNotificationContent(){
   q('notificationsList').innerHTML=tabs+actions+(visible.length?'<div class="tablewrap notificationWrap"><table class="notificationTable"><thead><tr><th>Zdarzenie</th><th>Czas</th><th>Status / decyzja</th></tr></thead><tbody>'+visible.map(n=>'<tr class="'+(!n.read_at?'mine':'')+'"><td><b>'+esc(n.title)+'</b><br>'+esc(n.body)+'</td><td class="nowrap small">'+new Date(n.created_at).toLocaleString('pl-PL')+'</td><td>'+notificationStatusHtml(n)+'</td></tr>').join('')+'</tbody></table></div>':'<p class="muted">Brak powiadomień.</p>');
 }
 async function loadNotifications(){
+  if(ME?.role==='JUDGE')return;
   if(!ME)return;
   const d=await api('/api/notifications');
   NOTIFICATION_CACHE=d.notifications||[];ADMIN_PENDING_REQUESTS=d.pendingLeaveRequests||[];
@@ -1230,6 +1238,62 @@ function bindAuthButtons(){
 
 function scrollAppBottom(){window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})}
 Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,loadPlayerHistory,saveGeneralRules,closePlayerCompetition,showAdminZone,loadCompetitions,createCompetition,openCompetitionEdit,deleteCompetition,clearCompetitions,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,editPlayerName,deletePlayer,deleteAllAdminPlayers,saveMyProfile,setPlayerCompetitionFilter,setPlayerCompetitionMonth,confirmPlayerPresence,enablePush,sendPushTest,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,setPlayerDrawView,openPlayerNotifications,fitPlayerMobileFullMaps,togglePlayerSectorAccordion,toggleFinalClub,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
-function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_119');sessionStorage.removeItem('lowcy_update_retry_102')}catch(_){}}
-function startBoot(){console.log('CLIENT_V119_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v119',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().then(()=>{window.__LOWCY_BOOT_OK_119=1;hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);try{window.__lowcyRecover119&&window.__lowcyRecover119()}catch(_){hideBootGuard();try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(__){}}})}
+function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_120');sessionStorage.removeItem('lowcy_update_retry_102')}catch(_){}}
+function startBoot(){console.log('CLIENT_V120_BOOT');syncStickyNavOffset();try{fetch('/__probe_boot_v120',{cache:'no-store'}).catch(()=>{})}catch(_){};bindAuthButtons();boot().then(()=>{window.__LOWCY_BOOT_OK_120=1;hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);try{window.__lowcyRecover120&&window.__lowcyRecover120()}catch(_){hideBootGuard();try{msg('Błąd startu aplikacji: '+(e.message||e),'bad')}catch(__){}}})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();
+
+let JUDGE_VIEW='competitions',JUDGE_ROUND=1,JUDGE_COMPETITIONS=[],JUDGE_MANAGEMENT=null;
+function mountJudgeShell(){
+  document.body.classList.add('judgeTheme');document.body.classList.remove('playerTheme','authMode');
+  stopAchievements();stopPlayerResultPolling();CURRENT_DETAIL=null;
+  q('competitionDetail').innerHTML='';
+  let shell=q('judgeShell');if(!shell){shell=document.createElement('section');shell.id='judgeShell';q('app').appendChild(shell)}
+  shell.innerHTML='<nav class="judgeMenu" aria-label="Menu sędziego"><button type="button" onclick="judgeNavigate(\'competitions\')">📅<span>Zawody</span></button><button type="button" id="judge-entry" onclick="judgeNavigate(\'entry\')">⚖️<span>Wpisz wyniki</span></button><button type="button" id="judge-results" onclick="judgeNavigate(\'results\')">🏆<span>Wyniki</span></button></nav><div id="judgeWork"></div>';
+  q('who').textContent=ME.first_name+' '+ME.last_name;q('role').textContent='Sędzia wagowy';JUDGE_VIEW='competitions';
+}
+async function judgeLoadCompetitions(){
+  const d=await api('/api/competitions');JUDGE_COMPETITIONS=d.competitions||[];renderJudgeWork();
+}
+async function judgeOpenCompetition(id){
+  try{CURRENT_DETAIL=await api('/api/competitions/'+id);JUDGE_VIEW='entry';JUDGE_ROUND=1;renderJudgeWork();scrollAppTop();return true}catch(e){msg(e.message,'bad');return false}
+}
+async function judgeNavigate(view){
+  if(view!=='competitions'&&!CURRENT_DETAIL)return;
+  try{
+    if(view==='competitions'){JUDGE_VIEW=view;await judgeLoadCompetitions()}
+    else{const d=await api('/api/competitions/'+CURRENT_DETAIL.competition.id);CURRENT_DETAIL=d;JUDGE_VIEW=view;renderJudgeWork()}
+    scrollAppTop();
+  }catch(e){msg(e.message,'bad')}
+}
+function judgeChooseRound(round){JUDGE_ROUND=Number(round)===2?2:1;renderJudgeWork()}
+function renderJudgeWork(){
+  const box=q('judgeWork');if(!box)return;
+  q('judge-entry').disabled=!CURRENT_DETAIL;q('judge-results').disabled=!CURRENT_DETAIL;
+  document.querySelectorAll('.judgeMenu button').forEach((b,i)=>{const active=['competitions','entry','results'][i]===JUDGE_VIEW;b.classList.toggle('active',active);b.setAttribute('aria-current',active?'page':'false')});
+  if(JUDGE_VIEW==='competitions'){
+    box.innerHTML='<h2>Wybierz zawody</h2><p>Wybierz zawody, w których ważysz ryby.</p>'+(JUDGE_COMPETITIONS.length?'<div class="judgeCompetitionGrid">'+JUDGE_COMPETITIONS.map(c=>'<button type="button" class="judgeCompetitionCard" onclick="judgeOpenCompetition('+Number(c.id)+')"><strong>'+esc(c.title)+'</strong><span>📅 '+fmtDate(c.competition_date)+'</span><span>📍 '+esc(c.fishery||'')+'</span><b>Otwórz →</b></button>').join('')+'</div>':'<div class="card">Nie masz jeszcze przypisanych zawodów. Administrator nada Ci dostęp.</div>');return;
+  }
+  const d=CURRENT_DETAIL,c=d.competition;
+  const heading='<div class="judgeEventHeading"><h2>'+esc(c.title)+'</h2><span>'+fmtDate(c.competition_date)+' · '+esc(c.fishery||'')+'</span></div>';
+  if(JUDGE_VIEW==='entry')box.innerHTML=heading+'<div class="judgeRoundTabs"><button type="button" class="'+(JUDGE_ROUND===1?'active':'')+'" onclick="judgeChooseRound(1)">Tura 1</button><button type="button" class="'+(JUDGE_ROUND===2?'active':'')+'" onclick="judgeChooseRound(2)">Tura 2</button></div><div class="card"><h2>Wpisz wagę — Tura '+JUDGE_ROUND+'</h2><p>Wagi podawaj w gramach. Wpisz wagę i naciśnij Enter lub dotknij poza polem — zapis i przeliczenie są automatyczne. Błędny wpis usuniesz krzyżykiem.</p>'+renderResultForm(d,JUDGE_ROUND)+'</div>';
+  else box.innerHTML=heading+'<button type="button" class="secondary" onclick="judgeNavigate(\'results\')">↻ Odśwież wyniki</button>'+renderSectorResultsBoard(d)+'<div class="card"><h2>Klasyfikacja T1</h2>'+renderClassTable(d.classification.round1)+'<h2>Klasyfikacja T2</h2>'+renderClassTable(d.classification.round2)+'<h2>Klasyfikacja generalna</h2>'+renderGeneralTable(d.classification.general)+'</div>';
+}
+async function loadJudgeManagement(){
+  if(ME?.role!=='ADMIN')return;
+  let root=q('judgeManagement');if(!root){root=document.createElement('details');root.id='judgeManagement';root.className='card';root.innerHTML='<summary>⚖️ Sędziowie wagowi</summary><div id="judgeManagementBody"></div>';q('tab-competitions').prepend(root);root.addEventListener('toggle',()=>{if(root.open)refreshJudgeManagement()})}
+}
+async function refreshJudgeManagement(){
+  try{JUDGE_MANAGEMENT=await api('/api/admin/judges');renderJudgeManagement()}catch(e){q('judgeManagementBody').textContent=e.message}
+}
+function judgeAssignmentChoices(selected){const ids=new Set((selected||[]).map(Number));return JUDGE_MANAGEMENT.competitions.map(c=>'<label class="judgeAssignment"><input type="checkbox" name="competitionIds" value="'+Number(c.id)+'" '+(ids.has(Number(c.id))?'checked':'')+'><span>'+esc(c.title)+' · '+fmtDate(c.competition_date)+'</span></label>').join('')||'<p>Najpierw utwórz zawody. Konto może na razie pozostać bez przypisania.</p>'}
+function judgeAccountFields(j){return '<div class="grid"><label>Imię<input name="firstName" required value="'+esc(j.first_name||'')+'" autocomplete="off"></label><label>Nazwisko<input name="lastName" required value="'+esc(j.last_name||'')+'" autocomplete="off"></label><label>Telefon — login<input name="phone" type="tel" required value="'+esc(j.phone||'')+'" autocomplete="off"></label><label>'+(!j.id?'Hasło (minimum 8 znaków)':'Nowe hasło (zostaw puste, aby zachować)')+'<input name="password" type="password" minlength="8" maxlength="128" '+(!j.id?'required':'')+' autocomplete="new-password"></label></div><h4>Przypisane zawody</h4><div class="judgeAssignments">'+judgeAssignmentChoices(j.competition_ids)+'</div>'+(j.id?'<label class="judgeAssignment"><input type="checkbox" name="enabled" '+(j.judge_enabled?'checked':'')+'> Konto aktywne</label>':'')}
+function renderJudgeManagement(){
+  const d=JUDGE_MANAGEMENT;
+  q('judgeManagementBody').innerHTML='<p>Sędzia loguje się telefonem i hasłem. Widzi tylko zaznaczone zawody, wpisuje wagi i przegląda wyniki.</p><details class="judgeAccountEditor"><summary>＋ Utwórz konto sędziego</summary><form onsubmit="saveJudgeAccount(event,0)">'+judgeAccountFields({})+'<button type="submit">Utwórz konto sędziego</button></form></details><h3>Konta sędziów ('+d.judges.length+')</h3>'+d.judges.map(j=>'<details class="judgeAccountEditor"><summary>'+esc(j.first_name+' '+j.last_name)+' · '+(j.judge_enabled?'Aktywne':'Wyłączone')+'</summary><form onsubmit="saveJudgeAccount(event,'+Number(j.id)+')">'+judgeAccountFields(j)+'<button type="submit">Zapisz konto i przypisania</button></form></details>').join('');
+}
+async function saveJudgeAccount(ev,id){
+  ev.preventDefault();const form=ev.target,button=form.querySelector('button[type="submit"]');if(button.disabled)return;button.disabled=true;
+  const f=new FormData(form),body={firstName:f.get('firstName'),lastName:f.get('lastName'),phone:f.get('phone'),password:f.get('password'),enabled:!id||f.get('enabled')==='on',competitionIds:f.getAll('competitionIds').map(Number)};
+  try{await api('/api/admin/judges'+(id?'/'+id:''),{method:id?'PUT':'POST',body:JSON.stringify(body)});msg(id?'Zapisano konto i przypisane zawody':'Utworzono konto sędziego. Może zalogować się podanym telefonem i hasłem.');await refreshJudgeManagement()}
+  catch(e){msg(e.message,'bad');button.disabled=false}
+}

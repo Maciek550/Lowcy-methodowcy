@@ -1,3 +1,13 @@
+V120 — Sędzia wagowy
+
+Tworzenie konta: zaloguj się jako administrator → Zawody → Sędziowie wagowi → Utwórz konto sędziego. Podaj imię, nazwisko, osobny nieużywany numer telefonu i hasło (minimum 8 znaków). Zaznacz zawody i zapisz.
+
+Sędzia loguje się na zwykłym ekranie telefonem i hasłem. Ma trzy przyciski: Zawody, Wpisz wyniki, Wyniki. Widzi wyłącznie przypisane zawody. Wagi siatek i BF wpisuje w gramach dla T1 lub T2; zapis następuje po Enter lub opuszczeniu pola. Błędną wagę usuwa krzyżykiem. Dostęp do losowania, zarządzania zawodnikami i publikowania powiadomień jest zablokowany również na serwerze.
+
+Administrator może zmienić przypisania, ustawić nowe hasło i wyłączyć konto w tej samej sekcji. Zmiany dostępu obowiązują przy kolejnych żądaniach. Aktualizacja tworzy potrzebną tabelę przypisań i kolumnę uprawnień podczas startu serwera. Wgraj komplet plików, w tym judge.cjs, i zrestartuj aplikację. Nie utworzono domyślnego konta ani wspólnego hasła.
+
+Sprawdzono składnię oraz logikę dostępu i renderowanie menu w testach izolowanych. Testy nie obejmowały rzeczywistej bazy produkcyjnej ani wizualnego uruchomienia w przeglądarce.
+
 Układ dymka V119: wielki puchar, miejsce, sektor/tura lub Klasyfikacja generalna, waga. Obsługuje również wcześniej zapisane gratulacje.
 
 V119 — Duży puchar 104–144 px nad napisem Brawo TY! w dymkach sektorowych i generalnych, na telefonie i komputerze. W niskim widoku poziomym 72 px. Czas i zasady publikacji bez zmian.

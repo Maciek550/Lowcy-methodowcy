@@ -16,8 +16,8 @@ const ADMIN_SETUP_CODE = process.env.ADMIN_SETUP_CODE || '';
 let VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 let VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
-const APP_VERSION = '119';
-const APP_VERSION_NAME = 'V119_LARGE_TROPHIES';
+const APP_VERSION = '120';
+const APP_VERSION_NAME = 'V120_JUDGE_PANEL';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 const CARP_REAL = fs.readFileSync(pathModule.join(__dirname, 'carp-real-v116.png'));
 const ICON_192 = fs.readFileSync(pathModule.join(__dirname, 'icon-192.png'));
@@ -83,13 +83,14 @@ function verifyToken(token) {
     return data;
   } catch { return null; }
 }
+const handleJudgeRoutes=require('./judge.cjs')({pool,bcrypt,readBody,sendJson,requireAdmin,normalizePhone,buildDetail,addResultItem,deleteResultItem,refreshResultAggregate});
 async function auth(req) {
   const h = req.headers.authorization || '';
   const token = h.startsWith('Bearer ') ? h.slice(7) : '';
   const p = verifyToken(token);
   if (!p) return null;
   try {
-    const { rows } = await pool.query('select id, phone, first_name, last_name, pzw_club, role, created_at, account_source, last_login_at from users where id=$1', [p.uid]);
+    const { rows } = await pool.query('select id, phone, first_name, last_name, pzw_club, role, created_at, account_source, last_login_at, judge_enabled from users where id=$1', [p.uid]);
     return rows[0] || null;
   } catch { return null; }
 }
@@ -125,6 +126,12 @@ async function initDb() {
       notes text not null default '',
       created_by bigint references users(id),
       created_at timestamptz not null default now()
+    );
+    alter table users add column if not exists judge_enabled boolean not null default true;
+    create table if not exists competition_judges (
+      user_id bigint not null references users(id) on delete cascade,
+      competition_id bigint not null references competitions(id) on delete cascade,
+      primary key(user_id,competition_id)
     );
     create table if not exists entries (
       id bigserial primary key,
@@ -1185,7 +1192,7 @@ async function route(req, res) {
   const path = url.pathname;
   const method = req.method;
 
-  if (path === '/__probe_js_v119' || path === '/__probe_boot_v119' || path === '/__probe_js_v102' || path === '/__probe_boot_v102' || path === '/__probe_js_v101' || path === '/__probe_boot_v101' || path === '/__probe_js_v100' || path === '/__probe_boot_v100' || path === '/__probe_js_v99' || path === '/__probe_boot_v99' || path === '/__probe_js_v98' || path === '/__probe_boot_v98' || path === '/__probe_js_v97' || path === '/__probe_boot_v97' || path === '/__probe_js_v96' || path === '/__probe_boot_v96' || path === '/__probe_js_v95' || path === '/__probe_boot_v95' || path === '/__probe_js_v94' || path === '/__probe_boot_v94' || path === '/__probe_js_v93' || path === '/__probe_boot_v93' || path === '/__probe_js_v91' || path === '/__probe_boot_v91' || path === '/__probe_js_v90' || path === '/__probe_boot_v90' || path === '/__probe_js_v89' || path === '/__probe_boot_v89' || path === '/__probe_js_v88' || path === '/__probe_boot_v88' || path === '/__probe_js_v87' || path === '/__probe_boot_v87' || path === '/__probe_js_v86' || path === '/__probe_boot_v86' || path === '/__probe_js_v85' || path === '/__probe_boot_v85' || path === '/__probe_js_v84' || path === '/__probe_boot_v84' || path === '/__probe_js_v83' || path === '/__probe_boot_v83' || path === '/__probe_js_v82' || path === '/__probe_boot_v82' || path === '/__probe_js_v81' || path === '/__probe_boot_v81' || path === '/__probe_js_v80' || path === '/__probe_boot_v80' || path === '/__probe_js_v79' || path === '/__probe_boot_v79' || path === '/__probe_js_v78' || path === '/__probe_boot_v78' || path === '/__probe_js_v77' || path === '/__probe_boot_v77' || path === '/__probe_js_v76' || path === '/__probe_boot_v76' || path === '/__probe_js_v75' || path === '/__probe_boot_v75' || path === '/__probe_js_v74' || path === '/__probe_boot_v74' || path === '/__probe_js_v73' || path === '/__probe_boot_v73' || path === '/__probe_js_v72' || path === '/__probe_boot_v72' || path === '/__probe_js_v71' || path === '/__probe_boot_v71') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
+  if (path === '/__probe_js_v120' || path === '/__probe_boot_v120' || path === '/__probe_js_v102' || path === '/__probe_boot_v102' || path === '/__probe_js_v101' || path === '/__probe_boot_v101' || path === '/__probe_js_v100' || path === '/__probe_boot_v100' || path === '/__probe_js_v99' || path === '/__probe_boot_v99' || path === '/__probe_js_v98' || path === '/__probe_boot_v98' || path === '/__probe_js_v97' || path === '/__probe_boot_v97' || path === '/__probe_js_v96' || path === '/__probe_boot_v96' || path === '/__probe_js_v95' || path === '/__probe_boot_v95' || path === '/__probe_js_v94' || path === '/__probe_boot_v94' || path === '/__probe_js_v93' || path === '/__probe_boot_v93' || path === '/__probe_js_v91' || path === '/__probe_boot_v91' || path === '/__probe_js_v90' || path === '/__probe_boot_v90' || path === '/__probe_js_v89' || path === '/__probe_boot_v89' || path === '/__probe_js_v88' || path === '/__probe_boot_v88' || path === '/__probe_js_v87' || path === '/__probe_boot_v87' || path === '/__probe_js_v86' || path === '/__probe_boot_v86' || path === '/__probe_js_v85' || path === '/__probe_boot_v85' || path === '/__probe_js_v84' || path === '/__probe_boot_v84' || path === '/__probe_js_v83' || path === '/__probe_boot_v83' || path === '/__probe_js_v82' || path === '/__probe_boot_v82' || path === '/__probe_js_v81' || path === '/__probe_boot_v81' || path === '/__probe_js_v80' || path === '/__probe_boot_v80' || path === '/__probe_js_v79' || path === '/__probe_boot_v79' || path === '/__probe_js_v78' || path === '/__probe_boot_v78' || path === '/__probe_js_v77' || path === '/__probe_boot_v77' || path === '/__probe_js_v76' || path === '/__probe_boot_v76' || path === '/__probe_js_v75' || path === '/__probe_boot_v75' || path === '/__probe_js_v74' || path === '/__probe_boot_v74' || path === '/__probe_js_v73' || path === '/__probe_boot_v73' || path === '/__probe_js_v72' || path === '/__probe_boot_v72' || path === '/__probe_js_v71' || path === '/__probe_boot_v71') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
 
   if (path === '/__probe_js_v68' || path === '/__probe_boot_v68' || path === '/__probe_js_v67' || path === '/__probe_boot_v67' || path === '/__probe_js_v66' || path === '/__probe_boot_v66' || path === '/__probe_js_v65' || path === '/__probe_boot_v65' || path === '/__probe_js_v63' || path === '/__probe_boot_v63' || path === '/__probe_js_v62' || path === '/__probe_boot_v62' || path === '/__probe_js_v60' || path === '/__probe_boot_v60' || path === '/__probe_js_v59' || path === '/__probe_boot_v59' || path === '/__probe_js_v58' || path === '/__probe_boot_v58' || path === '/__probe_js_v57' || path === '/__probe_boot_v57' || path === '/__probe_js_v56' || path === '/__probe_boot_v56' || path === '/__probe_js_v55' || path === '/__probe_boot_v55' || path === '/__probe_js_v54' || path === '/__probe_boot_v54' || path === '/__probe_js_v53' || path === '/__probe_boot_v53' || path === '/__probe_js_v52' || path === '/__probe_boot_v52' || path === '/__probe_js_v51' || path === '/__probe_boot_v51' || path === '/__probe_js_v50' || path === '/__probe_boot_v50' || path === '/__probe_js_v49' || path === '/__probe_boot_v49' || path === '/__probe_js_v36' || path === '/__probe_boot_v36' || path === '/__probe_js_v35' || path === '/__probe_boot_v35' || path === '/__probe_js_v34' || path === '/__probe_boot_v34' || path === '/__probe_js_v33' || path === '/__probe_boot_v33' || path === '/__probe_js_v32' || path === '/__probe_boot_v32' || path === '/__probe_js_v30' || path === '/__probe_boot_v30' || path === '/__probe_js_v29' || path === '/__probe_boot_v29' || path === '/__probe_js_v27' || path === '/__probe_boot_v27' || path === '/__probe_inline_v26') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/api/version') return sendJson(res, 200, { ok:true, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
@@ -1381,9 +1388,9 @@ body #app button.rosterLeaveRequest:disabled{opacity:.65;cursor:wait}
     ]
   }), {'Content-Type':'application/manifest+json; charset=utf-8','Cache-Control':'no-cache'});
   if (path === '/sw.js') return send(res, 200, `
-const SW_VERSION='lowcy-v119-mobile-results-contrast';
-const SHELL_CACHE='lowcy-shell-v119';
-const APP_SHELL_JS='/app.js?v=119';
+const SW_VERSION='lowcy-v120-mobile-results-contrast';
+const SHELL_CACHE='lowcy-shell-v120';
+const APP_SHELL_JS='/app.js?v=120';
 const SHELL=['/',APP_SHELL_JS,'/manifest.webmanifest','/icon-192.png','/icon-512.png','/apple-touch-icon.png'];
 const NET_TIMEOUT_MS=4500;
 async function fetchWithTimeout(req,ms=NET_TIMEOUT_MS){
@@ -1471,12 +1478,14 @@ self.addEventListener('notificationclick', event => {
     const { rows } = await pool.query('select * from users where phone=$1', [phone]);
     const u = rows[0];
     if (!u || !(await bcrypt.compare(String(b.password||''), u.password_hash))) return sendJson(res, 401, { ok:false, error:'Błędny telefon lub hasło' });
+    if(u.role==='JUDGE'&&u.judge_enabled===false)return sendJson(res,403,{ok:false,error:'Konto sędziego jest wyłączone przez administratora'});
     const loginStamp = new Date();
     await pool.query('update users set last_login_at=$1 where id=$2', [loginStamp, u.id]);
     return sendJson(res, 200, { ok:true, user:{id:u.id,phone:u.phone,first_name:u.first_name,last_name:u.last_name,pzw_club:u.pzw_club,role:u.role,created_at:u.created_at,account_source:u.account_source||'SELF',last_login_at:loginStamp.toISOString()}, token:signToken(u) });
   }
 
   const user = await auth(req);
+  if(await handleJudgeRoutes(req,res,path,method,user))return;
   if (path === '/api/me' && method === 'GET') { if (!requireUser(user, res)) return; return sendJson(res, 200, { ok:true, user }); }
   if (path === '/api/general-rules' && method === 'GET') {
     if (!requireUser(user, res)) return;
@@ -5691,11 +5700,41 @@ body:not(.playerTheme) #app #competitionDetail .mobileRosterCompactActions .rost
 #achievementToast .achievementWeight{font-size:21px!important;margin:12px 0!important}
 #achievementToast .achievementWeight strong{white-space:nowrap;color:#fff2b4}
 @media(max-height:500px){#achievementToast .achievementPlace{font-size:25px!important}#achievementToast .achievementWeight{margin:6px 0!important}}
+
+/* V120: focused judge workspace and administrative account editor. */
+body.judgeTheme #app>:not(#judgeShell):not(.compactUserBar){display:none!important}
+body.judgeTheme .playerBottomNav,body.judgeTheme #playerGlobalBottomNav,body.judgeTheme .scrollJumpButtons,body.judgeTheme #pushStatus,body.judgeTheme #notifCounter{display:none!important}
+#judgeShell{max-width:1450px;margin:auto;padding-bottom:20px}
+#judgeShell .judgeMenu{position:sticky;top:0;z-index:5000;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:8px 0;background:#0c2331}
+#judgeShell .judgeMenu button{display:flex;align-items:center;justify-content:center;gap:8px;min-height:58px;font-size:22px;background:#163f54;border:1px solid #52758a;color:#fff}
+#judgeShell .judgeMenu button span{font-size:17px;font-weight:800}
+#judgeShell .judgeMenu button.active,#judgeShell .judgeRoundTabs button.active{background:#167244;border-color:#96d6ad}
+#judgeShell .judgeMenu button:disabled{opacity:.45}
+.judgeCompetitionGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+#judgeShell .judgeCompetitionCard{display:flex;flex-direction:column;gap:9px;padding:20px;text-align:left;background:#143b50;color:#fff;min-height:150px;border:1px solid #517488}
+#judgeShell .judgeCompetitionCard strong{font-size:21px}#judgeShell .judgeCompetitionCard span{font-size:15px}
+.judgeEventHeading{padding:10px 0 16px}.judgeEventHeading h2{margin-bottom:6px}
+.judgeRoundTabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+#judgeShell .judgeRoundTabs button{min-height:46px}
+#judgeShell .card{background:#102e3e;color:#edf6fa}
+#judgeShell .mobileAdminCard{background:#102e3e!important;color:#edf6fa!important}
+#judgeShell .mobileAdminCard :is(b,strong,label,small){color:#edf6fa!important}
+#judgeShell .mobileAdminMeta span,#judgeShell .mobileScoreGrid>span{background:#193f50!important}
+#judgeShell .mobileScoreGrid em,#judgeShell .bfLine{color:#ffaaaa!important}
+#judgeShell .mobileAdminCard input{background:#071e2b!important;color:white!important;border:1px solid #7396a5!important;min-height:46px;font-size:18px!important}
+#judgeShell .mobileResultFooter>span{color:#d5e8ec!important}
+#judgeManagement summary{cursor:pointer;font-size:19px;font-weight:800;padding:9px 0}
+#judgeManagement .judgeAccountEditor{border:1px solid #507083;border-radius:10px;padding:12px;margin:10px 0;background:#102d3d;color:#fff}
+#judgeManagement .judgeAssignment{display:flex;align-items:center;gap:9px;margin:8px 0;font-size:15px;color:#edf6fa}
+#judgeManagement .judgeAssignment input{width:20px;height:20px;min-height:20px;margin:0;flex-shrink:0}
+#judgeManagement .judgeAssignments{max-height:250px;overflow:auto;padding:6px;border:1px solid #456b7d;border-radius:8px;margin-bottom:12px}
+#judgeManagement form>button{margin-top:12px}
+@media(max-width:760px){#judgeShell .judgeMenu button{flex-direction:column;gap:2px;min-height:64px}#judgeShell .judgeMenu button span{font-size:13px}#judgeShell .card{padding:10px}#judgeShell .mobileWeightBlock label{font-size:14px!important}}
 </style>
 </head>
 <body class="authMode">
 <div id="bootGuard"><img src="/icon-192.png" alt=""><b>Łowcy Methodowcy</b><span>Aktualizuję aplikację…</span></div>
-<header><div class="row"><h1><img class="brandIcon" src="/icon-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V119</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
+<header><div class="row"><h1><img class="brandIcon" src="/icon-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V120</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
 <main>
 <div id="msg"></div>
 <section id="auth" class="card">
@@ -5708,7 +5747,7 @@ body:not(.playerTheme) #app #competitionDetail .mobileRosterCompactActions .rost
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="appVersionBadge">V119</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
+  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="appVersionBadge">V120</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-rules" class="hidden" onclick="showTab('rules')">Regulamin ogólny</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-profile" class="hidden" onclick="showTab('profile')">Mój profil</button><button id="btn-history" class="hidden" onclick="showTab('history')">Historia startów</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
     <details id="adminCreate" class="card hidden adminCreateV93"><summary class="adminCreateToggle">Robimy zawody</summary><div class="adminCreateBody"><h2>Utwórz zawody</h2><p class="small muted">Dane z tego formularza są później widoczne dla zawodnika.</p><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Zbiórka / godzina</label><input id="cMeetingTime" type="time" value="06:00"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div></div><div class="adminTextPair"><div><label>Informacje organizacyjne</label><textarea id="cNotes" placeholder="Parking, miejsce zbiórki, godzina losowania, dodatkowe informacje…"></textarea></div><div><label>Program / regulamin tych zawodów</label><textarea id="cRegulations" class="rulesEditor" placeholder="Np. 06:00 zbiórka, 06:15 losowanie, 07:00–15:00 zawody, ważne zasady tylko dla tego wydarzenia…"></textarea></div></div><button onclick="createCompetition(event)">Utwórz zawody</button></div></details>
@@ -5726,21 +5765,21 @@ body:not(.playerTheme) #app #competitionDetail .mobileRosterCompactActions .rost
 <script>
 (function(){
   var retried=false,recovering=false;
-  try{retried=sessionStorage.getItem('lowcy_update_retry_119')==='1'}catch(e){}
-  window.__lowcyRecover119=function(){
+  try{retried=sessionStorage.getItem('lowcy_update_retry_120')==='1'}catch(e){}
+  window.__lowcyRecover120=function(){
     if(recovering)return;recovering=true;
     var g=document.getElementById('bootGuard'),sp=g&&g.querySelector('span');if(sp)sp.textContent='Naprawiam połączenie z aplikacją…';
     if(retried){if(sp)sp.textContent='Nie udało się uruchomić aplikacji. Sprawdź internet i odśwież.';recovering=false;return}
-    retried=true;try{sessionStorage.setItem('lowcy_update_retry_119','1')}catch(e){}
+    retried=true;try{sessionStorage.setItem('lowcy_update_retry_120','1')}catch(e){}
     var jobs=[];
     try{if('caches'in window)jobs.push(caches.keys().then(function(keys){return Promise.all(keys.filter(function(k){return k.indexOf('lowcy-shell-')===0}).map(function(k){return caches.delete(k)}))}))}catch(e){}
     try{if('serviceWorker'in navigator)jobs.push(navigator.serviceWorker.getRegistrations().then(function(rs){return Promise.all(rs.map(function(r){return r.unregister().catch(function(){})}))}))}catch(e){}
-    Promise.allSettled(jobs).finally(function(){setTimeout(function(){location.replace('/?recover=119&t='+Date.now())},80)});
+    Promise.allSettled(jobs).finally(function(){setTimeout(function(){location.replace('/?recover=120&t='+Date.now())},80)});
   };
-  setTimeout(function(){if(!window.__LOWCY_BOOT_OK_119)window.__lowcyRecover119()},8000);
+  setTimeout(function(){if(!window.__LOWCY_BOOT_OK_120)window.__lowcyRecover120()},8000);
 })();
 </script>
-<script src="/app.js?v=119" defer onerror="window.__lowcyRecover119&&window.__lowcyRecover119()"></script>
+<script src="/app.js?v=120" defer onerror="window.__lowcyRecover120&&window.__lowcyRecover120()"></script>
 </body>
 </html>`;
 
@@ -5751,5 +5790,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V119_LARGE_TROPHIES_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V120_JUDGE_PANEL_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });
