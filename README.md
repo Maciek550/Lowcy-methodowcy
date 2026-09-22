@@ -1,3 +1,7 @@
+V124 — Naprawa dostarczania składników PDF
+
+Serwer wysyła skrypty i czcionki jako pliki binarne, bez konwersji na JSON. Zmienione adresy składników omijają błędne kopie zapisane przez V123. Wszystkie funkcje i układy PDF z V123 pozostają. Sprawdzono rzeczywiste procedury obsługi pięciu plików: zgodność bajtów, poprawność JavaScript i nagłówków TTF. Wgraj cały komplet i zrestartuj aplikację.
+
 V123 — Wszystkie PDF-y wektorowe
 
 Tekst można zaznaczać i wyszukiwać, linie są wektorowe, czcionki z polskimi znakami osadzone w pliku. Dotyczy list startowych, losowań, wyników tur i sektorów, klasyfikacji generalnej oraz statystyk.
