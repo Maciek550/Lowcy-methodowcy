@@ -1,3 +1,12 @@
+V125 — Kompaktowe PDF-y do 35 zawodników
+
+Losowanie każdej tury: jedna ciągła lista na jednej stronie, bez powtarzania listy. Pakiet T1+T2 nadal ma dwie strony (jedna na turę).
+Tabelka wynikowa: kolumna nazwisk mierzona według najdłuższego nazwiska osadzoną czcionką; pozostałe miejsce podzielone na pięć wag i sumę.
+Wyniki T1, T2 i generalne do 35 osób: po jednej stronie. Mniejsze odstępy, bez zmniejszania czcionki wyników. Zachowane BF.
+Zestawienie sektorowe T1/T2 i statystyki dostępne osobno w Generowaniu PDF; nie są już automatycznie dopisywane do głównych wyników. Wszystkie sektory do 35 osób razem na jednej stronie.
+Sprawdzono wygenerowane PDF-y dla 35 osób, ostatnie nazwisko i komplet wag BF, oraz obejrzano wyniki i tabelkę wynikową.
+Wgraj cały komplet plików wraz z pdf-assets i zrestartuj aplikację.
+
 V124 — Naprawa dostarczania składników PDF
 
 Serwer wysyła skrypty i czcionki jako pliki binarne, bez konwersji na JSON. Zmienione adresy składników omijają błędne kopie zapisane przez V123. Wszystkie funkcje i układy PDF z V123 pozostają. Sprawdzono rzeczywiste procedury obsługi pięciu plików: zgodność bajtów, poprawność JavaScript i nagłówków TTF. Wgraj cały komplet i zrestartuj aplikację.
