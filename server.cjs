@@ -16,8 +16,8 @@ const ADMIN_SETUP_CODE = process.env.ADMIN_SETUP_CODE || '';
 let VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 let VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
-const APP_VERSION = '126';
-const APP_VERSION_NAME = 'V126_COMBINED_DRAW';
+const APP_VERSION = '127';
+const APP_VERSION_NAME = 'V127_PWA_STARTUP';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 const CARP_REAL = fs.readFileSync(pathModule.join(__dirname, 'carp-real-v116.png'));
 const ICON_192 = fs.readFileSync(pathModule.join(__dirname, 'icon-192.png'));
@@ -1192,7 +1192,7 @@ async function route(req, res) {
   const path = url.pathname;
   const method = req.method;
 
-  if (path === '/__probe_js_v126' || path === '/__probe_boot_v126' || path === '/__probe_js_v102' || path === '/__probe_boot_v102' || path === '/__probe_js_v101' || path === '/__probe_boot_v101' || path === '/__probe_js_v100' || path === '/__probe_boot_v100' || path === '/__probe_js_v99' || path === '/__probe_boot_v99' || path === '/__probe_js_v98' || path === '/__probe_boot_v98' || path === '/__probe_js_v97' || path === '/__probe_boot_v97' || path === '/__probe_js_v96' || path === '/__probe_boot_v96' || path === '/__probe_js_v95' || path === '/__probe_boot_v95' || path === '/__probe_js_v94' || path === '/__probe_boot_v94' || path === '/__probe_js_v93' || path === '/__probe_boot_v93' || path === '/__probe_js_v91' || path === '/__probe_boot_v91' || path === '/__probe_js_v90' || path === '/__probe_boot_v90' || path === '/__probe_js_v89' || path === '/__probe_boot_v89' || path === '/__probe_js_v88' || path === '/__probe_boot_v88' || path === '/__probe_js_v87' || path === '/__probe_boot_v87' || path === '/__probe_js_v86' || path === '/__probe_boot_v86' || path === '/__probe_js_v85' || path === '/__probe_boot_v85' || path === '/__probe_js_v84' || path === '/__probe_boot_v84' || path === '/__probe_js_v83' || path === '/__probe_boot_v83' || path === '/__probe_js_v82' || path === '/__probe_boot_v82' || path === '/__probe_js_v81' || path === '/__probe_boot_v81' || path === '/__probe_js_v80' || path === '/__probe_boot_v80' || path === '/__probe_js_v79' || path === '/__probe_boot_v79' || path === '/__probe_js_v78' || path === '/__probe_boot_v78' || path === '/__probe_js_v77' || path === '/__probe_boot_v77' || path === '/__probe_js_v76' || path === '/__probe_boot_v76' || path === '/__probe_js_v75' || path === '/__probe_boot_v75' || path === '/__probe_js_v74' || path === '/__probe_boot_v74' || path === '/__probe_js_v73' || path === '/__probe_boot_v73' || path === '/__probe_js_v72' || path === '/__probe_boot_v72' || path === '/__probe_js_v71' || path === '/__probe_boot_v71') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
+  if (path === '/__probe_js_v127' || path === '/__probe_boot_v127' || path === '/__probe_js_v102' || path === '/__probe_boot_v102' || path === '/__probe_js_v101' || path === '/__probe_boot_v101' || path === '/__probe_js_v100' || path === '/__probe_boot_v100' || path === '/__probe_js_v99' || path === '/__probe_boot_v99' || path === '/__probe_js_v98' || path === '/__probe_boot_v98' || path === '/__probe_js_v97' || path === '/__probe_boot_v97' || path === '/__probe_js_v96' || path === '/__probe_boot_v96' || path === '/__probe_js_v95' || path === '/__probe_boot_v95' || path === '/__probe_js_v94' || path === '/__probe_boot_v94' || path === '/__probe_js_v93' || path === '/__probe_boot_v93' || path === '/__probe_js_v91' || path === '/__probe_boot_v91' || path === '/__probe_js_v90' || path === '/__probe_boot_v90' || path === '/__probe_js_v89' || path === '/__probe_boot_v89' || path === '/__probe_js_v88' || path === '/__probe_boot_v88' || path === '/__probe_js_v87' || path === '/__probe_boot_v87' || path === '/__probe_js_v86' || path === '/__probe_boot_v86' || path === '/__probe_js_v85' || path === '/__probe_boot_v85' || path === '/__probe_js_v84' || path === '/__probe_boot_v84' || path === '/__probe_js_v83' || path === '/__probe_boot_v83' || path === '/__probe_js_v82' || path === '/__probe_boot_v82' || path === '/__probe_js_v81' || path === '/__probe_boot_v81' || path === '/__probe_js_v80' || path === '/__probe_boot_v80' || path === '/__probe_js_v79' || path === '/__probe_boot_v79' || path === '/__probe_js_v78' || path === '/__probe_boot_v78' || path === '/__probe_js_v77' || path === '/__probe_boot_v77' || path === '/__probe_js_v76' || path === '/__probe_boot_v76' || path === '/__probe_js_v75' || path === '/__probe_boot_v75' || path === '/__probe_js_v74' || path === '/__probe_boot_v74' || path === '/__probe_js_v73' || path === '/__probe_boot_v73' || path === '/__probe_js_v72' || path === '/__probe_boot_v72' || path === '/__probe_js_v71' || path === '/__probe_boot_v71') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
 
   if (path === '/__probe_js_v68' || path === '/__probe_boot_v68' || path === '/__probe_js_v67' || path === '/__probe_boot_v67' || path === '/__probe_js_v66' || path === '/__probe_boot_v66' || path === '/__probe_js_v65' || path === '/__probe_boot_v65' || path === '/__probe_js_v63' || path === '/__probe_boot_v63' || path === '/__probe_js_v62' || path === '/__probe_boot_v62' || path === '/__probe_js_v60' || path === '/__probe_boot_v60' || path === '/__probe_js_v59' || path === '/__probe_boot_v59' || path === '/__probe_js_v58' || path === '/__probe_boot_v58' || path === '/__probe_js_v57' || path === '/__probe_boot_v57' || path === '/__probe_js_v56' || path === '/__probe_boot_v56' || path === '/__probe_js_v55' || path === '/__probe_boot_v55' || path === '/__probe_js_v54' || path === '/__probe_boot_v54' || path === '/__probe_js_v53' || path === '/__probe_boot_v53' || path === '/__probe_js_v52' || path === '/__probe_boot_v52' || path === '/__probe_js_v51' || path === '/__probe_boot_v51' || path === '/__probe_js_v50' || path === '/__probe_boot_v50' || path === '/__probe_js_v49' || path === '/__probe_boot_v49' || path === '/__probe_js_v36' || path === '/__probe_boot_v36' || path === '/__probe_js_v35' || path === '/__probe_boot_v35' || path === '/__probe_js_v34' || path === '/__probe_boot_v34' || path === '/__probe_js_v33' || path === '/__probe_boot_v33' || path === '/__probe_js_v32' || path === '/__probe_boot_v32' || path === '/__probe_js_v30' || path === '/__probe_boot_v30' || path === '/__probe_js_v29' || path === '/__probe_boot_v29' || path === '/__probe_js_v27' || path === '/__probe_boot_v27' || path === '/__probe_inline_v26') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/api/version') return sendJson(res, 200, { ok:true, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
@@ -1386,48 +1386,20 @@ body #app button.rosterLeaveRequest:disabled{opacity:.65;cursor:wait}
     background_color:'#061521', theme_color:'#0b3b35',
     icons:[
       {src:'/icon-192.png',sizes:'192x192',type:'image/png',purpose:'any'},
-      {src:'/icon-512.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}
+      {src:'/icon-512.png',sizes:'512x512',type:'image/png',purpose:'any'}
     ]
   }), {'Content-Type':'application/manifest+json; charset=utf-8','Cache-Control':'no-cache'});
   if (path === '/sw.js') return send(res, 200, `
-const SW_VERSION='lowcy-v126-mobile-results-contrast';
-const SHELL_CACHE='lowcy-shell-v126';
-const APP_SHELL_JS='/app.js?v=126';
-const SHELL=['/',APP_SHELL_JS,'/manifest.webmanifest','/icon-192.png','/icon-512.png','/apple-touch-icon.png'];
-const NET_TIMEOUT_MS=4500;
-async function fetchWithTimeout(req,ms=NET_TIMEOUT_MS){
-  const ctrl=typeof AbortController!=='undefined'?new AbortController():null;
-  const timer=ctrl?setTimeout(()=>ctrl.abort(),ms):null;
-  try{return await fetch(req,{cache:'no-store',signal:ctrl?ctrl.signal:undefined})}finally{if(timer)clearTimeout(timer)}
-}
-function offlineShell(){return new Response('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#061521"><style>html,body{margin:0;height:100%;background:#061521;color:#eef8ff;font:16px system-ui}body{display:grid;place-items:center;text-align:center;padding:24px;box-sizing:border-box}button{padding:12px 18px;border:0;border-radius:10px;background:#16834a;color:white;font-weight:800}
-/* V119: pending withdrawal action at the end of the roster row. */
-body #app .rosterLeaveActions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-body #app button.rosterLeaveRequest{background:#ffce54!important;color:#302100!important;border:2px solid #ffe49a!important;border-radius:9px;padding:8px 12px!important;min-height:44px;font-weight:800;line-height:1.2;white-space:normal}
-body #app button.rosterLeaveRequest small{display:block;color:#302100!important;font-size:11px;margin-top:3px}
-body #app button.rosterLeaveRequest:disabled{opacity:.65;cursor:wait}
-@media(max-width:760px){body #app .mobileRosterCompactActions .rosterLeaveActions{width:100%}body #app .mobileRosterCompactActions .rosterLeaveRequest{flex:1;min-width:140px}}
-</style></head><body><div><b>Łowcy Methodowcy</b><p>Brak połączenia z aplikacją.</p><button onclick="location.reload()">Spróbuj ponownie</button></div></body></html>',{headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'}})}
-self.addEventListener('install',event=>event.waitUntil((async()=>{const c=await caches.open(SHELL_CACHE);await Promise.all(SHELL.map(async url=>{try{const r=await fetchWithTimeout(url,6000);if(r&&r.ok)await c.put(url,r.clone())}catch(e){}}));await self.skipWaiting()})()));
-self.addEventListener('activate',event=>event.waitUntil((async()=>{try{if(self.registration.navigationPreload)await self.registration.navigationPreload.enable()}catch(e){}try{const keys=await caches.keys();await Promise.all(keys.filter(k=>k.startsWith('lowcy-shell-')&&k!==SHELL_CACHE).map(k=>caches.delete(k)))}catch(e){}await self.clients.claim()})()));
-self.addEventListener('fetch',event=>{
-  const req=event.request;if(req.method!=='GET')return;
-  const u=new URL(req.url);if(u.origin!==self.location.origin)return;
-  if(req.mode==='navigate'){
-    event.respondWith((async()=>{
-      try{
-        const preload=event.preloadResponse?await Promise.race([event.preloadResponse,new Promise(r=>setTimeout(()=>r(null),1200))]):null;
-        if(preload&&preload.ok){const c=await caches.open(SHELL_CACHE);c.put('/',preload.clone()).catch(()=>{});return preload}
-        const r=await fetchWithTimeout(req,4500);
-        if(r&&r.ok){const c=await caches.open(SHELL_CACHE);c.put('/',r.clone()).catch(()=>{});return r}
-      }catch(e){}
-      return (await caches.match('/'))||offlineShell();
-    })());
-    return;
-  }
-  if(u.pathname==='/app.js'||u.pathname==='/manifest.webmanifest'||u.pathname.startsWith('/icon-')||u.pathname==='/apple-touch-icon.png'){
-    event.respondWith((async()=>{try{const r=await fetchWithTimeout(req,4500);if(r&&r.ok){const c=await caches.open(SHELL_CACHE);const key=u.pathname==='/app.js'?APP_SHELL_JS:req;await c.put(key,r.clone()).catch(()=>{});return r}throw new Error('bad network response')}catch(e){if(u.pathname==='/app.js')return (await caches.match(APP_SHELL_JS))||Response.error();return (await caches.match(req))||Response.error()}})());
-  }
+const SHELL_CACHE='lowcy-shell-v127';
+const APP_SHELL_JS='/app.js?v=127';
+const PDF_JS='/pdf-vector.js?v=127';
+const SHELL=['/',APP_SHELL_JS,PDF_JS,'/icon-192.png','/icon-512.png'];
+async function fetchWithTimeout(req,ms=30000){const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),ms);try{return await fetch(req,{cache:'no-store',signal:ctrl.signal})}finally{clearTimeout(timer)}}
+self.addEventListener('install',event=>event.waitUntil((async()=>{const replies=await Promise.all(SHELL.map(url=>fetchWithTimeout(url)));if(replies.some(r=>!r.ok))throw Error('Incomplete shell');const cache=await caches.open(SHELL_CACHE);await Promise.all(SHELL.map((url,i)=>cache.put(url,replies[i])));await self.skipWaiting()})()));
+self.addEventListener('activate',event=>event.waitUntil((async()=>{await self.clients.claim();const keys=await caches.keys();await Promise.all(keys.filter(k=>k.startsWith('lowcy-shell-')&&k!==SHELL_CACHE).map(k=>caches.delete(k)))})()));
+self.addEventListener('fetch',event=>{const req=event.request,u=new URL(req.url);if(req.method!=='GET'||u.origin!==self.location.origin)return;
+ if(req.mode==='navigate'){event.respondWith((async()=>{try{const r=await fetchWithTimeout(req);if(r.ok)return r}catch(e){}return(await(await caches.open(SHELL_CACHE)).match('/'))||new Response('Brak połączenia. Otwórz aplikację ponownie po połączeniu z internetem.',{headers:{'Content-Type':'text/plain; charset=utf-8'}})})());return}
+ if(u.pathname==='/app.js'||u.pathname==='/pdf-vector.js'){event.respondWith((async()=>{const key=u.pathname+u.search,c=await caches.open(SHELL_CACHE),saved=await c.match(key);if(saved)return saved;return fetchWithTimeout(req)})());return}
 });
 self.addEventListener('push', event => {
   let data={}; try{data=event.data?event.data.json():{}}catch(e){}
@@ -5750,11 +5722,12 @@ body.judgeTheme .playerBottomNav,body.judgeTheme #playerGlobalBottomNav,body.jud
 #judgeShell .judgeEntryRound1>h2{background:#124e85!important}
 #judgeShell .judgeEntryRound2>h2{background:#73370b!important}
 @media(max-width:600px){#adminQuickActions button{flex:1;min-width:0;padding:8px 6px;font-size:13px}}
+#bootGuard img{width:76px!important;height:76px!important;min-width:76px!important;max-width:76px!important;min-height:76px!important;max-height:76px!important;flex:0 0 76px!important;object-fit:contain!important;aspect-ratio:1/1}
 </style>
 </head>
 <body class="authMode">
-<div id="bootGuard"><img src="/icon-192.png" alt=""><b>Łowcy Methodowcy</b><span>Aktualizuję aplikację…</span></div>
-<header><div class="row"><h1><img class="brandIcon" src="/icon-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V126</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
+<div id="bootGuard"><img src="/icon-192.png" alt=""><b>Łowcy Methodowcy</b><span>Uruchamiam aplikację…</span><button id="bootRetry" class="hidden" type="button" onclick="retryLowcyBoot()">Spróbuj ponownie</button></div>
+<header><div class="row"><h1><img class="brandIcon" src="/icon-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V127</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
 <main>
 <div id="msg"></div>
 <section id="auth" class="card">
@@ -5767,7 +5740,7 @@ body.judgeTheme .playerBottomNav,body.judgeTheme #playerGlobalBottomNav,body.jud
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="appVersionBadge">V126</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
+  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="appVersionBadge">V127</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-rules" class="hidden" onclick="showTab('rules')">Regulamin ogólny</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-profile" class="hidden" onclick="showTab('profile')">Mój profil</button><button id="btn-history" class="hidden" onclick="showTab('history')">Historia startów</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
     <details id="adminCreate" class="card hidden adminCreateV93"><summary class="adminCreateToggle">Robimy zawody</summary><div class="adminCreateBody"><h2>Utwórz zawody</h2><p class="small muted">Dane z tego formularza są później widoczne dla zawodnika.</p><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Zbiórka / godzina</label><input id="cMeetingTime" type="time" value="06:00"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div></div><div class="adminTextPair"><div><label>Informacje organizacyjne</label><textarea id="cNotes" placeholder="Parking, miejsce zbiórki, godzina losowania, dodatkowe informacje…"></textarea></div><div><label>Program / regulamin tych zawodów</label><textarea id="cRegulations" class="rulesEditor" placeholder="Np. 06:00 zbiórka, 06:15 losowanie, 07:00–15:00 zawody, ważne zasady tylko dla tego wydarzenia…"></textarea></div></div><button onclick="createCompetition(event)">Utwórz zawody</button></div></details>
@@ -5784,23 +5757,14 @@ body.judgeTheme .playerBottomNav,body.judgeTheme #playerGlobalBottomNav,body.jud
 <div class="quickScroll"><button onclick="scrollAppTop()">↑</button><button onclick="scrollAppBottom()">↓</button></div>
 <script>
 (function(){
-  var retried=false,recovering=false;
-  try{retried=sessionStorage.getItem('lowcy_update_retry_126')==='1'}catch(e){}
-  window.__lowcyRecover126=function(){
-    if(recovering)return;recovering=true;
-    var g=document.getElementById('bootGuard'),sp=g&&g.querySelector('span');if(sp)sp.textContent='Naprawiam połączenie z aplikacją…';
-    if(retried){if(sp)sp.textContent='Nie udało się uruchomić aplikacji. Sprawdź internet i odśwież.';recovering=false;return}
-    retried=true;try{sessionStorage.setItem('lowcy_update_retry_126','1')}catch(e){}
-    var jobs=[];
-    try{if('caches'in window)jobs.push(caches.keys().then(function(keys){return Promise.all(keys.filter(function(k){return k.indexOf('lowcy-shell-')===0}).map(function(k){return caches.delete(k)}))}))}catch(e){}
-    try{if('serviceWorker'in navigator)jobs.push(navigator.serviceWorker.getRegistrations().then(function(rs){return Promise.all(rs.map(function(r){return r.unregister().catch(function(){})}))}))}catch(e){}
-    Promise.allSettled(jobs).finally(function(){setTimeout(function(){location.replace('/?recover=126&t='+Date.now())},80)});
-  };
-  setTimeout(function(){if(!window.__LOWCY_BOOT_OK_126)window.__lowcyRecover126()},8000);
+ window.__lowcyRecover127=function(){var g=document.getElementById('bootGuard');if(!g)return;g.classList.remove('hidden');var sp=g.querySelector('span');if(sp)sp.textContent='Nie udało się pobrać aplikacji. Sprawdź połączenie i spróbuj ponownie.';var b=document.getElementById('bootRetry');if(b)b.classList.remove('hidden')};
+ window.retryLowcyBoot=function(){if(typeof startBoot==='function'){startBoot();return}location.reload()};
+ if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'}).then(function(reg){return reg.update()}).catch(function(){});
+ setTimeout(function(){if(!window.__LOWCY_JS_STARTED)window.__lowcyRecover127()},30000);
 })();
 </script>
-<script src="/pdf-vector.js?v=126" defer></script>
-<script src="/app.js?v=126" defer onerror="window.__lowcyRecover126&&window.__lowcyRecover126()"></script>
+<script src="/pdf-vector.js?v=127" defer></script>
+<script src="/app.js?v=127" defer onerror="window.__lowcyRecover127&&window.__lowcyRecover127()"></script>
 </body>
 </html>`;
 
@@ -5811,5 +5775,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V126_COMBINED_DRAW_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V127_PWA_STARTUP_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });

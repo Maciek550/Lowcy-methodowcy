@@ -1,3 +1,13 @@
+V127 — Uruchamianie aplikacji zainstalowanej na telefonie
+
+Usunięto automatyczne kasowanie cache i wyrejestrowywanie service workera po 8 sekundach startu. Wolne połączenie nie powoduje pętli przeładowań. Przycisk „Spróbuj ponownie” ponawia start bez kasowania sesji. Błędy sieci nie wylogowują; 401/403 nadal kończy nieważną sesję.
+
+Komplet plików startowych (w tym obsługa PDF) jest wymagany przed aktywacją nowej pamięci offline. Skrypty mają osobne klucze zależne od wersji. Obsługa push zachowana. Logo na ekranie ładowania ma sztywne proporcje i object-fit:contain; standardowa ikona nie jest błędnie oznaczana jako maskowalna.
+
+Testy izolowane: niepełna aktualizacja nie aktywuje się, wersje skryptów nie mieszają kluczy cache, brak sieci zachowuje token, nieważna sesja jest odrzucana, ekran startowy nie uruchamia destrukcyjnej naprawy. Nie testowano na fizycznym Samsungu.
+
+Wgraj komplet plików i zrestartuj serwer. Po wdrożeniu zamknij zainstalowaną aplikację i otwórz ją ponownie. Zachowane PDF-y z V126.
+
 V126 dodatkowo: sektory w PDF rozdzielone małym odstępem i linią; do 35 osób jedna strona.
 
 V126 — PDF Losowanie T1 + T2: jedna kartka, jedna lista, kolumny Lp., Zawodnik, T1 (stanowisko/sektor), T2 (stanowisko/sektor). Brak drugiej tury oznaczony kreską. Zweryfikowano jedną stronę, 35 nazwisk bez powtórzeń i obie kolumny tur. Wgraj cały komplet i zrestartuj aplikację.
