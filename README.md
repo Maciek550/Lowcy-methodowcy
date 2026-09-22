@@ -1,3 +1,7 @@
+V126 dodatkowo: sektory w PDF rozdzielone małym odstępem i linią; do 35 osób jedna strona.
+
+V126 — PDF Losowanie T1 + T2: jedna kartka, jedna lista, kolumny Lp., Zawodnik, T1 (stanowisko/sektor), T2 (stanowisko/sektor). Brak drugiej tury oznaczony kreską. Zweryfikowano jedną stronę, 35 nazwisk bez powtórzeń i obie kolumny tur. Wgraj cały komplet i zrestartuj aplikację.
+
 V125 — Kompaktowe PDF-y do 35 zawodników
 
 Losowanie każdej tury: jedna ciągła lista na jednej stronie, bez powtarzania listy. Pakiet T1+T2 nadal ma dwie strony (jedna na turę).
