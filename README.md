@@ -1,3 +1,5 @@
+V122 — Nagłówek „Wpisz wagę” ma kolor aktywnej tury: T1 niebieski, T2 brązowy. Telefon i komputer.
+
 V121 — Czytelne tury, kompaktowy panel admina, jednostronicowe PDF-y
 
 • Sędzia: T1 niebieska, T2 pomarańczowa; aktywna tura ma białą ramkę i ✓, a formularz pasek w kolorze tury. Telefon i komputer.
