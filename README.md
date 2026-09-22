@@ -1,3 +1,15 @@
+V123 — Wszystkie PDF-y wektorowe
+
+Tekst można zaznaczać i wyszukiwać, linie są wektorowe, czcionki z polskimi znakami osadzone w pliku. Dotyczy list startowych, losowań, wyników tur i sektorów, klasyfikacji generalnej oraz statystyk.
+
+Losowanie T1 i T2: prosta tabela bez kolorowego wypełnienia i bez mapy, jedna strona na turę. Łączny plik T1 + T2 ma dwie strony.
+
+Nowy przycisk w Generowaniu PDF: „PDF Tabelka wynikowa — 1 strona”. Wszyscy aktywni zawodnicy, kolumny Lp., Zawodnik, Waga 1–5, SUMA; pola wag i sumy puste do ręcznego wpisywania, co drugi wiersz delikatnie szary. Nagłówek: nazwa zawodów, data i łowisko w jednym wierszu.
+
+WAŻNE: wgraj cały komplet, w tym pdf-vector.js oraz katalog pdf-assets z czcionkami i bibliotekami, następnie zrestartuj aplikację. PDF-y powstają w przeglądarce, bez wysyłania danych do zewnętrznych usług. Przy pierwszym eksporcie aplikacja pobiera składniki PDF z własnego serwera.
+
+Weryfikacja: 16 wygenerowanych plików dla 40 i 100 zawodników; kontrola liczby stron, tekstu z polskimi znakami, ostatniego zawodnika i braku obrazów rastrowych. Podgląd wydruków tabelki wynikowej, losowania i wyników. Zachowane wcześniejsze funkcje aplikacji.
+
 V122 — Nagłówek „Wpisz wagę” ma kolor aktywnej tury: T1 niebieski, T2 brązowy. Telefon i komputer.
 
 V121 — Czytelne tury, kompaktowy panel admina, jednostronicowe PDF-y
