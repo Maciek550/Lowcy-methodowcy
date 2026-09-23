@@ -1,3 +1,7 @@
+V136 — Większe bezpieczne marginesy formularza zdjęciowego
+
+Formularz W1–W5 + SUMA został odsunięty od krawędzi A4: tabela i znaczniki OCR mają większy zapas po bokach oraz u góry i dołu. Geometria generatora i odczytu zdjęcia została zmieniona razem, aby po wydruku nic nie było obcinane bez rozjechania importu.
+
 V135 — Papierowy import: szerokie pola, * = BF, SUMA kontrolna
 
 Formularz do zdjęcia ma kolumny W1–W5 i SUMA. Każdą wagę wpisuje się normalnie w jednym szerokim polu. Waga poprzedzona znakiem * (np. *9890) jest zapisywana jako duża ryba (BF), ale nadal wchodzi do łącznej wagi zawodnika. Można oznaczyć kilka osobno ważonych ryb znakiem *; największa z nich jest prezentowana jako Największa ryba.

@@ -1,4 +1,4 @@
-const CLIENT_VERSION='135';const CLIENT_VERSION_NAME='V135_PHOTO_SHEET_STAR_BF';window.__LOWCY_APP_JS_135=1;try{fetch('/__probe_js_v135',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V135_PHOTO_SHEET_STAR_BF_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='136';const CLIENT_VERSION_NAME='V136_PHOTO_SHEET_STAR_BF';window.__LOWCY_APP_JS_135=1;try{fetch('/__probe_js_v136',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V136_PHOTO_SHEET_STAR_BF_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -11,7 +11,7 @@ function closeAchievementToast(){
   const el=document.getElementById('achievementToast');
   if(el){el.classList.add('closing');setTimeout(()=>{el.remove();pollAchievements()},180)}
 }
-function renderCarpEncouragement(a){return '<button type="button" class="achievementClose" aria-label="Zamknij">×</button><svg class="carpScene" viewBox="0 0 400 260" aria-hidden="true"><defs><linearGradient id="carpGold" x2=".3" y2="1"><stop stop-color="#fff1a5"/><stop offset=".45" stop-color="#d6a548"/><stop offset="1" stop-color="#74451e"/></linearGradient><linearGradient id="carpFin"><stop stop-color="#d8a353"/><stop offset="1" stop-color="#6f3e20"/></linearGradient><radialGradient id="carpGlow"><stop stop-color="#73cfc4" stop-opacity=".35"/><stop offset="1" stop-color="#73cfc4" stop-opacity="0"/></radialGradient></defs><ellipse cx="200" cy="140" rx="180" ry="120" fill="url(#carpGlow)"/><g class="carpWater"><path d="M0 216 Q50 200 100 216T200 216T300 216T400 216V260H0Z" fill="#166d72" opacity=".7"/><path d="M0 223 Q50 207 100 223T200 223T300 223T400 223" fill="none" stroke="#85ddd3" stroke-width="2" opacity=".65"/></g><g class="carpRipple" fill="none" stroke="#9be9e0"><ellipse cx="200" cy="220" rx="48" ry="8" stroke-width="3"/><ellipse cx="200" cy="220" rx="72" ry="13" opacity=".55"/></g><g class="carpLeap"><g class="carpFish"><defs><clipPath id="carpBodyClip"><path d="M144 0H400V260H134L143 157L144 135Z"/></clipPath><clipPath id="carpTailClip"><path d="M0 0H146V135L145 157L136 260H0Z"/></clipPath></defs><g clip-path="url(#carpBodyClip)"><image href="/carp-real-v116.png" x="16" y="12" width="368" height="214" preserveAspectRatio="xMidYMid meet"/></g><g class="carpTailSwing"><g clip-path="url(#carpTailClip)"><image href="/carp-real-v116.png" x="16" y="12" width="368" height="214" preserveAspectRatio="xMidYMid meet"/></g></g></g></g><circle class="carpDrop" style="--dx:-110px;--dy:-85px;--delay:0s" cx="200" cy="218" r="4" fill="#b0f4ed"/><circle class="carpDrop" style="--dx:-70px;--dy:-125px;--delay:0.08s" cx="200" cy="218" r="3" fill="#b0f4ed"/><circle class="carpDrop" style="--dx:-135px;--dy:-50px;--delay:0.12s" cx="200" cy="218" r="3" fill="#b0f4ed"/><circle class="carpDrop" style="--dx:90px;--dy:-105px;--delay:0.04s" cx="200" cy="218" r="5" fill="#b0f4ed"/><circle class="carpDrop" style="--dx:130px;--dy:-65px;--delay:0.1s" cx="200" cy="218" r="3" fill="#b0f4ed"/><circle class="carpDrop" style="--dx:45px;--dy:-145px;--delay:0.15s" cx="200" cy="218" r="3" fill="#b0f4ed"/><circle class="carpDrop" style="--dx:-30px;--dy:-150px;--delay:0.18s" cx="200" cy="218" r="2" fill="#b0f4ed"/><circle class="carpDrop" style="--dx:70px;--dy:-70px;--delay:0.2s" cx="200" cy="218" r="2" fill="#b0f4ed"/><path class="carpSplash" d="M145 219L130 199L167 210L159 185L189 210L201 187L214 210L247 188L239 214L270 203L253 224" fill="#7fdbd2" opacity=".8"/></svg><div class="carpMessage"><h3>'+(Number(a.round)===2?'TEN KARP CZEKA<br>NA REWANŻ!':'POWODZENIA<br>W 2 TURZE!')+'</h3><p>'+(Number(a.round)===2?'Do zobaczenia na kolejnych zawodach!':'Nowa tura, nowa szansa! 💪')+'</p><small>'+esc(a.title)+'</small></div><div class="achievementTimer"></div>'}
+function renderCarpEncouragement(a){return '<button type="button" class="achievementClose" aria-label="Zamknij">×</button><svg class="carpScene" viewBox="0 0 400 260" aria-hidden="true"><defs><linearGradient id="carpGold" x2=".3" y2="1"><stop stop-color="#fff1a5"/><stop offset=".45" stop-color="#d6a548"/><stop offset="1" stop-color="#74451e"/></linearGradient><linearGradient id="carpFin"><stop stop-color="#d8a353"/><stop offset="1" stop-color="#6f3e20"/></linearGradient><radialGradient id="carpGlow"><stop stop-color="#73cfc4" stop-opacity=".35"/><stop offset="1" stop-color="#73cfc4" stop-opacity="0"/></radialGradient></defs><ellipse cx="200" cy="140" rx="180" ry="120" fill="url(#carpGlow)"/><g class="carpWater"><path d="M0 216 Q50 200 100 216T200 216T300 216T400 216V260H0Z" fill="#166d72" opacity=".7"/><path d="M0 223 Q50 207 100 223T200 223T300 223T400 223" fill="none" stroke="#85ddd3" stroke-width="2" opacity=".65"/></g><g class="carpRipple" fill="none" stroke="#9be9e0"><ellipse cx="200" cy="220" rx="48" ry="8" stroke-width="3"/><ellipse cx="200" cy="220" rx="72" ry="13" opacity=".55"/></g><g class="carpLeap"><g class="carpFish"><defs><clipPath id="carpBodyClip"><path d="M144 0H400V260H134L143 157L144 135Z"/></clipPath><clipPath id="carpTailClip"><path d="M0 0H146V136L145 157L136 260H0Z"/></clipPath></defs><g clip-path="url(#carpBodyClip)"><image href="/carp-real-v116.png" x="16" y="12" width="368" height="214" preserveAspectRatio="xMidYMid meet"/></g><g class="carpTailSwing"><g clip-path="url(#carpTailClip)"><image href="/carp-real-v116.png" x="16" y="12" width="368" height="214" preserveAspectRatio="xMidYMid meet"/></g></g></g></g><circle class="carpDrop" style="--dx:-110px;--dy:-85px;--delay:0s" cx="200" cy="218" r="4" fill="#b0f4ed"/><circle class="carpDrop" style="--dx:-70px;--dy:-125px;--delay:0.08s" cx="200" cy="218" r="3" fill="#b0f4ed"/><circle class="carpDrop" style="--dx:-135px;--dy:-50px;--delay:0.12s" cx="200" cy="218" r="3" fill="#b0f4ed"/><circle class="carpDrop" style="--dx:90px;--dy:-105px;--delay:0.04s" cx="200" cy="218" r="5" fill="#b0f4ed"/><circle class="carpDrop" style="--dx:130px;--dy:-65px;--delay:0.1s" cx="200" cy="218" r="3" fill="#b0f4ed"/><circle class="carpDrop" style="--dx:45px;--dy:-145px;--delay:0.15s" cx="200" cy="218" r="3" fill="#b0f4ed"/><circle class="carpDrop" style="--dx:-30px;--dy:-150px;--delay:0.18s" cx="200" cy="218" r="2" fill="#b0f4ed"/><circle class="carpDrop" style="--dx:70px;--dy:-70px;--delay:0.2s" cx="200" cy="218" r="2" fill="#b0f4ed"/><path class="carpSplash" d="M145 219L130 199L167 210L159 185L189 210L201 187L214 210L247 188L239 214L270 203L253 224" fill="#7fdbd2" opacity=".8"/></svg><div class="carpMessage"><h3>'+(Number(a.round)===2?'TEN KARP CZEKA<br>NA REWANŻ!':'POWODZENIA<br>W 2 TURZE!')+'</h3><p>'+(Number(a.round)===2?'Do zobaczenia na kolejnych zawodach!':'Nowa tura, nowa szansa! 💪')+'</p><small>'+esc(a.title)+'</small></div><div class="achievementTimer"></div>'}
 let CARP_IMAGE_READY=null;
 function preloadRealCarp(){
   if(!CARP_IMAGE_READY)CARP_IMAGE_READY=new Promise((resolve,reject)=>{
@@ -1075,18 +1075,20 @@ function photoOcrPrototypes(){
 }
 function photoSheetGeometry(count){
   count=Math.max(1,Number(count||1));
-  const x0=21,headerY=250,headerH=52,dataY=302,bottom=1658,rowH=Math.min(46,(bottom-dataY)/count);
-  const widths=[45,330,137,137,137,137,137,137],fieldStart=x0+widths[0]+widths[1];
-  return {x0,headerY,headerH,dataY,bottom,rowH,widths,fieldStart,fieldW:137,
-    markers:[{x:50,y:216},{x:1190,y:216},{x:50,y:1702},{x:1190,y:1702}]};
+  // Bezpieczny obszar druku A4: ok. 11–12 mm od krawędzi.
+  // Geometria jest wspólna dla PDF i odczytu zdjęcia, więc OCR pozostaje zsynchronizowany.
+  const x0=61,headerY=270,headerH=50,dataY=320,bottom=1635,rowH=Math.min(45,(bottom-dataY)/count);
+  const widths=[42,320,126,126,126,126,126,126],fieldStart=x0+widths[0]+widths[1];
+  return {x0,headerY,headerH,dataY,bottom,rowH,widths,fieldStart,fieldW:126,
+    markers:[{x:85,y:238},{x:1155,y:238},{x:85,y:1680},{x:1155,y:1680}]};
 }
 function drawPhotoResultSheetPage(round){
   const d=CURRENT_DETAIL,o=pdfCanvas(),ctx=o.ctx,g=photoSheetGeometry((d.activeEntries||[]).length);
   drawPdfHeaderV33(ctx,'FORMULARZ DO IMPORTU ZE ZDJĘCIA — TURA '+round);
   ctx.fillStyle='#17251d';ctx.font='800 16px Arial';ctx.textAlign='center';
-  ctx.fillText('Wpisuj normalnie całe wagi. * przed wagą oznacza dużą rybę, np. *9890. Ostatnia kolumna = SUMA.',620,188,1040);
+  ctx.fillText('Wpisuj normalnie całe wagi. * przed wagą oznacza dużą rybę, np. *9890. Ostatnia kolumna = SUMA.',620,196,1010);
   ctx.font='700 13px Arial';
-  ctx.fillText('Przykład: 12450 | *9890 | 8700  → wszystkie wagi liczą się do sumy, a BF = 9890 g. Nie kadruj czarnych znaczników.',620,210,1080);
+  ctx.fillText('Przykład: 12450 | *9890 | 8700  → wszystkie wagi liczą się do sumy, a BF = 9890 g. Nie kadruj czarnych znaczników.',620,217,1020);
   ctx.textAlign='left';
   for(const m of g.markers){ctx.fillStyle='#000';ctx.fillRect(m.x-20,m.y-20,40,40);ctx.fillStyle='#fff';ctx.fillRect(m.x-6,m.y-6,12,12);ctx.fillStyle='#000';ctx.fillRect(m.x-2,m.y-2,4,4)}
   const headers=['Lp.','Zawodnik','W1','W2','W3','W4','W5','SUMA'];let x=g.x0;
@@ -1102,7 +1104,7 @@ function drawPhotoResultSheetPage(round){
     ctx.fillText(String(e.first_name+' '+e.last_name),g.x0+g.widths[0]+6,y+Math.max(5,(g.rowH-18)/2),g.widths[1]-12);
   });
   ctx.fillStyle='#17251d';ctx.font='700 13px Arial';ctx.textAlign='center';
-  ctx.fillText('W1–W5 = kolejne ważenia w gramach • * przed wagą = BF • kilka * jest dozwolone • SUMA służy do kontroli odczytu',620,1670,1080);
+  ctx.fillText('W1–W5 = kolejne ważenia w gramach • * przed wagą = BF • kilka * jest dozwolone • SUMA służy do kontroli odczytu',620,1658,1010);
   ctx.textAlign='left';return o.canvas;
 }
 function generatePhotoResultSheetPdf(round){
