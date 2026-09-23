@@ -1,3 +1,11 @@
+V128 — Przełącznik admin / zawodnik
+
+Obok danych konta znajduje się kompaktowy kafelek „Na zawodnika” lub „Na admina”. Pierwsze kliknięcie otwiera formularz logowania drugiego konta telefonem i hasłem. Po poprawnym zalogowaniu kolejne przełączenia korzystają z osobnych, zweryfikowanych sesji. Nie są zapisywane hasła. Mechanizm działa lokalnie na danym urządzeniu i w danej przeglądarce.
+
+Przełączenie weryfikuje ważność i rolę docelowego konta przez serwer, odłącza powiadomienia poprzedniego konta i przeładowuje widok. Wygasła sesja wymaga ponownego logowania; „Wyloguj” i czyszczenie sesji usuwają oba zapamiętane konta. Nie zmieniono uprawnień na serwerze. Konto sędziego nie korzysta z przełącznika.
+
+Testy izolowane: przełączenie w obie strony, blokada niewłaściwej roli, wygasła sesja, brak zapisu haseł. Wgraj cały komplet i poczekaj na wdrożenie Railway.
+
 V127 — Uruchamianie aplikacji zainstalowanej na telefonie
 
 Usunięto automatyczne kasowanie cache i wyrejestrowywanie service workera po 8 sekundach startu. Wolne połączenie nie powoduje pętli przeładowań. Przycisk „Spróbuj ponownie” ponawia start bez kasowania sesji. Błędy sieci nie wylogowują; 401/403 nadal kończy nieważną sesję.
