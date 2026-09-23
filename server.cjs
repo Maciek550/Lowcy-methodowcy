@@ -16,8 +16,8 @@ const ADMIN_SETUP_CODE = process.env.ADMIN_SETUP_CODE || '';
 let VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 let VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
-const APP_VERSION = '129';
-const APP_VERSION_NAME = 'V129_MOBILE_READABILITY';
+const APP_VERSION = '130';
+const APP_VERSION_NAME = 'V130_COMPETITION_MODES';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 const CARP_REAL = fs.readFileSync(pathModule.join(__dirname, 'carp-real-v116.png'));
 const ICON_192 = fs.readFileSync(pathModule.join(__dirname, 'icon-192.png'));
@@ -313,6 +313,7 @@ async function pushToUser(userId, title, body, url='/', meta={}) {
 }
 function playerPushType(type){return ['NEW_COMPETITION','DRAW_PUBLISH','RESULTS_T1','RESULTS_T2','RESULTS_GENERAL'].includes(String(type||''))}
 async function notifyUser(userId, type, title, body, data={}, deferPush=false) {
+  if(data.competitionId){const c=await getCompetition(data.competitionId);if(c?.status==='TEST'){const recipient=await pool.query('select role from users where id=$1',[userId]);if(recipient.rows[0]?.role!=='ADMIN')return;}}
   await pool.query('insert into notifications(recipient_user_id,type,title,body,data) values($1,$2,$3,$4,$5)', [userId, type, title, body, data]);
   const u=await pool.query('select role from users where id=$1',[userId]);
   const role=u.rows[0]?.role||'PLAYER';
@@ -1126,7 +1127,7 @@ async function savePublishedAchievements(detail,round,userId){
 
 async function buildDetail(competitionId, user) {
   const comp = await getCompetition(competitionId);
-  if (!comp) return null;
+  if (!comp || (comp.status==='TEST' && user.role!=='ADMIN')) return null;
   const entriesAll = await pool.query(`
     select e.*, u.phone, u.first_name, u.last_name, u.pzw_club
     from entries e join users u on u.id=e.user_id
@@ -1155,7 +1156,7 @@ async function buildPlayerStartHistory(userId) {
     select c.id
     from competitions c
     join entries e on e.competition_id=c.id and e.user_id=$1 and e.status='ACTIVE'
-    where c.competition_date is not null
+    where c.status<>'TEST' and c.competition_date is not null
       and c.competition_date <= current_date
       and (select count(distinct r.round) from results r where r.competition_id=c.id and r.user_id=$1) = 2
     order by c.competition_date desc, c.id desc
@@ -1192,7 +1193,7 @@ async function route(req, res) {
   const path = url.pathname;
   const method = req.method;
 
-  if (path === '/__probe_js_v129' || path === '/__probe_boot_v129' || path === '/__probe_js_v102' || path === '/__probe_boot_v102' || path === '/__probe_js_v101' || path === '/__probe_boot_v101' || path === '/__probe_js_v100' || path === '/__probe_boot_v100' || path === '/__probe_js_v99' || path === '/__probe_boot_v99' || path === '/__probe_js_v98' || path === '/__probe_boot_v98' || path === '/__probe_js_v97' || path === '/__probe_boot_v97' || path === '/__probe_js_v96' || path === '/__probe_boot_v96' || path === '/__probe_js_v95' || path === '/__probe_boot_v95' || path === '/__probe_js_v94' || path === '/__probe_boot_v94' || path === '/__probe_js_v93' || path === '/__probe_boot_v93' || path === '/__probe_js_v91' || path === '/__probe_boot_v91' || path === '/__probe_js_v90' || path === '/__probe_boot_v90' || path === '/__probe_js_v89' || path === '/__probe_boot_v89' || path === '/__probe_js_v88' || path === '/__probe_boot_v88' || path === '/__probe_js_v87' || path === '/__probe_boot_v87' || path === '/__probe_js_v86' || path === '/__probe_boot_v86' || path === '/__probe_js_v85' || path === '/__probe_boot_v85' || path === '/__probe_js_v84' || path === '/__probe_boot_v84' || path === '/__probe_js_v83' || path === '/__probe_boot_v83' || path === '/__probe_js_v82' || path === '/__probe_boot_v82' || path === '/__probe_js_v81' || path === '/__probe_boot_v81' || path === '/__probe_js_v80' || path === '/__probe_boot_v80' || path === '/__probe_js_v79' || path === '/__probe_boot_v79' || path === '/__probe_js_v78' || path === '/__probe_boot_v78' || path === '/__probe_js_v77' || path === '/__probe_boot_v77' || path === '/__probe_js_v76' || path === '/__probe_boot_v76' || path === '/__probe_js_v75' || path === '/__probe_boot_v75' || path === '/__probe_js_v74' || path === '/__probe_boot_v74' || path === '/__probe_js_v73' || path === '/__probe_boot_v73' || path === '/__probe_js_v72' || path === '/__probe_boot_v72' || path === '/__probe_js_v71' || path === '/__probe_boot_v71') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
+  if (path === '/__probe_js_v130' || path === '/__probe_boot_v130' || path === '/__probe_js_v102' || path === '/__probe_boot_v102' || path === '/__probe_js_v101' || path === '/__probe_boot_v101' || path === '/__probe_js_v100' || path === '/__probe_boot_v100' || path === '/__probe_js_v99' || path === '/__probe_boot_v99' || path === '/__probe_js_v98' || path === '/__probe_boot_v98' || path === '/__probe_js_v97' || path === '/__probe_boot_v97' || path === '/__probe_js_v96' || path === '/__probe_boot_v96' || path === '/__probe_js_v95' || path === '/__probe_boot_v95' || path === '/__probe_js_v94' || path === '/__probe_boot_v94' || path === '/__probe_js_v93' || path === '/__probe_boot_v93' || path === '/__probe_js_v91' || path === '/__probe_boot_v91' || path === '/__probe_js_v90' || path === '/__probe_boot_v90' || path === '/__probe_js_v89' || path === '/__probe_boot_v89' || path === '/__probe_js_v88' || path === '/__probe_boot_v88' || path === '/__probe_js_v87' || path === '/__probe_boot_v87' || path === '/__probe_js_v86' || path === '/__probe_boot_v86' || path === '/__probe_js_v85' || path === '/__probe_boot_v85' || path === '/__probe_js_v84' || path === '/__probe_boot_v84' || path === '/__probe_js_v83' || path === '/__probe_boot_v83' || path === '/__probe_js_v82' || path === '/__probe_boot_v82' || path === '/__probe_js_v81' || path === '/__probe_boot_v81' || path === '/__probe_js_v80' || path === '/__probe_boot_v80' || path === '/__probe_js_v79' || path === '/__probe_boot_v79' || path === '/__probe_js_v78' || path === '/__probe_boot_v78' || path === '/__probe_js_v77' || path === '/__probe_boot_v77' || path === '/__probe_js_v76' || path === '/__probe_boot_v76' || path === '/__probe_js_v75' || path === '/__probe_boot_v75' || path === '/__probe_js_v74' || path === '/__probe_boot_v74' || path === '/__probe_js_v73' || path === '/__probe_boot_v73' || path === '/__probe_js_v72' || path === '/__probe_boot_v72' || path === '/__probe_js_v71' || path === '/__probe_boot_v71') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
 
   if (path === '/__probe_js_v68' || path === '/__probe_boot_v68' || path === '/__probe_js_v67' || path === '/__probe_boot_v67' || path === '/__probe_js_v66' || path === '/__probe_boot_v66' || path === '/__probe_js_v65' || path === '/__probe_boot_v65' || path === '/__probe_js_v63' || path === '/__probe_boot_v63' || path === '/__probe_js_v62' || path === '/__probe_boot_v62' || path === '/__probe_js_v60' || path === '/__probe_boot_v60' || path === '/__probe_js_v59' || path === '/__probe_boot_v59' || path === '/__probe_js_v58' || path === '/__probe_boot_v58' || path === '/__probe_js_v57' || path === '/__probe_boot_v57' || path === '/__probe_js_v56' || path === '/__probe_boot_v56' || path === '/__probe_js_v55' || path === '/__probe_boot_v55' || path === '/__probe_js_v54' || path === '/__probe_boot_v54' || path === '/__probe_js_v53' || path === '/__probe_boot_v53' || path === '/__probe_js_v52' || path === '/__probe_boot_v52' || path === '/__probe_js_v51' || path === '/__probe_boot_v51' || path === '/__probe_js_v50' || path === '/__probe_boot_v50' || path === '/__probe_js_v49' || path === '/__probe_boot_v49' || path === '/__probe_js_v36' || path === '/__probe_boot_v36' || path === '/__probe_js_v35' || path === '/__probe_boot_v35' || path === '/__probe_js_v34' || path === '/__probe_boot_v34' || path === '/__probe_js_v33' || path === '/__probe_boot_v33' || path === '/__probe_js_v32' || path === '/__probe_boot_v32' || path === '/__probe_js_v30' || path === '/__probe_boot_v30' || path === '/__probe_js_v29' || path === '/__probe_boot_v29' || path === '/__probe_js_v27' || path === '/__probe_boot_v27' || path === '/__probe_inline_v26') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/api/version') return sendJson(res, 200, { ok:true, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
@@ -1390,9 +1391,9 @@ body #app button.rosterLeaveRequest:disabled{opacity:.65;cursor:wait}
     ]
   }), {'Content-Type':'application/manifest+json; charset=utf-8','Cache-Control':'no-cache'});
   if (path === '/sw.js') return send(res, 200, `
-const SHELL_CACHE='lowcy-shell-v129';
-const APP_SHELL_JS='/app.js?v=129';
-const PDF_JS='/pdf-vector.js?v=129';
+const SHELL_CACHE='lowcy-shell-v130';
+const APP_SHELL_JS='/app.js?v=130';
+const PDF_JS='/pdf-vector.js?v=130';
 const SHELL=['/',APP_SHELL_JS,PDF_JS,'/icon-192.png','/icon-512.png'];
 async function fetchWithTimeout(req,ms=30000){const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),ms);try{return await fetch(req,{cache:'no-store',signal:ctrl.signal})}finally{clearTimeout(timer)}}
 self.addEventListener('install',event=>event.waitUntil((async()=>{const replies=await Promise.all(SHELL.map(url=>fetchWithTimeout(url)));if(replies.some(r=>!r.ok))throw Error('Incomplete shell');const cache=await caches.open(SHELL_CACHE);await Promise.all(SHELL.map((url,i)=>cache.put(url,replies[i])));await self.skipWaiting()})()));
@@ -1459,6 +1460,8 @@ self.addEventListener('notificationclick', event => {
   }
 
   const user = await auth(req);
+  const privateCompetition = path.match(/^\/api\/(?:admin\/)?competitions\/(\d+)(?:\/|$)/);
+  if(user && user.role!=='ADMIN' && privateCompetition){const c=await getCompetition(Number(privateCompetition[1]));if(c?.status==='TEST')return sendJson(res,404,{ok:false,error:'Nie znaleziono zawodów'});}
   if(await handleJudgeRoutes(req,res,path,method,user))return;
   if (path === '/api/me' && method === 'GET') { if (!requireUser(user, res)) return; return sendJson(res, 200, { ok:true, user }); }
   if (path === '/api/general-rules' && method === 'GET') {
@@ -1525,13 +1528,14 @@ self.addEventListener('notificationclick', event => {
              coalesce((select confirmed from entries e where e.competition_id=c.id and e.user_id=$1),false) my_confirmed,
              (select confirmed_at from entries e where e.competition_id=c.id and e.user_id=$1) my_confirmed_at,
              (select lr.status from leave_requests lr where lr.competition_id=c.id and lr.user_id=$1 order by lr.created_at desc limit 1) my_leave_request_status
-      from competitions c order by c.competition_date nulls last, c.created_at desc
-    `, [user.id]);
+      from competitions c where ($2::boolean or c.status<>'TEST') order by c.competition_date nulls last, c.created_at desc
+    `, [user.id,user.role==='ADMIN']);
     return sendJson(res, 200, { ok:true, competitions:rows });
   }
   if (path === '/api/competitions' && method === 'POST') {
     if (!requireAdmin(user, res)) return;
     const b = await readBody(req);
+    if(b.status && !['OPEN','CLOSED','TEST'].includes(b.status))return sendJson(res,400,{ok:false,error:'Nieprawidłowy tryb zawodów'});
     const limit = intOrNull(b.limitPlaces);
     if (!limit || limit < 1) return sendJson(res, 400, { ok:false, error:'Podaj liczbę osób / limit miejsc' });
     const fishery = String(b.fishery || '').trim();
@@ -1553,6 +1557,16 @@ self.addEventListener('notificationclick', event => {
     return sendJson(res, 200, { ok:true, competition:rows[0] });
   }
 
+  const modeMatch=path.match(/^\/api\/competitions\/(\d+)\/mode$/);
+  if(modeMatch && method==='POST'){
+    if(!requireAdmin(user,res))return;
+    const b=await readBody(req);
+    if(!['OPEN','CLOSED','TEST'].includes(b.status))return sendJson(res,400,{ok:false,error:'Nieprawidłowy tryb zawodów'});
+    const out=await pool.query('update competitions set status=$1,signup_open=$2 where id=$3 returning *',[b.status,b.status==='OPEN',Number(modeMatch[1])]);
+    if(!out.rows[0])return sendJson(res,404,{ok:false,error:'Nie znaleziono zawodów'});
+    return sendJson(res,200,{ok:true,competition:out.rows[0]});
+  }
+
   let m = path.match(/^\/api\/competitions\/(\d+)$/);
   if (m && method === 'GET') {
     if (!requireUser(user, res)) return;
@@ -1567,6 +1581,7 @@ self.addEventListener('notificationclick', event => {
     const old = await getCompetition(id);
     if (!old) return sendJson(res, 404, { ok:false, error:'Nie znaleziono zawodów' });
     const sectors = clampInt(b.sectorsCount, 1, 26, old.sectors_count || 4);
+    if(b.status && !['OPEN','CLOSED','TEST'].includes(b.status))return sendJson(res,400,{ok:false,error:'Nieprawidłowy tryb zawodów'});
     const limit = intOrNull(b.limitPlaces);
     const mapMode = b.mapMode || old.map_mode || 'TWO_OPPOSITE';
     let bank1, bank2;
@@ -1586,7 +1601,7 @@ self.addEventListener('notificationclick', event => {
     const { rows } = await pool.query(`
       update competitions set title=$1, fishery=$2, competition_date=$3, meeting_time=$4, limit_places=$5, status=$6, notes=$7, regulations=$8, map_mode=$9, bank1_count=$10, bank2_count=$11, sectors_count=$12, sector_layout=$13, signup_open=$14
       where id=$15 returning *
-    `, [String(b.title||old.title).trim(), String(b.fishery||'').trim(), b.competitionDate || null, (/^\d{2}:\d{2}$/.test(String(b.meetingTime||''))?String(b.meetingTime):'06:00'), limit, b.status || old.status || 'OPEN', String(b.notes||''), String(b.regulations||''), mapMode, bank1, bank2, sectors, sectorLayout === undefined ? old.sector_layout : sectorLayout, b.signupOpen !== false, id]);
+    `, [String(b.title||old.title).trim(), String(b.fishery||'').trim(), b.competitionDate || null, (/^\d{2}:\d{2}$/.test(String(b.meetingTime||''))?String(b.meetingTime):'06:00'), limit, b.status || old.status || 'OPEN', String(b.notes||''), String(b.regulations||''), mapMode, bank1, bank2, sectors, sectorLayout === undefined ? old.sector_layout : sectorLayout, b.status!==undefined ? b.status==='OPEN' : (b.signupOpen===undefined ? old.signup_open : b.signupOpen!==false), id]);
     await notifyAdmins('COMPETITION_UPDATE', 'Edytowano zawody', `${user.first_name} ${user.last_name} edytował zawody: ${rows[0].title}`, { competitionId:id });
     return sendJson(res, 200, { ok:true, competition:rows[0] });
   }
@@ -1703,12 +1718,19 @@ self.addEventListener('notificationclick', event => {
   if (m && method === 'POST') {
     if (!requireUser(user, res)) return;
     const id = Number(m[1]);
-    const c = await getCompetition(id);
-    if (!c) return sendJson(res, 404, { ok:false, error:'Nie znaleziono zawodów' });
-    if (c.status !== 'OPEN' || c.signup_open === false) return sendJson(res, 409, { ok:false, error:'Zapisy są zamknięte' });
-    const wantedStatus = await nextRosterStatus(id, 'AUTO');
-    await pool.query(`insert into entries(competition_id,user_id,status,joined_at,cancelled_at,confirmed,confirmed_at) values($1,$2,$3,now(),null,false,null)
-      on conflict(competition_id,user_id) do update set status=excluded.status, joined_at=now(), cancelled_at=null, confirmed=false, confirmed_at=null`, [id, user.id, wantedStatus]);
+    const client=await pool.connect();let c,wantedStatus;
+    try{
+      await client.query('BEGIN');
+      c=(await client.query('select * from competitions where id=$1 for update',[id])).rows[0];
+      if(!c || c.status!=='OPEN' || c.signup_open===false){await client.query('ROLLBACK');return sendJson(res,409,{ok:false,error:'Zapisy są zamknięte'});}
+      const existing=(await client.query('select status from entries where competition_id=$1 and user_id=$2',[id,user.id])).rows[0];
+      if(existing && ['ACTIVE','RESERVE'].includes(existing.status)){await client.query('COMMIT');return sendJson(res,200,{ok:true,status:existing.status});}
+      const count=Number((await client.query("select count(*)::int n from entries where competition_id=$1 and status='ACTIVE'",[id])).rows[0].n);
+      wantedStatus=c.limit_places && count>=Number(c.limit_places)?'RESERVE':'ACTIVE';
+      await client.query(`insert into entries(competition_id,user_id,status,joined_at,cancelled_at,confirmed,confirmed_at) values($1,$2,$3,now(),null,false,null)
+        on conflict(competition_id,user_id) do update set status=excluded.status,joined_at=now(),cancelled_at=null,confirmed=false,confirmed_at=null`,[id,user.id,wantedStatus]);
+      await client.query('COMMIT');
+    }catch(e){await client.query('ROLLBACK');throw e}finally{client.release()}
     const label = rosterStatusLabel(wantedStatus);
     await notifyAdmins('JOIN', 'Nowy zapis', `${user.first_name} ${user.last_name} zapisał się: ${c.title} — ${label}`, { competitionId:id, userId:user.id, status:wantedStatus });
     await notifyUser(user.id, 'JOIN_CONFIRM', wantedStatus === 'RESERVE' ? 'Zapisano na rezerwę' : 'Zapisano na zawody', `${c.title}: ${label}`, { competitionId:id, status:wantedStatus });
@@ -1949,7 +1971,7 @@ self.addEventListener('notificationclick', event => {
 
   if(path==='/api/achievements' && method==='GET'){
     if(!requireUser(user,res))return;
-    const rows=user.role==='ADMIN'?[]:(await pool.query('select id, competition_id, payload, delivery from player_achievements where user_id=$1 and seen_at is null order by created_at,id limit 30',[user.id])).rows;
+    const rows=user.role==='ADMIN'?[]:(await pool.query(`select id, competition_id, payload, delivery from player_achievements where user_id=$1 and seen_at is null and competition_id in (select id from competitions where status<>'TEST') order by created_at,id limit 30`,[user.id])).rows;
     return sendJson(res,200,{ok:true,achievements:rows});
   }
   m=path.match(/^\/api\/achievements\/(\d+)\/seen$/);
@@ -1963,7 +1985,7 @@ self.addEventListener('notificationclick', event => {
   if ((path === '/api/notifications' || path === '/api/admin/notifications') && method === 'GET') {
     if (!requireUser(user, res)) return;
     if (path === '/api/admin/notifications' && user.role !== 'ADMIN') return sendJson(res, 403, { ok:false, error:'Brak uprawnień admina' });
-    const { rows } = await pool.query(`select * from notifications where recipient_user_id=$1 and ($2::boolean=false or type not like 'RESULT_ITEM_T%') order by case when type='LEAVE_REQUEST' and coalesce(data->>'status','PENDING')='PENDING' then 0 else 1 end, created_at desc limit 150`, [user.id, user.role==='ADMIN']);
+    const { rows } = await pool.query(`select * from notifications where recipient_user_id=$1 and ($2::boolean or not exists(select 1 from competitions c where c.status='TEST' and c.id::text=notifications.data->>'competitionId')) and ($2::boolean=false or type not like 'RESULT_ITEM_T%') order by case when type='LEAVE_REQUEST' and coalesce(data->>'status','PENDING')='PENDING' then 0 else 1 end, created_at desc limit 150`, [user.id, user.role==='ADMIN']);
     const pendingLeaveRequests=user.role==='ADMIN'?(await pool.query(`select lr.id, lr.competition_id, lr.created_at, u.first_name, u.last_name, c.title, c.competition_date from leave_requests lr join users u on u.id=lr.user_id join competitions c on c.id=lr.competition_id where lr.status='PENDING' order by lr.created_at asc, lr.id asc`)).rows:[];
     return sendJson(res, 200, { ok:true, notifications:rows, pendingLeaveRequests });
   }
@@ -5753,11 +5775,25 @@ body #app>.compactUserBar #accountSwitch{flex:0 0 auto!important;width:auto!impo
  body.playerTheme #app .playerCompCardV98 .playerPresenceConfirm.confirmed{font-size:14px!important}
  body.playerTheme #app .playerCompCardV98 .playerCompBottomRow{margin-top:4px!important;padding-top:4px!important}
 }
+
+/* V130 */
+.competitionModeBar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:7px;margin:5px 0;border:1px solid #52758a;border-radius:8px;background:#102d3d;color:#fff}
+.competitionModeBar strong{flex:1 1 170px;font-size:14px}
+.competitionModeBar button{width:auto!important;min-height:36px;padding:6px 10px;font-size:13px}
+body.playerTheme #app .playerCompCardMeeting{font-size:18px!important;line-height:1.1!important;font-weight:900!important;padding:4px 7px!important}
+body.playerTheme #app .playerCompCardDate{flex-wrap:wrap!important;gap:4px!important}
+body.playerTheme #app .playerCompWeekday,body.playerTheme #app .playerCompCountdown,body.playerTheme #app .playerCompStatus{font-size:12px!important;line-height:1.15!important;height:auto!important;min-height:26px!important;padding:4px 6px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important}
+@media(max-width:760px){
+ body.playerTheme #app .playerCompCardV98 .playerCompCardMeeting{font-size:17px!important;min-height:28px!important}
+ body.playerTheme #app .playerCompCardV98 .playerCompCardDate{display:grid!important;grid-template-columns:auto minmax(0,1fr) minmax(0,1.3fr)!important;gap:3px!important}
+ body.playerTheme #app .playerCompCardV98 .playerCompDate{grid-column:1/-1}
+ body.playerTheme #app .playerCompCardV98 .playerCompWeekday,body.playerTheme #app .playerCompCardV98 .playerCompCountdown,body.playerTheme #app .playerCompCardV98 .playerCompStatus{font-size:11px!important;white-space:normal!important;text-align:center!important}
+}
 </style>
 </head>
 <body class="authMode">
 <div id="bootGuard"><img src="/icon-192.png" alt=""><b>Łowcy Methodowcy</b><span>Uruchamiam aplikację…</span><button id="bootRetry" class="hidden" type="button" onclick="retryLowcyBoot()">Spróbuj ponownie</button></div>
-<header><div class="row"><h1><img class="brandIcon" src="/icon-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V129</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
+<header><div class="row"><h1><img class="brandIcon" src="/icon-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V130</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
 <main>
 <div id="msg"></div>
 <section id="auth" class="card">
@@ -5770,10 +5806,10 @@ body #app>.compactUserBar #accountSwitch{flex:0 0 auto!important;width:auto!impo
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="appVersionBadge">V129</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
+  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="appVersionBadge">V130</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-rules" class="hidden" onclick="showTab('rules')">Regulamin ogólny</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-profile" class="hidden" onclick="showTab('profile')">Mój profil</button><button id="btn-history" class="hidden" onclick="showTab('history')">Historia startów</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
-    <details id="adminCreate" class="card hidden adminCreateV93"><summary class="adminCreateToggle">Robimy zawody</summary><div class="adminCreateBody"><h2>Utwórz zawody</h2><p class="small muted">Dane z tego formularza są później widoczne dla zawodnika.</p><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Zbiórka / godzina</label><input id="cMeetingTime" type="time" value="06:00"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div></div><div class="adminTextPair"><div><label>Informacje organizacyjne</label><textarea id="cNotes" placeholder="Parking, miejsce zbiórki, godzina losowania, dodatkowe informacje…"></textarea></div><div><label>Program / regulamin tych zawodów</label><textarea id="cRegulations" class="rulesEditor" placeholder="Np. 06:00 zbiórka, 06:15 losowanie, 07:00–15:00 zawody, ważne zasady tylko dla tego wydarzenia…"></textarea></div></div><button onclick="createCompetition(event)">Utwórz zawody</button></div></details>
+    <details id="adminCreate" class="card hidden adminCreateV93"><summary class="adminCreateToggle">Robimy zawody</summary><div class="adminCreateBody"><h2>Utwórz zawody</h2><p class="small muted">Dane z tego formularza są później widoczne dla zawodnika.</p><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Zbiórka / godzina</label><input id="cMeetingTime" type="time" value="06:00"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div></div><div class="adminTextPair"><div><label>Tryb zawodów</label><select id="cStatus"><option value="OPEN">Zawody otwarte — każdy może się zapisać</option><option value="TEST">Zawody testowe — tylko admin</option><option value="CLOSED">Zapisy zakończone — widoczne, bez zapisów</option></select><label>Informacje organizacyjne</label><textarea id="cNotes" placeholder="Parking, miejsce zbiórki, godzina losowania, dodatkowe informacje…"></textarea></div><div><label>Program / regulamin tych zawodów</label><textarea id="cRegulations" class="rulesEditor" placeholder="Np. 06:00 zbiórka, 06:15 losowanie, 07:00–15:00 zawody, ważne zasady tylko dla tego wydarzenia…"></textarea></div></div><button onclick="createCompetition(event)">Utwórz zawody</button></div></details>
     <div class="card"><h2>Lista zawodów</h2><div id="competitionsList"></div></div>
     <div id="competitionDetail" class="hidden"></div>
   </section>
@@ -5787,14 +5823,14 @@ body #app>.compactUserBar #accountSwitch{flex:0 0 auto!important;width:auto!impo
 <div class="quickScroll"><button onclick="scrollAppTop()">↑</button><button onclick="scrollAppBottom()">↓</button></div>
 <script>
 (function(){
- window.__lowcyRecover129=function(){var g=document.getElementById('bootGuard');if(!g)return;g.classList.remove('hidden');var sp=g.querySelector('span');if(sp)sp.textContent='Nie udało się pobrać aplikacji. Sprawdź połączenie i spróbuj ponownie.';var b=document.getElementById('bootRetry');if(b)b.classList.remove('hidden')};
+ window.__lowcyRecover130=function(){var g=document.getElementById('bootGuard');if(!g)return;g.classList.remove('hidden');var sp=g.querySelector('span');if(sp)sp.textContent='Nie udało się pobrać aplikacji. Sprawdź połączenie i spróbuj ponownie.';var b=document.getElementById('bootRetry');if(b)b.classList.remove('hidden')};
  window.retryLowcyBoot=function(){if(typeof startBoot==='function'){startBoot();return}location.reload()};
  if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'}).then(function(reg){return reg.update()}).catch(function(){});
- setTimeout(function(){if(!window.__LOWCY_JS_STARTED)window.__lowcyRecover129()},30000);
+ setTimeout(function(){if(!window.__LOWCY_JS_STARTED)window.__lowcyRecover130()},30000);
 })();
 </script>
-<script src="/pdf-vector.js?v=129" defer></script>
-<script src="/app.js?v=129" defer onerror="window.__lowcyRecover129&&window.__lowcyRecover129()"></script>
+<script src="/pdf-vector.js?v=130" defer></script>
+<script src="/app.js?v=130" defer onerror="window.__lowcyRecover130&&window.__lowcyRecover130()"></script>
 </body>
 </html>`;
 
@@ -5805,5 +5841,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V129_MOBILE_READABILITY_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V130_COMPETITION_MODES_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });

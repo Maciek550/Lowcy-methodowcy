@@ -47,7 +47,7 @@ module.exports=function judgeRoutes({pool,bcrypt,readBody,sendJson,requireAdmin,
     if(path==='/api/me'&&method==='GET'){sendJson(res,200,{ok:true,user});return true}
     if(path==='/api/push-subscription'&&method==='DELETE'){await pool.query('delete from push_subscriptions where user_id=$1',[user.id]);sendJson(res,200,{ok:true});return true}
     if(path==='/api/competitions'&&method==='GET'){
-      const competitions=(await pool.query('select c.id,c.title,c.fishery,c.competition_date,c.status from competitions c join competition_judges j on j.competition_id=c.id where j.user_id=$1 order by c.competition_date desc nulls last,c.id desc',[user.id])).rows;
+      const competitions=(await pool.query(`select c.id,c.title,c.fishery,c.competition_date,c.status from competitions c join competition_judges j on j.competition_id=c.id where j.user_id=$1 and c.status<>'TEST' order by c.competition_date desc nulls last,c.id desc`,[user.id])).rows;
       sendJson(res,200,{ok:true,competitions});return true;
     }
     let m=path.match(/^\/api\/competitions\/(\d+)$/);
