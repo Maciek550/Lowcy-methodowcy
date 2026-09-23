@@ -16,8 +16,8 @@ const ADMIN_SETUP_CODE = process.env.ADMIN_SETUP_CODE || '';
 let VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 let VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
-const APP_VERSION = '133';
-const APP_VERSION_NAME = 'V133_HISTORY_SECTOR_PLACE';
+const APP_VERSION = '134';
+const APP_VERSION_NAME = 'V134_ATTENTION_HISTORY_OFFLINE';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 const CARP_REAL = fs.readFileSync(pathModule.join(__dirname, 'carp-real-v116.png'));
 const ICON_192 = fs.readFileSync(pathModule.join(__dirname, 'icon-192.png'));
@@ -56,7 +56,7 @@ function sendBinary(res,status,buf,type='application/octet-stream',cache='public
 async function readBody(req) {
   return await new Promise((resolve, reject) => {
     let b = '';
-    req.on('data', c => { b += c; if (b.length > 2_000_000) { req.destroy(); reject(new Error('Payload too large')); }});
+    req.on('data', c => { b += c; if (b.length > 8_000_000) { req.destroy(); reject(new Error('Payload too large')); }});
     req.on('end', () => resolve(safeJsonParse(b)));
     req.on('error', reject);
   });
@@ -240,6 +240,11 @@ async function initDb() {
     );
   `);
   await pool.query(`
+    alter table result_items add column if not exists client_mutation_id text;
+    create unique index if not exists result_items_client_mutation_uidx
+      on result_items(client_mutation_id) where client_mutation_id is not null;
+  `);
+  await pool.query(`
     insert into result_items(competition_id,user_id,round,kind,weight,created_at)
     select r.competition_id,r.user_id,r.round,'NET',r.weight,r.updated_at
     from results r
@@ -295,13 +300,66 @@ async function waitForDb() {
   throw lastErr || new Error('DB not ready');
 }
 
+const PLAYER_ATTENTION_TYPES=new Set(['PRESENCE_CONFIRM','DRAW_PUBLISH','RESULTS_T1','RESULTS_T2','RESULTS_GENERAL']);
+function attentionPanelForNotification(type,data={}){
+  type=String(type||'');
+  if(type==='RESULTS_GENERAL')return {kind:'RESULTS_GENERAL',panel:'general',label:'NOWA KLASYFIKACJA'};
+  if(type==='RESULTS_T2')return {kind:'RESULTS_T2',panel:'t2',label:'NOWE WYNIKI T2'};
+  if(type==='RESULTS_T1')return {kind:'RESULTS_T1',panel:'t1',label:'NOWE WYNIKI T1'};
+  if(type==='DRAW_PUBLISH'){
+    const hasT2=Boolean(data&&data.t2),hasT1=Boolean(data&&data.t1);
+    return {kind:'DRAW_PUBLISH',panel:hasT2?'draw2':'draw1',label:hasT2&&hasT1?'NOWE LOSOWANIE T1/T2':hasT2?'NOWE LOSOWANIE T2':'NOWE LOSOWANIE T1'};
+  }
+  return {kind:type,panel:'',label:''};
+}
+async function getPlayerAttention(userId){
+  const presence=(await pool.query(`
+    select c.id as competition_id,c.title,c.fishery,c.competition_date
+    from entries e join competitions c on c.id=e.competition_id
+    where e.user_id=$1 and e.status='ACTIVE' and e.confirmed=false
+      and c.status<>'TEST' and c.competition_date is not null
+      and (c.competition_date::date-current_date)::int between 0 and 4
+    order by c.competition_date,c.id
+  `,[userId])).rows;
+  const notifs=(await pool.query(`
+    select id,type,title,body,data,created_at
+    from notifications
+    where recipient_user_id=$1 and read_at is null
+      and type=any($2::text[])
+    order by created_at desc,id desc
+  `,[userId,Array.from(PLAYER_ATTENTION_TYPES)])).rows;
+  const items=[],seen=new Set();
+  for(const r of presence){
+    const key='PRESENCE_CONFIRM:'+Number(r.competition_id);
+    if(seen.has(key))continue;seen.add(key);
+    items.push({key,competitionId:Number(r.competition_id),kind:'PRESENCE_CONFIRM',panel:'presence',label:'POTWIERDŹ OBECNOŚĆ',title:r.title||'',fishery:r.fishery||'',competitionDate:r.competition_date||null});
+  }
+  for(const n of notifs){
+    const data=n.data&&typeof n.data==='object'?n.data:{};
+    const compId=Number(data.competitionId||0);
+    if(!compId)continue;
+    if(n.type==='PRESENCE_CONFIRM'){
+      const key='PRESENCE_CONFIRM:'+compId;
+      if(seen.has(key))continue;
+      seen.add(key);
+      items.push({key,competitionId:compId,kind:'PRESENCE_CONFIRM',panel:'presence',label:'POTWIERDŹ OBECNOŚĆ',notificationId:Number(n.id),createdAt:n.created_at});
+      continue;
+    }
+    const info=attentionPanelForNotification(n.type,data);
+    const key=info.kind+':'+compId;
+    if(seen.has(key))continue;seen.add(key);
+    items.push({key,competitionId:compId,kind:info.kind,panel:info.panel,label:info.label,notificationId:Number(n.id),createdAt:n.created_at});
+  }
+  return {count:items.length,items};
+}
 async function pushToUser(userId, title, body, url='/', meta={}) {
   if (!webpush || !VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) return { ready:false, sent:0, failed:0 };
   const subs = await pool.query('select id, subscription from push_subscriptions where user_id=$1', [userId]);
   let sent=0,failed=0;
+  const badgeCount=Math.max(0,Number(meta.badgeCount||0));
   for (const s of subs.rows) {
     try {
-      await webpush.sendNotification(s.subscription, JSON.stringify({ title, body, url, type:meta.type||'', competitionId:meta.competitionId||null }));
+      await webpush.sendNotification(s.subscription, JSON.stringify({ title, body, url, type:meta.type||'', competitionId:meta.competitionId||null, badgeCount }));
       sent++;
     } catch (e) {
       failed++;
@@ -311,17 +369,49 @@ async function pushToUser(userId, title, body, url='/', meta={}) {
   }
   return { ready:true, sent, failed };
 }
-function playerPushType(type){return ['NEW_COMPETITION','DRAW_PUBLISH','RESULTS_T1','RESULTS_T2','RESULTS_GENERAL'].includes(String(type||''))}
+function playerPushType(type){return ['NEW_COMPETITION','PRESENCE_CONFIRM','DRAW_PUBLISH','RESULTS_T1','RESULTS_T2','RESULTS_GENERAL'].includes(String(type||''))}
 async function notifyUser(userId, type, title, body, data={}, deferPush=false) {
   if(data.competitionId){const c=await getCompetition(data.competitionId);if(c?.status==='TEST'){const recipient=await pool.query('select role from users where id=$1',[userId]);if(recipient.rows[0]?.role!=='ADMIN')return;}}
   await pool.query('insert into notifications(recipient_user_id,type,title,body,data) values($1,$2,$3,$4,$5)', [userId, type, title, body, data]);
   const u=await pool.query('select role from users where id=$1',[userId]);
   const role=u.rows[0]?.role||'PLAYER';
-  if(role==='ADMIN'||playerPushType(type)){const sending=pushToUser(userId,title,body,data.url||'/',{type,competitionId:data.competitionId});if(deferPush)sending.catch(e=>console.error('RESULT_PUSH_ERROR',e.message));else await sending;}
+  if(role==='ADMIN'||playerPushType(type)){
+    let badgeCount=0;
+    if(role!=='ADMIN'&&PLAYER_ATTENTION_TYPES.has(String(type||'')))badgeCount=(await getPlayerAttention(userId)).count;
+    const sending=pushToUser(userId,title,body,data.url||'/',{type,competitionId:data.competitionId,badgeCount});
+    if(deferPush)sending.catch(e=>console.error('RESULT_PUSH_ERROR',e.message));else await sending;
+  }
 }
 async function notifyAdmins(type, title, body, data={}) {
   const admins = await pool.query(`select id from users where role='ADMIN'`);
   for (const admin of admins.rows) await notifyUser(admin.id, type, title, body, Object.assign({ url:'/admin' }, data));
+}
+async function ensurePresenceConfirmNotifications(){
+  const rows=(await pool.query(`
+    select e.user_id,c.id competition_id,c.title,c.competition_date,(c.competition_date::date-current_date)::int days_left
+    from entries e join competitions c on c.id=e.competition_id
+    join users u on u.id=e.user_id and u.role='PLAYER'
+    where e.status='ACTIVE' and e.confirmed=false and c.status<>'TEST'
+      and c.competition_date is not null
+      and (c.competition_date::date-current_date)::int between 0 and 4
+      and not exists(
+        select 1 from notifications n
+        where n.recipient_user_id=e.user_id and n.type='PRESENCE_CONFIRM'
+          and n.data->>'competitionId'=c.id::text
+      )
+  `)).rows;
+  for(const r of rows){
+    const days=Math.max(0,Number(r.days_left||0));
+    const when=days===0?'dzisiaj':days===1?'jutro':'za '+days+' dni';
+    await notifyUser(Number(r.user_id),'PRESENCE_CONFIRM','Potwierdź obecność',`${r.title}: zawody ${when}. Potwierdź obecność w aplikacji.`,{competitionId:Number(r.competition_id),url:'/'});
+  }
+  return rows.length;
+}
+function startPresenceReminderLoop(){
+  const run=()=>ensurePresenceConfirmNotifications().catch(e=>console.error('PRESENCE_REMINDER_ERR',e.message));
+  setTimeout(run,1500);
+  const timer=setInterval(run,10*60*1000);
+  if(timer&&typeof timer.unref==='function')timer.unref();
 }
 
 
@@ -873,22 +963,43 @@ async function refreshResultAggregate(client, competitionId, userId, round) {
   return { weight:total, big_fish:bf };
 }
 
-async function addResultItem(competitionId, userId, round, kind, weight) {
+async function addResultItem(competitionId, userId, round, kind, weight, clientMutationId=null) {
   kind = String(kind || '').toUpperCase() === 'BF' ? 'BF' : 'NET';
   const g = grams(weight);
+  const mutationId=String(clientMutationId||'').trim().slice(0,160)||null;
   if (!g) throw new Error('Podaj wagę większą od 0');
   const entry = await pool.query(`select 1 from entries where competition_id=$1 and user_id=$2 and status='ACTIVE'`, [competitionId, userId]);
   if (!entry.rows[0]) throw new Error('Ten zawodnik nie jest na liście głównej tych zawodów');
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const ins = await client.query(`
-      insert into result_items(competition_id,user_id,round,kind,weight)
-      values($1,$2,$3,$4,$5) returning *
-    `, [competitionId, userId, round, kind, g]);
+    let item=null,duplicate=false;
+    if(mutationId){
+      const ins = await client.query(`
+        insert into result_items(competition_id,user_id,round,kind,weight,client_mutation_id)
+        values($1,$2,$3,$4,$5,$6)
+        on conflict do nothing
+        returning *
+      `, [competitionId, userId, round, kind, g, mutationId]);
+      item=ins.rows[0]||null;
+      if(!item){
+        duplicate=true;
+        const prev=await client.query(`select * from result_items where client_mutation_id=$1 limit 1`,[mutationId]);
+        item=prev.rows[0]||null;
+        if(!item)throw new Error('Nie udało się potwierdzić zapisu offline');
+        if(Number(item.competition_id)!==Number(competitionId)||Number(item.user_id)!==Number(userId)||Number(item.round)!==Number(round)||String(item.kind)!==kind||Number(item.weight)!==g)
+          throw new Error('Identyfikator zapisu offline jest już użyty dla innego wpisu');
+      }
+    }else{
+      const ins = await client.query(`
+        insert into result_items(competition_id,user_id,round,kind,weight)
+        values($1,$2,$3,$4,$5) returning *
+      `, [competitionId, userId, round, kind, g]);
+      item=ins.rows[0];
+    }
     const aggregate = await refreshResultAggregate(client, competitionId, userId, round);
     await client.query('commit');
-    return { item:ins.rows[0], aggregate };
+    return { item, aggregate, duplicate };
   } catch (e) {
     await client.query('rollback');
     throw e;
@@ -1178,11 +1289,20 @@ async function buildPlayerStartHistory(userId) {
       competition_date:d.competition.competition_date||null,
       t1_place:Number(r1.points||r1.sector_place||0),
       t1_sector_size:Number(s1||0),
+      t1_weight:Number(r1.weight||0),
+      t1_big_fish:Number(r1.big_fish||0),
+      t1_stand:r1.stand==null?null:Number(r1.stand),
+      t1_sector:String(r1.sector||''),
       t2_place:Number(r2.points||r2.sector_place||0),
       t2_sector_size:Number(s2||0),
+      t2_weight:Number(r2.weight||0),
+      t2_big_fish:Number(r2.big_fish||0),
+      t2_stand:r2.stand==null?null:Number(r2.stand),
+      t2_sector:String(r2.sector||''),
       general_rank:Number(g.rank||0),
       general_count:Number((d.classification.general||[]).length||0),
-      total_weight:Number(g.total_weight||0)
+      total_weight:Number(g.total_weight||0),
+      biggest_fish:Number(g.biggest_fish||Math.max(Number(r1.big_fish||0),Number(r2.big_fish||0)))
     });
   }
   return history;
@@ -1193,7 +1313,7 @@ async function route(req, res) {
   const path = url.pathname;
   const method = req.method;
 
-  if (path === '/__probe_js_v133' || path === '/__probe_boot_v133' || path === '/__probe_js_v132' || path === '/__probe_boot_v132' || path === '/__probe_js_v102' || path === '/__probe_boot_v102' || path === '/__probe_js_v101' || path === '/__probe_boot_v101' || path === '/__probe_js_v100' || path === '/__probe_boot_v100' || path === '/__probe_js_v99' || path === '/__probe_boot_v99' || path === '/__probe_js_v98' || path === '/__probe_boot_v98' || path === '/__probe_js_v97' || path === '/__probe_boot_v97' || path === '/__probe_js_v96' || path === '/__probe_boot_v96' || path === '/__probe_js_v95' || path === '/__probe_boot_v95' || path === '/__probe_js_v94' || path === '/__probe_boot_v94' || path === '/__probe_js_v93' || path === '/__probe_boot_v93' || path === '/__probe_js_v91' || path === '/__probe_boot_v91' || path === '/__probe_js_v90' || path === '/__probe_boot_v90' || path === '/__probe_js_v89' || path === '/__probe_boot_v89' || path === '/__probe_js_v88' || path === '/__probe_boot_v88' || path === '/__probe_js_v87' || path === '/__probe_boot_v87' || path === '/__probe_js_v86' || path === '/__probe_boot_v86' || path === '/__probe_js_v85' || path === '/__probe_boot_v85' || path === '/__probe_js_v84' || path === '/__probe_boot_v84' || path === '/__probe_js_v83' || path === '/__probe_boot_v83' || path === '/__probe_js_v82' || path === '/__probe_boot_v82' || path === '/__probe_js_v81' || path === '/__probe_boot_v81' || path === '/__probe_js_v80' || path === '/__probe_boot_v80' || path === '/__probe_js_v79' || path === '/__probe_boot_v79' || path === '/__probe_js_v78' || path === '/__probe_boot_v78' || path === '/__probe_js_v77' || path === '/__probe_boot_v77' || path === '/__probe_js_v76' || path === '/__probe_boot_v76' || path === '/__probe_js_v75' || path === '/__probe_boot_v75' || path === '/__probe_js_v74' || path === '/__probe_boot_v74' || path === '/__probe_js_v73' || path === '/__probe_boot_v73' || path === '/__probe_js_v72' || path === '/__probe_boot_v72' || path === '/__probe_js_v71' || path === '/__probe_boot_v71') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
+  if (path === '/__probe_js_v134' || path === '/__probe_boot_v134' || path === '/__probe_js_v133' || path === '/__probe_boot_v133' || path === '/__probe_js_v132' || path === '/__probe_boot_v132' || path === '/__probe_js_v102' || path === '/__probe_boot_v102' || path === '/__probe_js_v101' || path === '/__probe_boot_v101' || path === '/__probe_js_v100' || path === '/__probe_boot_v100' || path === '/__probe_js_v99' || path === '/__probe_boot_v99' || path === '/__probe_js_v98' || path === '/__probe_boot_v98' || path === '/__probe_js_v97' || path === '/__probe_boot_v97' || path === '/__probe_js_v96' || path === '/__probe_boot_v96' || path === '/__probe_js_v95' || path === '/__probe_boot_v95' || path === '/__probe_js_v94' || path === '/__probe_boot_v94' || path === '/__probe_js_v93' || path === '/__probe_boot_v93' || path === '/__probe_js_v91' || path === '/__probe_boot_v91' || path === '/__probe_js_v90' || path === '/__probe_boot_v90' || path === '/__probe_js_v89' || path === '/__probe_boot_v89' || path === '/__probe_js_v88' || path === '/__probe_boot_v88' || path === '/__probe_js_v87' || path === '/__probe_boot_v87' || path === '/__probe_js_v86' || path === '/__probe_boot_v86' || path === '/__probe_js_v85' || path === '/__probe_boot_v85' || path === '/__probe_js_v84' || path === '/__probe_boot_v84' || path === '/__probe_js_v83' || path === '/__probe_boot_v83' || path === '/__probe_js_v82' || path === '/__probe_boot_v82' || path === '/__probe_js_v81' || path === '/__probe_boot_v81' || path === '/__probe_js_v80' || path === '/__probe_boot_v80' || path === '/__probe_js_v79' || path === '/__probe_boot_v79' || path === '/__probe_js_v78' || path === '/__probe_boot_v78' || path === '/__probe_js_v77' || path === '/__probe_boot_v77' || path === '/__probe_js_v76' || path === '/__probe_boot_v76' || path === '/__probe_js_v75' || path === '/__probe_boot_v75' || path === '/__probe_js_v74' || path === '/__probe_boot_v74' || path === '/__probe_js_v73' || path === '/__probe_boot_v73' || path === '/__probe_js_v72' || path === '/__probe_boot_v72' || path === '/__probe_js_v71' || path === '/__probe_boot_v71') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
 
   if (path === '/__probe_js_v68' || path === '/__probe_boot_v68' || path === '/__probe_js_v67' || path === '/__probe_boot_v67' || path === '/__probe_js_v66' || path === '/__probe_boot_v66' || path === '/__probe_js_v65' || path === '/__probe_boot_v65' || path === '/__probe_js_v63' || path === '/__probe_boot_v63' || path === '/__probe_js_v62' || path === '/__probe_boot_v62' || path === '/__probe_js_v60' || path === '/__probe_boot_v60' || path === '/__probe_js_v59' || path === '/__probe_boot_v59' || path === '/__probe_js_v58' || path === '/__probe_boot_v58' || path === '/__probe_js_v57' || path === '/__probe_boot_v57' || path === '/__probe_js_v56' || path === '/__probe_boot_v56' || path === '/__probe_js_v55' || path === '/__probe_boot_v55' || path === '/__probe_js_v54' || path === '/__probe_boot_v54' || path === '/__probe_js_v53' || path === '/__probe_boot_v53' || path === '/__probe_js_v52' || path === '/__probe_boot_v52' || path === '/__probe_js_v51' || path === '/__probe_boot_v51' || path === '/__probe_js_v50' || path === '/__probe_boot_v50' || path === '/__probe_js_v49' || path === '/__probe_boot_v49' || path === '/__probe_js_v36' || path === '/__probe_boot_v36' || path === '/__probe_js_v35' || path === '/__probe_boot_v35' || path === '/__probe_js_v34' || path === '/__probe_boot_v34' || path === '/__probe_js_v33' || path === '/__probe_boot_v33' || path === '/__probe_js_v32' || path === '/__probe_boot_v32' || path === '/__probe_js_v30' || path === '/__probe_boot_v30' || path === '/__probe_js_v29' || path === '/__probe_boot_v29' || path === '/__probe_js_v27' || path === '/__probe_boot_v27' || path === '/__probe_inline_v26') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/api/version') return sendJson(res, 200, { ok:true, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
@@ -1373,7 +1493,10 @@ body #app button.rosterLeaveRequest{background:#ffce54!important;color:#302100!i
 body #app button.rosterLeaveRequest small{display:block;color:#302100!important;font-size:11px;margin-top:3px}
 body #app button.rosterLeaveRequest:disabled{opacity:.65;cursor:wait}
 @media(max-width:760px){body #app .mobileRosterCompactActions .rosterLeaveActions{width:100%}body #app .mobileRosterCompactActions .rosterLeaveRequest{flex:1;min-width:140px}}
-</style></head><body><div class="card"><h2>Reset pamięci aplikacji</h2><p>Usuwam cache i starego service workera. Przekierowanie jest natychmiastowe, bez czekania na zawieszone obietnice przeglądarki.</p><button onclick="go()">Wyczyść teraz</button></div><script>function go(){try{localStorage.removeItem('carp_token');localStorage.removeItem('lowcy_app_version_seen');sessionStorage.clear();if('serviceWorker'in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister()})}).catch(function(){})}if('caches'in window){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k)})}).catch(function(){})}}catch(e){}setTimeout(function(){location.replace('/?hard=36&t='+Date.now())},50)}go();</script></body></html>`, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate'});
+</style>
+
+
+</head><body><div class="card"><h2>Reset pamięci aplikacji</h2><p>Usuwam cache i starego service workera. Przekierowanie jest natychmiastowe, bez czekania na zawieszone obietnice przeglądarki.</p><button onclick="go()">Wyczyść teraz</button></div><script>function go(){try{localStorage.removeItem('carp_token');localStorage.removeItem('lowcy_app_version_seen');sessionStorage.clear();if('serviceWorker'in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister()})}).catch(function(){})}if('caches'in window){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k)})}).catch(function(){})}}catch(e){}setTimeout(function(){location.replace('/?hard=36&t='+Date.now())},50)}go();</script></body></html>`, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate'});
 
   if (path === '/carp-real-v116.png') return sendBinary(res,200,CARP_REAL,'image/png','public, max-age=31536000, immutable');
   if (path === '/icon-192.png') return sendBinary(res,200,ICON_192,'image/png','public, max-age=604800');
@@ -1391,9 +1514,9 @@ body #app button.rosterLeaveRequest:disabled{opacity:.65;cursor:wait}
     ]
   }), {'Content-Type':'application/manifest+json; charset=utf-8','Cache-Control':'no-cache'});
   if (path === '/sw.js') return send(res, 200, `
-const SHELL_CACHE='lowcy-shell-v133';
-const APP_SHELL_JS='/app.js?v=133';
-const PDF_JS='/pdf-vector.js?v=133';
+const SHELL_CACHE='lowcy-shell-v134';
+const APP_SHELL_JS='/app.js?v=134';
+const PDF_JS='/pdf-vector.js?v=134';
 const SHELL=['/',APP_SHELL_JS,PDF_JS,'/icon-192.png','/icon-512.png'];
 async function fetchWithTimeout(req,ms=30000){const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),ms);try{return await fetch(req,{cache:'no-store',signal:ctrl.signal})}finally{clearTimeout(timer)}}
 self.addEventListener('install',event=>event.waitUntil((async()=>{const replies=await Promise.all(SHELL.map(url=>fetchWithTimeout(url)));if(replies.some(r=>!r.ok))throw Error('Incomplete shell');const cache=await caches.open(SHELL_CACHE);await Promise.all(SHELL.map((url,i)=>cache.put(url,replies[i])));await self.skipWaiting()})()));
@@ -1402,11 +1525,12 @@ self.addEventListener('fetch',event=>{const req=event.request,u=new URL(req.url)
  if(req.mode==='navigate'){event.respondWith((async()=>{try{const r=await fetchWithTimeout(req);if(r.ok)return r}catch(e){}return(await(await caches.open(SHELL_CACHE)).match('/'))||new Response('Brak połączenia. Otwórz aplikację ponownie po połączeniu z internetem.',{headers:{'Content-Type':'text/plain; charset=utf-8'}})})());return}
  if(u.pathname==='/app.js'||u.pathname==='/pdf-vector.js'){event.respondWith((async()=>{const key=u.pathname+u.search,c=await caches.open(SHELL_CACHE),saved=await c.match(key);if(saved)return saved;return fetchWithTimeout(req)})());return}
 });
+async function setLowcyBadge(n){try{const count=Math.max(0,Number(n||0));if(self.navigator&&typeof self.navigator.setAppBadge==='function'){if(count)await self.navigator.setAppBadge(count);else if(typeof self.navigator.clearAppBadge==='function')await self.navigator.clearAppBadge()}}catch(e){}}
 self.addEventListener('push', event => {
   let data={}; try{data=event.data?event.data.json():{}}catch(e){}
   const title=data.title||'Łowcy Methodowcy';
   const options={body:data.body||'Nowe powiadomienie',icon:'/icon-192.png',badge:'/icon-64.png',data:{url:data.url||'/'},tag:data.type?(data.type+'-'+(data.competitionId||'')):undefined,renotify:true};
-  event.waitUntil(self.registration.showNotification(title,options));
+  event.waitUntil((async()=>{await Promise.all([self.registration.showNotification(title,options),setLowcyBadge(data.badgeCount)]);const list=await clients.matchAll({type:'window',includeUncontrolled:true});for(const c of list){try{c.postMessage({type:'LOWCY_ATTENTION_REFRESH'})}catch(e){}}})());
 });
 self.addEventListener('notificationclick', event => {
   event.notification.close();
@@ -1464,6 +1588,12 @@ self.addEventListener('notificationclick', event => {
   if(user && user.role!=='ADMIN' && privateCompetition){const c=await getCompetition(Number(privateCompetition[1]));if(c?.status==='TEST')return sendJson(res,404,{ok:false,error:'Nie znaleziono zawodów'});}
   if(await handleJudgeRoutes(req,res,path,method,user))return;
   if (path === '/api/me' && method === 'GET') { if (!requireUser(user, res)) return; return sendJson(res, 200, { ok:true, user }); }
+  if (path === '/api/me/attention' && method === 'GET') {
+    if (!requireUser(user, res)) return;
+    if (user.role!=='PLAYER') return sendJson(res, 200, {ok:true,count:0,items:[]});
+    const attention=await getPlayerAttention(Number(user.id));
+    return sendJson(res, 200, {ok:true,...attention});
+  }
   if (path === '/api/general-rules' && method === 'GET') {
     if (!requireUser(user, res)) return;
     const q=await pool.query(`select value from app_settings where key='general_regulations' limit 1`);
@@ -1663,7 +1793,9 @@ self.addEventListener('notificationclick', event => {
     const days=Number(row.days_left);
     if(!Number.isFinite(days)||days<0||days>4)return sendJson(res,409,{ok:false,error:'Obecność można potwierdzić od 4 dni przed zawodami do dnia zawodów'});
     const upd=await pool.query(`update entries set confirmed=true, confirmed_at=coalesce(confirmed_at,now()) where id=$1 returning confirmed,confirmed_at`,[row.id]);
-    return sendJson(res,200,{ok:true,confirmed:true,confirmedAt:upd.rows[0]?.confirmed_at||row.confirmed_at});
+    await pool.query(`update notifications set read_at=coalesce(read_at,now()) where recipient_user_id=$1 and type='PRESENCE_CONFIRM' and data->>'competitionId'=$2`,[user.id,String(compId)]);
+    const attention=await getPlayerAttention(Number(user.id));
+    return sendJson(res,200,{ok:true,confirmed:true,confirmedAt:upd.rows[0]?.confirmed_at||row.confirmed_at,attention});
   }
 
   m = path.match(/^\/api\/admin\/competitions\/(\d+)\/entries\/(\d+)\/confirm$/);
@@ -1884,6 +2016,45 @@ self.addEventListener('notificationclick', event => {
     await notifyAdmins('RESULTS_SAVE_T'+round, 'Zapisano wyniki T'+round, `${user.first_name} ${user.last_name} zapisał wyniki T${round}: ${comp.title}`, { competitionId:compId, round });
     return sendJson(res, 200, { ok:true });
   }
+  m = path.match(/^\/api\/admin\/competitions\/(\d+)\/results\/(1|2)\/import-photo$/);
+  if (m && method === 'POST') {
+    if (!requireAdmin(user, res)) return;
+    const compId = Number(m[1]); const round = Number(m[2]);
+    const comp = await getCompetition(compId);
+    if (!comp) return sendJson(res, 404, { ok:false, error:'Nie znaleziono zawodów' });
+    const b = await readBody(req);
+    const rows = Array.isArray(b.rows) ? b.rows : [];
+    const active = await getActiveEntries(compId);
+    const activeIds = new Set(active.map(e=>Number(e.user_id)));
+    const receivedIds = new Set();
+    for (const row of rows) {
+      const uid=Number(row?.userId);
+      if(!activeIds.has(uid)) return sendJson(res,400,{ok:false,error:'Import zawiera zawodnika spoza aktualnej listy głównej'});
+      if(receivedIds.has(uid)) return sendJson(res,400,{ok:false,error:'Ten sam zawodnik występuje w imporcie więcej niż raz'});
+      receivedIds.add(uid);
+    }
+    if(receivedIds.size!==activeIds.size) return sendJson(res,400,{ok:false,error:'Zdjęcie/import nie obejmuje całej aktualnej listy głównej. Odśwież formularz i spróbuj ponownie.'});
+    const client=await pool.connect();
+    let inserted=0;
+    try{
+      await client.query('begin');
+      await client.query('delete from result_items where competition_id=$1 and round=$2',[compId,round]);
+      for(const row of rows){
+        const uid=Number(row.userId);
+        const weights=(Array.isArray(row.weights)?row.weights:[]).slice(0,5).map(grams).filter(x=>x>0);
+        const bf=grams(row.bigFish);
+        for(const w of weights){
+          await client.query('insert into result_items(competition_id,user_id,round,kind,weight) values($1,$2,$3,$4,$5)',[compId,uid,round,'NET',w]);inserted++;
+        }
+        if(bf>0){await client.query('insert into result_items(competition_id,user_id,round,kind,weight) values($1,$2,$3,$4,$5)',[compId,uid,round,'BF',bf]);inserted++;}
+        await refreshResultAggregate(client,compId,uid,round);
+      }
+      await client.query('commit');
+    }catch(e){await client.query('rollback');throw e}
+    finally{client.release()}
+    await notifyAdmins('RESULTS_PHOTO_IMPORT_T'+round,'Import wyników ze zdjęcia',`${user.first_name} ${user.last_name} zaimportował wyniki T${round} ze zdjęcia: ${comp.title}`,{competitionId:compId,round,rows:rows.length,inserted});
+    return sendJson(res,200,{ok:true,round,rows:rows.length,inserted});
+  }
   m = path.match(/^\/api\/admin\/competitions\/(\d+)\/results\/(1|2)\/items$/);
   if (m && method === 'POST') {
     if (!requireAdmin(user, res)) return;
@@ -1892,7 +2063,7 @@ self.addEventListener('notificationclick', event => {
     if (!comp) return sendJson(res, 404, { ok:false, error:'Nie znaleziono zawodów' });
     const b = await readBody(req);
     try {
-      const out = await addResultItem(compId, Number(b.userId), round, b.kind, b.weight);
+      const out = await addResultItem(compId, Number(b.userId), round, b.kind, b.weight, b.clientMutationId);
       return sendJson(res, 200, { ok:true, item:out.item, aggregate:out.aggregate });
     } catch (e) { return sendJson(res, 400, { ok:false, error:e.message }); }
   }
@@ -1998,6 +2169,18 @@ self.addEventListener('notificationclick', event => {
     }
     const out = await pool.query(`delete from notifications where recipient_user_id=$1`, [user.id]);
     return sendJson(res, 200, { ok:true, deleted:out.rowCount || 0, keptPending:0 });
+  }
+  if (path === '/api/notifications/attention/read' && method === 'POST') {
+    if (!requireUser(user, res)) return;
+    const b=await readBody(req),compId=Number(b.competitionId||0);
+    const allowed=['PRESENCE_CONFIRM','DRAW_PUBLISH','RESULTS_T1','RESULTS_T2','RESULTS_GENERAL'];
+    const types=(Array.isArray(b.types)?b.types:[b.type]).map(String).filter(t=>allowed.includes(t));
+    if(!compId||!types.length)return sendJson(res,400,{ok:false,error:'Brak danych powiadomienia'});
+    await pool.query(`update notifications set read_at=coalesce(read_at,now())
+      where recipient_user_id=$1 and read_at is null and type=any($2::text[])
+        and data->>'competitionId'=$3`,[user.id,types,String(compId)]);
+    const attention=user.role==='PLAYER'?await getPlayerAttention(Number(user.id)):{count:0,items:[]};
+    return sendJson(res,200,{ok:true,...attention});
   }
   m = path.match(/^\/api\/(?:admin\/)?notifications\/(\d+)\/read$/);
   if (m && method === 'POST') {
@@ -2259,7 +2442,7 @@ const HTML = `<!doctype html>
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
 <script>try{if(localStorage.getItem('carp_token'))document.documentElement.classList.add('hasSavedSession')}catch(e){}</script>
-<title>Łowcy Methodowcy — V106</title>
+<title>Łowcy Methodowcy — V134</title>
 <style>
 :root{--green:#114b2f;--green2:#17643f;--bg:#f3f6ef;--card:#fff;--line:#cfd8cc;--txt:#18251d;--muted:#68746d;--red:#b32020;--gold:#ffc400;--blue:#1067c8;--soft:#eaf2eb}
 *{box-sizing:border-box}html,body{height:auto!important;min-height:100%!important;overflow-y:auto!important;overscroll-behavior:auto!important}body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}header{position:sticky;top:0;z-index:5;background:var(--green);color:white;padding:12px 14px;box-shadow:0 2px 8px #0002}header .row{display:flex;justify-content:space-between;gap:12px;align-items:center;max-width:1180px;margin:auto}h1{font-size:18px;margin:0}h2{font-size:18px;margin:0 0 8px}h3{font-size:16px;margin:12px 0 8px}main{max-width:1180px;margin:0 auto;padding:12px}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin:12px 0;box-shadow:0 2px 8px #0000000d}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}input,select,textarea,button{width:100%;font:inherit;border-radius:12px;border:1px solid var(--line);padding:10px 11px;background:white}textarea{min-height:70px}button{border:0;background:var(--green);color:white;font-weight:900;cursor:pointer}button.secondary{background:#e7eee7;color:var(--green);border:1px solid #bfd0c2}button.warn{background:var(--red)}button.blue{background:var(--blue)}button:disabled{opacity:.55;cursor:not-allowed}label{display:block;font-size:12px;font-weight:900;color:var(--muted);margin:8px 0 4px}.tabs{display:flex;gap:8px;overflow:auto;padding:8px 0}.tabs button{white-space:nowrap;width:auto;padding:9px 13px}.tabs button.active{background:#072e1c}.tablewrap{width:100%;overflow:auto;border-radius:12px;border:1px solid var(--line)}table{width:100%;border-collapse:collapse;background:white}th,td{border:1px solid var(--line);padding:8px 7px;text-align:left;vertical-align:middle}th{background:#e6f0e8;color:#106b28;font-size:12px;text-transform:uppercase}.nowrap{white-space:nowrap}.muted{color:var(--muted)}.ok{color:var(--green);font-weight:900}.bad{color:var(--red);font-weight:900}.pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#e6f0e8;font-weight:900}.hidden{display:none!important}.top-actions{display:flex;gap:8px;align-items:center}.top-actions button{width:auto;padding:8px 11px;background:#ffffff22;border:1px solid #ffffff55}.small{font-size:12px}.right{text-align:right}.mine{background:#fff4b8!important;outline:3px solid var(--gold);outline-offset:-3px;font-weight:900}.mine td{font-weight:900}.danger-line{border-left:6px solid var(--red)}.success-line{border-left:6px solid var(--green)}.mapbox{background:#f7faf4;border:1px solid var(--line);border-radius:14px;padding:10px;overflow:auto}.banktitle{font-size:12px;font-weight:900;color:var(--muted);margin:8px 0 5px}.bank{display:grid;grid-template-columns:repeat(auto-fit,minmax(42px,1fr));gap:5px;min-width:320px}.stand{min-height:42px;border:1px solid #a8b7aa;border-radius:9px;background:white;display:flex;align-items:center;justify-content:center;flex-direction:column;font-weight:900;font-size:12px}.stand small{font-size:9px;font-weight:800;color:#555}.stand.occ{box-shadow:inset 0 -4px 0 #cbd8cc}.stand.t1{background:#ffe1e1;border:3px solid #d00000;color:#8e0000}.stand.t2{background:#dfeaff;border:3px solid #005bd8;color:#003c91}.stand.both{background:#f0dcff;border:3px solid #7a1fc2;color:#461078}.ownbox{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.ownitem{border:2px solid var(--line);border-radius:14px;padding:12px;background:#fff}.ownitem strong{font-size:24px}.twoCols{display:grid;grid-template-columns:1fr 1fr;gap:12px}.inlineBtns{display:flex;gap:6px;flex-wrap:wrap}.inlineBtns button{width:auto}.competitionActions{gap:22px;align-items:center}.competitionActions button{min-width:96px}.adminbar{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.tag{font-size:11px;border-radius:999px;padding:3px 7px;background:#f0f4ee;font-weight:900}.t1tag{background:#ffe1e1;color:#8e0000}.t2tag{background:#dfeaff;color:#003c91}.sector-A{box-shadow:inset 0 0 0 2px #b32020}.sector-B{box-shadow:inset 0 0 0 2px #1067c8}.sector-C{box-shadow:inset 0 0 0 2px #14803a}.sector-D{box-shadow:inset 0 0 0 2px #7a1fc2}.sector-E{box-shadow:inset 0 0 0 2px #b36b00}.sector-F{box-shadow:inset 0 0 0 2px #006b7a}.checkline{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--txt);font-weight:800}.checkline input{width:auto}.sectorMap{background:#fbfdf9;border:1px solid var(--line);border-radius:14px;padding:12px;overflow:auto}.mapTitle,.bankLabel{font-weight:1000;color:#204b38;margin:5px 0}.standRow{display:grid;gap:0;min-width:640px}.standCell{min-height:45px;border:2px solid #446b56;display:flex;align-items:center;justify-content:center;flex-direction:column;font-weight:1000;color:#123827;margin:-1px 0 0 -1px}.standCell small{font-size:10px}.standCell.empty{border:0;background:transparent}.sectorBand{display:grid;min-width:640px;gap:0}.sectorBlock{min-height:78px;border:3px solid #38664d;display:flex;align-items:center;justify-content:center;flex-direction:column;margin:-1px 0 0 -1px;text-align:center}.sectorBlock span{font-size:22px;font-weight:1000}.sectorSummary{background:#ecf2ed;border-radius:10px;padding:10px;margin-top:10px;font-size:13px}.water{text-align:center;background:#f2f6f1;color:#6a756d;font-weight:1000;padding:12px;min-width:640px}.sectorFill-A{background:#d8f1dd}.sectorFill-B{background:#dbe8fb}.sectorFill-C{background:#ffe7bd}.sectorFill-D{background:#f6d9e3}.sectorFill-E{background:#eadffb}.sectorFill-F{background:#dff4f4}.sectorFill-G{background:#f7e8ce}.sectorFill-H{background:#e5f0d0}.standCell.t1{background:#ffb5b5!important;border:4px solid #d00000!important;color:#7c0000}.standCell.t2{background:#b9d2ff!important;border:4px solid #005bd8!important;color:#002c70}.standCell.both{background:#e1b8ff!important;border:4px solid #7a1fc2!important;color:#3c0060}.standCell.occ{box-shadow:inset 0 -5px 0 #244f36}.weightItems{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:5px}.weightTag{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:3px 6px;font-size:11px;font-weight:900;background:#edf4ec;border:1px solid #bfd0c2}.weightTag button{width:auto;padding:0 4px;border-radius:8px;background:#b91c1c;color:#fff;line-height:1.1}.bfTag{background:#fff0d6;border-color:#e5b965}.netTag{background:#e7f5e7}.bfLine{font-size:12px;font-weight:1000;color:#b91c1c}.flashSave{background:#bff7c8!important;transition:background .25s}.resultInputTable input{min-width:120px}.sectorBand.clean{margin:0}.sectorFlexRow{display:flex;gap:0;min-width:640px}.sectorGroup{display:grid;gap:0;margin:0}.sectorGroup .standCell{border-radius:0;margin:-1px 0 0 -1px}.sectorFlexRow .sectorBlock{border-radius:0;margin:-1px 0 0 -1px}.standFlex{align-items:stretch}.sectorBand.clean .sectorBlock{min-height:72px}.pushBox{margin-top:6px;line-height:1.35}.bankLabelBottom{margin-top:8px}.quickScroll{position:fixed;right:10px;bottom:14px;z-index:30;display:flex;flex-direction:column;gap:7px}.quickScroll button{width:52px;padding:9px 0;border-radius:999px;background:#123827cc;box-shadow:0 3px 10px #0003}.quickScroll button:last-child{background:#e7eee7;color:#123827;border:1px solid #bfd0c2}
@@ -5795,10 +5978,60 @@ body.playerTheme #app>.tabs button{font-size:15px!important;line-height:1.1!impo
  body.playerTheme #app .playerCompCardV98 .playerCompCardDate{grid-template-columns:auto minmax(0,1fr) minmax(0,1.3fr)!important}
 }
 </style>
+<style id="v134-ui">
+.playerCompCardHead,.playerCompDesktopTitle{position:relative}
+.playerCompAttentionBadge{display:inline-flex!important;align-items:center;justify-content:center;min-width:24px;height:24px;padding:0 6px;border-radius:999px;background:#df1f32;color:#fff;font-weight:900;font-size:13px;line-height:1;box-shadow:0 0 0 2px #fff2,0 2px 8px #0005;margin-left:6px;vertical-align:middle}
+.playerCompAttentionMain{background:linear-gradient(180deg,#ffcc33,#ed9714)!important;color:#1e2730!important;border-color:#ffd86a!important;font-weight:1000!important}
+.playerPresenceHint{pointer-events:none}
+.playerNearestThree{margin:0 0 12px;border:1px solid #385d75;border-radius:10px;padding:8px;background:#0b1c2a}
+.playerNearestThreeHead{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:3px 4px 8px;color:#fff}
+.playerNearestThreeHead b{font-size:13px;letter-spacing:.3px}.playerNearestThreeHead span{font-size:11px;color:#9ec7dc}
+.playerNearestThreeBody{display:grid;gap:7px}
+.playerHistoryDashboard{display:grid;gap:12px}
+.historyHero{background:linear-gradient(145deg,#102b3d,#081824);border:1px solid #38586e;border-radius:16px;padding:14px;color:#fff;box-shadow:0 8px 24px #0004}
+.historyHero h2{margin:0;font-size:22px}.historyHero p{margin:4px 0 12px;color:#a9c3d6}
+.historyStats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.historyStat{background:#0b1f2d;border:1px solid #395a70;border-radius:11px;padding:9px;text-align:center;min-width:0}
+.historyStat small{display:block;color:#9eb9cb;font-weight:800;font-size:10px;line-height:1.15}.historyStat strong{display:block;margin-top:5px;color:#fff;font-size:18px;white-space:nowrap}
+.historyStat.fish strong{color:#ffd35a}.historyStat.podium strong{color:#ffca37}.historyStat.best strong{color:#73e59a}
+.historyStartList{display:grid;gap:12px}
+.historyStartCard{background:linear-gradient(160deg,#122b3d,#091925);border:1px solid #37566b;border-radius:16px;padding:12px;color:#fff;box-shadow:0 8px 24px #0003}
+.historyStartHead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.historyStartHead h3{margin:0;font-size:20px;color:#fff}.historyStartHead span{display:block;margin-top:2px;color:#a7bfd0;font-size:12px}
+.historyGeneral{flex:0 0 auto;min-width:90px;text-align:center;background:#0a5638;border:1px solid #2b9568;border-radius:12px;padding:7px 10px}
+.historyGeneral small{display:block;font-size:9px;font-weight:900;color:#b7efd4}.historyGeneral strong{font-size:24px;line-height:1.05}
+.historyRounds{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.historyRound{border-radius:12px;padding:10px;text-align:center;border:1px solid #526d81;background:#102536}
+.historyRound1{border-top:4px solid #2f8cff}.historyRound2{border-top:4px solid #e58a2c}
+.historyRoundTitle{font-weight:1000;font-size:12px;letter-spacing:.4px}.historyRoundPlace{margin:5px 0;font-size:16px}.historyRoundPlace b{font-size:32px}.historyRoundPlace span{font-size:18px;color:#a9c1d1}
+.historyRoundMeta{display:flex;justify-content:center;gap:14px;font-size:11px;color:#b7cddd}.historyRoundWeight{margin-top:7px;font-size:18px;font-weight:900}.historyRoundBF{margin-top:3px;font-size:12px;color:#ffd361}
+.historyStartFoot{display:grid;grid-template-columns:1fr 1fr auto;align-items:center;gap:8px;margin-top:9px;padding-top:9px;border-top:1px solid #38556a}
+.historyStartFoot small{display:block;color:#8faebe;font-size:9px;font-weight:900}.historyStartFoot b{font-size:15px}.historyStartFoot button{margin:0;background:#0b8d55!important;font-weight:900!important}
+.judgeOfflineState{margin:0 0 9px;padding:9px 12px;border-radius:10px;font-weight:900;text-align:center}
+.judgeOfflineState.ok{background:#143c2d;color:#9af0bd;border:1px solid #29734f}.judgeOfflineState.offline{background:#573b13;color:#ffd98f;border:1px solid #a47025}.judgeOfflineState.syncing{background:#183c59;color:#a9daf9;border:1px solid #376c91}
+.judgePendingWeight{border-style:dashed!important;opacity:.95}.judgePendingWeight small{font-weight:1000}.judgePendingError{background:#68242d!important;border-color:#e75a6c!important}
+.photoImportQuick,.photoPdfBox{margin:12px 0;padding:12px;border:1px solid #3d6a82;border-radius:12px;background:#0d2636;color:#eaf7ff}
+.photoImportQuick>b,.photoPdfBox>b{display:block;font-size:15px;margin-bottom:4px}.photoImportQuick>span,.photoPdfBox>span{display:block;font-size:12px;color:#b6cedd;margin-bottom:9px}
+.photoImportOverlay{position:fixed;inset:0;z-index:100000;background:#06101aeF;overflow:auto;padding:18px}
+.photoImportDialog{max-width:1180px;margin:0 auto;background:#102534;color:#fff;border:1px solid #48677b;border-radius:16px;padding:14px;box-shadow:0 20px 70px #0008}
+.photoImportHead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.photoImportHead h2{margin:0 0 4px}.photoImportHead p{margin:0;color:#b8ccda}
+.photoImportPreview{margin:10px 0;text-align:center;background:#07141d;border-radius:10px;padding:8px}.photoImportPreview img{max-width:100%;max-height:260px;object-fit:contain;border-radius:6px}
+.photoImportWarn{margin:10px 0;padding:10px;background:#5a4016;border:1px solid #aa7929;color:#ffe1a2;border-radius:9px;font-weight:800}
+.photoImportTable{min-width:800px}.photoImportTable th,.photoImportTable td{padding:5px!important}.photoImportTable input{width:100%;min-width:76px;text-align:center;font-size:17px;font-weight:900;padding:7px 4px}
+.photoImportTable .photoOcrName{min-width:220px}.photoOcrLow{background:#5b4319!important}.photoOcrLow input{border-color:#ffbd3c!important;background:#fff8d8!important;color:#1e252b!important}.photoOcrLow small{display:block;color:#ffd47a;text-align:center;font-size:10px;font-weight:900}
+.photoImportActions{display:flex;gap:9px;justify-content:flex-end;margin-top:12px}.photoImportActions button{min-height:46px}
+@media(max-width:760px){
+  .photoImportOverlay{padding:5px}.photoImportDialog{padding:8px;border-radius:10px}.photoImportHead{display:block}.photoImportHead button{margin-top:8px}.photoImportPreview img{max-height:190px}.photoImportActions{position:sticky;bottom:0;background:#102534;padding:8px 0;z-index:2}.photoImportActions button{flex:1}
+  .historyStats{grid-template-columns:repeat(2,minmax(0,1fr))}.historyStat:last-child{grid-column:1/-1}
+  .historyStartHead h3{font-size:17px}.historyGeneral{min-width:78px}.historyGeneral strong{font-size:21px}
+  .historyRoundPlace b{font-size:28px}.historyRoundMeta{gap:8px}.historyStartFoot{grid-template-columns:1fr 1fr}.historyStartFoot button{grid-column:1/-1;width:100%}
+  .playerCompAttentionBadge{min-width:22px;height:22px;font-size:12px}
+}
+</style>
 </head>
 <body class="authMode">
 <div id="bootGuard"><img src="/icon-192.png" alt=""><b>Łowcy Methodowcy</b><span>Uruchamiam aplikację…</span><button id="bootRetry" class="hidden" type="button" onclick="retryLowcyBoot()">Spróbuj ponownie</button></div>
-<header><div class="row"><h1><img class="brandIcon" src="/icon-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V133</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
+<header><div class="row"><h1><img class="brandIcon" src="/icon-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V134</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
 <main>
 <div id="msg"></div>
 <section id="auth" class="card">
@@ -5811,7 +6044,7 @@ body.playerTheme #app>.tabs button{font-size:15px!important;line-height:1.1!impo
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="appVersionBadge">V133</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
+  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="appVersionBadge">V134</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-rules" class="hidden" onclick="showTab('rules')">Regulamin ogólny</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-profile" class="hidden" onclick="showTab('profile')">Mój profil</button><button id="btn-history" class="hidden" onclick="showTab('history')">Historia startów</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
     <details id="adminCreate" class="card hidden adminCreateV93"><summary class="adminCreateToggle">Robimy zawody</summary><div class="adminCreateBody"><h2>Utwórz zawody</h2><p class="small muted">Dane z tego formularza są później widoczne dla zawodnika.</p><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Zbiórka / godzina</label><input id="cMeetingTime" type="time" value="06:00"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div></div><div class="adminTextPair"><div><label>Tryb zawodów</label><select id="cStatus"><option value="OPEN">Zawody otwarte — każdy może się zapisać</option><option value="TEST">Zawody testowe — tylko admin</option><option value="CLOSED">Zapisy zakończone — widoczne, bez zapisów</option></select><label>Informacje organizacyjne</label><textarea id="cNotes" placeholder="Parking, miejsce zbiórki, godzina losowania, dodatkowe informacje…"></textarea></div><div><label>Program / regulamin tych zawodów</label><textarea id="cRegulations" class="rulesEditor" placeholder="Np. 06:00 zbiórka, 06:15 losowanie, 07:00–15:00 zawody, ważne zasady tylko dla tego wydarzenia…"></textarea></div></div><button onclick="createCompetition(event)">Utwórz zawody</button></div></details>
@@ -5828,14 +6061,14 @@ body.playerTheme #app>.tabs button{font-size:15px!important;line-height:1.1!impo
 <div class="quickScroll"><button onclick="scrollAppTop()">↑</button><button onclick="scrollAppBottom()">↓</button></div>
 <script>
 (function(){
- window.__lowcyRecover133=function(){var g=document.getElementById('bootGuard');if(!g)return;g.classList.remove('hidden');var sp=g.querySelector('span');if(sp)sp.textContent='Nie udało się pobrać aplikacji. Sprawdź połączenie i spróbuj ponownie.';var b=document.getElementById('bootRetry');if(b)b.classList.remove('hidden')};
+ window.__lowcyRecover134=function(){var g=document.getElementById('bootGuard');if(!g)return;g.classList.remove('hidden');var sp=g.querySelector('span');if(sp)sp.textContent='Nie udało się pobrać aplikacji. Sprawdź połączenie i spróbuj ponownie.';var b=document.getElementById('bootRetry');if(b)b.classList.remove('hidden')};
  window.retryLowcyBoot=function(){if(typeof startBoot==='function'){startBoot();return}location.reload()};
  if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'}).then(function(reg){return reg.update()}).catch(function(){});
- setTimeout(function(){if(!window.__LOWCY_JS_STARTED)window.__lowcyRecover133()},30000);
+ setTimeout(function(){if(!window.__LOWCY_JS_STARTED)window.__lowcyRecover134()},30000);
 })();
 </script>
-<script src="/pdf-vector.js?v=133" defer></script>
-<script src="/app.js?v=133" defer onerror="window.__lowcyRecover133&&window.__lowcyRecover133()"></script>
+<script src="/pdf-vector.js?v=134" defer></script>
+<script src="/app.js?v=134" defer onerror="window.__lowcyRecover134&&window.__lowcyRecover134()"></script>
 </body>
 </html>`;
 
@@ -5846,5 +6079,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V133_HISTORY_SECTOR_PLACE_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V134_ATTENTION_HISTORY_OFFLINE_READY'); console.log('CARP_MOBILE_READY port=' + PORT); startPresenceReminderLoop(); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });

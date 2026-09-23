@@ -1,3 +1,24 @@
+V134 — Centrum uwagi, historia startów, offline sędziego i import wyników ze zdjęcia
+
+Zawodnik:
+- jeden licznik wymagających uwagi spraw: potwierdzenie obecności, nowe losowanie, wyniki T1/T2 i klasyfikacja końcowa; licznik aktualizuje także badge zainstalowanej PWA tam, gdzie system to obsługuje,
+- czerwony licznik na konkretnym kaflu zawodów oraz dynamiczny główny przycisk prowadzący do najważniejszej czynności,
+- przywrócone „Najbliższe 3 zawody” nad filtrami,
+- nowa graficzna Historia startów: miejsca T1/T2 jako np. 3/9, klasyfikacja generalna, stanowiska, sektory, wagi, BF oraz osobna statystyka największej ryby.
+
+Sędzia wagowy:
+- wpis jest wysyłany natychmiast, gdy serwer odpowiada; przy braku zasięgu lub niedostępności serwera zostaje zapisany w telefonie i wysłany automatycznie po odzyskaniu połączenia,
+- wpisy offline mają unikalne identyfikatory, więc ponowienie synchronizacji nie dubluje wagi,
+- lista zawodów i ostatnio otwarte zawody są buforowane do pracy bez zasięgu.
+
+Import z papieru:
+- osobne PDF-y „do zdjęcia” dla T1 i T2 z czterema znacznikami i polami na W1–W5 oraz BF,
+- zdjęcie jest prostowane i odczytywane lokalnie w przeglądarce; przed zapisem zawsze pojawia się tabela kontrolna do ręcznej korekty,
+- W1–W5 zapisują się jako zwykłe wagi NET, a pole BF (np. 9890) jako Duża ryba 9890 g,
+- zatwierdzony import całej tury odbywa się transakcyjnie i zastępuje wcześniejsze wpisy tej tury.
+
+Weryfikacja V134: składnia app.js/server.cjs/judge.cjs/pdf-vector.js, zgodność wersji i cache V134, test renderowania badge/kafli/Najbliższych 3/Historia 3/9 + największa ryba, test kolejki offline sędziego z BF 9890 oraz test OCR na zdjęciu z perspektywą i czterema znacznikami.
+
 V132 — Usunięte zbiorcze kasowanie zawodów
 
 Usunięto licznik bazy i przycisk Usuń wszystkie zawody testowe, funkcję klienta oraz endpoint zbiorczego usuwania. Lista zawodów i usuwanie pojedynczych zawodów pozostają. Historia startów bez zmian — grafika jest osobnym podglądem propozycji.

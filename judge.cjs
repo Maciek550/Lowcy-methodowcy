@@ -62,7 +62,7 @@ module.exports=function judgeRoutes({pool,bcrypt,readBody,sendJson,requireAdmin,
       const b=await readBody(req);
       if(m[3]){
         if(!['NET','BF'].includes(b.kind)||!Number.isSafeInteger(Number(b.userId))){fail(res,400,'Nieprawidłowy wpis wagi');return true}
-        try{const out=await addResultItem(id,Number(b.userId),round,b.kind,b.weight);sendJson(res,200,{ok:true,item:out.item,aggregate:out.aggregate})}catch(e){fail(res,400,e.message)}
+        try{const out=await addResultItem(id,Number(b.userId),round,b.kind,b.weight,b.clientMutationId);sendJson(res,200,{ok:true,item:out.item,aggregate:out.aggregate,duplicate:Boolean(out.duplicate)})}catch(e){fail(res,400,e.message)}
       }else{
         // Recalculate current entries only: ignore client-supplied weights and user IDs.
         const entries=(await pool.query("select user_id from entries where competition_id=$1 and status='ACTIVE'",[id])).rows,client=await pool.connect();

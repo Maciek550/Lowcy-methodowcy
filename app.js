@@ -1,4 +1,4 @@
-const CLIENT_VERSION='133';const CLIENT_VERSION_NAME='V133_HISTORY_SECTOR_PLACE';window.__LOWCY_APP_JS_133=1;try{fetch('/__probe_js_v133',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V133_HISTORY_SECTOR_PLACE_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='134';const CLIENT_VERSION_NAME='V134_ATTENTION_HISTORY_OFFLINE';window.__LOWCY_APP_JS_134=1;try{fetch('/__probe_js_v134',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V134_ATTENTION_HISTORY_OFFLINE_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -135,6 +135,8 @@ let PLAYER_COMP_MONTH = 'all';
 let PLAYER_COMPETITIONS_CACHE = [];
 let PLAYER_RESULT_POLL_TIMER = null;
 let PLAYER_RESULT_POLL_BUSY = false;
+let PLAYER_ATTENTION={count:0,items:[],byCompetition:{}};
+let PLAYER_ATTENTION_BUSY=false;
 const q = id => document.getElementById(id);
 window.addEventListener('error',e=>{console.error('CLIENT_ERR',e.message);try{const m=document.getElementById('msg');if(m)m.innerHTML='<div class=\"card bad danger-line\">Błąd ekranu: '+String(e.message||'nieznany')+'</div>'}catch(_){}});
 window.addEventListener('unhandledrejection',e=>{console.error('CLIENT_REJECT',e.reason);});
@@ -151,7 +153,7 @@ function renderPhoneCall(phone,cls=''){
   return '<a class="phoneCallBtn '+esc(cls)+'" href="tel:'+esc(href)+'" title="Zadzwoń: '+esc(raw)+'" aria-label="Zadzwoń pod numer '+esc(raw)+'"><span class="phoneCallIcon">☎</span><span>'+esc(raw)+'</span></a>';
 }
 function msg(t,type='ok'){const el=q('msg');if(!el)return;el.innerHTML='<div class="card '+(type==='bad'?'bad danger-line':'ok success-line')+'">'+esc(t)+'</div>';setTimeout(()=>{const x=q('msg');if(x)x.innerHTML=''},3500)}
-async function api(path, opts={}){const ctrl=typeof AbortController!=='undefined'?new AbortController():null;const to=ctrl?setTimeout(()=>ctrl.abort(),30000):null;try{const res=await fetch(path,Object.assign({cache:'no-store',signal:ctrl?ctrl.signal:undefined,headers:{'Content-Type':'application/json',...(TOKEN?{Authorization:'Bearer '+TOKEN}:{})}},opts));const data=await res.json().catch(()=>({ok:false,error:'Błąd odpowiedzi'}));if(!res.ok||data.ok===false){const error=new Error(data.error||'Błąd');error.status=res.status;throw error}return data}catch(e){if(e&&e.name==='AbortError')throw new Error('Serwer jeszcze nie odpowiada. Spróbuj ponownie.');throw e}finally{if(to)clearTimeout(to)}}
+async function api(path, opts={}){const fetchOpts={...opts},timeoutMs=Math.max(800,Number(fetchOpts.timeoutMs||30000));delete fetchOpts.timeoutMs;const ctrl=typeof AbortController!=='undefined'?new AbortController():null;const to=ctrl?setTimeout(()=>ctrl.abort(),timeoutMs):null;try{const res=await fetch(path,Object.assign({cache:'no-store',signal:ctrl?ctrl.signal:undefined,headers:{'Content-Type':'application/json',...(TOKEN?{Authorization:'Bearer '+TOKEN}:{})}},fetchOpts));const data=await res.json().catch(()=>({ok:false,error:'Błąd odpowiedzi'}));if(!res.ok||data.ok===false){const error=new Error(data.error||'Błąd');error.status=res.status;throw error}return data}catch(e){if(e&&e.name==='AbortError'){const error=new Error('Serwer jeszcze nie odpowiada. Spróbuj ponownie.');error.timeout=true;throw error}throw e}finally{if(to)clearTimeout(to)}}
 function fmtDate(d){if(!d)return '—';const s=String(d);const m=s.match(/^\d{4}-\d{2}-\d{2}/);const dt=new Date(m?(m[0]+'T12:00:00'):s);return isNaN(dt.getTime())?'—':dt.toLocaleDateString('pl-PL')}
 function dateInputValue(d){if(!d)return '';const s=String(d);const m=s.match(/^\d{4}-\d{2}-\d{2}/);return m?m[0]:''}
 function fmtGram(v){v=Number(v||0);return v?String(v).replace(/\B(?=(\d{3})+(?!\d))/g,' '):'0'}
@@ -163,12 +165,12 @@ function playerResultSeenKey(compId,round){return 'lowcy_result_seen_'+Number(co
 function playerDrawSeenKey(compId,round){return 'lowcy_draw_seen_'+Number(compId||0)+'_'+Number(round)}
 function playerResultSeen(compId,round){return STORE.get(playerResultSeenKey(compId,round))==='1'}
 function playerDrawSeen(compId,round){return STORE.get(playerDrawSeenKey(compId,round))==='1'}
-function playerHasNewResults(d,round){const id=d?.competition?.id;return Boolean(id&&playerRoundHasResults(d,round)&&!playerResultSeen(id,round))}
-function playerHasNewDraw(d,round){const id=d?.competition?.id;return Boolean(id&&playerRoundHasOwnDraw(d,round)&&!playerDrawSeen(id,round))}
+function playerHasNewResults(d,round){const id=Number(d?.competition?.id||0),kind='RESULTS_T'+Number(round);return Boolean(id&&playerRoundHasResults(d,round)&&playerAttentionItemsFor({id}).some(x=>x.kind===kind))}
+function playerHasNewDraw(d,round){const id=Number(d?.competition?.id||0);return Boolean(id&&playerRoundHasOwnDraw(d,round)&&playerAttentionItemsFor({id}).some(x=>x.kind==='DRAW_PUBLISH'))}
 function playerResultStar(d,round){return playerHasNewResults(d,round)?'<span class="playerNewResultStar" data-result-round="'+Number(round)+'" aria-label="Nowe wyniki" title="Nowe wyniki">★</span>':''}
 function playerDrawStar(d,round){return playerHasNewDraw(d,round)?'<span class="playerNewResultStar playerNewDrawStar" data-draw-round="'+Number(round)+'" aria-label="Nowe losowanie" title="Nowe losowanie">★</span>':''}
-function markPlayerResultSeen(round){const id=CURRENT_DETAIL?.competition?.id;if(!id)return;STORE.set(playerResultSeenKey(id,round),'1');document.querySelectorAll('.playerNewResultStar[data-result-round="'+Number(round)+'"]').forEach(x=>x.remove())}
-function markPlayerDrawSeen(round){const id=CURRENT_DETAIL?.competition?.id;if(!id)return;STORE.set(playerDrawSeenKey(id,round),'1');document.querySelectorAll('.playerNewResultStar[data-draw-round="'+Number(round)+'"]').forEach(x=>x.remove())}
+function markPlayerResultSeen(round){const id=CURRENT_DETAIL?.competition?.id;if(!id)return;STORE.set(playerResultSeenKey(id,round),'1');document.querySelectorAll('.playerNewResultStar[data-result-round="'+Number(round)+'"]').forEach(x=>x.remove());markPlayerAttentionRead(id,'RESULTS_T'+Number(round),true)}
+function markPlayerDrawSeen(round){const id=CURRENT_DETAIL?.competition?.id;if(!id)return;STORE.set(playerDrawSeenKey(id,round),'1');document.querySelectorAll('.playerNewResultStar[data-draw-round="'+Number(round)+'"]').forEach(x=>x.remove());markPlayerAttentionRead(id,'DRAW_PUBLISH',true)}
 function playerResultsSignature(d){const items=[...(d?.results||[]).map(r=>['r',r.round,r.user_id,r.weight,r.big_fish]),...(d?.resultItems||[]).map(r=>['i',r.round,r.user_id,r.kind,r.weight])];return JSON.stringify(items.sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b))))}
 function playerDrawSignature(d){const uid=Number(ME?.id||0);const items=(d?.draws||[]).filter(r=>!uid||Number(r.user_id)===uid).map(r=>[r.round,r.user_id,r.stand,r.sector]);return JSON.stringify(items.sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b))))}
 function playerContentSignature(d){return playerResultsSignature(d)+'|'+playerDrawSignature(d)}
@@ -177,11 +179,76 @@ function stopPlayerResultPolling(){if(PLAYER_RESULT_POLL_TIMER){clearInterval(PL
 function startPlayerResultPolling(){if(PLAYER_RESULT_POLL_TIMER)return;PLAYER_RESULT_POLL_TIMER=setInterval(()=>pollPlayerCompetitionResults(),12000)}
 async function pollPlayerCompetitionResults(){if(PLAYER_RESULT_POLL_BUSY||!ME||ME.role==='ADMIN'||!CURRENT_DETAIL?.competition?.id||q('competitionDetail')?.classList.contains('hidden'))return;PLAYER_RESULT_POLL_BUSY=true;try{const id=CURRENT_DETAIL.competition.id,d=await api('/api/competitions/'+id);if(playerContentSignature(d)===playerContentSignature(CURRENT_DETAIL))return;CURRENT_DETAIL=d;const active=PLAYER_MOBILE_PANEL;if(active==='t1'||active==='t2')markPlayerResultSeen(active==='t1'?1:2);if(active==='draw1'||active==='draw2')markPlayerDrawSeen(active==='draw1'?1:2);const mobile=q('playerMobilePanelContent'),desktop=q('playerDesktopPanelContent');if(mobile)mobile.innerHTML=renderPlayerMobilePanelContent(d,active);if(desktop)desktop.innerHTML=renderPlayerDesktopPanelContent(d,active);syncPlayerContentStars(d);requestAnimationFrame(()=>{syncPlayerStickyBars();fitPlayerMobileFullMaps()})}catch(_){ }finally{PLAYER_RESULT_POLL_BUSY=false}}
 function syncNotificationBadges(unread=PLAYER_UNREAD_NOTIFICATIONS){const n=Math.max(0,Number(unread||0));document.querySelectorAll('#playerNotifBtn,.notificationTile').forEach(btn=>{btn.innerHTML=playerNotifLabel(n)});const top=q('btn-notifications');if(top){let b=top.querySelector('.topNotifBadge');if(n){if(!b){b=document.createElement('span');b.className='topNotifBadge';top.appendChild(b)}b.textContent=n>99?'99+':String(n)}else if(b)b.remove()}}
+
+function applyPlayerAppBadge(n){
+  n=Math.max(0,Number(n||0));
+  try{
+    if(typeof navigator!=='undefined'&&typeof navigator.setAppBadge==='function'){
+      if(n)navigator.setAppBadge(n).catch(()=>{});
+      else if(typeof navigator.clearAppBadge==='function')navigator.clearAppBadge().catch(()=>{});
+    }
+  }catch(_){}
+}
+function playerAttentionMap(items){
+  const by={};for(const it of (items||[])){const id=Number(it.competitionId||0);if(!id)continue;(by[id]=by[id]||[]).push(it)}
+  return by;
+}
+function applyPlayerAttention(data,rerender=false){
+  if(!data||typeof data!=='object')data={count:0,items:[]};
+  PLAYER_ATTENTION={count:Math.max(0,Number(data.count||0)),items:Array.isArray(data.items)?data.items:[],byCompetition:{}};
+  PLAYER_ATTENTION.byCompetition=playerAttentionMap(PLAYER_ATTENTION.items);
+  if(ME?.role==='PLAYER'){
+    syncNotificationBadges(PLAYER_ATTENTION.count);
+    const counter=q('notifCounter');if(counter)counter.textContent=PLAYER_ATTENTION.count?'🔴 '+PLAYER_ATTENTION.count+' do sprawdzenia':'';
+    applyPlayerAppBadge(PLAYER_ATTENTION.count);
+    if(rerender&&PLAYER_COMPETITIONS_CACHE.length)renderPlayerCompetitionList();
+  }
+}
+async function refreshPlayerAttention(rerender=false){
+  if(!ME||ME.role!=='PLAYER'||PLAYER_ATTENTION_BUSY)return PLAYER_ATTENTION;
+  PLAYER_ATTENTION_BUSY=true;
+  try{const d=await api('/api/me/attention');applyPlayerAttention(d,rerender);return PLAYER_ATTENTION}catch(_){return PLAYER_ATTENTION}
+  finally{PLAYER_ATTENTION_BUSY=false}
+}
+function playerAttentionItemsFor(c){return PLAYER_ATTENTION.byCompetition[Number(c?.id||0)]||[]}
+function playerAttentionPrimary(c){
+  const items=playerAttentionItemsFor(c);
+  if(!items.length)return null;
+  const presence=items.find(x=>x.kind==='PRESENCE_CONFIRM');if(presence)return presence;
+  const pr={RESULTS_GENERAL:50,RESULTS_T2:40,DRAW_PUBLISH:30,RESULTS_T1:20};
+  return [...items].sort((a,b)=>{
+    const at=Date.parse(a.createdAt||0)||0,bt=Date.parse(b.createdAt||0)||0;
+    return bt-at||(pr[b.kind]||0)-(pr[a.kind]||0);
+  })[0]||null;
+}
+function playerCompetitionAttentionBadge(c){
+  const n=playerAttentionItemsFor(c).length;
+  return n?'<span class="playerCompAttentionBadge" title="'+n+' rzeczy do sprawdzenia">'+(n>9?'9+':n)+'</span>':'';
+}
+function playerPrimaryButton(c,extraClass=''){
+  const a=playerAttentionPrimary(c),id=Number(c.id);
+  if(!a)return '<button type="button" class="'+esc(extraClass)+'" onclick="openCompetition('+id+')">LOSOWANIE / WYNIKI</button>';
+  if(a.kind==='PRESENCE_CONFIRM')return '<button type="button" class="playerCompAttentionMain '+esc(extraClass)+'" onclick="confirmPlayerPresence('+id+',this,event)">POTWIERDŹ OBECNOŚĆ</button>';
+  const panel=String(a.panel||'').replace(/[^a-z0-9]/gi,'');
+  const kind=String(a.kind||'').replace(/[^A-Z0-9_]/g,'');
+  return '<button type="button" class="playerCompAttentionMain '+esc(extraClass)+'" onclick="openCompetitionAttention('+id+',\''+panel+'\',\''+kind+'\',event)">★ '+esc(a.label||'NOWOŚĆ')+'</button>';
+}
+async function markPlayerAttentionRead(compId,types,rerender=true){
+  types=(Array.isArray(types)?types:[types]).filter(Boolean);
+  if(!compId||!types.length)return;
+  try{const d=await api('/api/notifications/attention/read',{method:'POST',body:JSON.stringify({competitionId:Number(compId),types})});applyPlayerAttention(d,rerender)}catch(_){}
+}
+async function openCompetitionAttention(id,panel,kind,ev){
+  if(ev){ev.preventDefault();ev.stopPropagation()}
+  if(!await openCompetition(Number(id),true))return;
+  if(panel)showPlayerMobilePanel(panel);
+  await markPlayerAttentionRead(Number(id),kind,true);
+}
 function setLoggedOut(showMsg){q('accountSwitch')?.remove();q('accountLinkDialog')?.remove();document.body.classList.remove('judgeTheme');q('judgeShell')?.remove();stopAchievements();
   try{document.documentElement.classList.remove('hasSavedSession');document.body.classList.add('authMode')}catch(_){}
   stopPlayerResultPolling();
   q('playerGlobalBottomNav')?.remove();
-  TOKEN=''; ME=null; document.body.classList.remove('playerTheme'); STORE.del('carp_token');
+  TOKEN=''; ME=null; document.body.classList.remove('playerTheme'); STORE.del('carp_token');applyPlayerAppBadge(0);
   const logout=q('logoutBtn'), auth=q('auth'), app=q('app');
   if(logout)logout.classList.add('hidden');
   if(auth)auth.classList.remove('hidden');
@@ -196,13 +263,13 @@ async function boot(){
   if(!TOKEN){if(auth)auth.classList.remove('hidden');if(app)app.classList.add('hidden');setLoggedOut(false);return}
   if(auth)auth.classList.add('hidden');
   if(app)app.classList.add('hidden');
-  try{const d=await api('/api/me');ME=d.user}catch(e){if(e.status===401||e.status===403){setLoggedOut(false);return}throw e}
+  try{const d=await api('/api/me');ME=d.user;if(ME?.role==='JUDGE')STORE.set(JUDGE_ME_CACHE,JSON.stringify(ME))}catch(e){if(e.status===401||e.status===403){setLoggedOut(false);return}try{const cached=JSON.parse(STORE.get(JUDGE_ME_CACHE)||'null');if(cached?.role==='JUDGE'){ME=cached}else throw e}catch(_){throw e}}
   if(auth)auth.classList.add('hidden');
   if(app)app.classList.remove('hidden');
   if(logout)logout.classList.remove('hidden');
   mountAccountSwitch();
   document.body.classList.toggle('judgeTheme',ME.role==='JUDGE');
-  if(ME.role==='JUDGE'){mountJudgeShell();hideBootGuard();await judgeLoadCompetitions();return}
+  if(ME.role==='JUDGE'){mountJudgeShell();hideBootGuard();await judgeLoadCompetitions();if(navigator.onLine)flushJudgeQueue(true).catch(()=>{});return}
   q('judgeShell')?.remove();
   if(ME.role==='ADMIN')await loadJudgeManagement();else {q('judgeManagement')?.remove();q('adminQuickActions')?.remove()}
   q('who').textContent=ME.first_name+' '+ME.last_name+' — Koło PZW '+(ME.pzw_club||'');q('role').textContent=ME.role==='ADMIN'?'Administrator':'Zawodnik';
@@ -269,9 +336,20 @@ function renderPlayerHistory(rows){
   const box=q('playerHistoryContent');if(!box)return;
   rows=Array.isArray(rows)?rows:[];
   if(!rows.length){box.innerHTML='<div class="card playerHistoryCard"><h2>Historia startów</h2><p class="muted">Brak zakończonych startów z pełnymi wynikami T1 i T2.</p></div>';return}
-  const line=r=>'<div class="playerHistoryRow" title="'+esc(r.title||'')+'"><span class="playerHistoryFishery">'+esc(r.fishery||r.title||'Zawody')+'</span><span class="playerHistoryDate">'+fmtDate(r.competition_date)+'</span><span class="playerHistoryScore"><b>'+placeText(r.t1_place)+'</b>/'+Number(r.t1_sector_size||0)+' + <b>'+placeText(r.t2_place)+'</b>/'+Number(r.t2_sector_size||0)+' = <strong>'+Number(r.general_rank||0)+'</strong>/'+Number(r.general_count||0)+'</span><span class="playerHistoryWeight">'+fmtGram(r.total_weight)+' g</span></div>';
-  box.innerHTML='<div class="card playerHistoryCard"><div class="playerHistoryHead"><h2>Historia startów</h2><span>'+rows.length+' '+(rows.length===1?'start':'startów')+'</span></div><div class="playerHistoryList">'+rows.map(line).join('')+'</div></div>';
+  const starts=rows.length,podiums=rows.filter(r=>Number(r.general_rank)>0&&Number(r.general_rank)<=3).length;
+  const best=Math.min(...rows.map(r=>Number(r.general_rank||9999)).filter(Number.isFinite));
+  const total=rows.reduce((s,r)=>s+Number(r.total_weight||0),0);
+  const biggest=Math.max(0,...rows.map(r=>Number(r.biggest_fish||0)));
+  const stat=(label,value,cls='')=>'<div class="historyStat '+cls+'"><small>'+esc(label)+'</small><strong>'+value+'</strong></div>';
+  const round=(r,n)=>{const place=placeText(r['t'+n+'_place']),size=Number(r['t'+n+'_sector_size']||0),stand=r['t'+n+'_stand'],sector=r['t'+n+'_sector']||'—',weight=Number(r['t'+n+'_weight']||0),bf=Number(r['t'+n+'_big_fish']||0);return '<div class="historyRound historyRound'+n+'"><div class="historyRoundTitle">TURA '+n+'</div><div class="historyRoundPlace"><b>'+place+'</b><span>/'+size+'</span></div><div class="historyRoundMeta"><span>Stan. <b>'+(stand??'—')+'</b></span><span>Sektor <b>'+esc(sector)+'</b></span></div><div class="historyRoundWeight">'+fmtGram(weight)+' g</div><div class="historyRoundBF">BF: <b>'+fmtGram(bf)+' g</b></div></div>'};
+  const card=r=>'<article class="historyStartCard"><div class="historyStartHead"><div><h3>'+esc(r.fishery||r.title||'Zawody')+'</h3><span>'+fmtDate(r.competition_date)+(r.title&&r.fishery?' · '+esc(r.title):'')+'</span></div><div class="historyGeneral"><small>GENERAL</small><strong>'+Number(r.general_rank||0)+'/'+Number(r.general_count||0)+'</strong></div></div><div class="historyRounds">'+round(r,1)+round(r,2)+'</div><div class="historyStartFoot"><div><small>SUMA WAGI</small><b>'+fmtGram(r.total_weight)+' g</b></div><div><small>NAJWIĘKSZA RYBA</small><b>'+fmtGram(r.biggest_fish||0)+' g</b></div><button type="button" onclick="openHistoryCompetition('+Number(r.competition_id)+')">PEŁNE WYNIKI</button></div></article>';
+  box.innerHTML='<section class="playerHistoryDashboard"><div class="historyHero"><div><h2>Historia startów</h2><p>Twoje wyniki i statystyki zawodów.</p></div><div class="historyStats">'+stat('STARTY',starts)+stat('PODIA',podiums,'podium')+stat('NAJLEPSZE MIEJSCE',best<9999?best:'—','best')+stat('NAJWIĘKSZA RYBA',fmtGram(biggest)+' g','fish')+stat('ŁĄCZNA WAGA',fmtGram(total)+' g','weight')+'</div></div><div class="historyStartList">'+rows.map(card).join('')+'</div></section>';
 }
+async function openHistoryCompetition(id){
+  showTab('competitions');
+  if(await openCompetition(Number(id),true))showPlayerMobilePanel('general');
+}
+
 async function loadPlayerHistory(){
   if(!ME||ME.role==='ADMIN')return;
   const box=q('playerHistoryContent');if(box)box.innerHTML='<div class="card"><p class="muted">Wczytuję historię startów…</p></div>';
@@ -328,14 +406,16 @@ function renderPlayerPresenceConfirm(c){
   if(c.my_confirmed===true||String(c.my_confirmed).toLowerCase()==='true')return '<span class="playerPresenceConfirm confirmed">✓ OBECNOŚĆ POTWIERDZONA</span>';
   return '<button type="button" class="playerPresenceConfirm pending" onclick="confirmPlayerPresence('+Number(c.id)+',this,event)">POTWIERDŹ OBECNOŚĆ</button>';
 }
-function renderPlayerMineStack(c,mine){return mine?'<div class="playerCompMineStack"><span class="playerCompMineBadge">'+mine+'</span>'+renderPlayerPresenceConfirm(c)+'</div>':''}
+function renderPlayerMineStack(c,mine){if(!mine)return '';const pending=playerPresenceConfirmWindow(c)&&!(c.my_confirmed===true||String(c.my_confirmed).toLowerCase()==='true');const presence=pending?'<span class="playerPresenceConfirm pending playerPresenceHint">⚠ POTWIERDŹ OBECNOŚĆ</span>':(playerPresenceConfirmWindow(c)?'<span class="playerPresenceConfirm confirmed">✓ OBECNOŚĆ POTWIERDZONA</span>':'');return '<div class="playerCompMineStack"><span class="playerCompMineBadge">'+mine+'</span>'+presence+'</div>'}
 async function confirmPlayerPresence(id,el,ev){
   if(ev){ev.preventDefault();ev.stopPropagation()}
   try{
     if(el){el.disabled=true;el.textContent='Potwierdzam...'}
-    await api('/api/competitions/'+Number(id)+'/confirm-presence',{method:'POST',body:'{}'});
+    const out=await api('/api/competitions/'+Number(id)+'/confirm-presence',{method:'POST',body:'{}'});
     const c=(PLAYER_COMPETITIONS_CACHE||[]).find(x=>Number(x.id)===Number(id));if(c)c.my_confirmed=true;
+    if(out?.attention)applyPlayerAttention(out.attention,false);else await refreshPlayerAttention(false);
     renderPlayerCompetitionList();
+    loadNotifications().catch(()=>{});
     msg('Obecność potwierdzona');
   }catch(e){msg(e.message,'bad');if(el){el.disabled=false;el.textContent='POTWIERDŹ OBECNOŚĆ'}}
 }
@@ -356,19 +436,19 @@ function renderPlayerCompetitionFilters(arr){
   const opts=['<option value="all">Wszystkie miesiące</option>'].concat(months.map(m=>'<option value="'+esc(m)+'" '+(PLAYER_COMP_MONTH===m?'selected':'')+'>'+esc(playerCompetitionMonthLabel(m))+'</option>')).join('');
   return '<div class="playerCompetitionOrganizer"><div class="playerCompFilters">'+f('upcoming','NADCHODZĄCE',upcoming)+f('registered','ZAPISANE',registered)+f('completed','HISTORIA',completed)+'</div><select class="playerCompMonthSelect" onchange="setPlayerCompetitionMonth(this.value)">'+opts+'</select></div>';
 }
-function renderPlayerCompetitionCompactActions(c){const mine=playerCompetitionMine(c),closed=c.status!=='OPEN'||c.signup_open===false,leavePending=String(c.my_leave_request_status||'').toUpperCase()==='PENDING';let second='';if(mine)second=leavePending?'<button type="button" class="secondary" disabled>Prośba wysłana</button>':'<button type="button" class="warn" onclick="leaveComp('+c.id+')">Zrezygnuj</button>';else second='<button type="button" '+(closed?'disabled':'')+' onclick="joinComp('+c.id+')">Zapisz</button>';return '<div class="playerCompCompactActions"><button type="button" onclick="openCompetition('+c.id+')">LOSOWANIE / WYNIKI</button>'+second+'</div>'}
+function renderPlayerCompetitionCompactActions(c){const mine=playerCompetitionMine(c),closed=c.status!=='OPEN'||c.signup_open===false,leavePending=String(c.my_leave_request_status||'').toUpperCase()==='PENDING';let second='';if(mine)second=leavePending?'<button type="button" class="secondary" disabled>Prośba wysłana</button>':'<button type="button" class="warn" onclick="leaveComp('+c.id+')">Zrezygnuj</button>';else second='<button type="button" '+(closed?'disabled':'')+' onclick="joinComp('+c.id+')">Zapisz</button>';return '<div class="playerCompCompactActions">'+playerPrimaryButton(c)+second+'</div>'}
 function renderPlayerCompetitionMobileItem(c){
   const st=playerCompetitionStatus(c),mine=playerCompetitionMineLabel(c),x=playerCompetitionDateInfo(c),cc=playerCompetitionCountdownClass(x),isMine=playerCompetitionMine(c),closed=c.status!=='OPEN'||c.signup_open===false,leavePending=String(c.my_leave_request_status||'').toUpperCase()==='PENDING';
   const action2=isMine?(leavePending?'<button type="button" class="secondary" disabled>PROŚBA WYSŁANA</button>':'<button type="button" class="warn" onclick="leaveComp('+c.id+')">REZYGNUJ</button>'):'<button type="button" '+(closed?'disabled':'')+' onclick="joinComp('+c.id+')">ZAPISZ</button>';
   return '<article class="playerCompCompactCard playerCompCardV96 playerCompCardV97 playerCompCardV98 '+(mine?'mine':'')+'">'
-    +'<div class="playerCompCardHead"><span class="playerCompNo">'+playerCompetitionNo(c)+'</span><b class="playerCompCardTitle">'+esc(c.title)+'</b><span class="playerCompMeeting playerCompCardMeeting">◷ '+esc(meetingTimeText(c))+'</span></div>'
+    +'<div class="playerCompCardHead"><span class="playerCompNo">'+playerCompetitionNo(c)+'</span><b class="playerCompCardTitle">'+esc(c.title)+'</b>'+playerCompetitionAttentionBadge(c)+'<span class="playerCompMeeting playerCompCardMeeting">◷ '+esc(meetingTimeText(c))+'</span></div>'
     +'<div class="playerCompLocationDate"><span class="playerCompFishery">'+esc(c.fishery||'—')+'</span><strong class="playerCompDate">'+esc(x.date)+'</strong></div>'
     +'<div class="playerCompCardDate"><span class="playerCompWeekday">'+esc(x.weekday)+'</span>'+(x.countdown?'<em class="playerCompCountdown '+cc+'">'+esc(x.countdown)+'</em>':'')+'<span class="playerCompStatus '+st.cls+'">'+st.label+'</span></div>'
     +(mine?'<div class="playerCompCardFishery">'+renderPlayerMineStack(c,mine)+'</div>':'')
-    +'<div class="playerCompBottomRow"><span class="playerCompBottomCount">'+playerCompetitionCountHtml(c)+'</span><button type="button" class="playerCompBottomMain" onclick="openCompetition('+c.id+')">LOSOWANIE / WYNIKI</button>'+action2+'</div>'
+    +'<div class="playerCompBottomRow"><span class="playerCompBottomCount">'+playerCompetitionCountHtml(c)+'</span>'+playerPrimaryButton(c,'playerCompBottomMain')+action2+'</div>'
     +'</article>';
 }
-function renderPlayerCompetitionDesktopItem(c){const st=playerCompetitionStatus(c),mine=playerCompetitionMineLabel(c);return '<div class="playerCompDesktopRow '+(mine?'mine':'')+'"><span class="playerCompNo">'+playerCompetitionNo(c)+'</span><div class="playerCompDesktopTitle"><b>'+esc(c.title)+'</b><span>'+esc(c.fishery||'—')+'</span></div><div class="playerCompDesktopDate">'+renderPlayerCompetitionDesktopDate(c)+'</div><div class="playerCompDesktopCount">'+playerCompetitionCountHtml(c)+'</div><div class="playerCompMineCell">'+renderPlayerMineStack(c,mine)+'</div><span class="playerCompStatus '+st.cls+'">'+st.label+'</span>'+renderPlayerCompetitionCompactActions(c)+'</div>'}
+function renderPlayerCompetitionDesktopItem(c){const st=playerCompetitionStatus(c),mine=playerCompetitionMineLabel(c);return '<div class="playerCompDesktopRow '+(mine?'mine':'')+'"><span class="playerCompNo">'+playerCompetitionNo(c)+'</span><div class="playerCompDesktopTitle"><b>'+esc(c.title)+'</b>'+playerCompetitionAttentionBadge(c)+'<span>'+esc(c.fishery||'—')+'</span></div><div class="playerCompDesktopDate">'+renderPlayerCompetitionDesktopDate(c)+'</div><div class="playerCompDesktopCount">'+playerCompetitionCountHtml(c)+'</div><div class="playerCompMineCell">'+renderPlayerMineStack(c,mine)+'</div><span class="playerCompStatus '+st.cls+'">'+st.label+'</span>'+renderPlayerCompetitionCompactActions(c)+'</div>'}
 function renderPlayerCompetitionGroups(arr,mode){
   if(!arr.length)return '<div class="playerCompEmpty">Brak zawodów w tej kategorii.</div>';
   const groups=[];for(const c of arr){const key=playerCompetitionMonthKey(c);let g=groups.find(x=>x.key===key);if(!g){g={key,items:[]};groups.push(g)}g.items.push(c)}
@@ -389,7 +469,9 @@ function renderPlayerCompetitionList(){
   
   const filtered=filterPlayerCompetitions(arr,PLAYER_COMP_FILTER,true);
   const filteredView=mode=>'<section class="playerFilteredResults">'+renderPlayerCompetitionGroups(filtered,mode)+'</section>';
-  box.innerHTML=renderPlayerCompetitionFilters(arr)
+  box.innerHTML='<div class="playerCompetitionDesktopOnly">'+renderPlayerNearestThree(arr,'desktop')+'</div>'
+    +'<div class="playerCompetitionMobileOnly">'+renderPlayerNearestThree(arr,'mobile')+'</div>'
+    +renderPlayerCompetitionFilters(arr)
     +'<div class="playerCompetitionDesktopOnly">'+filteredView('desktop')+'</div>'
     +'<div class="playerCompetitionMobileOnly">'+filteredView('mobile')+'</div>';
 }
@@ -405,6 +487,7 @@ async function loadCompetitions(){
     q('competitionsList').innerHTML=html+desktop+mobile;return;
   }
   PLAYER_COMPETITIONS_CACHE=arr;
+  await refreshPlayerAttention(false);
   renderPlayerCompetitionList();
   if(q('tab-rules')&&!q('tab-rules').classList.contains('hidden'))renderPlayerRules();
 }
@@ -686,6 +769,7 @@ function showPlayerDesktopPanel(panel,ev){
   const allowed=['draw1','draw2','map1','map2','t1','t2','general','stats'];
   if(!allowed.includes(panel))return;
   if(panel==='t1'||panel==='t2')markPlayerResultSeen(panel==='t1'?1:2);
+  if(panel==='general'&&CURRENT_DETAIL?.competition?.id)markPlayerAttentionRead(CURRENT_DETAIL.competition.id,'RESULTS_GENERAL',true);
   if(panel==='draw1'||panel==='draw2')markPlayerDrawSeen(panel==='draw1'?1:2);
   PLAYER_MOBILE_PANEL=panel;
   if(panel==='draw1'||panel==='draw2'||panel==='map1'||panel==='map2')PLAYER_DRAW_ROUND=(panel==='draw2'||panel==='map2')?2:1;
@@ -754,6 +838,7 @@ function showPlayerMobilePanel(panel,ev){
   const allowed=['draw1','draw2','map1','map2','t1','t2','general','stats'];
   if(!allowed.includes(panel))return;
   if(panel==='t1'||panel==='t2')markPlayerResultSeen(panel==='t1'?1:2);
+  if(panel==='general'&&CURRENT_DETAIL?.competition?.id)markPlayerAttentionRead(CURRENT_DETAIL.competition.id,'RESULTS_GENERAL',true);
   if(panel==='draw1'||panel==='draw2')markPlayerDrawSeen(panel==='draw1'?1:2);
   PLAYER_MOBILE_PANEL=panel;
   if(panel==='draw1'||panel==='draw2'||panel==='map1'||panel==='map2')PLAYER_DRAW_ROUND=(panel==='draw2'||panel==='map2')?2:1;
@@ -974,7 +1059,172 @@ function sectorCardsChanged(){if(!CURRENT_DETAIL)return;SECTOR_MANUAL_DRAFT=read
 function sectorLayoutPayloadForSave(){if(SECTOR_MANUAL_DRAFT===undefined)return Array.isArray(CURRENT_DETAIL?.competition?.sector_layout)?CURRENT_DETAIL.competition.sector_layout:null;if(SECTOR_MANUAL_DRAFT===null)return null;return normalizeSectorLayoutClient(SECTOR_MANUAL_DRAFT,draftCompetition())}
 function resetSectorLayout(ev){if(ev){ev.preventDefault();ev.stopPropagation()}SECTOR_MANUAL_DRAFT=null;updateStructurePreview(true)}
 
-function renderResultsEntryPanel(d){const c=d.competition;return '<div class="card"><h2>Wpisywanie wyników</h2><p class="small muted"><b>Przeliczanie jest automatyczne.</b> Po zapisaniu lub usunięciu każdej wagi klasyfikacje T1, T2 i końcowa są liczone ponownie. Wpisz wagę siatki albo dużej ryby i przejdź do innego pola.</p><div class="grid3"><button type="button" class="secondary" onclick="generateResults('+c.id+',1,event)">Generuj wyniki T1</button><button type="button" class="secondary" onclick="generateResults('+c.id+',2,event)">Generuj wyniki T2</button><button type="button" class="blue" onclick="generateResultsAll('+c.id+',event)">Generuj T1 + T2</button></div><button type="button" class="warn" style="margin-top:10px" onclick="clearResults('+c.id+',event)">Wyczyść wszystkie wyniki T1 i T2</button><div class="resultEntryRounds"><div class="resultRoundPanel"><h3>T1</h3>'+renderResultForm(d,1)+'</div><div class="resultRoundPanel"><h3>T2</h3>'+renderResultForm(d,2)+'</div></div></div>'}
+
+const PHOTO_OCR_MODEL_B64='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';
+let PHOTO_OCR_PROTOS=null;
+function photoOcrPrototypes(){
+  if(PHOTO_OCR_PROTOS)return PHOTO_OCR_PROTOS;
+  const bin=atob(PHOTO_OCR_MODEL_B64),out=[];
+  for(let p=0;p<300;p++){
+    const v=new Float32Array(64);let norm=0;
+    for(let i=0;i<64;i++){const x=bin.charCodeAt(p*64+i)/255;v[i]=x;norm+=x*x}
+    norm=Math.sqrt(norm)||1;for(let i=0;i<64;i++)v[i]/=norm;
+    out.push({label:Math.floor(p/30),v});
+  }
+  return PHOTO_OCR_PROTOS=out;
+}
+function photoSheetGeometry(count){
+  count=Math.max(1,Number(count||1));
+  const x0=21,headerY=250,headerH=52,dataY=302,bottom=1658,rowH=Math.min(46,(bottom-dataY)/count);
+  const widths=[45,330,137,137,137,137,137,137],fieldStart=x0+widths[0]+widths[1];
+  return {x0,headerY,headerH,dataY,bottom,rowH,widths,fieldStart,fieldW:137,
+    markers:[{x:50,y:216},{x:1190,y:216},{x:50,y:1702},{x:1190,y:1702}]};
+}
+function drawPhotoResultSheetPage(round){
+  const d=CURRENT_DETAIL,o=pdfCanvas(),ctx=o.ctx,g=photoSheetGeometry((d.activeEntries||[]).length),c=d.competition;
+  drawPdfHeaderV33(ctx,'FORMULARZ DO IMPORTU ZE ZDJĘCIA — TURA '+round);
+  ctx.fillStyle='#17251d';ctx.font='800 17px Arial';ctx.textAlign='center';
+  ctx.fillText('Wpisuj wyłącznie cyfry. Każdą cyfrę w osobnej kratce. Nie kadruj czarnych znaczników.',620,190,980);
+  ctx.textAlign='left';
+  for(const m of g.markers){ctx.fillStyle='#000';ctx.fillRect(m.x-20,m.y-20,40,40);ctx.fillStyle='#fff';ctx.fillRect(m.x-6,m.y-6,12,12);ctx.fillStyle='#000';ctx.fillRect(m.x-2,m.y-2,4,4)}
+  const headers=['Lp.','Zawodnik','W1','W2','W3','W4','W5','BF'];let x=g.x0;
+  ctx.fillStyle='#e5efe8';ctx.fillRect(g.x0,g.headerY,g.widths.reduce((p,n)=>p+n,0),g.headerH);
+  headers.forEach((h,i)=>{ctx.strokeStyle='#6c7d72';ctx.lineWidth=1.2;ctx.strokeRect(x,g.headerY,g.widths[i],g.headerH);ctx.fillStyle='#173d2e';ctx.font='800 15px Arial';ctx.textAlign=i<2?'left':'center';ctx.fillText(h,i<2?x+5:x+g.widths[i]/2,g.headerY+16,g.widths[i]-10);x+=g.widths[i]});
+  ctx.textAlign='left';
+  (d.activeEntries||[]).forEach((e,ri)=>{
+    const y=g.dataY+ri*g.rowH;
+    ctx.fillStyle=ri%2?'#fafafa':'#fff';ctx.fillRect(g.x0,y,g.widths[0]+g.widths[1],g.rowH);
+    ctx.strokeStyle='#9dad9f';ctx.strokeRect(g.x0,y,g.widths[0],g.rowH);ctx.strokeRect(g.x0+g.widths[0],y,g.widths[1],g.rowH);
+    ctx.fillStyle='#17251d';ctx.font='800 '+Math.min(18,g.rowH*.48)+'px Arial';ctx.fillText(String(ri+1),g.x0+7,y+Math.max(5,(g.rowH-18)/2),g.widths[0]-12);
+    ctx.fillText(String(e.first_name+' '+e.last_name),g.x0+g.widths[0]+6,y+Math.max(5,(g.rowH-18)/2),g.widths[1]-12);
+    for(let f=0;f<6;f++){
+      const fx=g.fieldStart+f*g.fieldW,slot=g.fieldW/5;
+      for(let k=0;k<5;k++){ctx.fillStyle='#fff';ctx.fillRect(fx+k*slot,y,slot,g.rowH);ctx.strokeStyle='#9dad9f';ctx.lineWidth=.8;ctx.strokeRect(fx+k*slot,y,slot,g.rowH)}
+    }
+  });
+  ctx.fillStyle='#17251d';ctx.font='700 13px Arial';ctx.textAlign='center';
+  ctx.fillText('W1–W5 = kolejne siatki w gramach • BF = największa ryba w gramach • puste pole = brak wpisu',620,1670,1040);
+  ctx.textAlign='left';return o.canvas;
+}
+function generatePhotoResultSheetPdf(round){
+  const r=Number(round)===2?2:1,d=CURRENT_DETAIL;if(!d)return;
+  if((d.activeEntries||[]).length>35){msg('Formularz zdjęciowy obsługuje do 35 zawodników na jednej stronie.','bad');return}
+  return downloadPdfPages([drawPhotoResultSheetPage(r)],'formularz_zdjecie_'+pdfSafeName(d.competition.title)+'_T'+r+'.pdf');
+}
+function photoImageFromFile(file){
+  return new Promise((resolve,reject)=>{const u=URL.createObjectURL(file),img=new Image();img.onload=()=>{URL.revokeObjectURL(u);resolve(img)};img.onerror=()=>{URL.revokeObjectURL(u);reject(new Error('Nie udało się otworzyć zdjęcia'))};img.src=u});
+}
+function photoGrayData(img){
+  const max=1800,scale=Math.min(1,max/Math.max(img.naturalWidth||img.width,img.naturalHeight||img.height)),w=Math.max(1,Math.round((img.naturalWidth||img.width)*scale)),h=Math.max(1,Math.round((img.naturalHeight||img.height)*scale));
+  const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(img,0,0,w,h);
+  const rgba=ctx.getImageData(0,0,w,h).data,gray=new Uint8Array(w*h);
+  for(let i=0,p=0;i<rgba.length;i+=4,p++)gray[p]=Math.round(rgba[i]*.299+rgba[i+1]*.587+rgba[i+2]*.114);
+  return {w,h,gray,canvas};
+}
+function photoIntegralDark(gray,w,h,limit=92){
+  const stride=w+1,ii=new Uint32Array((w+1)*(h+1));
+  for(let y=0;y<h;y++){let row=0;for(let x=0;x<w;x++){row+=gray[y*w+x]<limit?1:0;ii[(y+1)*stride+x+1]=ii[y*stride+x+1]+row}}
+  return {ii,stride};
+}
+function photoRectSum(integral,x1,y1,x2,y2){
+  const {ii,stride}=integral;x1=Math.max(0,x1|0);y1=Math.max(0,y1|0);x2=Math.max(x1,x2|0);y2=Math.max(y1,y2|0);
+  return ii[y2*stride+x2]-ii[y1*stride+x2]-ii[y2*stride+x1]+ii[y1*stride+x1];
+}
+function photoFindMarker(image,rx1,ry1,rx2,ry2){
+  const {w,h,gray}=image,integ=photoIntegralDark(gray,w,h),win=Math.max(18,Math.round(Math.min(w,h)*.028)),step=Math.max(2,Math.round(win/7));
+  const x1=Math.round(w*rx1),x2=Math.round(w*rx2),y1=Math.round(h*ry1),y2=Math.round(h*ry2);let best=null;
+  const scoreAt=(x,y)=>{
+    const total=photoRectSum(integ,x,y,x+win,y+win),pad=Math.round(win*.33),ix1=x+pad,iy1=y+pad,ix2=x+win-pad,iy2=y+win-pad,inner=photoRectSum(integ,ix1,iy1,ix2,iy2);
+    const innerArea=Math.max(1,(ix2-ix1)*(iy2-iy1)),outerArea=Math.max(1,win*win-innerArea),outer=(total-inner)/outerArea,inside=inner/innerArea;
+    return {score:outer-inside*.8,outer,inside};
+  };
+  for(let y=y1;y<=y2-win;y+=step)for(let x=x1;x<=x2-win;x+=step){const sc=scoreAt(x,y);if(!best||sc.score>best.score)best={x:x+win/2,y:y+win/2,win,...sc,left:x,top:y}}
+  if(!best||best.score<.18||best.outer<.28)return null;
+  const refine=Math.max(2,step);let fine=best;
+  for(let y=Math.max(y1,best.top-refine);y<=Math.min(y2-win,best.top+refine);y++)for(let x=Math.max(x1,best.left-refine);x<=Math.min(x2-win,best.left+refine);x++){const sc=scoreAt(x,y);if(sc.score>fine.score)fine={x:x+win/2,y:y+win/2,win,...sc,left:x,top:y}}
+  return fine;
+}
+function photoSolveLinear(A,b){
+  const n=b.length,M=A.map((r,i)=>r.slice().concat([b[i]]));
+  for(let c=0;c<n;c++){let p=c;for(let r=c+1;r<n;r++)if(Math.abs(M[r][c])>Math.abs(M[p][c]))p=r;if(Math.abs(M[p][c])<1e-9)throw new Error('Nie udało się wyprostować zdjęcia');[M[c],M[p]]=[M[p],M[c]];const q=M[c][c];for(let k=c;k<=n;k++)M[c][k]/=q;for(let r=0;r<n;r++)if(r!==c){const f=M[r][c];for(let k=c;k<=n;k++)M[r][k]-=f*M[c][k]}}
+  return M.map(r=>r[n]);
+}
+function photoHomography(src,dst){
+  const A=[],b=[];for(let i=0;i<4;i++){const x=src[i].x,y=src[i].y,u=dst[i].x,v=dst[i].y;A.push([x,y,1,0,0,0,-u*x,-u*y]);b.push(u);A.push([0,0,0,x,y,1,-v*x,-v*y]);b.push(v)}
+  const h=photoSolveLinear(A,b);return [h[0],h[1],h[2],h[3],h[4],h[5],h[6],h[7],1];
+}
+function photoMap(H,x,y){const d=H[6]*x+H[7]*y+1;return {x:(H[0]*x+H[1]*y+H[2])/d,y:(H[3]*x+H[4]*y+H[5])/d}}
+function photoOtsu(vals){
+  const hist=new Uint32Array(256);for(const v of vals)hist[v]++;const total=vals.length;let sum=0;for(let i=0;i<256;i++)sum+=i*hist[i];let sumB=0,wB=0,best=128,max=-1;
+  for(let t=20;t<235;t++){wB+=hist[t];if(!wB)continue;const wF=total-wB;if(!wF)break;sumB+=t*hist[t];const mB=sumB/wB,mF=(sum-sumB)/wF,between=wB*wF*(mB-mF)*(mB-mF);if(between>max){max=between;best=t}}
+  return Math.min(190,Math.max(70,best));
+}
+function photoSampleSlot(image,H,rect){
+  const sw=28,sh=36,vals=new Uint8Array(sw*sh),{w,h,gray}=image;
+  for(let yy=0;yy<sh;yy++)for(let xx=0;xx<sw;xx++){const lx=rect.x+(xx+.5)/sw*rect.w,ly=rect.y+(yy+.5)/sh*rect.h,p=photoMap(H,lx,ly),px=Math.max(0,Math.min(w-1,Math.round(p.x))),py=Math.max(0,Math.min(h-1,Math.round(p.y)));vals[yy*sw+xx]=gray[py*w+px]}
+  const thr=photoOtsu(vals),fg=[];for(let y=0;y<sh;y++)for(let x=0;x<sw;x++){const g=vals[y*sw+x];if(g<thr-4)fg.push({x,y,g})}
+  if(fg.length<12)return {digit:'',confidence:1,blank:true};
+  let minX=sw,maxX=0,minY=sh,maxY=0;for(const p of fg){minX=Math.min(minX,p.x);maxX=Math.max(maxX,p.x);minY=Math.min(minY,p.y);maxY=Math.max(maxY,p.y)}
+  if(maxX-minX<2||maxY-minY<5)return {digit:'',confidence:.2,blank:true};
+  const vec=new Float32Array(64),bw=Math.max(1,maxX-minX+1),bh=Math.max(1,maxY-minY+1),scale=Math.min(6/bw,7/bh),tw=bw*scale,th=bh*scale,ox=(8-tw)/2,oy=(8-th)/2;
+  for(const p of fg){const tx=Math.max(0,Math.min(7,Math.floor(ox+(p.x-minX+.5)*scale))),ty=Math.max(0,Math.min(7,Math.floor(oy+(p.y-minY+.5)*scale))),ink=Math.max(.25,(thr-p.g+12)/Math.max(40,thr));vec[ty*8+tx]=Math.max(vec[ty*8+tx],ink)}
+  let norm=0;for(const v of vec)norm+=v*v;norm=Math.sqrt(norm)||1;for(let i=0;i<64;i++)vec[i]/=norm;
+  let best={label:0,score:-1},second={label:-1,score:-1};for(const p of photoOcrPrototypes()){let score=0;for(let i=0;i<64;i++)score+=vec[i]*p.v[i];if(score>best.score){if(p.label!==best.label)second=best;best={label:p.label,score}}else if(p.label!==best.label&&score>second.score)second={label:p.label,score}}
+  const margin=best.score-(second.score<0?0:second.score),confidence=Math.max(0,Math.min(1,(best.score-.48)*1.8+margin*3));
+  return {digit:String(best.label),confidence,best:best.score,margin,blank:false};
+}
+function photoReadField(image,H,x,y,w,h){
+  const slot=w/5,digits=[],parts=[];let low=false,used=false;
+  for(let i=0;i<5;i++){const r=photoSampleSlot(image,H,{x:x+i*slot+3,y:y+3,w:slot-6,h:h-6});parts.push(r);if(!r.blank){used=true;digits.push(r.digit);if(r.confidence<.55)low=true}}
+  const value=used?digits.join('').replace(/^0+(?=\d)/,''):'';
+  return {value:value||'',low,parts};
+}
+async function photoRecognizeSheet(file,round){
+  const img=await photoImageFromFile(file),image=photoGrayData(img),g=photoSheetGeometry((CURRENT_DETAIL.activeEntries||[]).length);
+  const found=[
+    photoFindMarker(image,.005,.08,.18,.22),photoFindMarker(image,.82,.08,.995,.22),
+    photoFindMarker(image,.005,.84,.18,.995),photoFindMarker(image,.82,.84,.995,.995)
+  ];
+  if(found.some(x=>!x))throw new Error('Nie widzę wszystkich 4 czarnych znaczników. Zrób zdjęcie całej kartki, bez obciętych rogów.');
+  const H=photoHomography(g.markers,found);
+  const rows=(CURRENT_DETAIL.activeEntries||[]).map((e,ri)=>{
+    const y=g.dataY+ri*g.rowH,fields=[];for(let f=0;f<6;f++)fields.push(photoReadField(image,H,g.fieldStart+f*g.fieldW,y,g.fieldW,g.rowH));
+    return {userId:Number(e.user_id),name:e.first_name+' '+e.last_name,weights:fields.slice(0,5),bigFish:fields[5]};
+  });
+  return {round:Number(round),rows,markerQuality:Math.min(...found.map(x=>Number(x.score||0))),imageUrl:URL.createObjectURL(file)};
+}
+function closePhotoImportReview(){const x=q('photoImportOverlay');if(x){const u=x.dataset.imageUrl;if(u)URL.revokeObjectURL(u);x.remove()}}
+function photoImportCell(field,key){
+  const value=field?.value||'',low=!!field?.low;return '<td class="'+(low?'photoOcrLow':'')+'"><input inputmode="numeric" pattern="[0-9]*" data-key="'+key+'" value="'+esc(value)+'" placeholder="—">'+(low?'<small>sprawdź</small>':'')+'</td>';
+}
+function showPhotoImportReview(result){
+  closePhotoImportReview();const overlay=document.createElement('div');overlay.id='photoImportOverlay';overlay.className='photoImportOverlay';overlay.dataset.round=String(result.round);overlay.dataset.imageUrl=result.imageUrl||'';
+  const rows=result.rows.map((r,i)=>'<tr data-user-id="'+r.userId+'"><td class="photoOcrName"><b>'+(i+1)+'. '+esc(r.name)+'</b></td>'+r.weights.map((f,j)=>photoImportCell(f,'w'+(j+1))).join('')+photoImportCell(r.bigFish,'bf')+'</tr>').join('');
+  overlay.innerHTML='<div class="photoImportDialog"><div class="photoImportHead"><div><h2>Import ze zdjęcia — T'+result.round+'</h2><p>Sprawdź odczyt przed zapisem. Żółte pola wymagają szczególnej kontroli.</p></div><button type="button" class="warn" onclick="closePhotoImportReview()">Zamknij</button></div>'
+    +'<div class="photoImportPreview"><img src="'+esc(result.imageUrl||'')+'" alt="Zdjęcie formularza"></div>'
+    +'<div class="photoImportWarn">⚠ Zapis zastąpi wszystkie dotychczasowe wpisy wag w T'+result.round+'. Nic nie zostanie zapisane, dopóki nie klikniesz przycisku poniżej.</div>'
+    +'<div class="tablewrap"><table class="photoImportTable"><thead><tr><th>Zawodnik</th><th>W1</th><th>W2</th><th>W3</th><th>W4</th><th>W5</th><th>BF</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+    +'<div class="photoImportActions"><button type="button" class="blue" onclick="commitPhotoResultImport(this)">IMPORTUJ DO T'+result.round+'</button><button type="button" class="secondary" onclick="closePhotoImportReview()">Anuluj</button></div></div>';
+  document.body.appendChild(overlay);overlay.querySelector('input')?.focus({preventScroll:true});
+}
+async function processPhotoResultImport(file,round){
+  try{msg('Analizuję zdjęcie…');const result=await photoRecognizeSheet(file,round);showPhotoImportReview(result);msg('Zdjęcie odczytane — sprawdź dane przed importem.')}
+  catch(e){msg(e.message||'Nie udało się odczytać zdjęcia','bad')}
+}
+function startPhotoResultImport(round){
+  if(!CURRENT_DETAIL||ME?.role!=='ADMIN')return;const input=document.createElement('input');input.type='file';input.accept='image/*';input.setAttribute('capture','environment');input.style.display='none';
+  input.onchange=()=>{const f=input.files?.[0];input.remove();if(f)processPhotoResultImport(f,Number(round)===2?2:1)};document.body.appendChild(input);input.click();
+}
+async function commitPhotoResultImport(button){
+  const overlay=q('photoImportOverlay');if(!overlay||!CURRENT_DETAIL)return;const round=Number(overlay.dataset.round)===2?2:1,rows=[];
+  for(const tr of overlay.querySelectorAll('tbody tr[data-user-id]')){const get=k=>String(tr.querySelector('input[data-key="'+k+'"]')?.value||'').replace(/\D/g,'').slice(0,6);rows.push({userId:Number(tr.dataset.userId),weights:[1,2,3,4,5].map(i=>get('w'+i)),bigFish:get('bf')})}
+  if(!confirm('Zaimportować odczytane dane i ZASTĄPIĆ wszystkie obecne wpisy T'+round+'?'))return;
+  if(button){button.disabled=true;button.textContent='Importuję…'}
+  try{const d=await api('/api/admin/competitions/'+CURRENT_DETAIL.competition.id+'/results/'+round+'/import-photo',{method:'POST',body:JSON.stringify({rows})});closePhotoImportReview();msg('Zaimportowano T'+round+': '+d.inserted+' wpisów wag.');await refreshCompetitionKeepScroll(CURRENT_DETAIL.competition.id);showAdminZone('entry')}
+  catch(e){msg(e.message,'bad');if(button){button.disabled=false;button.textContent='IMPORTUJ DO T'+round}}
+}
+
+function renderResultsEntryPanel(d){const c=d.competition;return '<div class="card"><h2>Wpisywanie wyników</h2><p class="small muted"><b>Przeliczanie jest automatyczne.</b> Po zapisaniu lub usunięciu każdej wagi klasyfikacje T1, T2 i końcowa są liczone ponownie. Wpisz wagę siatki albo dużej ryby i przejdź do innego pola.</p><div class="photoImportQuick"><b>📷 Import z papierowej tabeli</b><span>Użyj formularza „do zdjęcia” z zakładki PDF. Odczyt zawsze wymaga kontroli przed zapisem.</span><div class="grid"><button type="button" class="blue" onclick="startPhotoResultImport(1)">Wczytaj T1 ze zdjęcia</button><button type="button" class="blue" onclick="startPhotoResultImport(2)">Wczytaj T2 ze zdjęcia</button></div></div><div class="grid3"><button type="button" class="secondary" onclick="generateResults('+c.id+',1,event)">Generuj wyniki T1</button><button type="button" class="secondary" onclick="generateResults('+c.id+',2,event)">Generuj wyniki T2</button><button type="button" class="blue" onclick="generateResultsAll('+c.id+',event)">Generuj T1 + T2</button></div><button type="button" class="warn" style="margin-top:10px" onclick="clearResults('+c.id+',event)">Wyczyść wszystkie wyniki T1 i T2</button><div class="resultEntryRounds"><div class="resultRoundPanel"><h3>T1</h3>'+renderResultForm(d,1)+'</div><div class="resultRoundPanel"><h3>T2</h3>'+renderResultForm(d,2)+'</div></div></div>'}
 function renderResultsSummaryPanel(d){const c=d.competition;return '<div class="card"><h2>Wyniki i klasyfikacja</h2><div class="grid"><button type="button" class="blue" onclick="notifyResults('+c.id+',1)">Powiadom o wynikach T1</button><button type="button" class="blue" onclick="notifyResults('+c.id+',2)">Powiadom o wynikach T2</button></div><div class="inlineBtns"><button type="button" class="secondary" onclick="retryAchievementToasts('+c.id+',1,this)">Ponów dymki T1</button><button type="button" class="secondary" onclick="retryAchievementToasts('+c.id+',2,this)">Ponów dymki T2</button><button type="button" class="secondary" onclick="retryAchievementToasts('+c.id+',\'general\',this)">Ponów dymki generalne</button></div><p id="achievementPublishStatus" role="status"></p>'+renderSectorResultsBoard(d)+'<h3>Klasyfikacja T1</h3>'+renderClassTable(d.classification.round1)+'<h3>Klasyfikacja T2</h3>'+renderClassTable(d.classification.round2)+'<h3>Klasyfikacja końcowa</h3><button type="button" class="blue" onclick="notifyGeneralResults('+c.id+',this)">Powiadom o klasyfikacji końcowej</button><p id="generalPublishStatus" role="status"></p>'+renderFinalClubToggle()+renderGeneralTable(d.classification.general)+renderStationStatistics(d)+'</div>'}
 function placeRowClass(rank){const r=Number(rank);return r===1?'place1':r===2?'place2':r===3?'place3':''}
 function sortRowsBySectorPlace(rows){return [...(rows||[])].sort((a,b)=>Number(a.points||999)-Number(b.points||999)||Number(b.weight||0)-Number(a.weight||0)||String(a.name||'').localeCompare(String(b.name||''),'pl'))}
@@ -985,12 +1235,95 @@ function renderSectorResultsBoard(d){return '<div class="card"><h2>Wyniki sektor
 function stationStatisticsRows(d){const all=[];for(const r of (d.classification?.round1||[]))all.push({round:1,...r});for(const r of (d.classification?.round2||[]))all.push({round:2,...r});const by={};for(const r of all){const stand=Number(r.stand||0);if(!stand)continue;const x=by[stand]||(by[stand]={stand,items:[],totalWeight:0});x.items.push(r);x.totalWeight+=Number(r.weight||0)}return Object.values(by).map(x=>{const places=x.items.map(r=>Number(r.points||0)).filter(Boolean),avg=places.length?places.reduce((a,b)=>a+b,0)/places.length:0;return {...x,occ:x.items.length,places,avg}}).sort((a,b)=>a.stand-b.stand)}
 function stationStatsTable(rows,kind=''){if(!rows.length)return '<p class="muted">Brak danych.</p>';const cls=kind==='best'?'stationStandBest':kind==='worst'?'stationStandWorst':'';const desktop='<div class="tablewrap adminDesktopOnly"><table class="sharpTable"><thead><tr><th>Lp.</th><th>Stan.</th><th>Wystąpienia</th><th>Miejsca</th><th>Śr.</th><th>Waga łączna</th></tr></thead><tbody>'+rows.map((r,i)=>'<tr><td class="center">'+(i+1)+'</td><td class="center '+cls+'"><b>'+r.stand+'</b></td><td class="center">'+r.occ+'</td><td class="center">'+r.places.map(placeText).join(' / ')+'</td><td class="center"><b>'+r.avg.toFixed(2).replace('.',',')+'</b></td><td class="right nowrap"><b>'+fmtGram(r.totalWeight)+'g</b></td></tr>').join('')+'</tbody></table></div>';const mobile='<div class="adminMobileOnly mobileStatsList">'+rows.map((r,i)=>'<article class="mobileStatsCard"><b class="mobileStatsStand '+cls+'">Stan. '+r.stand+'</b><div><span><small>Wyst.</small><b>'+r.occ+'</b></span><span><small>Miejsca</small><b>'+r.places.map(placeText).join(' / ')+'</b></span><span><small>Śr.</small><b>'+r.avg.toFixed(2).replace('.',',')+'</b></span><span><small>Waga</small><b>'+fmtGram(r.totalWeight)+'g</b></span></div></article>').join('')+'</div>';return desktop+mobile}
 function renderStationStatistics(d){const rows=stationStatisticsRows(d),best=[...rows].filter(x=>x.places.length).sort((a,b)=>a.avg-b.avg||b.totalWeight-a.totalWeight||a.stand-b.stand).slice(0,5),worst=[...rows].filter(x=>x.places.length).sort((a,b)=>b.avg-a.avg||a.totalWeight-b.totalWeight||a.stand-b.stand).slice(0,5),detail=[];for(const r of rows)for(const it of r.items)detail.push({round:it.round,stand:r.stand,sector:it.sector,points:it.points,weight:it.weight,name:it.name});detail.sort((a,b)=>a.round-b.round||a.stand-b.stand);return '<div class="card"><h2>Statystyki stanowisk</h2><h3>Stanowiska po 2 turach</h3>'+stationStatsTable(rows)+'<div class="twoCols"><div><h3>5 najlepszych stanowisk</h3>'+stationStatsTable(best,'best')+'</div><div><h3>5 najgorszych stanowisk</h3>'+stationStatsTable(worst,'worst')+'</div></div><h3>Stanowiska wg tury</h3><div class="tablewrap"><table class="sharpTable"><thead><tr><th>Lp.</th><th>Tura</th><th>Stan.</th><th>Sektor</th><th>Miejsce</th><th>Zawodnik</th><th>Waga</th></tr></thead><tbody>'+detail.map((r,i)=>'<tr class="'+placeRowClass(r.points)+'"><td class="center">'+(i+1)+'</td><td class="center">T'+r.round+'</td><td class="center"><b>'+r.stand+'</b></td><td class="center">'+esc(r.sector||'—')+'</td><td class="center"><b>'+placeText(r.points)+'</b></td><td>'+esc(r.name||'')+'</td><td class="right nowrap">'+fmtGram(r.weight||0)+'g</td></tr>').join('')+'</tbody></table></div></div>'}
-function renderWeightItems(round,uid,kind){const arr=resultItems(round,uid,kind);if(!arr.length)return '<div class="small muted">Brak zapisanych wag.</div>';return '<div class="weightItems">'+arr.map(i=>'<span class="weightTag '+(kind==='BF'?'bfTag':'netTag')+'">'+fmtGram(i.weight)+'g <button type="button" title="Usuń" onclick="deleteWeightItem('+i.id+')">×</button></span>').join('')+'</div>'}
+
+const JUDGE_QUEUE_KEY='lowcy_judge_offline_queue_v1';
+const JUDGE_ME_CACHE='lowcy_judge_offline_me_v1';
+const JUDGE_COMP_CACHE='lowcy_judge_offline_competitions_v1';
+let JUDGE_SYNC_BUSY=false;
+function judgeQueueAll(){try{const x=JSON.parse(STORE.get(JUDGE_QUEUE_KEY)||'[]');return Array.isArray(x)?x:[]}catch(_){return []}}
+function judgeSaveQueue(arr){STORE.set(JUDGE_QUEUE_KEY,JSON.stringify(arr||[]));}
+function judgeOwnQueue(){const uid=Number(ME?.id||0);return judgeQueueAll().filter(x=>Number(x.judgeUserId||0)===uid)}
+function judgePendingFor(compId,round,userId,kind){return judgeOwnQueue().filter(x=>Number(x.compId)===Number(compId)&&Number(x.round)===Number(round)&&Number(x.userId)===Number(userId)&&String(x.kind)===String(kind))}
+function judgeMutationId(){return 'judge-'+Number(ME?.id||0)+'-'+Date.now()+'-'+Math.random().toString(36).slice(2,10)}
+function judgeCacheDetail(d){if(!d?.competition?.id)return;try{STORE.set('lowcy_judge_detail_'+Number(d.competition.id),JSON.stringify(d))}catch(_){}}
+function judgeCachedDetail(id){try{return JSON.parse(STORE.get('lowcy_judge_detail_'+Number(id))||'null')}catch(_){return null}}
+function judgeCacheCompetitions(arr){try{STORE.set(JUDGE_COMP_CACHE,JSON.stringify(arr||[]))}catch(_){}}
+function judgeCachedCompetitions(){try{const a=JSON.parse(STORE.get(JUDGE_COMP_CACHE)||'[]');return Array.isArray(a)?a:[]}catch(_){return []}}
+function judgeQueueStatus(){
+  const n=judgeOwnQueue().length;
+  const cls=n?(navigator.onLine?'syncing':'offline'):'ok';
+  const text=n?(navigator.onLine?'⟳ '+n+' wpisów czeka na synchronizację':'📴 '+n+' wpisów zapisanych w telefonie'):'✓ Wszystkie wpisy zsynchronizowane';
+  return '<div class="judgeOfflineState '+cls+'">'+text+'</div>';
+}
+function judgeAddPending(item){
+  const all=judgeQueueAll();all.push(item);judgeSaveQueue(all);
+}
+function judgeRemovePending(id){
+  const all=judgeQueueAll().filter(x=>String(x.id)!==String(id));judgeSaveQueue(all);
+}
+function judgeCancelPending(id){
+  judgeRemovePending(id);renderJudgeWork();msg('Usunięto oczekujący wpis z telefonu');
+}
+async function flushJudgeQueue(silent=true){
+  if(JUDGE_SYNC_BUSY||!ME||ME.role!=='JUDGE'||!navigator.onLine)return;
+  const pending=judgeOwnQueue();if(!pending.length){if(JUDGE_VIEW==='entry')renderJudgeWork();return}
+  JUDGE_SYNC_BUSY=true;
+  let sent=0,failed=0;
+  try{
+    for(const item of pending){
+      try{
+        await api('/api/admin/competitions/'+item.compId+'/results/'+item.round+'/items',{method:'POST',body:JSON.stringify({userId:item.userId,kind:item.kind,weight:item.weight,clientMutationId:item.id}),timeoutMs:4000});
+        judgeRemovePending(item.id);sent++;
+      }catch(e){
+        if(e&&Number(e.status)>=400&&Number(e.status)<500){item.error=e.message||'Błąd wpisu';const all=judgeQueueAll().map(x=>String(x.id)===String(item.id)?item:x);judgeSaveQueue(all);failed++;continue}
+        break;
+      }
+    }
+    if(sent&&CURRENT_DETAIL?.competition?.id){
+      try{CURRENT_DETAIL=await api('/api/competitions/'+CURRENT_DETAIL.competition.id);judgeCacheDetail(CURRENT_DETAIL)}catch(_){}
+    }
+    if(JUDGE_VIEW==='entry')renderJudgeWork();
+    if(!silent&&sent)msg('Zsynchronizowano wpisy: '+sent);
+    if(failed)msg('Niektóre wpisy offline wymagają sprawdzenia.','bad');
+  }finally{JUDGE_SYNC_BUSY=false}
+}
+window.addEventListener('online',()=>{flushJudgeQueue(false).catch(()=>{})});
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.addEventListener('message',ev=>{
+    if(ev?.data?.type!=='LOWCY_ATTENTION_REFRESH'||!ME||ME.role==='ADMIN'||ME.role==='JUDGE')return;
+    refreshPlayerAttention(true).then(()=>loadNotifications()).catch(()=>{});
+  });
+}
+setInterval(()=>{if(ME?.role==='JUDGE'&&navigator.onLine)flushJudgeQueue(true).catch(()=>{})},15000);
+function renderWeightItems(round,uid,kind){const arr=resultItems(round,uid,kind),compId=Number(CURRENT_DETAIL?.competition?.id||0),pending=ME?.role==='JUDGE'?judgePendingFor(compId,round,uid,kind):[];if(!arr.length&&!pending.length)return '<div class="small muted">Brak zapisanych wag.</div>';return '<div class="weightItems">'+arr.map(i=>'<span class="weightTag '+(kind==='BF'?'bfTag':'netTag')+'">'+fmtGram(i.weight)+'g <button type="button" title="Usuń" onclick="deleteWeightItem('+i.id+')">×</button></span>').join('')+pending.map(i=>'<span class="weightTag judgePendingWeight '+(i.error?'judgePendingError':'')+'" title="'+esc(i.error||'Zapisano w telefonie — oczekuje na serwer')+'">'+fmtGram(i.weight)+'g <small>'+(i.error?'⚠':'⟳')+'</small> <button type="button" title="Usuń oczekujący wpis" data-id="'+esc(i.id)+'" onclick="judgeCancelPending(this.dataset.id)">×</button></span>').join('')+'</div>'}
 function resultCellSummary(r){r=r||{};const bf=Number(r.big_fish||0);return '<b>'+fmtGram(r.weight||0)+'g</b>'+(bf?'<br><span class="bfLine">BF: '+fmtGram(bf)+'g</span>':'')}
 function renderResultForm(d,round){const entries=d.activeEntries||[];const dm=drawMap(round);const rm=resMap(round);if(!entries.length)return '<p class="muted">Brak aktywnych zawodników.</p>';let desktop='<div class="tablewrap adminDesktopOnly"><table class="resultInputTable"><thead><tr><th style="width:42px">Lp.</th><th>Zawodnik</th><th>Stan.</th><th>Sektor</th><th>Wagi siatek</th><th>Duże ryby BF</th><th>Suma</th></tr></thead><tbody>';desktop+=entries.map((e,idx)=>{const uid=Number(e.user_id),dr=dm[uid],r=rm[uid]||{};return '<tr><td class="center"><b>'+(idx+1)+'</b></td><td><b>'+esc(e.first_name+' '+e.last_name)+'</b></td><td>'+(dr?esc(dr.stand):'—')+'</td><td>'+(dr?esc(dr.sector):'—')+'</td><td>'+renderWeightItems(round,uid,'NET')+'<input class="weightInput" inputmode="numeric" id="net-'+round+'-'+uid+'" placeholder="nowa waga siatki g" onblur="addWeightItem('+d.competition.id+','+round+','+uid+',\'NET\',this)" onkeydown="weightKey(event)"></td><td>'+renderWeightItems(round,uid,'BF')+'<input class="weightInput" inputmode="numeric" id="bf-'+round+'-'+uid+'" placeholder="nowa duża ryba g" onblur="addWeightItem('+d.competition.id+','+round+','+uid+',\'BF\',this)" onkeydown="weightKey(event)"></td><td class="nowrap">'+resultCellSummary(r)+'</td></tr>'}).join('');desktop+='</tbody></table></div>';const mobile='<div class="adminMobileOnly mobileResultEntryList">'+entries.map((e,idx)=>{const uid=Number(e.user_id),dr=dm[uid],r=rm[uid]||{};return '<article class="mobileAdminCard mobileResultEntryCard"><div class="mobileAdminCardHead"><span class="mobileLp">'+(idx+1)+'</span><b>'+esc(e.first_name+' '+e.last_name)+'</b><strong class="mobileResultSum">'+resultCellSummary(r)+'</strong></div><div class="mobileAdminMeta"><span><small>Stan.</small><b>'+(dr?esc(dr.stand):'—')+'</b></span><span><small>Sektor</small><b>'+(dr?esc(dr.sector):'—')+'</b></span></div><div class="mobileWeightBlock"><label>Wagi siatek</label>'+renderWeightItems(round,uid,'NET')+'<input class="weightInput" inputmode="numeric" id="mnet-'+round+'-'+uid+'" placeholder="Nowa waga siatki (g)" onblur="addWeightItem('+d.competition.id+','+round+','+uid+',\'NET\',this)" onkeydown="weightKey(event)"></div><div class="mobileWeightBlock"><label>Duże ryby BF</label>'+renderWeightItems(round,uid,'BF')+'<input class="weightInput" inputmode="numeric" id="mbf-'+round+'-'+uid+'" placeholder="Nowa duża ryba (g)" onblur="addWeightItem('+d.competition.id+','+round+','+uid+',\'BF\',this)" onkeydown="weightKey(event)"></div></article>'}).join('')+'</div>';return desktop+mobile}
 function weightKey(ev){if(ev.key==='Enter'){ev.preventDefault();ev.target.blur();}}
 async function refreshCompetitionKeepScroll(compId){try{const d=await api('/api/competitions/'+compId);CURRENT_DETAIL=d;renderDetail();q('competitionDetail').classList.remove('hidden');}catch(e){msg(e.message,'bad')}}
-async function addWeightItem(compId,round,userId,kind,el){try{const val=String(el?.value||'').trim();if(!val)return;if(el?.dataset?.saving==='1')return;if(el&&el.dataset)el.dataset.saving='1';const td=el.closest('td');if(td)td.classList.add('flashSave');await api('/api/admin/competitions/'+compId+'/results/'+round+'/items',{method:'POST',body:JSON.stringify({userId,kind,weight:val})});if(el)el.value='';setTimeout(async()=>{try{await refreshCompetitionKeepScroll(compId)}finally{if(el&&el.dataset)el.dataset.saving='0'}},350)}catch(e){if(el&&el.dataset)el.dataset.saving='0';msg(e.message,'bad')}}
+async function addWeightItem(compId,round,userId,kind,el){
+  const val=String(el?.value||'').trim();if(!val)return;if(el?.dataset?.saving==='1')return;
+  if(el&&el.dataset)el.dataset.saving='1';const td=el?.closest('td');if(td)td.classList.add('flashSave');
+  if(ME?.role==='JUDGE'){
+    const item={id:judgeMutationId(),judgeUserId:Number(ME.id),compId:Number(compId),round:Number(round),userId:Number(userId),kind:String(kind),weight:val,createdAt:new Date().toISOString(),error:''};
+    const queueAndFinish=()=>{judgeAddPending(item);if(el)el.value='';if(el&&el.dataset)el.dataset.saving='0';renderJudgeWork();msg('Zapisano w telefonie. Wyślę automatycznie po odzyskaniu zasięgu.','ok')};
+    if(!navigator.onLine){queueAndFinish();return}
+    try{
+      await api('/api/admin/competitions/'+compId+'/results/'+round+'/items',{method:'POST',body:JSON.stringify({userId,kind,weight:val,clientMutationId:item.id}),timeoutMs:4000});
+      if(el)el.value='';
+      try{CURRENT_DETAIL=await api('/api/competitions/'+compId);judgeCacheDetail(CURRENT_DETAIL)}catch(_){}
+      if(el&&el.dataset)el.dataset.saving='0';renderJudgeWork();
+    }catch(e){
+      if(e&&Number(e.status)>=400&&Number(e.status)<500){if(el&&el.dataset)el.dataset.saving='0';msg(e.message,'bad');return}
+      queueAndFinish();
+    }
+    return;
+  }
+  try{
+    await api('/api/admin/competitions/'+compId+'/results/'+round+'/items',{method:'POST',body:JSON.stringify({userId,kind,weight:val})});
+    if(el)el.value='';
+    setTimeout(async()=>{try{await refreshCompetitionKeepScroll(compId)}finally{if(el&&el.dataset)el.dataset.saving='0'}},350)
+  }catch(e){if(el&&el.dataset)el.dataset.saving='0';msg(e.message,'bad')}
+}
 async function deleteWeightItem(itemId){try{if(!confirm('Usunąć ten wpis wagi?'))return;const compId=CURRENT_DETAIL.competition.id;await api('/api/admin/results/items/'+itemId,{method:'DELETE'});msg('Usunięto wpis wagi');await refreshCompetitionKeepScroll(compId)}catch(e){msg(e.message,'bad')}}
 async function saveResults(id,round,ev){if(SAVING_RESULTS)return;SAVING_RESULTS=true;const btn=ev?.target;if(btn){btn.disabled=true;btn.textContent='Przeliczam...'}try{const results=(CURRENT_DETAIL.activeEntries||[]).map(e=>({userId:e.user_id}));await api('/api/admin/competitions/'+id+'/results/'+round,{method:'POST',body:JSON.stringify({results})});msg('Przeliczono wyniki T'+round);await refreshCompetitionKeepScroll(id);await loadNotifications()}catch(e){msg(e.message,'bad')}finally{SAVING_RESULTS=false;if(btn){btn.disabled=false;btn.textContent='Przelicz T'+round}}}
 async function generateResults(id,round,ev){const btn=ev?.target;try{if(!confirm('Wygenerować testowe wyniki T'+round+'? Obecne wpisy wag tej tury zostaną zastąpione.'))return;if(btn){btn.disabled=true;btn.textContent='Generuję...'}const d=await api('/api/admin/competitions/'+id+'/results/'+round+'/generate',{method:'POST',body:'{}'});msg('Wygenerowano wyniki T'+round+' dla '+d.count+' zawodników');await refreshCompetitionKeepScroll(id);await loadNotifications()}catch(e){msg(e.message,'bad')}finally{if(btn){btn.disabled=false;btn.textContent='Generuj wyniki T'+round}}}
@@ -1016,7 +1349,7 @@ async function notifyResults(id,round){try{if(!confirm('Wysłać zawodnikom powi
 function renderClassTable(rows){rows=sortRowsBySectorPlace(rows||[]);if(!rows.length)return '<p class="muted">Brak wyników.</p>';const desktop='<div class="tablewrap adminDesktopOnly"><table class="sharpTable roundClassTable"><thead><tr><th style="width:42px">Lp.</th><th>Zawodnik</th><th>Stan.</th><th>Sektor</th><th>Miejsce</th><th>Waga</th></tr></thead><tbody>'+rows.map((r,idx)=>'<tr class="'+placeRowClass(r.points)+' '+(Number(r.user_id)===Number(ME.id)?'mine':'')+'"><td class="center">'+(idx+1)+'</td><td><b>'+esc(r.name)+'</b></td><td class="nowrap">'+(r.stand||'—')+'</td><td>'+esc(r.sector||'—')+'</td><td><b>'+placeText(r.points)+'</b></td><td class="nowrap">'+resultCellSummary(r)+'</td></tr>').join('')+'</tbody></table></div>';const mobile='<div class="adminMobileOnly mobileClassList">'+rows.map((r,idx)=>'<article class="mobileAdminCard '+placeRowClass(r.points)+'"><div class="mobileAdminCardHead"><span class="mobileLp">'+(idx+1)+'</span><b>'+esc(r.name)+'</b><strong class="mobilePlace">Msc '+placeText(r.points)+'</strong></div><div class="mobileAdminMeta"><span><small>Stan.</small><b>'+(r.stand||'—')+'</b></span><span><small>Sektor</small><b>'+esc(r.sector||'—')+'</b></span></div><div class="mobileResultFooter"><span>Waga</span><b>'+resultCellSummary(r)+'</b></div></article>').join('')+'</div>';return desktop+mobile}
 function placeText(v){return (v===0||v)?esc(String(v).replace('.',',')):'—'}
 function renderGeneralTable(rows){rows=rows||[];if(!rows.length)return '<p class="muted">Brak klasyfikacji końcowej.</p>';const desktop='<div class="tablewrap finalWrap adminDesktopOnly"><table class="generalTable sharpTable"><thead><tr><th class="colRank center">MSC</th><th class="colName">Zawodnik</th><th class="colRound center">T1</th><th class="colRound center">T2</th><th class="colSum center">Suma miejsc</th><th class="colWeight right">Waga</th></tr></thead><tbody>'+rows.map(r=>{const club=String(r.pzw_club||'').trim();return '<tr class="'+placeRowClass(r.rank)+' '+(Number(r.user_id)===Number(ME.id)?'mine':'')+'"><td class="colRank center"><b>'+r.rank+'</b></td><td class="colName nameCell"><b>'+esc(r.name)+'</b>'+(club?'<span class="finalClub small muted '+(SHOW_FINAL_CLUB?'':'hidden')+'"> • '+esc(club)+'</span>':'')+'</td><td class="colRound center scoreCell"><b>'+placeText(r.t1_points)+'</b></td><td class="colRound center scoreCell"><b>'+placeText(r.t2_points)+'</b></td><td class="colSum center sumCell"><b>'+placeText(r.sum_points)+'</b></td><td class="colWeight right weightCell"><b>'+fmtGram(r.total_weight)+'g</b>'+(Number(r.biggest_fish||0)?'<br><span class="bfLine">BF: '+fmtGram(r.biggest_fish)+'g</span>':'')+'</td></tr>'}).join('')+'</tbody></table></div>';const mobile='<div class="adminMobileOnly mobileGeneralList">'+rows.map(r=>{const club=String(r.pzw_club||'').trim();return '<article class="mobileAdminCard '+placeRowClass(r.rank)+'"><div class="mobileAdminCardHead"><strong class="mobileRank">'+r.rank+'</strong><b>'+esc(r.name)+'</b>'+(club?'<span class="finalClub small muted '+(SHOW_FINAL_CLUB?'':'hidden')+'"> • '+esc(club)+'</span>':'')+'</div><div class="mobileScoreGrid"><span><small>T1</small><b>'+placeText(r.t1_points)+'</b></span><span><small>T2</small><b>'+placeText(r.t2_points)+'</b></span><span><small>Suma</small><b>'+placeText(r.sum_points)+'</b></span><span><small>Waga</small><b>'+fmtGram(r.total_weight)+'g</b>'+(Number(r.biggest_fish||0)?'<em>BF '+fmtGram(r.biggest_fish)+'g</em>':'')+'</span></div></article>'}).join('')+'</div>';return desktop+mobile}
-function renderPdfPanel(d){const c=d.competition;return '<div class="card"><h2>Generowanie plików PDF</h2><p class="small muted">Każdy PDF ma wspólny nagłówek: nazwa zawodów, data, łowisko i opis zawartości.</p><h3>Losowanie</h3><div class="grid3"><button type="button" onclick="generateDrawPdf(1)">PDF Losowanie T1</button><button type="button" onclick="generateDrawPdf(2)">PDF Losowanie T2</button><button type="button" class="secondary" onclick="generateDrawPdf(0)">PDF Losowanie T1 + T2</button></div><h3>Wyniki</h3>'+renderFinalClubToggle()+'<div class="grid3"><button type="button" onclick="generateResultsPdfV33(1)">PDF Wyniki T1</button><button type="button" onclick="generateResultsPdfV33(2)">PDF Wyniki T2</button><button type="button" class="secondary" onclick="generateResultsPdfV33(0)">PDF Klasyfikacja końcowa</button></div><div class="grid3"><button type="button" class="secondary" onclick="generateSectorPdf(1)">PDF Sektory T1</button><button type="button" class="secondary" onclick="generateSectorPdf(2)">PDF Sektory T2</button><button type="button" class="secondary" onclick="generateStatsPdf()">PDF Statystyki</button></div><h3>Tabelka wynikowa</h3><button type="button" class="secondary" onclick="generateWeightSheetPdf()">PDF Tabelka wynikowa — 1 strona</button><h3>Lista startowa</h3><button type="button" class="blue" onclick="generateStartListPdf()">PDF Tabela startowa zawodników — 1 strona</button><p class="small muted">Tabela startowa: Lp., Zawodnik, Potwierdzenie ✓, Wpisowe, Koszyk +, Uwagi. Układ automatycznie wykorzystuje całą stronę.</p></div>'}
+function renderPdfPanel(d){const c=d.competition;return '<div class="card"><h2>Generowanie plików PDF</h2><p class="small muted">Każdy PDF ma wspólny nagłówek: nazwa zawodów, data, łowisko i opis zawartości.</p><h3>Losowanie</h3><div class="grid3"><button type="button" onclick="generateDrawPdf(1)">PDF Losowanie T1</button><button type="button" onclick="generateDrawPdf(2)">PDF Losowanie T2</button><button type="button" class="secondary" onclick="generateDrawPdf(0)">PDF Losowanie T1 + T2</button></div><h3>Wyniki</h3>'+renderFinalClubToggle()+'<div class="grid3"><button type="button" onclick="generateResultsPdfV33(1)">PDF Wyniki T1</button><button type="button" onclick="generateResultsPdfV33(2)">PDF Wyniki T2</button><button type="button" class="secondary" onclick="generateResultsPdfV33(0)">PDF Klasyfikacja końcowa</button></div><div class="grid3"><button type="button" class="secondary" onclick="generateSectorPdf(1)">PDF Sektory T1</button><button type="button" class="secondary" onclick="generateSectorPdf(2)">PDF Sektory T2</button><button type="button" class="secondary" onclick="generateStatsPdf()">PDF Statystyki</button></div><h3>Tabelka wynikowa</h3><button type="button" class="secondary" onclick="generateWeightSheetPdf()">PDF Tabelka wynikowa — 1 strona</button><div class="photoPdfBox"><b>FORMULARZ DO ODCZYTU ZE ZDJĘCIA</b><span>Ma znaczniki i kratki dla cyfr — ten wariant daje największą pewność importu ręcznie zapisanych wag.</span><div class="grid"><button type="button" class="blue" onclick="generatePhotoResultSheetPdf(1)">PDF do zdjęcia — T1</button><button type="button" class="blue" onclick="generatePhotoResultSheetPdf(2)">PDF do zdjęcia — T2</button></div></div><h3>Lista startowa</h3><button type="button" class="blue" onclick="generateStartListPdf()">PDF Tabela startowa zawodników — 1 strona</button><p class="small muted">Tabela startowa: Lp., Zawodnik, Potwierdzenie ✓, Wpisowe, Koszyk +, Uwagi. Układ automatycznie wykorzystuje całą stronę.</p></div>'}
 function pdfAsciiBytes(x){return new TextEncoder().encode(x)}
 function pdfConcatBytes(chunks){let n=chunks.reduce((a,b)=>a+b.length,0),out=new Uint8Array(n),o=0;for(const c of chunks){out.set(c,o);o+=c.length}return out}
 function pdfDataUrlBytes(url){const b64=url.split(',')[1],bin=atob(b64),out=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)out[i]=bin.charCodeAt(i);return out}
@@ -1077,8 +1410,10 @@ async function loadNotifications(){
   NOTIFICATION_CACHE=d.notifications||[];ADMIN_PENDING_REQUESTS=d.pendingLeaveRequests||[];
   const unread=NOTIFICATION_CACHE.filter(n=>!n.read_at).length;
   PLAYER_UNREAD_NOTIFICATIONS=unread;
-  const counter=q('notifCounter');if(counter)counter.textContent=ME.role==='ADMIN'&&ADMIN_PENDING_REQUESTS.length?'Prośby o wypisanie: '+ADMIN_PENDING_REQUESTS.length:(unread?'🔔 '+unread:'');
-  syncNotificationBadges(unread);
+  if(ME.role==='PLAYER')await refreshPlayerAttention(false);
+  const displayCount=ME.role==='PLAYER'?PLAYER_ATTENTION.count:unread;
+  const counter=q('notifCounter');if(counter)counter.textContent=ME.role==='ADMIN'&&ADMIN_PENDING_REQUESTS.length?'Prośby o wypisanie: '+ADMIN_PENDING_REQUESTS.length:(displayCount?(ME.role==='PLAYER'?'🔴 '+displayCount+' do sprawdzenia':'🔔 '+displayCount):'');
+  syncNotificationBadges(displayCount);
   const top=q('btn-notifications');if(top){top.querySelector('.pendingLeaveTopBadge')?.remove();if(ME.role==='ADMIN'&&ADMIN_PENDING_REQUESTS.length){const badge=document.createElement('b');badge.className='pendingLeaveTopBadge';badge.textContent='Wypisanie: '+ADMIN_PENDING_REQUESTS.length;top.appendChild(badge)}}
   renderNotificationContent();
 }
@@ -1086,7 +1421,7 @@ async function loadNotifications(){
 async function confirmAllNotifications(){try{const path=ME?.role==='ADMIN'?'/api/admin/notifications/read-all':'/api/notifications/read-all';const d=await api(path,{method:'POST',body:'{}'});msg('Potwierdzono powiadomienia: '+Number(d.updated||0));await loadNotifications()}catch(e){msg(e.message,'bad')}}
 async function deleteAllNotifications(){try{const admin=ME?.role==='ADMIN';const question=admin?'Usunąć wszystkie zwykłe i zakończone powiadomienia? Oczekujące prośby o wypisanie pozostaną.':'Usunąć wszystkie swoje powiadomienia?';if(!confirm(question))return;const path=admin?'/api/admin/notifications':'/api/notifications';const d=await api(path,{method:'DELETE',body:'{}'});msg('Usunięto powiadomienia: '+Number(d.deleted||0)+(Number(d.keptPending||0)?'. Oczekujące prośby: '+Number(d.keptPending):''));await loadNotifications()}catch(e){msg(e.message,'bad')}}
 async function decideLeaveRequest(requestId,decision,notifId){try{if(!requestId)throw new Error('Brak identyfikatora prośby');const approve=decision==='approve';if(!confirm(approve?'Zaakceptować prośbę i wypisać zawodnika z zawodów?':'Odrzucić prośbę o wypisanie?'))return;const out=await api('/api/admin/leave-requests/'+requestId+'/'+(approve?'approve':'reject'),{method:'POST',body:'{}'});msg(approve?'Zawodnik został wypisany':'Prośba została odrzucona');await loadNotifications();await loadCompetitions();if(CURRENT_DETAIL?.competition?.id==out.competitionId)await refreshCompetitionKeepScroll(out.competitionId)}catch(e){msg(e.message,'bad')}}
-async function readNotif(id){await api('/api/notifications/'+id+'/read',{method:'POST',body:'{}'});loadNotifications()}
+async function readNotif(id){await api('/api/notifications/'+id+'/read',{method:'POST',body:'{}'});await loadNotifications();if(ME?.role==='PLAYER'){await refreshPlayerAttention(false);renderPlayerCompetitionList()}}
 async function editPlayerName(id,currentName){if(!ME||ME.role!=='ADMIN')return;const before=String(currentName||'').replace(/\s+/g,' ').trim();const entered=prompt('Popraw imię i nazwisko zawodnika:',before);if(entered===null)return;const fullName=String(entered||'').replace(/\s+/g,' ').trim();if(!fullName){msg('Imię i nazwisko nie może być puste','bad');return}if(fullName===before)return;try{const d=await api('/api/admin/players/'+Number(id),{method:'PATCH',body:JSON.stringify({fullName})});msg('Poprawiono nazwę zawodnika: '+(d.player?.name||fullName));await loadPlayers();if(CURRENT_DETAIL?.competition?.id)await refreshCompetitionKeepScroll(CURRENT_DETAIL.competition.id)}catch(e){msg(e.message,'bad')}}
 function playerInfoBadges(p){let out='';if(p.has_logged_in)out+='<span class="playerAccountBadge playerAccountVerified" title="Zawodnik zalogował się w aplikacji">V</span>';if(String(p.account_source||'SELF').toUpperCase()==='ADMIN')out+='<span class="playerAccountBadge playerAccountAdmin" title="Zawodnik dodany przez administratora">A</span>';return out||'<span class="muted">—</span>'}
 async function deletePlayer(id,name){if(!ME||ME.role!=='ADMIN')return;const label=String(name||'zawodnika');if(!confirm('Usunąć zawodnika '+label+'?\n\nUsunięte zostaną także jego zapisy, losowania, wyniki i powiadomienia.'))return;try{const d=await api('/api/admin/players/'+Number(id),{method:'DELETE',body:'{}'});msg('Usunięto zawodnika: '+(d.player?.name||label));await loadPlayers();await loadCompetitions();if(CURRENT_DETAIL?.competition?.id)await refreshCompetitionKeepScroll(CURRENT_DETAIL.competition.id)}catch(e){msg(e.message,'bad')}}
@@ -1251,10 +1586,10 @@ function bindAuthButtons(){
 }
 
 function scrollAppBottom(){window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})}
-Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,loadPlayerHistory,saveGeneralRules,closePlayerCompetition,showAdminZone,loadCompetitions,createCompetition,openCompetitionEdit,deleteCompetition,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,editPlayerName,deletePlayer,deleteAllAdminPlayers,saveMyProfile,setPlayerCompetitionFilter,setPlayerCompetitionMonth,confirmPlayerPresence,enablePush,sendPushTest,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,setPlayerDrawView,openPlayerNotifications,fitPlayerMobileFullMaps,togglePlayerSectorAccordion,toggleFinalClub,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
-function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_133');sessionStorage.removeItem('lowcy_update_retry_102')}catch(_){}}
+Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,loadPlayerHistory,openHistoryCompetition,openCompetitionAttention,judgeCancelPending,saveGeneralRules,closePlayerCompetition,showAdminZone,loadCompetitions,createCompetition,openCompetitionEdit,deleteCompetition,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,editPlayerName,deletePlayer,deleteAllAdminPlayers,saveMyProfile,setPlayerCompetitionFilter,setPlayerCompetitionMonth,confirmPlayerPresence,enablePush,sendPushTest,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,setPlayerDrawView,openPlayerNotifications,fitPlayerMobileFullMaps,togglePlayerSectorAccordion,toggleFinalClub,generatePhotoResultSheetPdf,startPhotoResultImport,closePhotoImportReview,commitPhotoResultImport,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
+function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_134');sessionStorage.removeItem('lowcy_update_retry_102')}catch(_){}}
 let BOOT_RUNNING=false;
-function startBoot(){if(BOOT_RUNNING)return;BOOT_RUNNING=true;window.__LOWCY_JS_STARTED=true;try{syncStickyNavOffset();bindAuthButtons()}catch(e){console.error(e)}const guard=q('bootGuard');if(guard){guard.classList.remove('hidden');const text=guard.querySelector('span');if(text)text.textContent='Łączę z aplikacją…';q('bootRetry')?.classList.add('hidden')}boot().then(()=>{window.__LOWCY_BOOT_OK_133=1;for(const script of document.querySelectorAll('script[src*="/app.js"]')){const version=new URL(script.src,location.href).searchParams.get('v');if(version)window['__LOWCY_BOOT_OK_'+version]=1}hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);if(guard){guard.classList.remove('hidden');const text=guard.querySelector('span');if(text)text.textContent=e.message||'Nie udało się połączyć.';q('bootRetry')?.classList.remove('hidden')}}).finally(()=>{BOOT_RUNNING=false})}
+function startBoot(){if(BOOT_RUNNING)return;BOOT_RUNNING=true;window.__LOWCY_JS_STARTED=true;try{syncStickyNavOffset();bindAuthButtons()}catch(e){console.error(e)}const guard=q('bootGuard');if(guard){guard.classList.remove('hidden');const text=guard.querySelector('span');if(text)text.textContent='Łączę z aplikacją…';q('bootRetry')?.classList.add('hidden')}boot().then(()=>{window.__LOWCY_BOOT_OK_134=1;for(const script of document.querySelectorAll('script[src*="/app.js"]')){const version=new URL(script.src,location.href).searchParams.get('v');if(version)window['__LOWCY_BOOT_OK_'+version]=1}hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);if(guard){guard.classList.remove('hidden');const text=guard.querySelector('span');if(text)text.textContent=e.message||'Nie udało się połączyć.';q('bootRetry')?.classList.remove('hidden')}}).finally(()=>{BOOT_RUNNING=false})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();
 
 let JUDGE_VIEW='competitions',JUDGE_ROUND=1,JUDGE_COMPETITIONS=[],JUDGE_MANAGEMENT=null;
@@ -1267,18 +1602,25 @@ function mountJudgeShell(){
   q('who').textContent=ME.first_name+' '+ME.last_name;q('role').textContent='Sędzia wagowy';JUDGE_VIEW='competitions';
 }
 async function judgeLoadCompetitions(){
-  const d=await api('/api/competitions');JUDGE_COMPETITIONS=d.competitions||[];renderJudgeWork();
+  if(!navigator.onLine){JUDGE_COMPETITIONS=judgeCachedCompetitions();if(!JUDGE_COMPETITIONS.length)msg('Brak połączenia i brak zapisanej listy zawodów. Otwórz zawody raz z internetem przed startem.','bad');renderJudgeWork();return}
+  try{const d=await api('/api/competitions');JUDGE_COMPETITIONS=d.competitions||[];judgeCacheCompetitions(JUDGE_COMPETITIONS)}
+  catch(e){JUDGE_COMPETITIONS=judgeCachedCompetitions();if(!JUDGE_COMPETITIONS.length)msg('Brak połączenia i brak zapisanej listy zawodów.','bad')}
+  renderJudgeWork();
 }
 async function judgeOpenCompetition(id){
-  try{CURRENT_DETAIL=await api('/api/competitions/'+id);JUDGE_VIEW='entry';JUDGE_ROUND=1;renderJudgeWork();scrollAppTop();return true}catch(e){msg(e.message,'bad');return false}
+  if(!navigator.onLine){CURRENT_DETAIL=judgeCachedDetail(id);if(!CURRENT_DETAIL){msg('Brak zapisanych danych tych zawodów. Otwórz je raz z internetem przed startem.','bad');return false}}
+  else try{CURRENT_DETAIL=await api('/api/competitions/'+id);judgeCacheDetail(CURRENT_DETAIL)}
+  catch(e){CURRENT_DETAIL=judgeCachedDetail(id);if(!CURRENT_DETAIL){msg('Nie udało się pobrać ani znaleźć zapisanych danych tych zawodów.','bad');return false}}
+  JUDGE_VIEW='entry';JUDGE_ROUND=1;renderJudgeWork();scrollAppTop();if(navigator.onLine)flushJudgeQueue(true).catch(()=>{});return true;
 }
 async function judgeNavigate(view){
   if(view!=='competitions'&&!CURRENT_DETAIL)return;
-  try{
-    if(view==='competitions'){JUDGE_VIEW=view;await judgeLoadCompetitions()}
-    else{const d=await api('/api/competitions/'+CURRENT_DETAIL.competition.id);CURRENT_DETAIL=d;JUDGE_VIEW=view;renderJudgeWork()}
-    scrollAppTop();
-  }catch(e){msg(e.message,'bad')}
+  if(view==='competitions'){JUDGE_VIEW=view;await judgeLoadCompetitions();scrollAppTop();return}
+  const id=Number(CURRENT_DETAIL.competition.id);
+  if(!navigator.onLine){const cached=judgeCachedDetail(id);if(cached)CURRENT_DETAIL=cached;else{msg('Brak zapisanych danych zawodów.','bad');return}}
+  else try{CURRENT_DETAIL=await api('/api/competitions/'+id);judgeCacheDetail(CURRENT_DETAIL)}
+  catch(e){const cached=judgeCachedDetail(id);if(cached)CURRENT_DETAIL=cached;else{msg('Brak połączenia i brak zapisanych danych zawodów.','bad');return}}
+  JUDGE_VIEW=view;renderJudgeWork();scrollAppTop();
 }
 function judgeChooseRound(round){JUDGE_ROUND=Number(round)===2?2:1;renderJudgeWork()}
 function renderJudgeWork(){
@@ -1290,7 +1632,7 @@ function renderJudgeWork(){
   }
   const d=CURRENT_DETAIL,c=d.competition;
   const heading='<div class="judgeEventHeading"><h2>'+esc(c.title)+'</h2><span>'+fmtDate(c.competition_date)+' · '+esc(c.fishery||'')+'</span></div>';
-  if(JUDGE_VIEW==='entry')box.innerHTML=heading+'<div class="judgeRoundTabs"><button type="button" class="judgeT1 '+(JUDGE_ROUND===1?'active':'')+'" aria-pressed="'+(JUDGE_ROUND===1)+'" onclick="judgeChooseRound(1)">Tura 1</button><button type="button" class="judgeT2 '+(JUDGE_ROUND===2?'active':'')+'" aria-pressed="'+(JUDGE_ROUND===2)+'" onclick="judgeChooseRound(2)">Tura 2</button></div><div class="card judgeEntryRound'+JUDGE_ROUND+'"><h2>Wpisz wagę — Tura '+JUDGE_ROUND+'</h2><p>Wagi podawaj w gramach. Wpisz wagę i naciśnij Enter lub dotknij poza polem — zapis i przeliczenie są automatyczne. Błędny wpis usuniesz krzyżykiem.</p>'+renderResultForm(d,JUDGE_ROUND)+'</div>';
+  if(JUDGE_VIEW==='entry')box.innerHTML=heading+judgeQueueStatus()+'<div class="judgeRoundTabs"><button type="button" class="judgeT1 '+(JUDGE_ROUND===1?'active':'')+'" aria-pressed="'+(JUDGE_ROUND===1)+'" onclick="judgeChooseRound(1)">Tura 1</button><button type="button" class="judgeT2 '+(JUDGE_ROUND===2?'active':'')+'" aria-pressed="'+(JUDGE_ROUND===2)+'" onclick="judgeChooseRound(2)">Tura 2</button></div><div class="card judgeEntryRound'+JUDGE_ROUND+'"><h2>Wpisz wagę — Tura '+JUDGE_ROUND+'</h2><p>Wagi podawaj w gramach. Wpisz wagę i naciśnij Enter lub dotknij poza polem — zapis i przeliczenie są automatyczne. Błędny wpis usuniesz krzyżykiem.</p>'+renderResultForm(d,JUDGE_ROUND)+'</div>';
   else box.innerHTML=heading+'<button type="button" class="secondary" onclick="judgeNavigate(\'results\')">↻ Odśwież wyniki</button>'+renderSectorResultsBoard(d)+'<div class="card"><h2>Klasyfikacja T1</h2>'+renderClassTable(d.classification.round1)+'<h2>Klasyfikacja T2</h2>'+renderClassTable(d.classification.round2)+'<h2>Klasyfikacja generalna</h2>'+renderGeneralTable(d.classification.general)+'</div>';
 }
 async function loadJudgeManagement(){
