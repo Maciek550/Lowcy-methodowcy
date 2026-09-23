@@ -1,3 +1,9 @@
+V138 — Import zdjęcia: SUMA nadrzędna, BF zachowany, puste pola odfiltrowane
+
+Import zdjęcia nie próbuje już czytać każdej kratki niezależnie. Dla każdej kolumny budowany jest wzorzec pustego pola z całego formularza, a odczyt wykonywany jest dopiero po odjęciu tego wzorca. Ma to odfiltrować linie tabeli, cienie i przypadkowe artefakty, które wcześniej dawały fałszywe 1/4/41. Pojedynczy odczyt 1 g jest automatycznie traktowany jako 0.
+
+Zasada zapisu: jeśli w kolumnie SUMA jest wartość, jest ona nadrzędnym wynikiem końcowym zawodnika. Z W1–W5 zachowywane są wtedy wyłącznie pozycje oznaczone * jako BF. Przykład: *6000 i SUMA 30000 zapisuje BF 6000 g + NET 24000 g = wynik 30000 g. Kilka BF jest dozwolone; największa pozostaje Największą rybą. Gdy SUMA jest pusta, wynik powstaje normalnie z W1–W5.
+
 V137 — Lista zawodów bez dublowania
 
 Domyślny widok zawodnika pokazuje wyłącznie 3 najbliższe zawody, posortowane według daty. Po wybraniu konkretnego miesiąca sekcja najbliższych znika i wyświetlane są wszystkie zawody z wybranego miesiąca — każdy tylko raz. Filtry ZAPISANE i HISTORIA również pokazują własną listę bez dodatkowej kopii w sekcji najbliższych. Dolne menu bez zmian.
