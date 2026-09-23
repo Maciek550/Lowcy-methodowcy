@@ -1,3 +1,7 @@
+V131 — Łowisko i data w jednym wierszu
+
+Mobilna karta: łowisko po lewej, data po prawej; długie nazwy łowisk skracane wielokropkiem. Większa nazwa zawodnika oraz napisy górnego menu bez zwiększania kafelków. Zachowane funkcje V130. Sprawdzono składnię, bez weryfikacji na fizycznym telefonie.
+
 V130 — Tryby zawodów i czytelniejsze kafelki
 
 Tryby: OPEN — publiczne z zapisami, TEST — tylko administratorzy, CLOSED — publiczne bez nowych zapisów. Wybór przy tworzeniu i w danych zawodów. Przycisk Zakończ zapisy / Wznów zapisy we wszystkich strefach administratora. Zamknięcie nie zmienia obecnej listy ani wyników. Tryb testowy filtruje listę, historię, szczegóły, powiadomienia i osiągnięcia zawodnika; niedostępny także sędziemu. Zapis blokowany na serwerze i synchronizowany z zamknięciem zapisów blokadą wiersza.

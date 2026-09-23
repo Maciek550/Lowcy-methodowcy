@@ -16,8 +16,8 @@ const ADMIN_SETUP_CODE = process.env.ADMIN_SETUP_CODE || '';
 let VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 let VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
-const APP_VERSION = '130';
-const APP_VERSION_NAME = 'V130_COMPETITION_MODES';
+const APP_VERSION = '131';
+const APP_VERSION_NAME = 'V131_COMPACT_LABELS';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 const CARP_REAL = fs.readFileSync(pathModule.join(__dirname, 'carp-real-v116.png'));
 const ICON_192 = fs.readFileSync(pathModule.join(__dirname, 'icon-192.png'));
@@ -1193,7 +1193,7 @@ async function route(req, res) {
   const path = url.pathname;
   const method = req.method;
 
-  if (path === '/__probe_js_v130' || path === '/__probe_boot_v130' || path === '/__probe_js_v102' || path === '/__probe_boot_v102' || path === '/__probe_js_v101' || path === '/__probe_boot_v101' || path === '/__probe_js_v100' || path === '/__probe_boot_v100' || path === '/__probe_js_v99' || path === '/__probe_boot_v99' || path === '/__probe_js_v98' || path === '/__probe_boot_v98' || path === '/__probe_js_v97' || path === '/__probe_boot_v97' || path === '/__probe_js_v96' || path === '/__probe_boot_v96' || path === '/__probe_js_v95' || path === '/__probe_boot_v95' || path === '/__probe_js_v94' || path === '/__probe_boot_v94' || path === '/__probe_js_v93' || path === '/__probe_boot_v93' || path === '/__probe_js_v91' || path === '/__probe_boot_v91' || path === '/__probe_js_v90' || path === '/__probe_boot_v90' || path === '/__probe_js_v89' || path === '/__probe_boot_v89' || path === '/__probe_js_v88' || path === '/__probe_boot_v88' || path === '/__probe_js_v87' || path === '/__probe_boot_v87' || path === '/__probe_js_v86' || path === '/__probe_boot_v86' || path === '/__probe_js_v85' || path === '/__probe_boot_v85' || path === '/__probe_js_v84' || path === '/__probe_boot_v84' || path === '/__probe_js_v83' || path === '/__probe_boot_v83' || path === '/__probe_js_v82' || path === '/__probe_boot_v82' || path === '/__probe_js_v81' || path === '/__probe_boot_v81' || path === '/__probe_js_v80' || path === '/__probe_boot_v80' || path === '/__probe_js_v79' || path === '/__probe_boot_v79' || path === '/__probe_js_v78' || path === '/__probe_boot_v78' || path === '/__probe_js_v77' || path === '/__probe_boot_v77' || path === '/__probe_js_v76' || path === '/__probe_boot_v76' || path === '/__probe_js_v75' || path === '/__probe_boot_v75' || path === '/__probe_js_v74' || path === '/__probe_boot_v74' || path === '/__probe_js_v73' || path === '/__probe_boot_v73' || path === '/__probe_js_v72' || path === '/__probe_boot_v72' || path === '/__probe_js_v71' || path === '/__probe_boot_v71') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
+  if (path === '/__probe_js_v131' || path === '/__probe_boot_v131' || path === '/__probe_js_v102' || path === '/__probe_boot_v102' || path === '/__probe_js_v101' || path === '/__probe_boot_v101' || path === '/__probe_js_v100' || path === '/__probe_boot_v100' || path === '/__probe_js_v99' || path === '/__probe_boot_v99' || path === '/__probe_js_v98' || path === '/__probe_boot_v98' || path === '/__probe_js_v97' || path === '/__probe_boot_v97' || path === '/__probe_js_v96' || path === '/__probe_boot_v96' || path === '/__probe_js_v95' || path === '/__probe_boot_v95' || path === '/__probe_js_v94' || path === '/__probe_boot_v94' || path === '/__probe_js_v93' || path === '/__probe_boot_v93' || path === '/__probe_js_v91' || path === '/__probe_boot_v91' || path === '/__probe_js_v90' || path === '/__probe_boot_v90' || path === '/__probe_js_v89' || path === '/__probe_boot_v89' || path === '/__probe_js_v88' || path === '/__probe_boot_v88' || path === '/__probe_js_v87' || path === '/__probe_boot_v87' || path === '/__probe_js_v86' || path === '/__probe_boot_v86' || path === '/__probe_js_v85' || path === '/__probe_boot_v85' || path === '/__probe_js_v84' || path === '/__probe_boot_v84' || path === '/__probe_js_v83' || path === '/__probe_boot_v83' || path === '/__probe_js_v82' || path === '/__probe_boot_v82' || path === '/__probe_js_v81' || path === '/__probe_boot_v81' || path === '/__probe_js_v80' || path === '/__probe_boot_v80' || path === '/__probe_js_v79' || path === '/__probe_boot_v79' || path === '/__probe_js_v78' || path === '/__probe_boot_v78' || path === '/__probe_js_v77' || path === '/__probe_boot_v77' || path === '/__probe_js_v76' || path === '/__probe_boot_v76' || path === '/__probe_js_v75' || path === '/__probe_boot_v75' || path === '/__probe_js_v74' || path === '/__probe_boot_v74' || path === '/__probe_js_v73' || path === '/__probe_boot_v73' || path === '/__probe_js_v72' || path === '/__probe_boot_v72' || path === '/__probe_js_v71' || path === '/__probe_boot_v71') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
 
   if (path === '/__probe_js_v68' || path === '/__probe_boot_v68' || path === '/__probe_js_v67' || path === '/__probe_boot_v67' || path === '/__probe_js_v66' || path === '/__probe_boot_v66' || path === '/__probe_js_v65' || path === '/__probe_boot_v65' || path === '/__probe_js_v63' || path === '/__probe_boot_v63' || path === '/__probe_js_v62' || path === '/__probe_boot_v62' || path === '/__probe_js_v60' || path === '/__probe_boot_v60' || path === '/__probe_js_v59' || path === '/__probe_boot_v59' || path === '/__probe_js_v58' || path === '/__probe_boot_v58' || path === '/__probe_js_v57' || path === '/__probe_boot_v57' || path === '/__probe_js_v56' || path === '/__probe_boot_v56' || path === '/__probe_js_v55' || path === '/__probe_boot_v55' || path === '/__probe_js_v54' || path === '/__probe_boot_v54' || path === '/__probe_js_v53' || path === '/__probe_boot_v53' || path === '/__probe_js_v52' || path === '/__probe_boot_v52' || path === '/__probe_js_v51' || path === '/__probe_boot_v51' || path === '/__probe_js_v50' || path === '/__probe_boot_v50' || path === '/__probe_js_v49' || path === '/__probe_boot_v49' || path === '/__probe_js_v36' || path === '/__probe_boot_v36' || path === '/__probe_js_v35' || path === '/__probe_boot_v35' || path === '/__probe_js_v34' || path === '/__probe_boot_v34' || path === '/__probe_js_v33' || path === '/__probe_boot_v33' || path === '/__probe_js_v32' || path === '/__probe_boot_v32' || path === '/__probe_js_v30' || path === '/__probe_boot_v30' || path === '/__probe_js_v29' || path === '/__probe_boot_v29' || path === '/__probe_js_v27' || path === '/__probe_boot_v27' || path === '/__probe_inline_v26') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/api/version') return sendJson(res, 200, { ok:true, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
@@ -1391,9 +1391,9 @@ body #app button.rosterLeaveRequest:disabled{opacity:.65;cursor:wait}
     ]
   }), {'Content-Type':'application/manifest+json; charset=utf-8','Cache-Control':'no-cache'});
   if (path === '/sw.js') return send(res, 200, `
-const SHELL_CACHE='lowcy-shell-v130';
-const APP_SHELL_JS='/app.js?v=130';
-const PDF_JS='/pdf-vector.js?v=130';
+const SHELL_CACHE='lowcy-shell-v131';
+const APP_SHELL_JS='/app.js?v=131';
+const PDF_JS='/pdf-vector.js?v=131';
 const SHELL=['/',APP_SHELL_JS,PDF_JS,'/icon-192.png','/icon-512.png'];
 async function fetchWithTimeout(req,ms=30000){const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),ms);try{return await fetch(req,{cache:'no-store',signal:ctrl.signal})}finally{clearTimeout(timer)}}
 self.addEventListener('install',event=>event.waitUntil((async()=>{const replies=await Promise.all(SHELL.map(url=>fetchWithTimeout(url)));if(replies.some(r=>!r.ok))throw Error('Incomplete shell');const cache=await caches.open(SHELL_CACHE);await Promise.all(SHELL.map((url,i)=>cache.put(url,replies[i])));await self.skipWaiting()})()));
@@ -5789,11 +5789,23 @@ body.playerTheme #app .playerCompWeekday,body.playerTheme #app .playerCompCountd
  body.playerTheme #app .playerCompCardV98 .playerCompDate{grid-column:1/-1}
  body.playerTheme #app .playerCompCardV98 .playerCompWeekday,body.playerTheme #app .playerCompCardV98 .playerCompCountdown,body.playerTheme #app .playerCompCardV98 .playerCompStatus{font-size:11px!important;white-space:normal!important;text-align:center!important}
 }
+
+/* V131: location/date together and larger navigation labels. */
+body.playerTheme #app .playerCompLocationDate{display:flex!important;align-items:baseline!important;justify-content:space-between!important;gap:6px!important;margin:5px 0 3px!important;min-width:0}
+body.playerTheme #app .playerCompLocationDate .playerCompFishery{flex:1 1 auto!important;min-width:0!important;font-size:14px!important;line-height:1.15!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+body.playerTheme #app .playerCompLocationDate .playerCompDate{flex:0 0 auto!important;font-size:14px!important;line-height:1.15!important;white-space:nowrap!important}
+body.playerTheme #app>.compactUserBar #who,body #app>.compactUserBar #who{font-size:16px!important;line-height:1.2!important;white-space:normal!important;overflow:visible!important}
+body.playerTheme #app>.tabs button{font-size:15px!important;line-height:1.1!important;padding:3px 4px!important;white-space:normal!important;font-weight:800!important}
+@media(max-width:760px){
+ body.playerTheme #app>.tabs button,body.playerTheme #app>.tabs #btn-notifications,body.playerTheme #app>.tabs #btn-history{font-size:clamp(11px,3.2vw,14px)!important;line-height:1.1!important;padding:2px!important;white-space:normal!important;overflow-wrap:normal!important;letter-spacing:-.2px!important}
+ body.playerTheme #app>.compactUserBar #who,body #app>.compactUserBar #who{font-size:16px!important}
+ body.playerTheme #app .playerCompCardV98 .playerCompCardDate{grid-template-columns:auto minmax(0,1fr) minmax(0,1.3fr)!important}
+}
 </style>
 </head>
 <body class="authMode">
 <div id="bootGuard"><img src="/icon-192.png" alt=""><b>Łowcy Methodowcy</b><span>Uruchamiam aplikację…</span><button id="bootRetry" class="hidden" type="button" onclick="retryLowcyBoot()">Spróbuj ponownie</button></div>
-<header><div class="row"><h1><img class="brandIcon" src="/icon-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V130</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
+<header><div class="row"><h1><img class="brandIcon" src="/icon-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V131</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
 <main>
 <div id="msg"></div>
 <section id="auth" class="card">
@@ -5806,7 +5818,7 @@ body.playerTheme #app .playerCompWeekday,body.playerTheme #app .playerCompCountd
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="appVersionBadge">V130</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
+  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="appVersionBadge">V131</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-rules" class="hidden" onclick="showTab('rules')">Regulamin ogólny</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-profile" class="hidden" onclick="showTab('profile')">Mój profil</button><button id="btn-history" class="hidden" onclick="showTab('history')">Historia startów</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
     <details id="adminCreate" class="card hidden adminCreateV93"><summary class="adminCreateToggle">Robimy zawody</summary><div class="adminCreateBody"><h2>Utwórz zawody</h2><p class="small muted">Dane z tego formularza są później widoczne dla zawodnika.</p><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Zbiórka / godzina</label><input id="cMeetingTime" type="time" value="06:00"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div></div><div class="adminTextPair"><div><label>Tryb zawodów</label><select id="cStatus"><option value="OPEN">Zawody otwarte — każdy może się zapisać</option><option value="TEST">Zawody testowe — tylko admin</option><option value="CLOSED">Zapisy zakończone — widoczne, bez zapisów</option></select><label>Informacje organizacyjne</label><textarea id="cNotes" placeholder="Parking, miejsce zbiórki, godzina losowania, dodatkowe informacje…"></textarea></div><div><label>Program / regulamin tych zawodów</label><textarea id="cRegulations" class="rulesEditor" placeholder="Np. 06:00 zbiórka, 06:15 losowanie, 07:00–15:00 zawody, ważne zasady tylko dla tego wydarzenia…"></textarea></div></div><button onclick="createCompetition(event)">Utwórz zawody</button></div></details>
@@ -5823,14 +5835,14 @@ body.playerTheme #app .playerCompWeekday,body.playerTheme #app .playerCompCountd
 <div class="quickScroll"><button onclick="scrollAppTop()">↑</button><button onclick="scrollAppBottom()">↓</button></div>
 <script>
 (function(){
- window.__lowcyRecover130=function(){var g=document.getElementById('bootGuard');if(!g)return;g.classList.remove('hidden');var sp=g.querySelector('span');if(sp)sp.textContent='Nie udało się pobrać aplikacji. Sprawdź połączenie i spróbuj ponownie.';var b=document.getElementById('bootRetry');if(b)b.classList.remove('hidden')};
+ window.__lowcyRecover131=function(){var g=document.getElementById('bootGuard');if(!g)return;g.classList.remove('hidden');var sp=g.querySelector('span');if(sp)sp.textContent='Nie udało się pobrać aplikacji. Sprawdź połączenie i spróbuj ponownie.';var b=document.getElementById('bootRetry');if(b)b.classList.remove('hidden')};
  window.retryLowcyBoot=function(){if(typeof startBoot==='function'){startBoot();return}location.reload()};
  if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'}).then(function(reg){return reg.update()}).catch(function(){});
- setTimeout(function(){if(!window.__LOWCY_JS_STARTED)window.__lowcyRecover130()},30000);
+ setTimeout(function(){if(!window.__LOWCY_JS_STARTED)window.__lowcyRecover131()},30000);
 })();
 </script>
-<script src="/pdf-vector.js?v=130" defer></script>
-<script src="/app.js?v=130" defer onerror="window.__lowcyRecover130&&window.__lowcyRecover130()"></script>
+<script src="/pdf-vector.js?v=131" defer></script>
+<script src="/app.js?v=131" defer onerror="window.__lowcyRecover131&&window.__lowcyRecover131()"></script>
 </body>
 </html>`;
 
@@ -5841,5 +5853,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V130_COMPETITION_MODES_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V131_COMPACT_LABELS_READY'); console.log('CARP_MOBILE_READY port=' + PORT); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });
