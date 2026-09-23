@@ -1,3 +1,11 @@
+V135 — Papierowy import: szerokie pola, * = BF, SUMA kontrolna
+
+Formularz do zdjęcia ma kolumny W1–W5 i SUMA. Każdą wagę wpisuje się normalnie w jednym szerokim polu. Waga poprzedzona znakiem * (np. *9890) jest zapisywana jako duża ryba (BF), ale nadal wchodzi do łącznej wagi zawodnika. Można oznaczyć kilka osobno ważonych ryb znakiem *; największa z nich jest prezentowana jako Największa ryba.
+
+Kolumna SUMA nie tworzy osobnego wpisu — służy do kontroli. Import zostaje zablokowany, jeśli suma z kartki nie zgadza się z sumą W1–W5. Ekran kontroli przed importem pozwala ręcznie poprawić rozpoznane liczby i dodać/usunąć *. Zachowano cztery czarne znaczniki do prostowania zdjęcia.
+
+Zachowane wszystkie funkcje V134: licznik uwagi i badge, dynamiczne akcje zawodów, Najbliższe 3, graficzna historia z BF, offline sędziego oraz kontrolowany import zdjęcia.
+
 V134 — Centrum uwagi, historia startów, offline sędziego i import wyników ze zdjęcia
 
 Zawodnik:

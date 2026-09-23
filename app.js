@@ -1,4 +1,4 @@
-const CLIENT_VERSION='134';const CLIENT_VERSION_NAME='V134_ATTENTION_HISTORY_OFFLINE';window.__LOWCY_APP_JS_134=1;try{fetch('/__probe_js_v134',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V134_ATTENTION_HISTORY_OFFLINE_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='135';const CLIENT_VERSION_NAME='V135_PHOTO_SHEET_STAR_BF';window.__LOWCY_APP_JS_135=1;try{fetch('/__probe_js_v135',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V135_PHOTO_SHEET_STAR_BF_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -1081,29 +1081,28 @@ function photoSheetGeometry(count){
     markers:[{x:50,y:216},{x:1190,y:216},{x:50,y:1702},{x:1190,y:1702}]};
 }
 function drawPhotoResultSheetPage(round){
-  const d=CURRENT_DETAIL,o=pdfCanvas(),ctx=o.ctx,g=photoSheetGeometry((d.activeEntries||[]).length),c=d.competition;
+  const d=CURRENT_DETAIL,o=pdfCanvas(),ctx=o.ctx,g=photoSheetGeometry((d.activeEntries||[]).length);
   drawPdfHeaderV33(ctx,'FORMULARZ DO IMPORTU ZE ZDJĘCIA — TURA '+round);
-  ctx.fillStyle='#17251d';ctx.font='800 17px Arial';ctx.textAlign='center';
-  ctx.fillText('Wpisuj wyłącznie cyfry. Każdą cyfrę w osobnej kratce. Nie kadruj czarnych znaczników.',620,190,980);
+  ctx.fillStyle='#17251d';ctx.font='800 16px Arial';ctx.textAlign='center';
+  ctx.fillText('Wpisuj normalnie całe wagi. * przed wagą oznacza dużą rybę, np. *9890. Ostatnia kolumna = SUMA.',620,188,1040);
+  ctx.font='700 13px Arial';
+  ctx.fillText('Przykład: 12450 | *9890 | 8700  → wszystkie wagi liczą się do sumy, a BF = 9890 g. Nie kadruj czarnych znaczników.',620,210,1080);
   ctx.textAlign='left';
   for(const m of g.markers){ctx.fillStyle='#000';ctx.fillRect(m.x-20,m.y-20,40,40);ctx.fillStyle='#fff';ctx.fillRect(m.x-6,m.y-6,12,12);ctx.fillStyle='#000';ctx.fillRect(m.x-2,m.y-2,4,4)}
-  const headers=['Lp.','Zawodnik','W1','W2','W3','W4','W5','BF'];let x=g.x0;
+  const headers=['Lp.','Zawodnik','W1','W2','W3','W4','W5','SUMA'];let x=g.x0;
   ctx.fillStyle='#e5efe8';ctx.fillRect(g.x0,g.headerY,g.widths.reduce((p,n)=>p+n,0),g.headerH);
   headers.forEach((h,i)=>{ctx.strokeStyle='#6c7d72';ctx.lineWidth=1.2;ctx.strokeRect(x,g.headerY,g.widths[i],g.headerH);ctx.fillStyle='#173d2e';ctx.font='800 15px Arial';ctx.textAlign=i<2?'left':'center';ctx.fillText(h,i<2?x+5:x+g.widths[i]/2,g.headerY+16,g.widths[i]-10);x+=g.widths[i]});
   ctx.textAlign='left';
   (d.activeEntries||[]).forEach((e,ri)=>{
     const y=g.dataY+ri*g.rowH;
-    ctx.fillStyle=ri%2?'#fafafa':'#fff';ctx.fillRect(g.x0,y,g.widths[0]+g.widths[1],g.rowH);
-    ctx.strokeStyle='#9dad9f';ctx.strokeRect(g.x0,y,g.widths[0],g.rowH);ctx.strokeRect(g.x0+g.widths[0],y,g.widths[1],g.rowH);
+    ctx.fillStyle=ri%2?'#fafafa':'#fff';ctx.fillRect(g.x0,y,g.widths.reduce((p,n)=>p+n,0),g.rowH);
+    let xx=g.x0;
+    for(let i=0;i<g.widths.length;i++){ctx.strokeStyle=i===7?'#597263':'#9dad9f';ctx.lineWidth=i===7?1.4:.9;ctx.strokeRect(xx,y,g.widths[i],g.rowH);xx+=g.widths[i]}
     ctx.fillStyle='#17251d';ctx.font='800 '+Math.min(18,g.rowH*.48)+'px Arial';ctx.fillText(String(ri+1),g.x0+7,y+Math.max(5,(g.rowH-18)/2),g.widths[0]-12);
     ctx.fillText(String(e.first_name+' '+e.last_name),g.x0+g.widths[0]+6,y+Math.max(5,(g.rowH-18)/2),g.widths[1]-12);
-    for(let f=0;f<6;f++){
-      const fx=g.fieldStart+f*g.fieldW,slot=g.fieldW/5;
-      for(let k=0;k<5;k++){ctx.fillStyle='#fff';ctx.fillRect(fx+k*slot,y,slot,g.rowH);ctx.strokeStyle='#9dad9f';ctx.lineWidth=.8;ctx.strokeRect(fx+k*slot,y,slot,g.rowH)}
-    }
   });
   ctx.fillStyle='#17251d';ctx.font='700 13px Arial';ctx.textAlign='center';
-  ctx.fillText('W1–W5 = kolejne siatki w gramach • BF = największa ryba w gramach • puste pole = brak wpisu',620,1670,1040);
+  ctx.fillText('W1–W5 = kolejne ważenia w gramach • * przed wagą = BF • kilka * jest dozwolone • SUMA służy do kontroli odczytu',620,1670,1080);
   ctx.textAlign='left';return o.canvas;
 }
 function generatePhotoResultSheetPdf(round){
@@ -1159,25 +1158,40 @@ function photoOtsu(vals){
   for(let t=20;t<235;t++){wB+=hist[t];if(!wB)continue;const wF=total-wB;if(!wF)break;sumB+=t*hist[t];const mB=sumB/wB,mF=(sum-sumB)/wF,between=wB*wF*(mB-mF)*(mB-mF);if(between>max){max=between;best=t}}
   return Math.min(190,Math.max(70,best));
 }
-function photoSampleSlot(image,H,rect){
-  const sw=28,sh=36,vals=new Uint8Array(sw*sh),{w,h,gray}=image;
-  for(let yy=0;yy<sh;yy++)for(let xx=0;xx<sw;xx++){const lx=rect.x+(xx+.5)/sw*rect.w,ly=rect.y+(yy+.5)/sh*rect.h,p=photoMap(H,lx,ly),px=Math.max(0,Math.min(w-1,Math.round(p.x))),py=Math.max(0,Math.min(h-1,Math.round(p.y)));vals[yy*sw+xx]=gray[py*w+px]}
-  const thr=photoOtsu(vals),fg=[];for(let y=0;y<sh;y++)for(let x=0;x<sw;x++){const g=vals[y*sw+x];if(g<thr-4)fg.push({x,y,g})}
-  if(fg.length<12)return {digit:'',confidence:1,blank:true};
-  let minX=sw,maxX=0,minY=sh,maxY=0;for(const p of fg){minX=Math.min(minX,p.x);maxX=Math.max(maxX,p.x);minY=Math.min(minY,p.y);maxY=Math.max(maxY,p.y)}
-  if(maxX-minX<2||maxY-minY<5)return {digit:'',confidence:.2,blank:true};
-  const vec=new Float32Array(64),bw=Math.max(1,maxX-minX+1),bh=Math.max(1,maxY-minY+1),scale=Math.min(6/bw,7/bh),tw=bw*scale,th=bh*scale,ox=(8-tw)/2,oy=(8-th)/2;
-  for(const p of fg){const tx=Math.max(0,Math.min(7,Math.floor(ox+(p.x-minX+.5)*scale))),ty=Math.max(0,Math.min(7,Math.floor(oy+(p.y-minY+.5)*scale))),ink=Math.max(.25,(thr-p.g+12)/Math.max(40,thr));vec[ty*8+tx]=Math.max(vec[ty*8+tx],ink)}
+function photoFieldPixels(image,H,rect,sw=150,sh=44){
+  const vals=new Uint8Array(sw*sh),{w,h,gray}=image;
+  for(let yy=0;yy<sh;yy++)for(let xx=0;xx<sw;xx++){
+    const lx=rect.x+(xx+.5)/sw*rect.w,ly=rect.y+(yy+.5)/sh*rect.h,p=photoMap(H,lx,ly),px=Math.max(0,Math.min(w-1,Math.round(p.x))),py=Math.max(0,Math.min(h-1,Math.round(p.y)));
+    vals[yy*sw+xx]=gray[py*w+px];
+  }
+  return {vals,sw,sh};
+}
+function photoClassifyGlyph(points,sw,sh){
+  if(!points||points.length<5)return {digit:'',confidence:0};
+  let minX=sw,maxX=0,minY=sh,maxY=0;for(const p of points){minX=Math.min(minX,p.x);maxX=Math.max(maxX,p.x);minY=Math.min(minY,p.y);maxY=Math.max(maxY,p.y)}
+  const bw=Math.max(1,maxX-minX+1),bh=Math.max(1,maxY-minY+1),vec=new Float32Array(64),scale=Math.min(6/bw,7/bh),tw=bw*scale,th=bh*scale,ox=(8-tw)/2,oy=(8-th)/2;
+  for(const p of points){const tx=Math.max(0,Math.min(7,Math.floor(ox+(p.x-minX+.5)*scale))),ty=Math.max(0,Math.min(7,Math.floor(oy+(p.y-minY+.5)*scale)));vec[ty*8+tx]=1}
   let norm=0;for(const v of vec)norm+=v*v;norm=Math.sqrt(norm)||1;for(let i=0;i<64;i++)vec[i]/=norm;
   let best={label:0,score:-1},second={label:-1,score:-1};for(const p of photoOcrPrototypes()){let score=0;for(let i=0;i<64;i++)score+=vec[i]*p.v[i];if(score>best.score){if(p.label!==best.label)second=best;best={label:p.label,score}}else if(p.label!==best.label&&score>second.score)second={label:p.label,score}}
-  const margin=best.score-(second.score<0?0:second.score),confidence=Math.max(0,Math.min(1,(best.score-.48)*1.8+margin*3));
-  return {digit:String(best.label),confidence,best:best.score,margin,blank:false};
+  const margin=best.score-(second.score<0?0:second.score),confidence=Math.max(0,Math.min(1,(best.score-.43)*1.7+margin*2.7));
+  return {digit:String(best.label),confidence,best:best.score,margin,bbox:{minX,maxX,minY,maxY,bw,bh},points};
 }
-function photoReadField(image,H,x,y,w,h){
-  const slot=w/5,digits=[],parts=[];let low=false,used=false;
-  for(let i=0;i<5;i++){const r=photoSampleSlot(image,H,{x:x+i*slot+3,y:y+3,w:slot-6,h:h-6});parts.push(r);if(!r.blank){used=true;digits.push(r.digit);if(r.confidence<.55)low=true}}
-  const value=used?digits.join('').replace(/^0+(?=\d)/,''):'';
-  return {value:value||'',low,parts};
+function photoReadWideField(image,H,x,y,w,h,allowStar=true){
+  const {vals,sw,sh}=photoFieldPixels(image,H,{x:x+3,y:y+3,w:w-6,h:h-6}),thr=photoOtsu(vals),bin=new Uint8Array(sw*sh);
+  for(let yy=2;yy<sh-2;yy++)for(let xx=2;xx<sw-2;xx++)if(vals[yy*sw+xx]<thr-5)bin[yy*sw+xx]=1;
+  const seen=new Uint8Array(sw*sh),components=[],dirs=[-1,1,-sw,sw,-sw-1,-sw+1,sw-1,sw+1];
+  for(let i=0;i<bin.length;i++)if(bin[i]&&!seen[i]){const stack=[i],pts=[];seen[i]=1;while(stack.length){const q=stack.pop(),qy=Math.floor(q/sw),qx=q-qy*sw;pts.push({x:qx,y:qy});for(const d of dirs){const n=q+d;if(n<0||n>=bin.length||seen[n]||!bin[n])continue;const ny=Math.floor(n/sw),nx=n-ny*sw;if(Math.abs(nx-qx)>1||Math.abs(ny-qy)>1)continue;seen[n]=1;stack.push(n)}}if(pts.length>=7)components.push(pts)}
+  let glyphs=components.map(c=>photoClassifyGlyph(c,sw,sh)).filter(g=>g.bbox&&g.bbox.bh>=6&&g.bbox.bw>=1);
+  glyphs.sort((a,b)=>a.bbox.minX-b.bbox.minX);
+  if(!glyphs.length)return {value:'',isBigFish:false,low:false,blank:true};
+  // Małe fragmenty (np. oddzielna kreska cyfry) dołącz do najbliższego większego znaku.
+  const major=glyphs.filter(g=>g.points.length>=12),minor=glyphs.filter(g=>g.points.length<12);
+  for(const m of minor){let target=null,dist=999;for(const g of major){const dx=Math.max(0,Math.max(g.bbox.minX-m.bbox.maxX,m.bbox.minX-g.bbox.maxX));if(dx<dist&&dx<=5){dist=dx;target=g}}if(target){target.points=target.points.concat(m.points);Object.assign(target,photoClassifyGlyph(target.points,sw,sh))}}
+  glyphs=major.length?major:glyphs;glyphs.sort((a,b)=>a.bbox.minX-b.bbox.minX);
+  let isBigFish=false;
+  if(allowStar&&glyphs.length>=2){const first=glyphs[0],rest=glyphs.slice(1),medH=rest.map(g=>g.bbox.bh).sort((a,b)=>a-b)[Math.floor(rest.length/2)]||first.bbox.bh;const square=first.bbox.bw/Math.max(1,first.bbox.bh);const small=first.bbox.bh<medH*.82;const left=first.bbox.minX<sw*.28;const uncertain=first.confidence<.48;const dense=first.points.length/Math.max(1,first.bbox.bw*first.bbox.bh)>.18;if(left&&(small||uncertain)&&(square>.35&&square<1.8)&&dense){isBigFish=true;glyphs=glyphs.slice(1)}}
+  const digits=glyphs.slice(0,6),value=digits.map(g=>g.digit).join('').replace(/^0+(?=\d)/,'');const low=digits.some(g=>g.confidence<.48)||(allowStar&&isBigFish&&digits.length===0);
+  return {value:value||'',isBigFish,low,blank:!value,glyphs};
 }
 async function photoRecognizeSheet(file,round){
   const img=await photoImageFromFile(file),image=photoGrayData(img),g=photoSheetGeometry((CURRENT_DETAIL.activeEntries||[]).length);
@@ -1188,22 +1202,25 @@ async function photoRecognizeSheet(file,round){
   if(found.some(x=>!x))throw new Error('Nie widzę wszystkich 4 czarnych znaczników. Zrób zdjęcie całej kartki, bez obciętych rogów.');
   const H=photoHomography(g.markers,found);
   const rows=(CURRENT_DETAIL.activeEntries||[]).map((e,ri)=>{
-    const y=g.dataY+ri*g.rowH,fields=[];for(let f=0;f<6;f++)fields.push(photoReadField(image,H,g.fieldStart+f*g.fieldW,y,g.fieldW,g.rowH));
-    return {userId:Number(e.user_id),name:e.first_name+' '+e.last_name,weights:fields.slice(0,5),bigFish:fields[5]};
+    const y=g.dataY+ri*g.rowH,weights=[];for(let f=0;f<5;f++)weights.push(photoReadWideField(image,H,g.fieldStart+f*g.fieldW,y,g.fieldW,g.rowH,true));
+    const sum=photoReadWideField(image,H,g.fieldStart+5*g.fieldW,y,g.fieldW,g.rowH,false);
+    const calc=weights.reduce((acc,f)=>acc+(Number(f.value)||0),0),written=Number(sum.value)||0;
+    if(written&&calc&&written!==calc)sum.low=true;
+    return {userId:Number(e.user_id),name:e.first_name+' '+e.last_name,weights,sum,calculatedSum:calc};
   });
   return {round:Number(round),rows,markerQuality:Math.min(...found.map(x=>Number(x.score||0))),imageUrl:URL.createObjectURL(file)};
 }
 function closePhotoImportReview(){const x=q('photoImportOverlay');if(x){const u=x.dataset.imageUrl;if(u)URL.revokeObjectURL(u);x.remove()}}
 function photoImportCell(field,key){
-  const value=field?.value||'',low=!!field?.low;return '<td class="'+(low?'photoOcrLow':'')+'"><input inputmode="numeric" pattern="[0-9]*" data-key="'+key+'" value="'+esc(value)+'" placeholder="—">'+(low?'<small>sprawdź</small>':'')+'</td>';
+  const value=(field?.isBigFish?'*':'')+(field?.value||''),low=!!field?.low;return '<td class="'+(low?'photoOcrLow':'')+'"><input inputmode="text" data-key="'+key+'" value="'+esc(value)+'" placeholder="—">'+(low?'<small>sprawdź</small>':'')+'</td>';
 }
 function showPhotoImportReview(result){
   closePhotoImportReview();const overlay=document.createElement('div');overlay.id='photoImportOverlay';overlay.className='photoImportOverlay';overlay.dataset.round=String(result.round);overlay.dataset.imageUrl=result.imageUrl||'';
-  const rows=result.rows.map((r,i)=>'<tr data-user-id="'+r.userId+'"><td class="photoOcrName"><b>'+(i+1)+'. '+esc(r.name)+'</b></td>'+r.weights.map((f,j)=>photoImportCell(f,'w'+(j+1))).join('')+photoImportCell(r.bigFish,'bf')+'</tr>').join('');
-  overlay.innerHTML='<div class="photoImportDialog"><div class="photoImportHead"><div><h2>Import ze zdjęcia — T'+result.round+'</h2><p>Sprawdź odczyt przed zapisem. Żółte pola wymagają szczególnej kontroli.</p></div><button type="button" class="warn" onclick="closePhotoImportReview()">Zamknij</button></div>'
+  const rows=result.rows.map((r,i)=>{const sumVal=r.sum?.value||'',calc=Number(r.calculatedSum||0),warn=!!r.sum?.low;return '<tr data-user-id="'+r.userId+'"><td class="photoOcrName"><b>'+(i+1)+'. '+esc(r.name)+'</b></td>'+r.weights.map((f,j)=>photoImportCell(f,'w'+(j+1))).join('')+'<td class="'+(warn?'photoOcrLow':'')+'"><input inputmode="numeric" data-key="sum" value="'+esc(sumVal)+'" placeholder="—"><small>wyliczona: '+fmtGram(calc)+'</small></td></tr>'}).join('');
+  overlay.innerHTML='<div class="photoImportDialog"><div class="photoImportHead"><div><h2>Import ze zdjęcia — T'+result.round+'</h2><p>Sprawdź odczyt. Zapis <b>*9890</b> oznacza BF 9890 g i nadal wchodzi do sumy.</p></div><button type="button" class="warn" onclick="closePhotoImportReview()">Zamknij</button></div>'
     +'<div class="photoImportPreview"><img src="'+esc(result.imageUrl||'')+'" alt="Zdjęcie formularza"></div>'
-    +'<div class="photoImportWarn">⚠ Zapis zastąpi wszystkie dotychczasowe wpisy wag w T'+result.round+'. Nic nie zostanie zapisane, dopóki nie klikniesz przycisku poniżej.</div>'
-    +'<div class="tablewrap"><table class="photoImportTable"><thead><tr><th>Zawodnik</th><th>W1</th><th>W2</th><th>W3</th><th>W4</th><th>W5</th><th>BF</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+    +'<div class="photoImportWarn">⚠ Zapis zastąpi wszystkie dotychczasowe wpisy wag w T'+result.round+'. Kilka wag z * jest dozwolone; największa z nich zostanie Największą rybą.</div>'
+    +'<div class="tablewrap"><table class="photoImportTable"><thead><tr><th>Zawodnik</th><th>W1</th><th>W2</th><th>W3</th><th>W4</th><th>W5</th><th>SUMA</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
     +'<div class="photoImportActions"><button type="button" class="blue" onclick="commitPhotoResultImport(this)">IMPORTUJ DO T'+result.round+'</button><button type="button" class="secondary" onclick="closePhotoImportReview()">Anuluj</button></div></div>';
   document.body.appendChild(overlay);overlay.querySelector('input')?.focus({preventScroll:true});
 }
@@ -1217,10 +1234,15 @@ function startPhotoResultImport(round){
 }
 async function commitPhotoResultImport(button){
   const overlay=q('photoImportOverlay');if(!overlay||!CURRENT_DETAIL)return;const round=Number(overlay.dataset.round)===2?2:1,rows=[];
-  for(const tr of overlay.querySelectorAll('tbody tr[data-user-id]')){const get=k=>String(tr.querySelector('input[data-key="'+k+'"]')?.value||'').replace(/\D/g,'').slice(0,6);rows.push({userId:Number(tr.dataset.userId),weights:[1,2,3,4,5].map(i=>get('w'+i)),bigFish:get('bf')})}
+  for(const tr of overlay.querySelectorAll('tbody tr[data-user-id]')){
+    const items=[];for(let i=1;i<=5;i++){const raw=String(tr.querySelector('input[data-key="w'+i+'"]')?.value||'').trim(),isBigFish=/^\s*\*/.test(raw),digits=raw.replace(/\D/g,'').slice(0,6);if(digits)items.push({weight:digits,bigFish:isBigFish})}
+    const writtenSum=String(tr.querySelector('input[data-key="sum"]')?.value||'').replace(/\D/g,'').slice(0,7),calc=items.reduce((a,x)=>a+Number(x.weight||0),0);
+    if(writtenSum&&Number(writtenSum)!==calc){msg('SUMA nie zgadza się z wagami: wpisano '+fmtGram(writtenSum)+' g, z wag wychodzi '+fmtGram(calc)+' g. Popraw wiersz przed importem.','bad');return}
+    rows.push({userId:Number(tr.dataset.userId),items,writtenSum});
+  }
   if(!confirm('Zaimportować odczytane dane i ZASTĄPIĆ wszystkie obecne wpisy T'+round+'?'))return;
   if(button){button.disabled=true;button.textContent='Importuję…'}
-  try{const d=await api('/api/admin/competitions/'+CURRENT_DETAIL.competition.id+'/results/'+round+'/import-photo',{method:'POST',body:JSON.stringify({rows})});closePhotoImportReview();msg('Zaimportowano T'+round+': '+d.inserted+' wpisów wag.');await refreshCompetitionKeepScroll(CURRENT_DETAIL.competition.id);showAdminZone('entry')}
+  try{const d=await api('/api/admin/competitions/'+CURRENT_DETAIL.competition.id+'/results/'+round+'/import-photo',{method:'POST',body:JSON.stringify({rows})});closePhotoImportReview();msg('Zaimportowano T'+round+': '+d.inserted+' wpisów wag, BF: '+d.bigFishEntries+'.');await refreshCompetitionKeepScroll(CURRENT_DETAIL.competition.id);showAdminZone('entry')}
   catch(e){msg(e.message,'bad');if(button){button.disabled=false;button.textContent='IMPORTUJ DO T'+round}}
 }
 
@@ -1349,7 +1371,7 @@ async function notifyResults(id,round){try{if(!confirm('Wysłać zawodnikom powi
 function renderClassTable(rows){rows=sortRowsBySectorPlace(rows||[]);if(!rows.length)return '<p class="muted">Brak wyników.</p>';const desktop='<div class="tablewrap adminDesktopOnly"><table class="sharpTable roundClassTable"><thead><tr><th style="width:42px">Lp.</th><th>Zawodnik</th><th>Stan.</th><th>Sektor</th><th>Miejsce</th><th>Waga</th></tr></thead><tbody>'+rows.map((r,idx)=>'<tr class="'+placeRowClass(r.points)+' '+(Number(r.user_id)===Number(ME.id)?'mine':'')+'"><td class="center">'+(idx+1)+'</td><td><b>'+esc(r.name)+'</b></td><td class="nowrap">'+(r.stand||'—')+'</td><td>'+esc(r.sector||'—')+'</td><td><b>'+placeText(r.points)+'</b></td><td class="nowrap">'+resultCellSummary(r)+'</td></tr>').join('')+'</tbody></table></div>';const mobile='<div class="adminMobileOnly mobileClassList">'+rows.map((r,idx)=>'<article class="mobileAdminCard '+placeRowClass(r.points)+'"><div class="mobileAdminCardHead"><span class="mobileLp">'+(idx+1)+'</span><b>'+esc(r.name)+'</b><strong class="mobilePlace">Msc '+placeText(r.points)+'</strong></div><div class="mobileAdminMeta"><span><small>Stan.</small><b>'+(r.stand||'—')+'</b></span><span><small>Sektor</small><b>'+esc(r.sector||'—')+'</b></span></div><div class="mobileResultFooter"><span>Waga</span><b>'+resultCellSummary(r)+'</b></div></article>').join('')+'</div>';return desktop+mobile}
 function placeText(v){return (v===0||v)?esc(String(v).replace('.',',')):'—'}
 function renderGeneralTable(rows){rows=rows||[];if(!rows.length)return '<p class="muted">Brak klasyfikacji końcowej.</p>';const desktop='<div class="tablewrap finalWrap adminDesktopOnly"><table class="generalTable sharpTable"><thead><tr><th class="colRank center">MSC</th><th class="colName">Zawodnik</th><th class="colRound center">T1</th><th class="colRound center">T2</th><th class="colSum center">Suma miejsc</th><th class="colWeight right">Waga</th></tr></thead><tbody>'+rows.map(r=>{const club=String(r.pzw_club||'').trim();return '<tr class="'+placeRowClass(r.rank)+' '+(Number(r.user_id)===Number(ME.id)?'mine':'')+'"><td class="colRank center"><b>'+r.rank+'</b></td><td class="colName nameCell"><b>'+esc(r.name)+'</b>'+(club?'<span class="finalClub small muted '+(SHOW_FINAL_CLUB?'':'hidden')+'"> • '+esc(club)+'</span>':'')+'</td><td class="colRound center scoreCell"><b>'+placeText(r.t1_points)+'</b></td><td class="colRound center scoreCell"><b>'+placeText(r.t2_points)+'</b></td><td class="colSum center sumCell"><b>'+placeText(r.sum_points)+'</b></td><td class="colWeight right weightCell"><b>'+fmtGram(r.total_weight)+'g</b>'+(Number(r.biggest_fish||0)?'<br><span class="bfLine">BF: '+fmtGram(r.biggest_fish)+'g</span>':'')+'</td></tr>'}).join('')+'</tbody></table></div>';const mobile='<div class="adminMobileOnly mobileGeneralList">'+rows.map(r=>{const club=String(r.pzw_club||'').trim();return '<article class="mobileAdminCard '+placeRowClass(r.rank)+'"><div class="mobileAdminCardHead"><strong class="mobileRank">'+r.rank+'</strong><b>'+esc(r.name)+'</b>'+(club?'<span class="finalClub small muted '+(SHOW_FINAL_CLUB?'':'hidden')+'"> • '+esc(club)+'</span>':'')+'</div><div class="mobileScoreGrid"><span><small>T1</small><b>'+placeText(r.t1_points)+'</b></span><span><small>T2</small><b>'+placeText(r.t2_points)+'</b></span><span><small>Suma</small><b>'+placeText(r.sum_points)+'</b></span><span><small>Waga</small><b>'+fmtGram(r.total_weight)+'g</b>'+(Number(r.biggest_fish||0)?'<em>BF '+fmtGram(r.biggest_fish)+'g</em>':'')+'</span></div></article>'}).join('')+'</div>';return desktop+mobile}
-function renderPdfPanel(d){const c=d.competition;return '<div class="card"><h2>Generowanie plików PDF</h2><p class="small muted">Każdy PDF ma wspólny nagłówek: nazwa zawodów, data, łowisko i opis zawartości.</p><h3>Losowanie</h3><div class="grid3"><button type="button" onclick="generateDrawPdf(1)">PDF Losowanie T1</button><button type="button" onclick="generateDrawPdf(2)">PDF Losowanie T2</button><button type="button" class="secondary" onclick="generateDrawPdf(0)">PDF Losowanie T1 + T2</button></div><h3>Wyniki</h3>'+renderFinalClubToggle()+'<div class="grid3"><button type="button" onclick="generateResultsPdfV33(1)">PDF Wyniki T1</button><button type="button" onclick="generateResultsPdfV33(2)">PDF Wyniki T2</button><button type="button" class="secondary" onclick="generateResultsPdfV33(0)">PDF Klasyfikacja końcowa</button></div><div class="grid3"><button type="button" class="secondary" onclick="generateSectorPdf(1)">PDF Sektory T1</button><button type="button" class="secondary" onclick="generateSectorPdf(2)">PDF Sektory T2</button><button type="button" class="secondary" onclick="generateStatsPdf()">PDF Statystyki</button></div><h3>Tabelka wynikowa</h3><button type="button" class="secondary" onclick="generateWeightSheetPdf()">PDF Tabelka wynikowa — 1 strona</button><div class="photoPdfBox"><b>FORMULARZ DO ODCZYTU ZE ZDJĘCIA</b><span>Ma znaczniki i kratki dla cyfr — ten wariant daje największą pewność importu ręcznie zapisanych wag.</span><div class="grid"><button type="button" class="blue" onclick="generatePhotoResultSheetPdf(1)">PDF do zdjęcia — T1</button><button type="button" class="blue" onclick="generatePhotoResultSheetPdf(2)">PDF do zdjęcia — T2</button></div></div><h3>Lista startowa</h3><button type="button" class="blue" onclick="generateStartListPdf()">PDF Tabela startowa zawodników — 1 strona</button><p class="small muted">Tabela startowa: Lp., Zawodnik, Potwierdzenie ✓, Wpisowe, Koszyk +, Uwagi. Układ automatycznie wykorzystuje całą stronę.</p></div>'}
+function renderPdfPanel(d){const c=d.competition;return '<div class="card"><h2>Generowanie plików PDF</h2><p class="small muted">Każdy PDF ma wspólny nagłówek: nazwa zawodów, data, łowisko i opis zawartości.</p><h3>Losowanie</h3><div class="grid3"><button type="button" onclick="generateDrawPdf(1)">PDF Losowanie T1</button><button type="button" onclick="generateDrawPdf(2)">PDF Losowanie T2</button><button type="button" class="secondary" onclick="generateDrawPdf(0)">PDF Losowanie T1 + T2</button></div><h3>Wyniki</h3>'+renderFinalClubToggle()+'<div class="grid3"><button type="button" onclick="generateResultsPdfV33(1)">PDF Wyniki T1</button><button type="button" onclick="generateResultsPdfV33(2)">PDF Wyniki T2</button><button type="button" class="secondary" onclick="generateResultsPdfV33(0)">PDF Klasyfikacja końcowa</button></div><div class="grid3"><button type="button" class="secondary" onclick="generateSectorPdf(1)">PDF Sektory T1</button><button type="button" class="secondary" onclick="generateSectorPdf(2)">PDF Sektory T2</button><button type="button" class="secondary" onclick="generateStatsPdf()">PDF Statystyki</button></div><h3>Tabelka wynikowa</h3><button type="button" class="secondary" onclick="generateWeightSheetPdf()">PDF Tabelka wynikowa — 1 strona</button><div class="photoPdfBox"><b>FORMULARZ DO ODCZYTU ZE ZDJĘCIA</b><span>Ma znaczniki do prostowania zdjęcia i szerokie pola na całe wagi. * przed wagą oznacza BF, ostatnia kolumna to SUMA.</span><div class="grid"><button type="button" class="blue" onclick="generatePhotoResultSheetPdf(1)">PDF do zdjęcia — T1</button><button type="button" class="blue" onclick="generatePhotoResultSheetPdf(2)">PDF do zdjęcia — T2</button></div></div><h3>Lista startowa</h3><button type="button" class="blue" onclick="generateStartListPdf()">PDF Tabela startowa zawodników — 1 strona</button><p class="small muted">Tabela startowa: Lp., Zawodnik, Potwierdzenie ✓, Wpisowe, Koszyk +, Uwagi. Układ automatycznie wykorzystuje całą stronę.</p></div>'}
 function pdfAsciiBytes(x){return new TextEncoder().encode(x)}
 function pdfConcatBytes(chunks){let n=chunks.reduce((a,b)=>a+b.length,0),out=new Uint8Array(n),o=0;for(const c of chunks){out.set(c,o);o+=c.length}return out}
 function pdfDataUrlBytes(url){const b64=url.split(',')[1],bin=atob(b64),out=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)out[i]=bin.charCodeAt(i);return out}
@@ -1587,9 +1609,9 @@ function bindAuthButtons(){
 
 function scrollAppBottom(){window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})}
 Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,loadPlayerHistory,openHistoryCompetition,openCompetitionAttention,judgeCancelPending,saveGeneralRules,closePlayerCompetition,showAdminZone,loadCompetitions,createCompetition,openCompetitionEdit,deleteCompetition,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,editPlayerName,deletePlayer,deleteAllAdminPlayers,saveMyProfile,setPlayerCompetitionFilter,setPlayerCompetitionMonth,confirmPlayerPresence,enablePush,sendPushTest,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,setPlayerDrawView,openPlayerNotifications,fitPlayerMobileFullMaps,togglePlayerSectorAccordion,toggleFinalClub,generatePhotoResultSheetPdf,startPhotoResultImport,closePhotoImportReview,commitPhotoResultImport,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
-function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_134');sessionStorage.removeItem('lowcy_update_retry_102')}catch(_){}}
+function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_135');sessionStorage.removeItem('lowcy_update_retry_102')}catch(_){}}
 let BOOT_RUNNING=false;
-function startBoot(){if(BOOT_RUNNING)return;BOOT_RUNNING=true;window.__LOWCY_JS_STARTED=true;try{syncStickyNavOffset();bindAuthButtons()}catch(e){console.error(e)}const guard=q('bootGuard');if(guard){guard.classList.remove('hidden');const text=guard.querySelector('span');if(text)text.textContent='Łączę z aplikacją…';q('bootRetry')?.classList.add('hidden')}boot().then(()=>{window.__LOWCY_BOOT_OK_134=1;for(const script of document.querySelectorAll('script[src*="/app.js"]')){const version=new URL(script.src,location.href).searchParams.get('v');if(version)window['__LOWCY_BOOT_OK_'+version]=1}hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);if(guard){guard.classList.remove('hidden');const text=guard.querySelector('span');if(text)text.textContent=e.message||'Nie udało się połączyć.';q('bootRetry')?.classList.remove('hidden')}}).finally(()=>{BOOT_RUNNING=false})}
+function startBoot(){if(BOOT_RUNNING)return;BOOT_RUNNING=true;window.__LOWCY_JS_STARTED=true;try{syncStickyNavOffset();bindAuthButtons()}catch(e){console.error(e)}const guard=q('bootGuard');if(guard){guard.classList.remove('hidden');const text=guard.querySelector('span');if(text)text.textContent='Łączę z aplikacją…';q('bootRetry')?.classList.add('hidden')}boot().then(()=>{window.__LOWCY_BOOT_OK_135=1;for(const script of document.querySelectorAll('script[src*="/app.js"]')){const version=new URL(script.src,location.href).searchParams.get('v');if(version)window['__LOWCY_BOOT_OK_'+version]=1}hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);if(guard){guard.classList.remove('hidden');const text=guard.querySelector('span');if(text)text.textContent=e.message||'Nie udało się połączyć.';q('bootRetry')?.classList.remove('hidden')}}).finally(()=>{BOOT_RUNNING=false})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();
 
 let JUDGE_VIEW='competitions',JUDGE_ROUND=1,JUDGE_COMPETITIONS=[],JUDGE_MANAGEMENT=null;
