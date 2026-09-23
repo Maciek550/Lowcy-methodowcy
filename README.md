@@ -1,3 +1,7 @@
+V132 — Usunięte zbiorcze kasowanie zawodów
+
+Usunięto licznik bazy i przycisk Usuń wszystkie zawody testowe, funkcję klienta oraz endpoint zbiorczego usuwania. Lista zawodów i usuwanie pojedynczych zawodów pozostają. Historia startów bez zmian — grafika jest osobnym podglądem propozycji.
+
 V131 — Łowisko i data w jednym wierszu
 
 Mobilna karta: łowisko po lewej, data po prawej; długie nazwy łowisk skracane wielokropkiem. Większa nazwa zawodnika oraz napisy górnego menu bez zwiększania kafelków. Zachowane funkcje V130. Sprawdzono składnię, bez weryfikacji na fizycznym telefonie.
