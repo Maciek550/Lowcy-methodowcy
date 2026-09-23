@@ -1,3 +1,7 @@
+V137 — Lista zawodów bez dublowania
+
+Domyślny widok zawodnika pokazuje wyłącznie 3 najbliższe zawody, posortowane według daty. Po wybraniu konkretnego miesiąca sekcja najbliższych znika i wyświetlane są wszystkie zawody z wybranego miesiąca — każdy tylko raz. Filtry ZAPISANE i HISTORIA również pokazują własną listę bez dodatkowej kopii w sekcji najbliższych. Dolne menu bez zmian.
+
 V136 — Większe bezpieczne marginesy formularza zdjęciowego
 
 Formularz W1–W5 + SUMA został odsunięty od krawędzi A4: tabela i znaczniki OCR mają większy zapas po bokach oraz u góry i dołu. Geometria generatora i odczytu zdjęcia została zmieniona razem, aby po wydruku nic nie było obcinane bez rozjechania importu.

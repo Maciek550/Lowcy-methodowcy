@@ -1,4 +1,4 @@
-const CLIENT_VERSION='136';const CLIENT_VERSION_NAME='V136_PHOTO_SHEET_STAR_BF';window.__LOWCY_APP_JS_135=1;try{fetch('/__probe_js_v136',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V136_PHOTO_SHEET_STAR_BF_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='137';const CLIENT_VERSION_NAME='V137_NEAREST_THREE_NO_DUPLICATES';window.__LOWCY_APP_JS_137=1;try{fetch('/__probe_js_v137',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V137_NEAREST_THREE_NO_DUPLICATES_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -459,21 +459,22 @@ function getPlayerNearestThree(arr){
 }
 function renderPlayerNearestThree(arr,mode){
   const nearest=getPlayerNearestThree(arr);
-  if(!nearest.length)return '';
+  if(!nearest.length)return '<div class="playerCompEmpty">Brak nadchodzących zawodów.</div>';
   const items=nearest.map(c=>mode==='desktop'?renderPlayerCompetitionDesktopItem(c):renderPlayerCompetitionMobileItem(c)).join('');
-  return '<section class="playerNearestThree '+(mode==='desktop'?'desktop':'mobile')+'"><div class="playerNearestThreeHead"><b>NAJBLIŻSZE 3 ZAWODY</b><span>Zawsze widoczne</span></div><div class="playerNearestThreeBody">'+items+'</div></section>';
+  return '<section class="playerNearestThree '+(mode==='desktop'?'desktop':'mobile')+'"><div class="playerNearestThreeHead"><b>NAJBLIŻSZE 3 ZAWODY</b><span>Według daty</span></div><div class="playerNearestThreeBody">'+items+'</div></section>';
 }
 function renderPlayerCompetitionList(){
   const box=q('competitionsList');if(!box)return;
   const arr=PLAYER_COMPETITIONS_CACHE||[];
-  
+  const filtersHtml=renderPlayerCompetitionFilters(arr);
   const filtered=filterPlayerCompetitions(arr,PLAYER_COMP_FILTER,true);
   const filteredView=mode=>'<section class="playerFilteredResults">'+renderPlayerCompetitionGroups(filtered,mode)+'</section>';
-  box.innerHTML='<div class="playerCompetitionDesktopOnly">'+renderPlayerNearestThree(arr,'desktop')+'</div>'
-    +'<div class="playerCompetitionMobileOnly">'+renderPlayerNearestThree(arr,'mobile')+'</div>'
-    +renderPlayerCompetitionFilters(arr)
-    +'<div class="playerCompetitionDesktopOnly">'+filteredView('desktop')+'</div>'
-    +'<div class="playerCompetitionMobileOnly">'+filteredView('mobile')+'</div>';
+  const defaultNearestOnly=PLAYER_COMP_FILTER==='upcoming'&&PLAYER_COMP_MONTH==='all';
+  const desktopContent=defaultNearestOnly?renderPlayerNearestThree(arr,'desktop'):filteredView('desktop');
+  const mobileContent=defaultNearestOnly?renderPlayerNearestThree(arr,'mobile'):filteredView('mobile');
+  box.innerHTML=filtersHtml
+    +'<div class="playerCompetitionDesktopOnly">'+desktopContent+'</div>'
+    +'<div class="playerCompetitionMobileOnly">'+mobileContent+'</div>';
 }
 async function loadCompetitions(){
   if(ME?.role==='JUDGE')return judgeLoadCompetitions();
@@ -1611,9 +1612,9 @@ function bindAuthButtons(){
 
 function scrollAppBottom(){window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})}
 Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,loadPlayerHistory,openHistoryCompetition,openCompetitionAttention,judgeCancelPending,saveGeneralRules,closePlayerCompetition,showAdminZone,loadCompetitions,createCompetition,openCompetitionEdit,deleteCompetition,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,editPlayerName,deletePlayer,deleteAllAdminPlayers,saveMyProfile,setPlayerCompetitionFilter,setPlayerCompetitionMonth,confirmPlayerPresence,enablePush,sendPushTest,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,setPlayerDrawView,openPlayerNotifications,fitPlayerMobileFullMaps,togglePlayerSectorAccordion,toggleFinalClub,generatePhotoResultSheetPdf,startPhotoResultImport,closePhotoImportReview,commitPhotoResultImport,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
-function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_135');sessionStorage.removeItem('lowcy_update_retry_102')}catch(_){}}
+function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_137');sessionStorage.removeItem('lowcy_update_retry_102')}catch(_){}}
 let BOOT_RUNNING=false;
-function startBoot(){if(BOOT_RUNNING)return;BOOT_RUNNING=true;window.__LOWCY_JS_STARTED=true;try{syncStickyNavOffset();bindAuthButtons()}catch(e){console.error(e)}const guard=q('bootGuard');if(guard){guard.classList.remove('hidden');const text=guard.querySelector('span');if(text)text.textContent='Łączę z aplikacją…';q('bootRetry')?.classList.add('hidden')}boot().then(()=>{window.__LOWCY_BOOT_OK_135=1;for(const script of document.querySelectorAll('script[src*="/app.js"]')){const version=new URL(script.src,location.href).searchParams.get('v');if(version)window['__LOWCY_BOOT_OK_'+version]=1}hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);if(guard){guard.classList.remove('hidden');const text=guard.querySelector('span');if(text)text.textContent=e.message||'Nie udało się połączyć.';q('bootRetry')?.classList.remove('hidden')}}).finally(()=>{BOOT_RUNNING=false})}
+function startBoot(){if(BOOT_RUNNING)return;BOOT_RUNNING=true;window.__LOWCY_JS_STARTED=true;try{syncStickyNavOffset();bindAuthButtons()}catch(e){console.error(e)}const guard=q('bootGuard');if(guard){guard.classList.remove('hidden');const text=guard.querySelector('span');if(text)text.textContent='Łączę z aplikacją…';q('bootRetry')?.classList.add('hidden')}boot().then(()=>{window.__LOWCY_BOOT_OK_137=1;for(const script of document.querySelectorAll('script[src*="/app.js"]')){const version=new URL(script.src,location.href).searchParams.get('v');if(version)window['__LOWCY_BOOT_OK_'+version]=1}hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);if(guard){guard.classList.remove('hidden');const text=guard.querySelector('span');if(text)text.textContent=e.message||'Nie udało się połączyć.';q('bootRetry')?.classList.remove('hidden')}}).finally(()=>{BOOT_RUNNING=false})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();
 
 let JUDGE_VIEW='competitions',JUDGE_ROUND=1,JUDGE_COMPETITIONS=[],JUDGE_MANAGEMENT=null;
