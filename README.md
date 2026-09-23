@@ -1,3 +1,7 @@
+V129 — Czytelniejszy i bardziej zwarty panel mobilny
+
+Większe potwierdzenie obecności (48 px, 16 px) i czytelny stan potwierdzenia. Mniejszy przełącznik kont obok danych użytkownika. Zmniejszone odstępy, bez dodatkowego wiersza na wersję aplikacji w karcie konta na telefonie; wersja pozostaje w nagłówku.
+
 V128 — Przełącznik admin / zawodnik
 
 Obok danych konta znajduje się kompaktowy kafelek „Na zawodnika” lub „Na admina”. Pierwsze kliknięcie otwiera formularz logowania drugiego konta telefonem i hasłem. Po poprawnym zalogowaniu kolejne przełączenia korzystają z osobnych, zweryfikowanych sesji. Nie są zapisywane hasła. Mechanizm działa lokalnie na danym urządzeniu i w danej przeglądarce.
