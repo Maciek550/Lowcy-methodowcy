@@ -1,4 +1,4 @@
-const CLIENT_VERSION='147';const CLIENT_VERSION_NAME='V147_MOBILE_CHATGPT_FAST_IMPORT';window.__LOWCY_APP_JS_147=1;try{fetch('/__probe_js_v147',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V147_MOBILE_CHATGPT_FAST_IMPORT_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='148';const CLIENT_VERSION_NAME='V148_LINE_GUIDED_PHOTO_FORM';window.__LOWCY_APP_JS_148=1;try{fetch('/__probe_js_v148',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V148_LINE_GUIDED_PHOTO_FORM_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -1063,37 +1063,87 @@ function resetSectorLayout(ev){if(ev){ev.preventDefault();ev.stopPropagation()}S
 
 function photoSheetGeometry(count){
   count=Math.max(1,Number(count||1));
-  // Bezpieczny obszar druku A4: ok. 11–12 mm od krawędzi.
-  // Geometria jest wspólna dla PDF i odczytu zdjęcia, więc OCR pozostaje zsynchronizowany.
-  const x0=61,headerY=270,headerH=50,dataY=320,bottom=1635,rowH=Math.min(45,(bottom-dataY)/count);
+  /*
+   * FORMULARZ FOTO V148 — ZASADA PROJEKTOWA:
+   * PODĄŻAJ ZA LINIĄ NA KARTCE.
+   * Poziome linie są główną granicą wiersza; wpis ma należeć do pasa między
+   * dwiema liniami, także wtedy, gdy perspektywa zdjęcia optycznie przesuwa go
+   * w stronę nazwiska z wiersza wyżej lub niżej.
+   * Górny margines A4 ~0,5 cm. Bez pustego pasa pod tytułem.
+   */
+  const x0=42,headerY=178,headerH=42,dataY=220,bottom=1662,rowH=Math.min(48,(bottom-dataY)/count);
   const widths=[42,320,126,126,126,126,126,126],fieldStart=x0+widths[0]+widths[1];
   return {x0,headerY,headerH,dataY,bottom,rowH,widths,fieldStart,fieldW:126,
-    markers:[{x:85,y:238},{x:1155,y:238},{x:85,y:1680},{x:1155,y:1680}]};
+    markers:[{x:62,y:154},{x:1178,y:154},{x:62,y:1702},{x:1178,y:1702}]};
 }
 function drawPhotoResultSheetPage(round){
-  const d=CURRENT_DETAIL,o=pdfCanvas(),ctx=o.ctx,g=photoSheetGeometry((d.activeEntries||[]).length);
-  drawPdfHeaderV33(ctx,'FORMULARZ DO IMPORTU ZE ZDJĘCIA — TURA '+round);
-  ctx.fillStyle='#17251d';ctx.font='800 16px Arial';ctx.textAlign='center';
-  ctx.fillText('Wpisuj normalnie całe wagi. * przed wagą oznacza dużą rybę, np. *9890. Ostatnia kolumna = SUMA.',620,196,1010);
+  const d=CURRENT_DETAIL,c=d.competition,o=pdfCanvas(),ctx=o.ctx,g=photoSheetGeometry((d.activeEntries||[]).length);
+  const totalW=g.widths.reduce((p,n)=>p+n,0),right=g.x0+totalW;
+
+  // V148: BIAŁY NAGŁÓWEK — bez ciemnego tła, żeby nie marnować tuszu.
+  // Górny margines ~0,5 cm. Bez pustego wiersza/pasa pod tytułem.
+  ctx.textBaseline='top';ctx.textAlign='left';ctx.fillStyle='#111';
+  ctx.font='900 30px Arial';
+  const title=wrapPdfText(ctx,String(c.title||'Zawody'),820).slice(0,1)[0]||'Zawody';
+  ctx.fillText(title,g.x0,30,820);
+  ctx.font='700 16px Arial';
+  ctx.fillText('Data: '+fmtDate(c.competition_date)+'    Łowisko: '+String(c.fishery||'—'),g.x0,63,930);
+  ctx.font='900 22px Arial';
+  ctx.fillText('FORMULARZ DO IMPORTU ZE ZDJĘCIA — TURA '+round,g.x0,86,1030);
   ctx.font='700 13px Arial';
-  ctx.fillText('Przykład: 12450 | *9890 | 8700  → wszystkie wagi liczą się do sumy, a BF = 9890 g. Nie kadruj czarnych znaczników.',620,217,1020);
-  ctx.textAlign='left';
-  for(const m of g.markers){ctx.fillStyle='#000';ctx.fillRect(m.x-20,m.y-20,40,40);ctx.fillStyle='#fff';ctx.fillRect(m.x-6,m.y-6,12,12);ctx.fillStyle='#000';ctx.fillRect(m.x-2,m.y-2,4,4)}
-  const headers=['Lp.','Zawodnik','W1','W2','W3','W4','W5','SUMA'];let x=g.x0;
-  ctx.fillStyle='#e5efe8';ctx.fillRect(g.x0,g.headerY,g.widths.reduce((p,n)=>p+n,0),g.headerH);
-  headers.forEach((h,i)=>{ctx.strokeStyle='#6c7d72';ctx.lineWidth=1.2;ctx.strokeRect(x,g.headerY,g.widths[i],g.headerH);ctx.fillStyle='#173d2e';ctx.font='800 15px Arial';ctx.textAlign=i<2?'left':'center';ctx.fillText(h,i<2?x+5:x+g.widths[i]/2,g.headerY+16,g.widths[i]-10);x+=g.widths[i]});
+  ctx.fillText('W1–W5: kolejne ważenia • * przed wagą = BF • ostatnia kolumna = SUMA',g.x0,114,1030);
+  ctx.font='700 12px Arial';
+  ctx.fillText('Pisz wewnątrz pola. Nie przekraczaj poziomych linii wiersza.',g.x0,133,1030);
+
+  for(const m of g.markers){
+    ctx.fillStyle='#000';ctx.fillRect(m.x-14,m.y-14,28,28);
+    ctx.fillStyle='#fff';ctx.fillRect(m.x-5,m.y-5,10,10);
+    ctx.fillStyle='#000';ctx.fillRect(m.x-2,m.y-2,4,4);
+  }
+
+  const headers=['Lp.','Zawodnik','W1','W2','W3','W4','W5','SUMA'];
+  let x=g.x0;
+  ctx.fillStyle='#fff';ctx.fillRect(g.x0,g.headerY,totalW,g.headerH);
+  headers.forEach((h,i)=>{
+    ctx.fillStyle='#111';ctx.font='900 14px Arial';ctx.textAlign=i<2?'left':'center';
+    ctx.fillText(h,i<2?x+6:x+g.widths[i]/2,g.headerY+12,g.widths[i]-12);
+    x+=g.widths[i];
+  });
+
+  // Bez szarego cieniowania: maksimum czytelności i minimum tuszu.
   ctx.textAlign='left';
   (d.activeEntries||[]).forEach((e,ri)=>{
     const y=g.dataY+ri*g.rowH;
-    ctx.fillStyle=ri%2?'#fafafa':'#fff';ctx.fillRect(g.x0,y,g.widths.reduce((p,n)=>p+n,0),g.rowH);
-    let xx=g.x0;
-    for(let i=0;i<g.widths.length;i++){ctx.strokeStyle=i===7?'#597263':'#9dad9f';ctx.lineWidth=i===7?1.4:.9;ctx.strokeRect(xx,y,g.widths[i],g.rowH);xx+=g.widths[i]}
-    ctx.fillStyle='#17251d';ctx.font='800 '+Math.min(18,g.rowH*.48)+'px Arial';ctx.fillText(String(ri+1),g.x0+7,y+Math.max(5,(g.rowH-18)/2),g.widths[0]-12);
-    ctx.fillText(String(e.first_name+' '+e.last_name),g.x0+g.widths[0]+6,y+Math.max(5,(g.rowH-18)/2),g.widths[1]-12);
+    ctx.fillStyle='#fff';ctx.fillRect(g.x0,y,totalW,g.rowH);
+    ctx.fillStyle='#111';ctx.font='800 '+Math.min(17,g.rowH*.42)+'px Arial';
+    const ty=y+Math.max(7,(g.rowH-Math.min(17,g.rowH*.42))/2-1);
+    ctx.fillText(String(ri+1),g.x0+7,ty,g.widths[0]-12);
+    ctx.fillText(String(e.first_name+' '+e.last_name),g.x0+g.widths[0]+6,ty,g.widths[1]-12);
   });
-  ctx.fillStyle='#17251d';ctx.font='700 13px Arial';ctx.textAlign='center';
-  ctx.fillText('W1–W5 = kolejne ważenia w gramach • * przed wagą = BF • kilka * jest dozwolone • SUMA służy do kontroli odczytu',620,1658,1010);
-  ctx.textAlign='left';return o.canvas;
+
+  /*
+   * KLUCZ DLA ODCZYTU:
+   * poziome linie są grubsze od pionowych.
+   * Wiersz = PAS pomiędzy dwiema poziomymi liniami.
+   * Nie przeskakuj wpisu do sąsiedniego nazwiska przez perspektywę zdjęcia.
+   */
+  ctx.strokeStyle='#111';ctx.lineCap='butt';
+  ctx.lineWidth=2.4;
+  const horizontal=[g.headerY,g.dataY];
+  for(let ri=1;ri<=(d.activeEntries||[]).length;ri++)horizontal.push(g.dataY+ri*g.rowH);
+  for(const y of horizontal){ctx.beginPath();ctx.moveTo(g.x0,y);ctx.lineTo(right,y);ctx.stroke()}
+
+  let vx=g.x0;
+  for(let i=0;i<=g.widths.length;i++){
+    ctx.lineWidth=(i===7||i===0||i===g.widths.length)?2.2:1.35;
+    ctx.beginPath();ctx.moveTo(vx,g.headerY);ctx.lineTo(vx,g.dataY+(d.activeEntries||[]).length*g.rowH);ctx.stroke();
+    if(i<g.widths.length)vx+=g.widths[i];
+  }
+
+  ctx.fillStyle='#111';ctx.font='700 12px Arial';ctx.textAlign='center';
+  ctx.fillText('W1–W5 = ważenia w gramach • * = BF • SUMA = wynik kontrolny',620,1682,960);
+  ctx.textAlign='left';ctx.textBaseline='alphabetic';
+  return o.canvas;
 }
 function generatePhotoResultSheetPdf(round){
   const r=Number(round)===2?2:1,d=CURRENT_DETAIL;if(!d)return;
@@ -1420,10 +1470,19 @@ function chatGptImportPrompt(round){
   round=Number(round)===2?2:1;
   const rows=(CURRENT_DETAIL?.activeEntries||[]).map((e,i)=>({lp:i+1,userId:Number(e.user_id),name:String(e.first_name+' '+e.last_name)}));
   const roster=rows.map(r=>r.lp+'|'+r.userId+'|'+r.name).join('\n');
-  return 'SZYBKI ODCZYT T'+round+'. Odczytaj 1–2 zdjęcia tej samej tury i połącz je. Bez opisu i bez dodatkowej analizy.\n'
-    +'Kolumny W1,W2,W3,W4,W5,SUMA. Przepisuj tylko ręczne wpisy. Nie zgaduj. *5250=>*5250 (BF), puste=>"", samotne 1=>0. SUMA przepisz dokładnie.\n'
-    +'Dopasuj po LP/nazwisku. Zwróć TYLKO jeden blok ```json``` z MINIFIKOWANYM JSON: {"round":'+round+',"sheetCount":2,"rows":[{"userId":123,"lp":1,"name":"Imię Nazwisko","w1":"*5250","w2":"","w3":"","w4":"","w5":"","sum":"32650","reviewFields":[]}]}\n'
-    +'W rows tylko osoby z jakimkolwiek wpisem. reviewFields tylko przy niepewnym polu.\nLISTA lp|userId|nazwisko:\n'+roster;
+  /*
+   * V148 — NAJWAŻNIEJSZA REGUŁA ODCZYTU:
+   * PODĄŻAJ ZA POZIOMĄ LINIĄ NA KARTCE.
+   * Najpierw ustal pas wiersza między dwiema liniami, dopiero potem przypisz
+   * W1–W5/SUMA do zawodnika. Perspektywa, szczególnie na dole kartki, może
+   * optycznie przesunąć pismo — linia wiersza ma pierwszeństwo przed tym,
+   * które nazwisko wygląda na najbliższe.
+   */
+  return 'SZYBKI ODCZYT T'+round+'. Odczytaj 1–2 zdjęcia tej samej tury i połącz je. Bez opisu.\n'
+    +'NAJWAŻNIEJSZE: PODĄŻAJ ZA POZIOMYMI LINIAMI TABELI. Najpierw ustal pas między dwiema liniami; wpis należy do tego wiersza. Nie przypisuj po najbliższym optycznie nazwisku. Perspektywa szczególnie na dole kartki może przesuwać pismo.\n'
+    +'Kolumny W1,W2,W3,W4,W5,SUMA. Tylko ręczne wpisy. Nie zgaduj. *5250=>*5250 (BF), puste=>"", samotne 1=>0. SUMA przepisz dokładnie.\n'
+    +'Dopasuj po LP/nazwisku. Zwróć TYLKO jeden blok JSON z MINIFIKOWANYM JSON: {"round":'+round+',"sheetCount":2,"rows":[{"userId":123,"lp":1,"name":"Imię Nazwisko","w1":"*5250","w2":"","w3":"","w4":"","w5":"","sum":"32650","reviewFields":[]}]}\n'
+    +'W rows tylko osoby z wpisem. reviewFields tylko przy niepewnym polu. Bez komentarza przed i po JSON.\nLISTA lp|userId|nazwisko:\n'+roster;
 }
 async function chatGptWriteClipboard(text){try{await navigator.clipboard.writeText(text);return true}catch(_){try{const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.left='-9999px';document.body.appendChild(ta);ta.select();const ok=document.execCommand('copy');ta.remove();return !!ok}catch(__){return false}}}
 async function chatGptCopyPrompt(round){const ok=await chatGptWriteClipboard(chatGptImportPrompt(round));msg(ok?'Skopiowano szybkie polecenie dla T'+round+'.':'Nie udało się skopiować polecenia.',ok?'':'bad')}
