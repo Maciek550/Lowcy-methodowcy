@@ -1,4 +1,4 @@
-V139 — HYBRYDOWY ODCZYT FORMULARZA (Google Cloud Vision)
+V140 — HYBRYDOWY ODCZYT FORMULARZA (Google Cloud Vision)
 
 Zmiany:
 - aplikacja lokalnie wykrywa kartkę, prostuje perspektywę i namierza dokładnie W1–W5/SUMA;
