@@ -1,4 +1,4 @@
-const CLIENT_VERSION='144';const CLIENT_VERSION_NAME='V144_OPENAI_MULTI_SHEET_OCR_CACHE_FIX';window.__LOWCY_APP_JS_144=1;try{fetch('/__probe_js_v144',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V144_OPENAI_MULTI_SHEET_OCR_CACHE_FIX_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='145';const CLIENT_VERSION_NAME='V145_CHATGPT_PASTE_IMPORT';window.__LOWCY_APP_JS_145=1;try{fetch('/__probe_js_v145',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V145_CHATGPT_PASTE_IMPORT_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -1351,7 +1351,7 @@ function showPhotoImportReview(result){
   const rows=(result.rows||[]).map((r,i)=>{const sumVal=r.sum?.value||'',calc=Number(r.calculatedSum||0),warn=!!r.sum?.low,info=sumVal?'SUMA = wynik końcowy':'z W1–W5: '+fmtGram(calc);return '<tr data-user-id="'+r.userId+'"><td class="photoOcrName"><b>'+(i+1)+'. '+esc(r.name)+'</b></td>'+r.weights.map((f,j)=>photoImportCell(f,'w'+(j+1))).join('')+'<td class="'+(warn?'photoOcrLow':'')+'"><input inputmode="numeric" data-key="sum" value="'+esc(sumVal)+'" placeholder="—"><small>'+info+'</small></td></tr>'}).join('');
   const previews=(result.imageUrls||[]).length?'<div class="photoImportPreview">'+(result.imageUrls||[]).map(u=>'<img src="'+esc(u)+'" alt="Zdjęcie formularza">').join('')+'</div>':'';
   const unmatched=(result.unmatched||[]).length?'<div class="photoImportWarn">⚠ Nierozpoznane wiersze: '+esc((result.unmatched||[]).map(x=>[x.lp,x.name].filter(Boolean).join('. ')).join(' | '))+'</div>':'';
-  overlay.innerHTML='<div class="photoImportDialog"><div class="photoImportHead"><div><h2>Import ze zdjęcia — T'+(result.round||1)+'</h2><p>AI odczytała '+Number(result.sheetCount||1)+' kartki. <b>SUMA ma pierwszeństwo</b>. Zapis <b>*9890</b> oznacza BF 9890 g. Pole „sprawdź” oznacza niepewny odczyt.</p></div><button type="button" class="warn" onclick="closePhotoImportReview()">Zamknij</button></div>'
+  const reviewTitle=result.manualChatGPT?'Import z ChatGPT — T'+(result.round||1):'Import ze zdjęcia — T'+(result.round||1);const reviewDesc=result.manualChatGPT?'Wklejone dane zostały dopasowane do aktualnej listy zawodników. <b>Nic nie jest jeszcze zapisane.</b> Sprawdź pola przed importem.':'AI odczytała '+Number(result.sheetCount||1)+' kartki. <b>SUMA ma pierwszeństwo</b>. Zapis <b>*9890</b> oznacza BF 9890 g. Pole „sprawdź” oznacza niepewny odczyt.';overlay.innerHTML='<div class="photoImportDialog"><div class="photoImportHead"><div><h2>'+reviewTitle+'</h2><p>'+reviewDesc+'</p></div><button type="button" class="warn" onclick="closePhotoImportReview()">Zamknij</button></div>'
     +previews
     +'<div class="photoImportWarn">⚠ Zapis zastąpi wszystkie dotychczasowe wpisy wag w T'+(result.round||1)+'. Jeśli jest SUMA, stanie się wynikiem końcowym; z W1–W5 zachowane zostaną wtedy tylko wartości oznaczone * jako BF.</div>'
     +unmatched
@@ -1379,7 +1379,82 @@ async function commitPhotoResultImport(button){
   catch(e){msg(e.message,'bad');if(button){button.disabled=false;button.textContent='IMPORTUJ DO T'+round}}
 }
 
-function renderResultsEntryPanel(d){const c=d.competition;return '<div class="card"><h2>Wpisywanie wyników</h2><p class="small muted"><b>Przeliczanie jest automatyczne.</b> Po zapisaniu lub usunięciu każdej wagi klasyfikacje T1, T2 i końcowa są liczone ponownie. Wpisz wagę siatki albo dużej ryby i przejdź do innego pola.</p><div class="photoImportQuick"><b>📷 Import hybrydowy z papierowej tabeli</b><span>AI czyta całą kartkę i scala odczyt nawet z 2 zdjęć dla tej samej tury. Możesz wgrać obie kartki z dwóch brzegów naraz. Odczyt zawsze wymaga kontroli.</span><div class="grid"><button type="button" class="blue" onclick="startPhotoResultImport(1)">Import T1 — zdjęcie / plik</button><button type="button" class="blue" onclick="startPhotoResultImport(2)">Import T2 — zdjęcie / plik</button></div></div><div class="grid3"><button type="button" class="secondary" onclick="generateResults('+c.id+',1,event)">Generuj wyniki T1</button><button type="button" class="secondary" onclick="generateResults('+c.id+',2,event)">Generuj wyniki T2</button><button type="button" class="blue" onclick="generateResultsAll('+c.id+',event)">Generuj T1 + T2</button></div><button type="button" class="warn" style="margin-top:10px" onclick="clearResults('+c.id+',event)">Wyczyść wszystkie wyniki T1 i T2</button><div class="resultEntryRounds"><div class="resultRoundPanel"><h3>T1</h3>'+renderResultForm(d,1)+'</div><div class="resultRoundPanel"><h3>T2</h3>'+renderResultForm(d,2)+'</div></div></div>'}
+
+function chatGptNormalizeName(v){return String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ł/g,'l').replace(/[^a-z0-9а-яёіїєґ\s-]/gi,' ').replace(/\s+/g,' ').trim()}
+function chatGptImportPrompt(round){
+  round=Number(round)===2?2:1;
+  const rows=(CURRENT_DETAIL?.activeEntries||[]).map((e,i)=>({lp:i+1,userId:Number(e.user_id),name:String(e.first_name+' '+e.last_name)}));
+  const roster=rows.map(r=>r.lp+'. ['+r.userId+'] '+r.name).join('\n');
+  return 'ODCZYTAJ WYNIKI Z PAPIEROWYCH KART — TURA '+round+'\n\n'
+    +'Za chwilę wgram 1 albo 2 zdjęcia kartek z tej samej tury (np. dwa brzegi łowiska). Połącz odczyt z obu zdjęć w jeden wynik.\n'
+    +'Każda kartka ma kolumny: W1, W2, W3, W4, W5, SUMA.\n'
+    +'Zasady:\n'
+    +'- przepisuj wyłącznie to, co rzeczywiście jest zapisane ręcznie; niczego nie zgaduj,\n'
+    +'- wpis typu *5250 zachowaj jako *5250 — gwiazdka oznacza BF,\n'
+    +'- puste pole = pusty tekst,\n'
+    +'- jeśli widzisz samą cyfrę 1 jako wynik, wpisz 0,\n'
+    +'- SUMA przepisz dokładnie do pola sum; jeśli SUMA jest pusta, zostaw pustą,\n'
+    +'- dopasuj zawodnika po LP i nazwisku do listy poniżej,\n'
+    +'- jeśli masz dwie kartki, scal je; zawodnik ma wystąpić tylko raz,\n'
+    +'- zwróć WYŁĄCZNIE JSON, bez komentarza i bez bloku ``` .\n\n'
+    +'LISTA ZAWODNIKÓW:\n'+roster+'\n\n'
+    +'FORMAT ODPOWIEDZI:\n'
+    +'{"round":'+round+',"sheetCount":2,"rows":[{"userId":123,"lp":1,"name":"Imię Nazwisko","w1":"*5250","w2":"","w3":"","w4":"","w5":"","sum":"32650","reviewFields":[]}]}\n'
+    +'W rows zwracaj tylko zawodników, którzy mają jakikolwiek odczytany wpis. reviewFields użyj tylko, gdy konkretna wartość jest niepewna, np. ["w3","sum"].';
+}
+async function chatGptCopyPrompt(round){
+  const text=chatGptImportPrompt(round);
+  try{await navigator.clipboard.writeText(text);msg('Skopiowano polecenie i aktualną listę zawodników dla T'+round+'. Wklej je w ChatGPT i dodaj zdjęcia.');}
+  catch(_){const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();msg('Skopiowano polecenie dla ChatGPT.');}
+}
+function closeChatGptPasteImport(){q('chatGptPasteImportOverlay')?.remove()}
+function openChatGptPasteImport(round){
+  round=Number(round)===2?2:1;closeChatGptPasteImport();
+  const o=document.createElement('div');o.id='chatGptPasteImportOverlay';o.className='photoImportOverlay';
+  o.innerHTML='<div class="photoImportDialog"><div class="photoImportHead"><div><h2>Import z ChatGPT — T'+round+'</h2><p>Bez API i bez opłat. Najpierw skopiuj polecenie, wklej je do rozmowy z ChatGPT i dodaj 1 albo 2 zdjęcia tej tury. Potem wklej tutaj sam JSON z odpowiedzi.</p></div><button type="button" class="warn" onclick="closeChatGptPasteImport()">Zamknij</button></div>'
+    +'<div class="photoImportWarn"><b>Dwa brzegi:</b> możesz wysłać do ChatGPT dwie kartki T'+round+' naraz. ChatGPT ma zwrócić jeden scalony JSON dla całej tury.</div>'
+    +'<div class="grid" style="margin:10px 0"><button type="button" class="blue" onclick="chatGptCopyPrompt('+round+')">1. KOPIUJ POLECENIE + LISTĘ</button><button type="button" class="secondary" onclick="window.open(\'https://chatgpt.com/\',\'_blank\')">2. OTWÓRZ CHATGPT</button></div>'
+    +'<label><b>3. Wklej JSON z odpowiedzi ChatGPT</b></label><textarea id="chatGptPasteText" rows="14" style="width:100%;margin-top:6px;font-family:ui-monospace,Consolas,monospace" placeholder=\'{"round":'+round+',"rows":[...]}\'></textarea>'
+    +'<div class="photoImportActions"><button type="button" class="blue" onclick="parseChatGptPasteImport('+round+')">WCZYTAJ DO KONTROLI</button><button type="button" class="secondary" onclick="closeChatGptPasteImport()">Anuluj</button></div></div>';
+  document.body.appendChild(o);q('chatGptPasteText')?.focus({preventScroll:true});
+}
+function chatGptParseJson(raw){
+  let t=String(raw||'').trim();
+  t=t.replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'').trim();
+  const a=t.indexOf('{'),b=t.lastIndexOf('}');if(a>=0&&b>a)t=t.slice(a,b+1);
+  return JSON.parse(t);
+}
+function chatGptField(raw,low){
+  let text=String(raw??'').trim(),isBigFish=/^\s*\*/.test(text),value=(text.match(/\d/g)||[]).join('').slice(0,7);
+  if(value==='1')value='0';
+  return {value,isBigFish:isBigFish&&Number(value||0)>0,low:!!low,blank:!value,raw:text};
+}
+function chatGptMergeField(oldField,newField){
+  if(!newField?.value)return oldField;
+  if(!oldField?.value)return newField;
+  if(oldField.value===newField.value&&!!oldField.isBigFish===!!newField.isBigFish)return { ...oldField, low:oldField.low||newField.low };
+  return { ...oldField, low:true, raw:[oldField.raw,newField.raw].filter(Boolean).join(' | ') };
+}
+function parseChatGptPasteImport(round){
+  round=Number(round)===2?2:1;const raw=q('chatGptPasteText')?.value||'';if(!raw.trim()){msg('Wklej najpierw JSON z ChatGPT.','bad');return}
+  let data;try{data=chatGptParseJson(raw)}catch(e){msg('Nie udało się odczytać JSON. Poproś ChatGPT o odpowiedź wyłącznie w JSON i wklej ponownie.','bad');return}
+  const entries=(CURRENT_DETAIL?.activeEntries||[]).map((e,i)=>({lp:i+1,userId:Number(e.user_id),name:String(e.first_name+' '+e.last_name)}));
+  const byId=new Map(entries.map(x=>[x.userId,x])),byLp=new Map(entries.map(x=>[x.lp,x])),byName=new Map(entries.map(x=>[chatGptNormalizeName(x.name),x]));
+  const mkBlank=()=>({value:'',isBigFish:false,low:false,blank:true,raw:''});
+  const rows=entries.map(e=>({userId:e.userId,name:e.name,weights:[mkBlank(),mkBlank(),mkBlank(),mkBlank(),mkBlank()],sum:mkBlank(),calculatedSum:0,bigFishTotal:0}));
+  const targetById=new Map(rows.map(r=>[r.userId,r])),unmatched=[];
+  for(const src of (Array.isArray(data?.rows)?data.rows:[])){
+    let match=byId.get(Number(src?.userId||0))||byLp.get(Number(src?.lp||0))||byName.get(chatGptNormalizeName(src?.name||''));
+    if(!match){unmatched.push({lp:src?.lp||'',name:String(src?.name||''),note:'Nie znaleziono na aktualnej liście'});continue}
+    const dst=targetById.get(match.userId),review=new Set(Array.isArray(src?.reviewFields)?src.reviewFields.map(x=>String(x||'').toLowerCase()):[]);
+    for(let i=0;i<5;i++){const key='w'+(i+1),f=chatGptField(src?.[key]||'',review.has(key));dst.weights[i]=chatGptMergeField(dst.weights[i],f)}
+    dst.sum=chatGptMergeField(dst.sum,chatGptField(src?.sum||'',review.has('sum')));
+  }
+  for(const r of rows){r.calculatedSum=r.weights.reduce((a,f)=>a+(Number(f.value)||0),0);r.bigFishTotal=r.weights.filter(f=>f.isBigFish).reduce((a,f)=>a+(Number(f.value)||0),0);if((Number(r.sum.value)||0)&&r.bigFishTotal>Number(r.sum.value||0))r.sum.low=true}
+  closeChatGptPasteImport();showPhotoImportReview({round,rows,unmatched,sheetCount:Number(data?.sheetCount||0)||1,imageUrls:[],manualChatGPT:true,provider:'ChatGPT'});
+  msg('Wczytano dane z ChatGPT do kontroli. Nic nie zostało jeszcze zapisane.');
+}
+function renderResultsEntryPanel(d){const c=d.competition;return '<div class="card"><h2>Wpisywanie wyników</h2><p class="small muted"><b>Przeliczanie jest automatyczne.</b> Po zapisaniu lub usunięciu każdej wagi klasyfikacje T1, T2 i końcowa są liczone ponownie. Wpisz wagę siatki albo dużej ryby i przejdź do innego pola.</p><div class="photoImportQuick"><b>💬 Import z ChatGPT — bez API</b><span>Wyślij tutaj w ChatGPT 1 lub 2 zdjęcia tej samej tury, skopiuj gotowy JSON i wklej go do aplikacji. Dwie kartki z obu brzegów zostaną połączone w pełną T1/T2. Przed zapisem zawsze jest tabela kontrolna.</span><div class="grid"><button type="button" class="blue" onclick="openChatGptPasteImport(1)">ChatGPT T1 — bezpłatnie</button><button type="button" class="blue" onclick="openChatGptPasteImport(2)">ChatGPT T2 — bezpłatnie</button></div></div><details class="card" style="margin-top:10px"><summary><b>Automatyczny import OpenAI API (opcjonalny / płatny)</b></summary><p class="small muted">Ten tryb wysyła zdjęcie bezpośrednio z aplikacji przez klucz API. Do testów bez kosztów użyj importu z ChatGPT powyżej.</p><div class="grid"><button type="button" class="secondary" onclick="startPhotoResultImport(1)">API T1 — zdjęcie / plik</button><button type="button" class="secondary" onclick="startPhotoResultImport(2)">API T2 — zdjęcie / plik</button></div></details><div class="grid3"><button type="button" class="secondary" onclick="generateResults('+c.id+',1,event)">Generuj wyniki T1</button><button type="button" class="secondary" onclick="generateResults('+c.id+',2,event)">Generuj wyniki T2</button><button type="button" class="blue" onclick="generateResultsAll('+c.id+',event)">Generuj T1 + T2</button></div><button type="button" class="warn" style="margin-top:10px" onclick="clearResults('+c.id+',event)">Wyczyść wszystkie wyniki T1 i T2</button><div class="resultEntryRounds"><div class="resultRoundPanel"><h3>T1</h3>'+renderResultForm(d,1)+'</div><div class="resultRoundPanel"><h3>T2</h3>'+renderResultForm(d,2)+'</div></div></div>'}
 function renderResultsSummaryPanel(d){const c=d.competition;return '<div class="card"><h2>Wyniki i klasyfikacja</h2><div class="grid"><button type="button" class="blue" onclick="notifyResults('+c.id+',1)">Powiadom o wynikach T1</button><button type="button" class="blue" onclick="notifyResults('+c.id+',2)">Powiadom o wynikach T2</button></div><div class="inlineBtns"><button type="button" class="secondary" onclick="retryAchievementToasts('+c.id+',1,this)">Ponów dymki T1</button><button type="button" class="secondary" onclick="retryAchievementToasts('+c.id+',2,this)">Ponów dymki T2</button><button type="button" class="secondary" onclick="retryAchievementToasts('+c.id+',\'general\',this)">Ponów dymki generalne</button></div><p id="achievementPublishStatus" role="status"></p>'+renderSectorResultsBoard(d)+'<h3>Klasyfikacja T1</h3>'+renderClassTable(d.classification.round1)+'<h3>Klasyfikacja T2</h3>'+renderClassTable(d.classification.round2)+'<h3>Klasyfikacja końcowa</h3><button type="button" class="blue" onclick="notifyGeneralResults('+c.id+',this)">Powiadom o klasyfikacji końcowej</button><p id="generalPublishStatus" role="status"></p>'+renderFinalClubToggle()+renderGeneralTable(d.classification.general)+renderStationStatistics(d)+'</div>'}
 function placeRowClass(rank){const r=Number(rank);return r===1?'place1':r===2?'place2':r===3?'place3':''}
 function sortRowsBySectorPlace(rows){return [...(rows||[])].sort((a,b)=>Number(a.points||999)-Number(b.points||999)||Number(b.weight||0)-Number(a.weight||0)||String(a.name||'').localeCompare(String(b.name||''),'pl'))}
