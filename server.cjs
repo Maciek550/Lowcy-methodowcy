@@ -1748,8 +1748,8 @@ body #app button.rosterLeaveRequest:disabled{opacity:.65;cursor:wait}
   }), {'Content-Type':'application/manifest+json; charset=utf-8','Cache-Control':'no-cache'});
   if (path === '/sw.js') return send(res, 200, `
 const SHELL_CACHE='lowcy-shell-v146';
-const APP_SHELL_JS='/app.js?v=145';
-const PDF_JS='/pdf-vector.js?v=145';
+const APP_SHELL_JS='/app.js?v=146';
+const PDF_JS='/pdf-vector.js?v=146';
 const SHELL=['/',APP_SHELL_JS,PDF_JS,'/icon-192.png','/icon-512.png'];
 async function fetchWithTimeout(req,ms=30000){const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),ms);try{return await fetch(req,{cache:'no-store',signal:ctrl.signal})}finally{clearTimeout(timer)}}
 self.addEventListener('install',event=>event.waitUntil((async()=>{const replies=await Promise.all(SHELL.map(url=>fetchWithTimeout(url)));if(replies.some(r=>!r.ok))throw Error('Incomplete shell');const cache=await caches.open(SHELL_CACHE);await Promise.all(SHELL.map((url,i)=>cache.put(url,replies[i])));await self.skipWaiting()})()));
@@ -6343,14 +6343,14 @@ body.playerTheme #app .playerCompCardMeeting .playerCompClockIcon{display:inline
 <div class="quickScroll"><button onclick="scrollAppTop()">↑</button><button onclick="scrollAppBottom()">↓</button></div>
 <script>
 (function(){
- window.__lowcyRecover145=function(){var g=document.getElementById('bootGuard');if(!g)return;g.classList.remove('hidden');var sp=g.querySelector('span');if(sp)sp.textContent='Nie udało się pobrać aplikacji. Sprawdź połączenie i spróbuj ponownie.';var b=document.getElementById('bootRetry');if(b)b.classList.remove('hidden')};
+ window.__lowcyRecover146=function(){var g=document.getElementById('bootGuard');if(!g)return;g.classList.remove('hidden');var sp=g.querySelector('span');if(sp)sp.textContent='Nie udało się pobrać aplikacji. Sprawdź połączenie i spróbuj ponownie.';var b=document.getElementById('bootRetry');if(b)b.classList.remove('hidden')};
  window.retryLowcyBoot=function(){if(typeof startBoot==='function'){startBoot();return}location.reload()};
  if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'}).then(function(reg){return reg.update()}).catch(function(){});
- setTimeout(function(){if(!window.__LOWCY_JS_STARTED)window.__lowcyRecover145()},30000);
+ setTimeout(function(){if(!window.__LOWCY_JS_STARTED)window.__lowcyRecover146()},30000);
 })();
 </script>
-<script src="/pdf-vector.js?v=145" defer></script>
-<script src="/app.js?v=145" defer onerror="window.__lowcyRecover145&&window.__lowcyRecover145()"></script>
+<script src="/pdf-vector.js?v=146" defer></script>
+<script src="/app.js?v=146" defer onerror="window.__lowcyRecover146&&window.__lowcyRecover146()"></script>
 </body>
 </html>`;
 
