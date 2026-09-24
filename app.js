@@ -1275,11 +1275,18 @@ function showPhotoImportReview(result){
     +'<div class="photoImportActions"><button type="button" class="blue" onclick="commitPhotoResultImport(this)">IMPORTUJ DO T'+result.round+'</button><button type="button" class="secondary" onclick="closePhotoImportReview()">Anuluj</button></div></div>';
   document.body.appendChild(overlay);overlay.querySelector('input')?.focus({preventScroll:true});
 }
+
+let PHOTO_IMPORT_SELECTION={round:1,files:[]};
 function closePhotoImportSource(){q('photoImportSourceOverlay')?.remove()}
+function photoImportReset(round){PHOTO_IMPORT_SELECTION={round:Number(round)===2?2:1,files:[]}}
+function photoImportGetFiles(round){round=Number(round)===2?2:1;if(Number(PHOTO_IMPORT_SELECTION.round)!==round)photoImportReset(round);return PHOTO_IMPORT_SELECTION.files}
+function photoImportAddFiles(round,list){const box=photoImportGetFiles(round);for(const f of Array.from(list||[])){if(!f)continue;box.push(f);if(box.length>=2)break}}
+function photoImportRemoveFile(round,index){const box=photoImportGetFiles(round);box.splice(index,1);startPhotoResultImport(round)}
 function closePhotoImportBusy(){q('photoImportBusyOverlay')?.remove()}
-function showPhotoImportBusy(round,file){
-  closePhotoImportBusy();const o=document.createElement('div');o.id='photoImportBusyOverlay';o.className='photoImportOverlay photoImportBusyOverlay';
-  o.innerHTML='<div class="photoSourceDialog photoBusyDialog"><div class="photoBusySpinner" aria-hidden="true"></div><h2>Analizuję zdjęcie — T'+round+'</h2><p>'+esc(file?.name||'Zdjęcie z aparatu')+'</p><strong>Namierzam kartkę, komórki i odczytuję liczby…</strong><small>To może potrwać kilka–kilkanaście sekund. Nie zamykaj tego okna.</small></div>';
+function showPhotoImportBusy(round,files){
+  closePhotoImportBusy();const count=Array.isArray(files)?files.length:(files?1:0),label=count>1?count+' zdjęcia':'1 zdjęcie';
+  const o=document.createElement('div');o.id='photoImportBusyOverlay';o.className='photoImportOverlay photoImportBusyOverlay';
+  o.innerHTML='<div class="photoSourceDialog photoBusyDialog"><div class="photoBusySpinner" aria-hidden="true"></div><h2>Analizuję zdjęcia — T'+round+'</h2><p>'+esc(label)+'</p><strong>AI czyta całą kartkę i scala odczyt dla całej tury…</strong><small>Możesz dodać 1 albo 2 kartki dla tej samej tury. Nie zamykaj tego okna.</small></div>';
   document.body.appendChild(o);
 }
 function showPhotoImportError(round,error){
@@ -1287,26 +1294,70 @@ function showPhotoImportError(round,error){
   o.innerHTML='<div class="photoSourceDialog photoErrorDialog"><div class="photoSourceIcon">⚠️</div><h2>Nie udało się odczytać zdjęcia — T'+round+'</h2><p>'+esc(error||'Nieznany błąd')+'</p><div class="photoSourceActions"><button type="button" class="blue" onclick="closePhotoImportBusy();startPhotoResultImport('+round+')">SPRÓBUJ PONOWNIE</button><button type="button" class="secondary" onclick="closePhotoImportBusy()">ZAMKNIJ</button></div></div>';
   document.body.appendChild(o);
 }
-async function processPhotoResultImport(file,round){
-  round=Number(round)===2?2:1;if(!file)return;showPhotoImportBusy(round,file);
-  try{const result=await photoRecognizeSheet(file,round);closePhotoImportBusy();showPhotoImportReview(result);msg('Hybryda: wykryto '+Number(result.detectedCells||0)+' zapisanych komórek — sprawdź dane przed importem.')}
-  catch(e){showPhotoImportError(round,e?.message||'Nie udało się odczytać zdjęcia');msg(e?.message||'Nie udało się odczytać zdjęcia','bad')}
+async function photoPrepareUploadImage(file){
+  const img=await photoImageFromFile(file),max=2200,scale=Math.min(1,max/Math.max(img.naturalWidth||img.width,img.naturalHeight||img.height)),w=Math.max(1,Math.round((img.naturalWidth||img.width)*scale)),h=Math.max(1,Math.round((img.naturalHeight||img.height)*scale));
+  const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0,w,h);
+  return {name:file?.name||'zdjecie.jpg',image:canvas.toDataURL('image/jpeg',0.92)};
+}
+async function processPhotoResultImport(files,round){
+  round=Number(round)===2?2:1;files=Array.from(files||[]).slice(0,2);if(!files.length)return;showPhotoImportBusy(round,files);
+  const previewUrls=[];
+  try{
+    const images=[];
+    for(const f of files){previewUrls.push(URL.createObjectURL(f));images.push(await photoPrepareUploadImage(f))}
+    const entries=(CURRENT_DETAIL?.activeEntries||[]).map((e,i)=>({lp:i+1,userId:Number(e.user_id),name:String(e.first_name+' '+e.last_name)}));
+    const result=await api('/api/admin/photo-ocr',{method:'POST',body:JSON.stringify({round,images,entries}),timeoutMs:120000});
+    result.round=round;result.imageUrls=previewUrls;
+    closePhotoImportBusy();showPhotoImportReview(result);
+    const unmatched=(result.unmatched||[]).length?(' Nierozpoznane wiersze: '+(result.unmatched||[]).length+'.'):'';
+    msg('AI OCR: odczytano '+Number(result.sheetCount||files.length)+' kartki dla T'+round+'.'+unmatched+' Sprawdź dane przed importem.');
+    photoImportReset(round);
+  }catch(e){
+    previewUrls.forEach(u=>{try{URL.revokeObjectURL(u)}catch(_){}});
+    showPhotoImportError(round,e?.message||'Nie udało się odczytać zdjęcia');msg(e?.message||'Nie udało się odczytać zdjęcia','bad')
+  }
 }
 function choosePhotoResultImport(round,source){
-  if(!CURRENT_DETAIL||ME?.role!=='ADMIN')return;round=Number(round)===2?2:1;closePhotoImportSource();
+  if(!CURRENT_DETAIL||ME?.role!=='ADMIN')return;round=Number(round)===2?2:1;
   const input=document.createElement('input');input.type='file';input.accept='image/*';input.style.position='fixed';input.style.left='-9999px';input.style.opacity='0';input.setAttribute('aria-hidden','true');
   if(source==='camera')input.setAttribute('capture','environment');
-  let finished=false;const cleanup=()=>{if(input.isConnected)input.remove()};
-  input.onchange=()=>{finished=true;const f=input.files?.[0];cleanup();if(f)processPhotoResultImport(f,round);else startPhotoResultImport(round)};
-  input.addEventListener('cancel',()=>{finished=true;cleanup();startPhotoResultImport(round)},{once:true});
+  if(source==='file')input.multiple=true;
+  const cleanup=()=>{if(input.isConnected)input.remove()};
+  input.onchange=()=>{const picked=Array.from(input.files||[]);cleanup();if(picked.length){photoImportAddFiles(round,picked);startPhotoResultImport(round)}};
+  input.addEventListener('cancel',()=>{cleanup();startPhotoResultImport(round)},{once:true});
   document.body.appendChild(input);input.click();
-  setTimeout(()=>{if(!finished&&!input.isConnected)return},1000);
 }
 function startPhotoResultImport(round){
   if(!CURRENT_DETAIL||ME?.role!=='ADMIN')return;round=Number(round)===2?2:1;closePhotoImportSource();
+  const files=photoImportGetFiles(round),items=files.map((f,i)=>'<li><b>'+(i+1)+'.</b> '+esc(f.name||('Zdjęcie '+(i+1)))+' <button type="button" class="linklike" onclick="photoImportRemoveFile('+round+','+i+')">usuń</button></li>').join('');
+  const note=round===1?'Możesz dodać dwie kartki dla obu brzegów i zaimportować je razem do pełnych wyników T1.':'Możesz dodać jedną lub dwie kartki dla T2 i złączyć odczyt w jeden import.';
+  const ready=files.length>0;
   const o=document.createElement('div');o.id='photoImportSourceOverlay';o.className='photoImportOverlay photoImportSourceOverlay';
-  o.innerHTML='<div class="photoSourceDialog"><button type="button" class="photoSourceClose" onclick="closePhotoImportSource()" aria-label="Zamknij">×</button><div class="photoSourceIcon">📷</div><h2>Import wyników ze zdjęcia — T'+round+'</h2><p>Wybierz skąd ma pochodzić zdjęcie formularza.</p><div class="photoSourceActions"><button type="button" class="blue photoSourcePrimary" onclick="choosePhotoResultImport('+round+',&quot;camera&quot;)"><b>📸 ZRÓB ZDJĘCIE</b><span>Uruchom aparat telefonu</span></button><button type="button" class="secondary photoSourcePrimary" onclick="choosePhotoResultImport('+round+',&quot;file&quot;)"><b>🖼️ WCZYTAJ Z PLIKU</b><span>Wybierz wcześniej zrobione zdjęcie</span></button></div><small>Po wybraniu zdjęcia analiza uruchomi się automatycznie.</small></div>';
+  o.innerHTML='<div class="photoSourceDialog"><button type="button" class="photoSourceClose" onclick="closePhotoImportSource()" aria-label="Zamknij">×</button><div class="photoSourceIcon">📷</div><h2>Import wyników ze zdjęcia — T'+round+'</h2><p>'+note+'</p><div class="photoSourceActions"><button type="button" class="blue photoSourcePrimary" onclick="choosePhotoResultImport('+round+',&quot;camera&quot;)" '+(files.length>=2?'disabled':'')+'><b>📸 DODAJ ZDJĘCIE</b><span>Zrób zdjęcie kartki aparatem</span></button><button type="button" class="secondary photoSourcePrimary" onclick="choosePhotoResultImport('+round+',&quot;file&quot;)" '+(files.length>=2?'disabled':'')+'><b>🖼️ DODAJ Z PLIKU</b><span>Wybierz 1 lub 2 wcześniej zrobione zdjęcia</span></button></div>'
+   +(ready?'<div class="photoImportPicked"><b>Wybrane kartki:</b><ol>'+items+'</ol></div>':'<small>Najpierw dodaj co najmniej jedno zdjęcie. Maksymalnie 2 kartki na jedną analizę.</small>')
+   +'<div class="photoSourceActions" style="margin-top:12px"><button type="button" class="blue photoSourcePrimary" onclick="analyzePhotoResultImport('+round+')" '+(ready?'':'disabled')+'><b>✅ ANALIZUJ '+(files.length?('('+files.length+')'):'')+'</b><span>Scal odczyt do pełnych wyników tury</span></button><button type="button" class="secondary photoSourcePrimary" onclick="photoImportReset('+round+');startPhotoResultImport('+round+')" '+(ready?'':'disabled')+'><b>WYCZYŚĆ WYBÓR</b><span>Usuń wybrane kartki</span></button></div></div>';
   document.body.appendChild(o);
+}
+async function analyzePhotoResultImport(round){
+  const files=photoImportGetFiles(round).slice();if(!files.length){msg('Najpierw dodaj zdjęcie formularza.','bad');return}
+  closePhotoImportSource();await processPhotoResultImport(files,round)
+}
+function closePhotoImportReview(){const x=q('photoImportOverlay');if(x){for(const u of (x._imageUrls||[])){try{URL.revokeObjectURL(u)}catch(_){}}x.remove()}}
+function photoImportCell(field,key){
+  const value=(field?.isBigFish?'*':'')+(field?.value||''),low=!!field?.low;return '<td class="'+(low?'photoOcrLow':'')+'"><input inputmode="text" data-key="'+key+'" value="'+esc(value)+'" placeholder="—">'+(low?'<small>sprawdź</small>':'')+'</td>';
+}
+function showPhotoImportReview(result){
+  closePhotoImportReview();const overlay=document.createElement('div');overlay.id='photoImportOverlay';overlay.className='photoImportOverlay';overlay._imageUrls=[...(result.imageUrls||[])];overlay.dataset.round=String(result.round||1);
+  const rows=(result.rows||[]).map((r,i)=>{const sumVal=r.sum?.value||'',calc=Number(r.calculatedSum||0),warn=!!r.sum?.low,info=sumVal?'SUMA = wynik końcowy':'z W1–W5: '+fmtGram(calc);return '<tr data-user-id="'+r.userId+'"><td class="photoOcrName"><b>'+(i+1)+'. '+esc(r.name)+'</b></td>'+r.weights.map((f,j)=>photoImportCell(f,'w'+(j+1))).join('')+'<td class="'+(warn?'photoOcrLow':'')+'"><input inputmode="numeric" data-key="sum" value="'+esc(sumVal)+'" placeholder="—"><small>'+info+'</small></td></tr>'}).join('');
+  const previews=(result.imageUrls||[]).length?'<div class="photoImportPreview">'+(result.imageUrls||[]).map(u=>'<img src="'+esc(u)+'" alt="Zdjęcie formularza">').join('')+'</div>':'';
+  const unmatched=(result.unmatched||[]).length?'<div class="photoImportWarn">⚠ Nierozpoznane wiersze: '+esc((result.unmatched||[]).map(x=>[x.lp,x.name].filter(Boolean).join('. ')).join(' | '))+'</div>':'';
+  overlay.innerHTML='<div class="photoImportDialog"><div class="photoImportHead"><div><h2>Import ze zdjęcia — T'+(result.round||1)+'</h2><p>AI odczytała '+Number(result.sheetCount||1)+' kartki. <b>SUMA ma pierwszeństwo</b>. Zapis <b>*9890</b> oznacza BF 9890 g. Pole „sprawdź” oznacza niepewny odczyt.</p></div><button type="button" class="warn" onclick="closePhotoImportReview()">Zamknij</button></div>'
+    +previews
+    +'<div class="photoImportWarn">⚠ Zapis zastąpi wszystkie dotychczasowe wpisy wag w T'+(result.round||1)+'. Jeśli jest SUMA, stanie się wynikiem końcowym; z W1–W5 zachowane zostaną wtedy tylko wartości oznaczone * jako BF.</div>'
+    +unmatched
+    +'<div class="tablewrap"><table class="photoImportTable"><thead><tr><th>Zawodnik</th><th>W1</th><th>W2</th><th>W3</th><th>W4</th><th>W5</th><th>SUMA</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+    +'<div class="photoImportActions"><button type="button" class="blue" onclick="commitPhotoResultImport(this)">IMPORTUJ DO T'+(result.round||1)+'</button><button type="button" class="secondary" onclick="closePhotoImportReview()">Anuluj</button></div></div>';
+  document.body.appendChild(overlay);overlay.querySelector('input')?.focus({preventScroll:true});
 }
 async function commitPhotoResultImport(button){
   const overlay=q('photoImportOverlay');if(!overlay||!CURRENT_DETAIL)return;const round=Number(overlay.dataset.round)===2?2:1,rows=[];
@@ -1328,7 +1379,7 @@ async function commitPhotoResultImport(button){
   catch(e){msg(e.message,'bad');if(button){button.disabled=false;button.textContent='IMPORTUJ DO T'+round}}
 }
 
-function renderResultsEntryPanel(d){const c=d.competition;return '<div class="card"><h2>Wpisywanie wyników</h2><p class="small muted"><b>Przeliczanie jest automatyczne.</b> Po zapisaniu lub usunięciu każdej wagi klasyfikacje T1, T2 i końcowa są liczone ponownie. Wpisz wagę siatki albo dużej ryby i przejdź do innego pola.</p><div class="photoImportQuick"><b>📷 Import hybrydowy z papierowej tabeli</b><span>Telefon namierza tylko zapisane komórki, a zewnętrzny silnik czyta same liczby. Cała kartka i nazwiska nie są wysyłane. Odczyt zawsze wymaga kontroli.</span><div class="grid"><button type="button" class="blue" onclick="startPhotoResultImport(1)">Import T1 — zdjęcie / plik</button><button type="button" class="blue" onclick="startPhotoResultImport(2)">Import T2 — zdjęcie / plik</button></div></div><div class="grid3"><button type="button" class="secondary" onclick="generateResults('+c.id+',1,event)">Generuj wyniki T1</button><button type="button" class="secondary" onclick="generateResults('+c.id+',2,event)">Generuj wyniki T2</button><button type="button" class="blue" onclick="generateResultsAll('+c.id+',event)">Generuj T1 + T2</button></div><button type="button" class="warn" style="margin-top:10px" onclick="clearResults('+c.id+',event)">Wyczyść wszystkie wyniki T1 i T2</button><div class="resultEntryRounds"><div class="resultRoundPanel"><h3>T1</h3>'+renderResultForm(d,1)+'</div><div class="resultRoundPanel"><h3>T2</h3>'+renderResultForm(d,2)+'</div></div></div>'}
+function renderResultsEntryPanel(d){const c=d.competition;return '<div class="card"><h2>Wpisywanie wyników</h2><p class="small muted"><b>Przeliczanie jest automatyczne.</b> Po zapisaniu lub usunięciu każdej wagi klasyfikacje T1, T2 i końcowa są liczone ponownie. Wpisz wagę siatki albo dużej ryby i przejdź do innego pola.</p><div class="photoImportQuick"><b>📷 Import hybrydowy z papierowej tabeli</b><span>AI czyta całą kartkę i scala odczyt nawet z 2 zdjęć dla tej samej tury. Możesz wgrać obie kartki z dwóch brzegów naraz. Odczyt zawsze wymaga kontroli.</span><div class="grid"><button type="button" class="blue" onclick="startPhotoResultImport(1)">Import T1 — zdjęcie / plik</button><button type="button" class="blue" onclick="startPhotoResultImport(2)">Import T2 — zdjęcie / plik</button></div></div><div class="grid3"><button type="button" class="secondary" onclick="generateResults('+c.id+',1,event)">Generuj wyniki T1</button><button type="button" class="secondary" onclick="generateResults('+c.id+',2,event)">Generuj wyniki T2</button><button type="button" class="blue" onclick="generateResultsAll('+c.id+',event)">Generuj T1 + T2</button></div><button type="button" class="warn" style="margin-top:10px" onclick="clearResults('+c.id+',event)">Wyczyść wszystkie wyniki T1 i T2</button><div class="resultEntryRounds"><div class="resultRoundPanel"><h3>T1</h3>'+renderResultForm(d,1)+'</div><div class="resultRoundPanel"><h3>T2</h3>'+renderResultForm(d,2)+'</div></div></div>'}
 function renderResultsSummaryPanel(d){const c=d.competition;return '<div class="card"><h2>Wyniki i klasyfikacja</h2><div class="grid"><button type="button" class="blue" onclick="notifyResults('+c.id+',1)">Powiadom o wynikach T1</button><button type="button" class="blue" onclick="notifyResults('+c.id+',2)">Powiadom o wynikach T2</button></div><div class="inlineBtns"><button type="button" class="secondary" onclick="retryAchievementToasts('+c.id+',1,this)">Ponów dymki T1</button><button type="button" class="secondary" onclick="retryAchievementToasts('+c.id+',2,this)">Ponów dymki T2</button><button type="button" class="secondary" onclick="retryAchievementToasts('+c.id+',\'general\',this)">Ponów dymki generalne</button></div><p id="achievementPublishStatus" role="status"></p>'+renderSectorResultsBoard(d)+'<h3>Klasyfikacja T1</h3>'+renderClassTable(d.classification.round1)+'<h3>Klasyfikacja T2</h3>'+renderClassTable(d.classification.round2)+'<h3>Klasyfikacja końcowa</h3><button type="button" class="blue" onclick="notifyGeneralResults('+c.id+',this)">Powiadom o klasyfikacji końcowej</button><p id="generalPublishStatus" role="status"></p>'+renderFinalClubToggle()+renderGeneralTable(d.classification.general)+renderStationStatistics(d)+'</div>'}
 function placeRowClass(rank){const r=Number(rank);return r===1?'place1':r===2?'place2':r===3?'place3':''}
 function sortRowsBySectorPlace(rows){return [...(rows||[])].sort((a,b)=>Number(a.points||999)-Number(b.points||999)||Number(b.weight||0)-Number(a.weight||0)||String(a.name||'').localeCompare(String(b.name||''),'pl'))}

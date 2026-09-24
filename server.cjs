@@ -17,8 +17,10 @@ let VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 let VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const GOOGLE_VISION_API_KEY = process.env.GOOGLE_VISION_API_KEY || process.env.OCR_GOOGLE_API_KEY || '';
-const APP_VERSION = '142';
-const APP_VERSION_NAME = 'V142_RAW_CELL_CLOUD_OCR';
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.PHOTO_OCR_OPENAI_API_KEY || '';
+const PHOTO_OCR_MODEL = process.env.PHOTO_OCR_OPENAI_MODEL || 'gpt-6-astra';
+const APP_VERSION = '143';
+const APP_VERSION_NAME = 'V143_OPENAI_MULTI_SHEET_OCR';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 const CARP_REAL = fs.readFileSync(pathModule.join(__dirname, 'carp-real-v116.png'));
 const ICON_192 = fs.readFileSync(pathModule.join(__dirname, 'icon-192.png'));
@@ -114,6 +116,161 @@ async function googleVisionOcrCells(cells) {
   console.log('PHOTO_OCR_V142 cells='+safe.length+' batches='+parts.length+' ms='+(Date.now()-started));
   return results.flat();
 }
+function responseOutputText(payload){
+  if(typeof payload?.output_text==='string' && payload.output_text.trim()) return payload.output_text.trim();
+  const out=[];
+  for(const item of payload?.output||[]){
+    if(item?.type==='message') for(const c of item?.content||[]) if(c?.type==='output_text' && c.text) out.push(String(c.text));
+  }
+  return out.join('\n').trim();
+}
+function extractJsonObject(text){
+  const raw=String(text||'').trim();
+  if(!raw) throw new Error('Zewnętrzny OCR nie zwrócił treści.');
+  const cleaned=raw.replace(/^```(?:json)?/i,'').replace(/```$/,'').trim();
+  const start=cleaned.indexOf('{'), end=cleaned.lastIndexOf('}');
+  const candidate=(start>=0 && end>start)?cleaned.slice(start,end+1):cleaned;
+  try{return JSON.parse(candidate);}catch(err){
+    throw new Error('Nie udało się odczytać odpowiedzi AI jako JSON.');
+  }
+}
+function normalizeRosterName(s){
+  return String(s||'').toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/ł/g,'l').replace(/[^a-z0-9а-яёіїєґ\s-]/gi,' ')
+    .replace(/\s+/g,' ').trim();
+}
+function emptyPhotoField(){ return { value:'', isBigFish:false, low:false, blank:true, raw:'' }; }
+function parseModelField(raw){
+  const text=String(raw||'').trim();
+  const isBigFish=/^\s*\*/.test(text);
+  let value=(text.match(/\d/g)||[]).join('').slice(0,5);
+  if(value==='1') value='0';
+  return { value, isBigFish:isBigFish && Number(value||0)>0, low:false, blank:!value, raw:text };
+}
+function mergePhotoField(dst, incoming){
+  if(!incoming || !incoming.value) return dst;
+  if(!dst.value) return { ...incoming };
+  if(dst.value===incoming.value && !!dst.isBigFish===!!incoming.isBigFish) return dst;
+  return { ...dst, low:true, raw:[dst.raw,incoming.raw].filter(Boolean).join(' | ') };
+}
+function preparePhotoRows(entries){
+  return (entries||[]).map(e=>({
+    userId:Number(e.userId),
+    name:String(e.name||''),
+    weights:[emptyPhotoField(),emptyPhotoField(),emptyPhotoField(),emptyPhotoField(),emptyPhotoField()],
+    sum:emptyPhotoField(),
+    calculatedSum:0,
+    bigFishTotal:0
+  }));
+}
+async function openAiPhotoOcrSheets(images, entries, round){
+  if(!OPENAI_API_KEY){
+    const e=new Error('OpenAI OCR nie jest jeszcze skonfigurowany. Dodaj OPENAI_API_KEY w Railway.');
+    e.status=503; throw e;
+  }
+  const safeImages=(Array.isArray(images)?images:[]).slice(0,2).map((img,i)=>{
+    const name=String(img?.name||('zdjecie_'+(i+1)+'.jpg')).slice(0,80);
+    const dataUrl=String(img?.image||img?.dataUrl||'');
+    const m=dataUrl.match(/^data:image\/(?:png|jpeg|jpg|webp);base64,([A-Za-z0-9+/=]+)$/i);
+    if(!m || m[1].length>11_000_000){ const e=new Error('Nieprawidłowe zdjęcie formularza.'); e.status=400; throw e; }
+    return {name,dataUrl};
+  });
+  if(!safeImages.length){ const e=new Error('Nie wybrano zdjęć formularza.'); e.status=400; throw e; }
+  const roster=(Array.isArray(entries)?entries:[]).slice(0,80).map((e,i)=>({lp:Number(e.lp||i+1),userId:Number(e.userId),name:String(e.name||'').trim()})).filter(e=>e.userId&&e.name);
+  if(!roster.length){ const e=new Error('Brak listy zawodników do dopasowania OCR.'); e.status=400; throw e; }
+
+  const prompt=`Jesteś precyzyjnym asystentem do odczytu kart wyników zawodów wędkarskich. Odczytaj 1 lub 2 zdjęcia formularza dla tury ${Number(round)===2?2:1}.
+
+`
+   +`Każdy formularz ma kolumny: W1, W2, W3, W4, W5, SUMA.
+`
+   +`Zasady odczytu:
+`
+   +`- zwracaj tylko wiersze, w których występuje jakikolwiek wpis liczbowy albo gwiazdka BF;
+`
+   +`- wpis typu *5250 oznacza BF 5250; gwiazdkę zachowaj jako pierwszy znak pola;
+`
+   +`- pola puste zwracaj jako pusty string;
+`
+   +`- jeśli widzisz samą cyfrę 1 jako wynik, potraktuj ją jako 0;
+`
+   +`- jeśli w wierszu jest wartość w SUMA, przepisz ją do pola sum;
+`
+   +`- dopasuj każdy odczytany wiersz do oficjalnej listy zawodników po LP i nazwisku; zwracaj userId z listy;
+`
+   +`- jeśli nie jesteś pewien konkretnego pola, dodaj nazwę pola do reviewFields, np. ["w3","sum"];
+`
+   +`- jeśli ten sam zawodnik pojawia się na dwóch zdjęciach, możesz zwrócić go tylko raz z połączonymi polami.
+
+`
+   +`Oficjalna lista zawodników:
+`
+   +roster.map(r=>`${r.lp}. [${r.userId}] ${r.name}`).join('\n')
+   +`
+
+Zwróć WYŁĄCZNIE poprawny JSON w formacie:
+`
+   +`{"rows":[{"userId":123,"lp":1,"name":"Imię Nazwisko","w1":"","w2":"","w3":"","w4":"","w5":"","sum":"","reviewFields":["w1"],"note":"krótka uwaga albo pusty string"}],"unmatched":[{"lp":"","name":"","note":""}]}
+`
+   +`Bez komentarza poza JSON.`;
+
+  const input=[{role:'user',content:[{type:'input_text',text:prompt}, ...safeImages.map(img=>({type:'input_image',image_url:img.dataUrl,detail:'original'}))]}];
+  const body={model:PHOTO_OCR_MODEL,input};
+  const ctrl=new AbortController(), timer=setTimeout(()=>ctrl.abort(),120000);
+  let r,j;
+  try{
+    r=await fetch('https://api.openai.com/v1/responses',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+OPENAI_API_KEY},
+      body:JSON.stringify(body),
+      signal:ctrl.signal
+    });
+    j=await r.json().catch(()=>({}));
+  }catch(err){
+    const e=new Error(err?.name==='AbortError'?'OpenAI OCR nie odpowiedział w 120 s.':'Nie udało się połączyć z OpenAI OCR.');
+    e.status=502; throw e;
+  }finally{ clearTimeout(timer); }
+  if(!r.ok){ const e=new Error(j?.error?.message||'OpenAI OCR odrzucił żądanie.'); e.status=502; throw e; }
+  const text=responseOutputText(j);
+  const parsed=extractJsonObject(text);
+
+  const reviewRows=preparePhotoRows(roster);
+  const byId=new Map(reviewRows.map(r=>[Number(r.userId),r]));
+  const normalizedMap=new Map(roster.map(r=>[normalizeRosterName(r.name),Number(r.userId)]));
+  const unmatched=[];
+
+  for(const row of Array.isArray(parsed?.rows)?parsed.rows:[]){
+    let userId=Number(row?.userId||0);
+    if(!userId){
+      const byName=normalizedMap.get(normalizeRosterName(row?.name||''));
+      if(byName) userId=byName;
+    }
+    const target=byId.get(userId);
+    if(!target){
+      unmatched.push({lp:row?.lp||'',name:String(row?.name||''),note:String(row?.note||'')});
+      continue;
+    }
+    const reviewSet=new Set(Array.isArray(row?.reviewFields)?row.reviewFields.map(x=>String(x||'').toLowerCase()):[]);
+    for(let i=0;i<5;i++){
+      const key='w'+(i+1), field=parseModelField(row?.[key]||'');
+      if(reviewSet.has(key)) field.low=true;
+      target.weights[i]=mergePhotoField(target.weights[i], field);
+      if(reviewSet.has(key) && target.weights[i].value) target.weights[i].low=true;
+    }
+    const sumField=parseModelField(row?.sum||'');
+    if(reviewSet.has('sum')) sumField.low=true;
+    target.sum=mergePhotoField(target.sum, sumField);
+    if(reviewSet.has('sum') && target.sum.value) target.sum.low=true;
+  }
+
+  for(const row of reviewRows){
+    row.calculatedSum=row.weights.reduce((acc,f)=>acc+(Number(f.value)||0),0);
+    row.bigFishTotal=row.weights.filter(f=>f.isBigFish).reduce((acc,f)=>acc+(Number(f.value)||0),0);
+    if((Number(row.sum.value)||0) && row.bigFishTotal>(Number(row.sum.value)||0)) row.sum.low=true;
+  }
+  return { rows:reviewRows, unmatched, sheetCount:safeImages.length, provider:'OpenAI Vision', model:PHOTO_OCR_MODEL };
+}
 function send(res, status, data, headers={}) {
   const body = typeof data === 'string' ? data : JSON.stringify(data);
   res.writeHead(status, Object.assign({
@@ -128,7 +285,7 @@ function sendBinary(res,status,buf,type='application/octet-stream',cache='public
 async function readBody(req) {
   return await new Promise((resolve, reject) => {
     let b = '';
-    req.on('data', c => { b += c; if (b.length > 8_000_000) { req.destroy(); reject(new Error('Payload too large')); }});
+    req.on('data', c => { b += c; if (b.length > 24_000_000) { req.destroy(); reject(new Error('Payload too large')); }});
     req.on('end', () => resolve(safeJsonParse(b)));
     req.on('error', reject);
   });
@@ -1610,7 +1767,7 @@ self.addEventListener('notificationclick', event => {
   event.waitUntil((async()=>{const list=await clients.matchAll({type:'window',includeUncontrolled:true});for(const c of list){try{if('focus'in c){await c.focus();if('navigate'in c)await c.navigate(target);return}}catch(e){}}return clients.openWindow(target)})());
 });
 `, {'Content-Type':'application/javascript; charset=utf-8', 'Cache-Control':'no-store, no-cache, must-revalidate'});
-  if (path === '/api/config') return sendJson(res, 200, { ok:true, vapidPublicKey: VAPID_PUBLIC_KEY, pushReady: Boolean(webpush && VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY), photoOcrReady:Boolean(GOOGLE_VISION_API_KEY), photoOcrProvider:'Google Cloud Vision', appVersion:APP_VERSION, version:APP_VERSION_NAME });
+  if (path === '/api/config') return sendJson(res, 200, { ok:true, vapidPublicKey: VAPID_PUBLIC_KEY, pushReady: Boolean(webpush && VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY), photoOcrReady:Boolean(OPENAI_API_KEY), photoOcrProvider:'OpenAI Vision', appVersion:APP_VERSION, version:APP_VERSION_NAME });
 
   if (path === '/api/setup-admin' && method === 'POST') {
     const b = await readBody(req);
@@ -1659,8 +1816,20 @@ self.addEventListener('notificationclick', event => {
   if (path === '/api/admin/photo-ocr' && method === 'POST') {
     if (!requireUser(user, res)) return;
     if (user.role!=='ADMIN') return sendJson(res,403,{ok:false,error:'Tylko administrator może użyć importu OCR.'});
-    const b=await readBody(req),cells=Array.isArray(b.cells)?b.cells:[];
-    if(!cells.length) return sendJson(res,200,{ok:true,provider:'Google Cloud Vision',cells:[]});
+    const b=await readBody(req);
+    const images=Array.isArray(b.images)?b.images:[];
+    const entries=Array.isArray(b.entries)?b.entries:[];
+    const round=Number(b.round)===2?2:1;
+    if(images.length){
+      try{
+        const result=await openAiPhotoOcrSheets(images, entries, round);
+        return sendJson(res,200,{ok:true,provider:'OpenAI Vision',round,rows:result.rows,unmatched:result.unmatched,sheetCount:result.sheetCount,model:result.model});
+      }catch(e){
+        return sendJson(res,Number(e.status)||502,{ok:false,error:e.message||'Błąd OpenAI OCR'});
+      }
+    }
+    const cells=Array.isArray(b.cells)?b.cells:[];
+    if(!cells.length) return sendJson(res,200,{ok:true,provider:'OpenAI Vision',cells:[]});
     if(cells.length>96) return sendJson(res,400,{ok:false,error:'Za dużo komórek OCR w jednym imporcie.'});
     try{
       const result=await googleVisionOcrCells(cells);
