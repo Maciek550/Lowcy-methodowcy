@@ -1,3 +1,9 @@
+V153 — CZYTELNE WYNIKI SĘDZIEGO NA KOMPUTERZE
+
+- w wynikach sektorowych i klasyfikacjach sędziego jasne komórki mają ciemne cyfry i nazwiska;
+- kolorowe oznaczenia miejsc 1–3 mają jasną czcionkę, a BF wyraźną czerwień;
+- na jasnej tabeli wpisów suma i BF są czytelne również po zapisaniu;
+
 V152 — CZYTELNE WAGI SĘDZIEGO NA KOMPUTERZE
 
 - biała tabela wpisywania wyników sędziego ma ciemny tekst w wierszach;
