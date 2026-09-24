@@ -17,10 +17,8 @@ let VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 let VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const GOOGLE_VISION_API_KEY = process.env.GOOGLE_VISION_API_KEY || process.env.OCR_GOOGLE_API_KEY || '';
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.PHOTO_OCR_OPENAI_API_KEY || '';
-const PHOTO_OCR_MODEL = process.env.PHOTO_OCR_OPENAI_MODEL || 'gpt-6-astra';
-const APP_VERSION = '143';
-const APP_VERSION_NAME = 'V143_OPENAI_MULTI_SHEET_OCR';
+const APP_VERSION = '139';
+const APP_VERSION_NAME = 'V139_HYBRID_CLOUD_VISION';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 const CARP_REAL = fs.readFileSync(pathModule.join(__dirname, 'carp-real-v116.png'));
 const ICON_192 = fs.readFileSync(pathModule.join(__dirname, 'icon-192.png'));
@@ -85,191 +83,28 @@ async function googleVisionOcrCells(cells) {
     if(!m || m[1].length>900000) { const e=new Error('Nieprawidłowy wycinek zdjęcia OCR.'); e.status=400; throw e; }
     return {id,content:m[1],allowStar:!!c.allowStar,localStarCandidate:!!c.localStarCandidate};
   });
-  const parts=[];
-  for(let off=0;off<safe.length;off+=16)parts.push(safe.slice(off,off+16));
-  // V142: Cloud Vision dostaje surowe kolorowe wycinki komórek; partie nadal lecą równolegle.
-  // W V139/V140 partie leciały sekwencyjnie, więc 3 partie po ~25 s przekraczały timeout telefonu.
-  // Teraz wszystkie partie lecą równolegle; czas całego importu jest zbliżony do czasu najwolniejszej partii.
-  async function runVisionPart(part,batchNo){
+  const out=[];
+  for(let off=0;off<safe.length;off+=16){
+    const part=safe.slice(off,off+16);
     const body={requests:part.map(c=>({image:{content:c.content},features:[{type:'DOCUMENT_TEXT_DETECTION',maxResults:1}],imageContext:{languageHints:['en-t-i0-handwrit']}}))};
-    const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),35000);
+    const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),30000);
     let r,j;
     try{
       r=await fetch('https://vision.googleapis.com/v1/images:annotate?key='+encodeURIComponent(GOOGLE_VISION_API_KEY),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:ctrl.signal});
       j=await r.json().catch(()=>({}));
     }catch(err){
-      const e=new Error(err?.name==='AbortError'?'Zewnętrzny OCR nie odpowiedział w 35 s.':'Nie udało się połączyć z zewnętrznym OCR.');
+      const e=new Error(err?.name==='AbortError'?'Zewnętrzny OCR nie odpowiedział w 30 s.':'Nie udało się połączyć z zewnętrznym OCR.');
       e.status=502;throw e;
     }finally{clearTimeout(timer)}
     if(!r.ok){const e=new Error(j?.error?.message||'Cloud Vision odrzucił żądanie OCR.');e.status=502;throw e;}
-    const out=[];
     for(let i=0;i<part.length;i++){
       const response=j?.responses?.[i]||{};
       if(response.error){out.push({id:part[i].id,value:'',isBigFish:false,low:true,raw:'',confidence:0,error:String(response.error.message||'OCR error')});continue}
       const t=visionTextAndConfidence(response),parsed=parseVisionWeight(t.raw,part[i].allowStar,t.confidence,part[i].localStarCandidate);
       out.push({id:part[i].id,...parsed});
     }
-    return out;
   }
-  const started=Date.now();
-  const results=await Promise.all(parts.map((part,i)=>runVisionPart(part,i)));
-  console.log('PHOTO_OCR_V142 cells='+safe.length+' batches='+parts.length+' ms='+(Date.now()-started));
-  return results.flat();
-}
-function responseOutputText(payload){
-  if(typeof payload?.output_text==='string' && payload.output_text.trim()) return payload.output_text.trim();
-  const out=[];
-  for(const item of payload?.output||[]){
-    if(item?.type==='message') for(const c of item?.content||[]) if(c?.type==='output_text' && c.text) out.push(String(c.text));
-  }
-  return out.join('\n').trim();
-}
-function extractJsonObject(text){
-  const raw=String(text||'').trim();
-  if(!raw) throw new Error('Zewnętrzny OCR nie zwrócił treści.');
-  const cleaned=raw.replace(/^```(?:json)?/i,'').replace(/```$/,'').trim();
-  const start=cleaned.indexOf('{'), end=cleaned.lastIndexOf('}');
-  const candidate=(start>=0 && end>start)?cleaned.slice(start,end+1):cleaned;
-  try{return JSON.parse(candidate);}catch(err){
-    throw new Error('Nie udało się odczytać odpowiedzi AI jako JSON.');
-  }
-}
-function normalizeRosterName(s){
-  return String(s||'').toLowerCase()
-    .normalize('NFD').replace(/[̀-ͯ]/g,'')
-    .replace(/ł/g,'l').replace(/[^a-z0-9а-яёіїєґ\s-]/gi,' ')
-    .replace(/\s+/g,' ').trim();
-}
-function emptyPhotoField(){ return { value:'', isBigFish:false, low:false, blank:true, raw:'' }; }
-function parseModelField(raw){
-  const text=String(raw||'').trim();
-  const isBigFish=/^\s*\*/.test(text);
-  let value=(text.match(/\d/g)||[]).join('').slice(0,5);
-  if(value==='1') value='0';
-  return { value, isBigFish:isBigFish && Number(value||0)>0, low:false, blank:!value, raw:text };
-}
-function mergePhotoField(dst, incoming){
-  if(!incoming || !incoming.value) return dst;
-  if(!dst.value) return { ...incoming };
-  if(dst.value===incoming.value && !!dst.isBigFish===!!incoming.isBigFish) return dst;
-  return { ...dst, low:true, raw:[dst.raw,incoming.raw].filter(Boolean).join(' | ') };
-}
-function preparePhotoRows(entries){
-  return (entries||[]).map(e=>({
-    userId:Number(e.userId),
-    name:String(e.name||''),
-    weights:[emptyPhotoField(),emptyPhotoField(),emptyPhotoField(),emptyPhotoField(),emptyPhotoField()],
-    sum:emptyPhotoField(),
-    calculatedSum:0,
-    bigFishTotal:0
-  }));
-}
-async function openAiPhotoOcrSheets(images, entries, round){
-  if(!OPENAI_API_KEY){
-    const e=new Error('OpenAI OCR nie jest jeszcze skonfigurowany. Dodaj OPENAI_API_KEY w Railway.');
-    e.status=503; throw e;
-  }
-  const safeImages=(Array.isArray(images)?images:[]).slice(0,2).map((img,i)=>{
-    const name=String(img?.name||('zdjecie_'+(i+1)+'.jpg')).slice(0,80);
-    const dataUrl=String(img?.image||img?.dataUrl||'');
-    const m=dataUrl.match(/^data:image\/(?:png|jpeg|jpg|webp);base64,([A-Za-z0-9+/=]+)$/i);
-    if(!m || m[1].length>11_000_000){ const e=new Error('Nieprawidłowe zdjęcie formularza.'); e.status=400; throw e; }
-    return {name,dataUrl};
-  });
-  if(!safeImages.length){ const e=new Error('Nie wybrano zdjęć formularza.'); e.status=400; throw e; }
-  const roster=(Array.isArray(entries)?entries:[]).slice(0,80).map((e,i)=>({lp:Number(e.lp||i+1),userId:Number(e.userId),name:String(e.name||'').trim()})).filter(e=>e.userId&&e.name);
-  if(!roster.length){ const e=new Error('Brak listy zawodników do dopasowania OCR.'); e.status=400; throw e; }
-
-  const prompt=`Jesteś precyzyjnym asystentem do odczytu kart wyników zawodów wędkarskich. Odczytaj 1 lub 2 zdjęcia formularza dla tury ${Number(round)===2?2:1}.
-
-`
-   +`Każdy formularz ma kolumny: W1, W2, W3, W4, W5, SUMA.
-`
-   +`Zasady odczytu:
-`
-   +`- zwracaj tylko wiersze, w których występuje jakikolwiek wpis liczbowy albo gwiazdka BF;
-`
-   +`- wpis typu *5250 oznacza BF 5250; gwiazdkę zachowaj jako pierwszy znak pola;
-`
-   +`- pola puste zwracaj jako pusty string;
-`
-   +`- jeśli widzisz samą cyfrę 1 jako wynik, potraktuj ją jako 0;
-`
-   +`- jeśli w wierszu jest wartość w SUMA, przepisz ją do pola sum;
-`
-   +`- dopasuj każdy odczytany wiersz do oficjalnej listy zawodników po LP i nazwisku; zwracaj userId z listy;
-`
-   +`- jeśli nie jesteś pewien konkretnego pola, dodaj nazwę pola do reviewFields, np. ["w3","sum"];
-`
-   +`- jeśli ten sam zawodnik pojawia się na dwóch zdjęciach, możesz zwrócić go tylko raz z połączonymi polami.
-
-`
-   +`Oficjalna lista zawodników:
-`
-   +roster.map(r=>`${r.lp}. [${r.userId}] ${r.name}`).join('\n')
-   +`
-
-Zwróć WYŁĄCZNIE poprawny JSON w formacie:
-`
-   +`{"rows":[{"userId":123,"lp":1,"name":"Imię Nazwisko","w1":"","w2":"","w3":"","w4":"","w5":"","sum":"","reviewFields":["w1"],"note":"krótka uwaga albo pusty string"}],"unmatched":[{"lp":"","name":"","note":""}]}
-`
-   +`Bez komentarza poza JSON.`;
-
-  const input=[{role:'user',content:[{type:'input_text',text:prompt}, ...safeImages.map(img=>({type:'input_image',image_url:img.dataUrl,detail:'original'}))]}];
-  const body={model:PHOTO_OCR_MODEL,input};
-  const ctrl=new AbortController(), timer=setTimeout(()=>ctrl.abort(),120000);
-  let r,j;
-  try{
-    r=await fetch('https://api.openai.com/v1/responses',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+OPENAI_API_KEY},
-      body:JSON.stringify(body),
-      signal:ctrl.signal
-    });
-    j=await r.json().catch(()=>({}));
-  }catch(err){
-    const e=new Error(err?.name==='AbortError'?'OpenAI OCR nie odpowiedział w 120 s.':'Nie udało się połączyć z OpenAI OCR.');
-    e.status=502; throw e;
-  }finally{ clearTimeout(timer); }
-  if(!r.ok){ const e=new Error(j?.error?.message||'OpenAI OCR odrzucił żądanie.'); e.status=502; throw e; }
-  const text=responseOutputText(j);
-  const parsed=extractJsonObject(text);
-
-  const reviewRows=preparePhotoRows(roster);
-  const byId=new Map(reviewRows.map(r=>[Number(r.userId),r]));
-  const normalizedMap=new Map(roster.map(r=>[normalizeRosterName(r.name),Number(r.userId)]));
-  const unmatched=[];
-
-  for(const row of Array.isArray(parsed?.rows)?parsed.rows:[]){
-    let userId=Number(row?.userId||0);
-    if(!userId){
-      const byName=normalizedMap.get(normalizeRosterName(row?.name||''));
-      if(byName) userId=byName;
-    }
-    const target=byId.get(userId);
-    if(!target){
-      unmatched.push({lp:row?.lp||'',name:String(row?.name||''),note:String(row?.note||'')});
-      continue;
-    }
-    const reviewSet=new Set(Array.isArray(row?.reviewFields)?row.reviewFields.map(x=>String(x||'').toLowerCase()):[]);
-    for(let i=0;i<5;i++){
-      const key='w'+(i+1), field=parseModelField(row?.[key]||'');
-      if(reviewSet.has(key)) field.low=true;
-      target.weights[i]=mergePhotoField(target.weights[i], field);
-      if(reviewSet.has(key) && target.weights[i].value) target.weights[i].low=true;
-    }
-    const sumField=parseModelField(row?.sum||'');
-    if(reviewSet.has('sum')) sumField.low=true;
-    target.sum=mergePhotoField(target.sum, sumField);
-    if(reviewSet.has('sum') && target.sum.value) target.sum.low=true;
-  }
-
-  for(const row of reviewRows){
-    row.calculatedSum=row.weights.reduce((acc,f)=>acc+(Number(f.value)||0),0);
-    row.bigFishTotal=row.weights.filter(f=>f.isBigFish).reduce((acc,f)=>acc+(Number(f.value)||0),0);
-    if((Number(row.sum.value)||0) && row.bigFishTotal>(Number(row.sum.value)||0)) row.sum.low=true;
-  }
-  return { rows:reviewRows, unmatched, sheetCount:safeImages.length, provider:'OpenAI Vision', model:PHOTO_OCR_MODEL };
+  return out;
 }
 function send(res, status, data, headers={}) {
   const body = typeof data === 'string' ? data : JSON.stringify(data);
@@ -285,7 +120,7 @@ function sendBinary(res,status,buf,type='application/octet-stream',cache='public
 async function readBody(req) {
   return await new Promise((resolve, reject) => {
     let b = '';
-    req.on('data', c => { b += c; if (b.length > 24_000_000) { req.destroy(); reject(new Error('Payload too large')); }});
+    req.on('data', c => { b += c; if (b.length > 8_000_000) { req.destroy(); reject(new Error('Payload too large')); }});
     req.on('end', () => resolve(safeJsonParse(b)));
     req.on('error', reject);
   });
@@ -1542,7 +1377,7 @@ async function route(req, res) {
   const path = url.pathname;
   const method = req.method;
 
-  if (path === '/__probe_js_v142' || path === '/__probe_boot_v142' || path === '/__probe_js_v141' || path === '/__probe_boot_v141' || path === '/__probe_js_v140' || path === '/__probe_boot_v140' || path === '/__probe_js_v139' || path === '/__probe_boot_v139' || path === '/__probe_js_v138' || path === '/__probe_boot_v138' || path === '/__probe_js_v137' || path === '/__probe_boot_v137' || path === '/__probe_js_v136' || path === '/__probe_boot_v136' || path === '/__probe_js_v134' || path === '/__probe_boot_v134' || path === '/__probe_js_v133' || path === '/__probe_boot_v133' || path === '/__probe_js_v132' || path === '/__probe_boot_v132' || path === '/__probe_js_v102' || path === '/__probe_boot_v102' || path === '/__probe_js_v101' || path === '/__probe_boot_v101' || path === '/__probe_js_v100' || path === '/__probe_boot_v100' || path === '/__probe_js_v99' || path === '/__probe_boot_v99' || path === '/__probe_js_v98' || path === '/__probe_boot_v98' || path === '/__probe_js_v97' || path === '/__probe_boot_v97' || path === '/__probe_js_v96' || path === '/__probe_boot_v96' || path === '/__probe_js_v95' || path === '/__probe_boot_v95' || path === '/__probe_js_v94' || path === '/__probe_boot_v94' || path === '/__probe_js_v93' || path === '/__probe_boot_v93' || path === '/__probe_js_v91' || path === '/__probe_boot_v91' || path === '/__probe_js_v90' || path === '/__probe_boot_v90' || path === '/__probe_js_v89' || path === '/__probe_boot_v89' || path === '/__probe_js_v88' || path === '/__probe_boot_v88' || path === '/__probe_js_v87' || path === '/__probe_boot_v87' || path === '/__probe_js_v86' || path === '/__probe_boot_v86' || path === '/__probe_js_v85' || path === '/__probe_boot_v85' || path === '/__probe_js_v84' || path === '/__probe_boot_v84' || path === '/__probe_js_v83' || path === '/__probe_boot_v83' || path === '/__probe_js_v82' || path === '/__probe_boot_v82' || path === '/__probe_js_v81' || path === '/__probe_boot_v81' || path === '/__probe_js_v80' || path === '/__probe_boot_v80' || path === '/__probe_js_v79' || path === '/__probe_boot_v79' || path === '/__probe_js_v78' || path === '/__probe_boot_v78' || path === '/__probe_js_v77' || path === '/__probe_boot_v77' || path === '/__probe_js_v76' || path === '/__probe_boot_v76' || path === '/__probe_js_v75' || path === '/__probe_boot_v75' || path === '/__probe_js_v74' || path === '/__probe_boot_v74' || path === '/__probe_js_v73' || path === '/__probe_boot_v73' || path === '/__probe_js_v72' || path === '/__probe_boot_v72' || path === '/__probe_js_v71' || path === '/__probe_boot_v71') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
+  if (path === '/__probe_js_v139' || path === '/__probe_boot_v139' || path === '/__probe_js_v138' || path === '/__probe_boot_v138' || path === '/__probe_js_v137' || path === '/__probe_boot_v137' || path === '/__probe_js_v136' || path === '/__probe_boot_v136' || path === '/__probe_js_v134' || path === '/__probe_boot_v134' || path === '/__probe_js_v133' || path === '/__probe_boot_v133' || path === '/__probe_js_v132' || path === '/__probe_boot_v132' || path === '/__probe_js_v102' || path === '/__probe_boot_v102' || path === '/__probe_js_v101' || path === '/__probe_boot_v101' || path === '/__probe_js_v100' || path === '/__probe_boot_v100' || path === '/__probe_js_v99' || path === '/__probe_boot_v99' || path === '/__probe_js_v98' || path === '/__probe_boot_v98' || path === '/__probe_js_v97' || path === '/__probe_boot_v97' || path === '/__probe_js_v96' || path === '/__probe_boot_v96' || path === '/__probe_js_v95' || path === '/__probe_boot_v95' || path === '/__probe_js_v94' || path === '/__probe_boot_v94' || path === '/__probe_js_v93' || path === '/__probe_boot_v93' || path === '/__probe_js_v91' || path === '/__probe_boot_v91' || path === '/__probe_js_v90' || path === '/__probe_boot_v90' || path === '/__probe_js_v89' || path === '/__probe_boot_v89' || path === '/__probe_js_v88' || path === '/__probe_boot_v88' || path === '/__probe_js_v87' || path === '/__probe_boot_v87' || path === '/__probe_js_v86' || path === '/__probe_boot_v86' || path === '/__probe_js_v85' || path === '/__probe_boot_v85' || path === '/__probe_js_v84' || path === '/__probe_boot_v84' || path === '/__probe_js_v83' || path === '/__probe_boot_v83' || path === '/__probe_js_v82' || path === '/__probe_boot_v82' || path === '/__probe_js_v81' || path === '/__probe_boot_v81' || path === '/__probe_js_v80' || path === '/__probe_boot_v80' || path === '/__probe_js_v79' || path === '/__probe_boot_v79' || path === '/__probe_js_v78' || path === '/__probe_boot_v78' || path === '/__probe_js_v77' || path === '/__probe_boot_v77' || path === '/__probe_js_v76' || path === '/__probe_boot_v76' || path === '/__probe_js_v75' || path === '/__probe_boot_v75' || path === '/__probe_js_v74' || path === '/__probe_boot_v74' || path === '/__probe_js_v73' || path === '/__probe_boot_v73' || path === '/__probe_js_v72' || path === '/__probe_boot_v72' || path === '/__probe_js_v71' || path === '/__probe_boot_v71') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
 
   if (path === '/__probe_js_v68' || path === '/__probe_boot_v68' || path === '/__probe_js_v67' || path === '/__probe_boot_v67' || path === '/__probe_js_v66' || path === '/__probe_boot_v66' || path === '/__probe_js_v65' || path === '/__probe_boot_v65' || path === '/__probe_js_v63' || path === '/__probe_boot_v63' || path === '/__probe_js_v62' || path === '/__probe_boot_v62' || path === '/__probe_js_v60' || path === '/__probe_boot_v60' || path === '/__probe_js_v59' || path === '/__probe_boot_v59' || path === '/__probe_js_v58' || path === '/__probe_boot_v58' || path === '/__probe_js_v57' || path === '/__probe_boot_v57' || path === '/__probe_js_v56' || path === '/__probe_boot_v56' || path === '/__probe_js_v55' || path === '/__probe_boot_v55' || path === '/__probe_js_v54' || path === '/__probe_boot_v54' || path === '/__probe_js_v53' || path === '/__probe_boot_v53' || path === '/__probe_js_v52' || path === '/__probe_boot_v52' || path === '/__probe_js_v51' || path === '/__probe_boot_v51' || path === '/__probe_js_v50' || path === '/__probe_boot_v50' || path === '/__probe_js_v49' || path === '/__probe_boot_v49' || path === '/__probe_js_v36' || path === '/__probe_boot_v36' || path === '/__probe_js_v35' || path === '/__probe_boot_v35' || path === '/__probe_js_v34' || path === '/__probe_boot_v34' || path === '/__probe_js_v33' || path === '/__probe_boot_v33' || path === '/__probe_js_v32' || path === '/__probe_boot_v32' || path === '/__probe_js_v30' || path === '/__probe_boot_v30' || path === '/__probe_js_v29' || path === '/__probe_boot_v29' || path === '/__probe_js_v27' || path === '/__probe_boot_v27' || path === '/__probe_inline_v26') return sendJson(res, 200, { ok:true, path, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/api/version') return sendJson(res, 200, { ok:true, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
@@ -1743,9 +1578,9 @@ body #app button.rosterLeaveRequest:disabled{opacity:.65;cursor:wait}
     ]
   }), {'Content-Type':'application/manifest+json; charset=utf-8','Cache-Control':'no-cache'});
   if (path === '/sw.js') return send(res, 200, `
-const SHELL_CACHE='lowcy-shell-v142';
-const APP_SHELL_JS='/app.js?v=142';
-const PDF_JS='/pdf-vector.js?v=142';
+const SHELL_CACHE='lowcy-shell-v139';
+const APP_SHELL_JS='/app.js?v=139';
+const PDF_JS='/pdf-vector.js?v=139';
 const SHELL=['/',APP_SHELL_JS,PDF_JS,'/icon-192.png','/icon-512.png'];
 async function fetchWithTimeout(req,ms=30000){const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),ms);try{return await fetch(req,{cache:'no-store',signal:ctrl.signal})}finally{clearTimeout(timer)}}
 self.addEventListener('install',event=>event.waitUntil((async()=>{const replies=await Promise.all(SHELL.map(url=>fetchWithTimeout(url)));if(replies.some(r=>!r.ok))throw Error('Incomplete shell');const cache=await caches.open(SHELL_CACHE);await Promise.all(SHELL.map((url,i)=>cache.put(url,replies[i])));await self.skipWaiting()})()));
@@ -1767,7 +1602,7 @@ self.addEventListener('notificationclick', event => {
   event.waitUntil((async()=>{const list=await clients.matchAll({type:'window',includeUncontrolled:true});for(const c of list){try{if('focus'in c){await c.focus();if('navigate'in c)await c.navigate(target);return}}catch(e){}}return clients.openWindow(target)})());
 });
 `, {'Content-Type':'application/javascript; charset=utf-8', 'Cache-Control':'no-store, no-cache, must-revalidate'});
-  if (path === '/api/config') return sendJson(res, 200, { ok:true, vapidPublicKey: VAPID_PUBLIC_KEY, pushReady: Boolean(webpush && VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY), photoOcrReady:Boolean(OPENAI_API_KEY), photoOcrProvider:'OpenAI Vision', appVersion:APP_VERSION, version:APP_VERSION_NAME });
+  if (path === '/api/config') return sendJson(res, 200, { ok:true, vapidPublicKey: VAPID_PUBLIC_KEY, pushReady: Boolean(webpush && VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY), photoOcrReady:Boolean(GOOGLE_VISION_API_KEY), photoOcrProvider:'Google Cloud Vision', appVersion:APP_VERSION, version:APP_VERSION_NAME });
 
   if (path === '/api/setup-admin' && method === 'POST') {
     const b = await readBody(req);
@@ -1816,20 +1651,8 @@ self.addEventListener('notificationclick', event => {
   if (path === '/api/admin/photo-ocr' && method === 'POST') {
     if (!requireUser(user, res)) return;
     if (user.role!=='ADMIN') return sendJson(res,403,{ok:false,error:'Tylko administrator może użyć importu OCR.'});
-    const b=await readBody(req);
-    const images=Array.isArray(b.images)?b.images:[];
-    const entries=Array.isArray(b.entries)?b.entries:[];
-    const round=Number(b.round)===2?2:1;
-    if(images.length){
-      try{
-        const result=await openAiPhotoOcrSheets(images, entries, round);
-        return sendJson(res,200,{ok:true,provider:'OpenAI Vision',round,rows:result.rows,unmatched:result.unmatched,sheetCount:result.sheetCount,model:result.model});
-      }catch(e){
-        return sendJson(res,Number(e.status)||502,{ok:false,error:e.message||'Błąd OpenAI OCR'});
-      }
-    }
-    const cells=Array.isArray(b.cells)?b.cells:[];
-    if(!cells.length) return sendJson(res,200,{ok:true,provider:'OpenAI Vision',cells:[]});
+    const b=await readBody(req),cells=Array.isArray(b.cells)?b.cells:[];
+    if(!cells.length) return sendJson(res,200,{ok:true,provider:'Google Cloud Vision',cells:[]});
     if(cells.length>96) return sendJson(res,400,{ok:false,error:'Za dużo komórek OCR w jednym imporcie.'});
     try{
       const result=await googleVisionOcrCells(cells);
@@ -2708,7 +2531,7 @@ const HTML = `<!doctype html>
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
 <script>try{if(localStorage.getItem('carp_token'))document.documentElement.classList.add('hasSavedSession')}catch(e){}</script>
-<title>Łowcy Methodowcy — V142</title>
+<title>Łowcy Methodowcy — V139</title>
 <style>
 :root{--green:#114b2f;--green2:#17643f;--bg:#f3f6ef;--card:#fff;--line:#cfd8cc;--txt:#18251d;--muted:#68746d;--red:#b32020;--gold:#ffc400;--blue:#1067c8;--soft:#eaf2eb}
 *{box-sizing:border-box}html,body{height:auto!important;min-height:100%!important;overflow-y:auto!important;overscroll-behavior:auto!important}body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}header{position:sticky;top:0;z-index:5;background:var(--green);color:white;padding:12px 14px;box-shadow:0 2px 8px #0002}header .row{display:flex;justify-content:space-between;gap:12px;align-items:center;max-width:1180px;margin:auto}h1{font-size:18px;margin:0}h2{font-size:18px;margin:0 0 8px}h3{font-size:16px;margin:12px 0 8px}main{max-width:1180px;margin:0 auto;padding:12px}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin:12px 0;box-shadow:0 2px 8px #0000000d}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}input,select,textarea,button{width:100%;font:inherit;border-radius:12px;border:1px solid var(--line);padding:10px 11px;background:white}textarea{min-height:70px}button{border:0;background:var(--green);color:white;font-weight:900;cursor:pointer}button.secondary{background:#e7eee7;color:var(--green);border:1px solid #bfd0c2}button.warn{background:var(--red)}button.blue{background:var(--blue)}button:disabled{opacity:.55;cursor:not-allowed}label{display:block;font-size:12px;font-weight:900;color:var(--muted);margin:8px 0 4px}.tabs{display:flex;gap:8px;overflow:auto;padding:8px 0}.tabs button{white-space:nowrap;width:auto;padding:9px 13px}.tabs button.active{background:#072e1c}.tablewrap{width:100%;overflow:auto;border-radius:12px;border:1px solid var(--line)}table{width:100%;border-collapse:collapse;background:white}th,td{border:1px solid var(--line);padding:8px 7px;text-align:left;vertical-align:middle}th{background:#e6f0e8;color:#106b28;font-size:12px;text-transform:uppercase}.nowrap{white-space:nowrap}.muted{color:var(--muted)}.ok{color:var(--green);font-weight:900}.bad{color:var(--red);font-weight:900}.pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#e6f0e8;font-weight:900}.hidden{display:none!important}.top-actions{display:flex;gap:8px;align-items:center}.top-actions button{width:auto;padding:8px 11px;background:#ffffff22;border:1px solid #ffffff55}.small{font-size:12px}.right{text-align:right}.mine{background:#fff4b8!important;outline:3px solid var(--gold);outline-offset:-3px;font-weight:900}.mine td{font-weight:900}.danger-line{border-left:6px solid var(--red)}.success-line{border-left:6px solid var(--green)}.mapbox{background:#f7faf4;border:1px solid var(--line);border-radius:14px;padding:10px;overflow:auto}.banktitle{font-size:12px;font-weight:900;color:var(--muted);margin:8px 0 5px}.bank{display:grid;grid-template-columns:repeat(auto-fit,minmax(42px,1fr));gap:5px;min-width:320px}.stand{min-height:42px;border:1px solid #a8b7aa;border-radius:9px;background:white;display:flex;align-items:center;justify-content:center;flex-direction:column;font-weight:900;font-size:12px}.stand small{font-size:9px;font-weight:800;color:#555}.stand.occ{box-shadow:inset 0 -4px 0 #cbd8cc}.stand.t1{background:#ffe1e1;border:3px solid #d00000;color:#8e0000}.stand.t2{background:#dfeaff;border:3px solid #005bd8;color:#003c91}.stand.both{background:#f0dcff;border:3px solid #7a1fc2;color:#461078}.ownbox{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.ownitem{border:2px solid var(--line);border-radius:14px;padding:12px;background:#fff}.ownitem strong{font-size:24px}.twoCols{display:grid;grid-template-columns:1fr 1fr;gap:12px}.inlineBtns{display:flex;gap:6px;flex-wrap:wrap}.inlineBtns button{width:auto}.competitionActions{gap:22px;align-items:center}.competitionActions button{min-width:96px}.adminbar{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.tag{font-size:11px;border-radius:999px;padding:3px 7px;background:#f0f4ee;font-weight:900}.t1tag{background:#ffe1e1;color:#8e0000}.t2tag{background:#dfeaff;color:#003c91}.sector-A{box-shadow:inset 0 0 0 2px #b32020}.sector-B{box-shadow:inset 0 0 0 2px #1067c8}.sector-C{box-shadow:inset 0 0 0 2px #14803a}.sector-D{box-shadow:inset 0 0 0 2px #7a1fc2}.sector-E{box-shadow:inset 0 0 0 2px #b36b00}.sector-F{box-shadow:inset 0 0 0 2px #006b7a}.checkline{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--txt);font-weight:800}.checkline input{width:auto}.sectorMap{background:#fbfdf9;border:1px solid var(--line);border-radius:14px;padding:12px;overflow:auto}.mapTitle,.bankLabel{font-weight:1000;color:#204b38;margin:5px 0}.standRow{display:grid;gap:0;min-width:640px}.standCell{min-height:45px;border:2px solid #446b56;display:flex;align-items:center;justify-content:center;flex-direction:column;font-weight:1000;color:#123827;margin:-1px 0 0 -1px}.standCell small{font-size:10px}.standCell.empty{border:0;background:transparent}.sectorBand{display:grid;min-width:640px;gap:0}.sectorBlock{min-height:78px;border:3px solid #38664d;display:flex;align-items:center;justify-content:center;flex-direction:column;margin:-1px 0 0 -1px;text-align:center}.sectorBlock span{font-size:22px;font-weight:1000}.sectorSummary{background:#ecf2ed;border-radius:10px;padding:10px;margin-top:10px;font-size:13px}.water{text-align:center;background:#f2f6f1;color:#6a756d;font-weight:1000;padding:12px;min-width:640px}.sectorFill-A{background:#d8f1dd}.sectorFill-B{background:#dbe8fb}.sectorFill-C{background:#ffe7bd}.sectorFill-D{background:#f6d9e3}.sectorFill-E{background:#eadffb}.sectorFill-F{background:#dff4f4}.sectorFill-G{background:#f7e8ce}.sectorFill-H{background:#e5f0d0}.standCell.t1{background:#ffb5b5!important;border:4px solid #d00000!important;color:#7c0000}.standCell.t2{background:#b9d2ff!important;border:4px solid #005bd8!important;color:#002c70}.standCell.both{background:#e1b8ff!important;border:4px solid #7a1fc2!important;color:#3c0060}.standCell.occ{box-shadow:inset 0 -5px 0 #244f36}.weightItems{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:5px}.weightTag{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:3px 6px;font-size:11px;font-weight:900;background:#edf4ec;border:1px solid #bfd0c2}.weightTag button{width:auto;padding:0 4px;border-radius:8px;background:#b91c1c;color:#fff;line-height:1.1}.bfTag{background:#fff0d6;border-color:#e5b965}.netTag{background:#e7f5e7}.bfLine{font-size:12px;font-weight:1000;color:#b91c1c}.flashSave{background:#bff7c8!important;transition:background .25s}.resultInputTable input{min-width:120px}.sectorBand.clean{margin:0}.sectorFlexRow{display:flex;gap:0;min-width:640px}.sectorGroup{display:grid;gap:0;margin:0}.sectorGroup .standCell{border-radius:0;margin:-1px 0 0 -1px}.sectorFlexRow .sectorBlock{border-radius:0;margin:-1px 0 0 -1px}.standFlex{align-items:stretch}.sectorBand.clean .sectorBlock{min-height:72px}.pushBox{margin-top:6px;line-height:1.35}.bankLabelBottom{margin-top:8px}.quickScroll{position:fixed;right:10px;bottom:14px;z-index:30;display:flex;flex-direction:column;gap:7px}.quickScroll button{width:52px;padding:9px 0;border-radius:999px;background:#123827cc;box-shadow:0 3px 10px #0003}.quickScroll button:last-child{background:#e7eee7;color:#123827;border:1px solid #bfd0c2}
@@ -6276,18 +6099,6 @@ body.playerTheme #app>.tabs button{font-size:15px!important;line-height:1.1!impo
 .judgeOfflineState{margin:0 0 9px;padding:9px 12px;border-radius:10px;font-weight:900;text-align:center}
 .judgeOfflineState.ok{background:#143c2d;color:#9af0bd;border:1px solid #29734f}.judgeOfflineState.offline{background:#573b13;color:#ffd98f;border:1px solid #a47025}.judgeOfflineState.syncing{background:#183c59;color:#a9daf9;border:1px solid #376c91}
 .judgePendingWeight{border-style:dashed!important;opacity:.95}.judgePendingWeight small{font-weight:1000}.judgePendingError{background:#68242d!important;border-color:#e75a6c!important}
-/* V140 — większy zegar w kaflu zawodów + jawny wybór aparatu/pliku dla importu zdjęcia. */
-body.playerTheme #app .playerCompCardMeeting{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:4px!important}
-body.playerTheme #app .playerCompCardMeeting .playerCompClockIcon{display:inline-flex!important;align-items:center!important;justify-content:center!important;font-size:30px!important;line-height:.72!important;height:28px!important;min-width:27px!important;margin:-3px 0 -2px!important;font-weight:400!important}
-@media(max-width:760px){body.playerTheme #app .playerCompCardV98 .playerCompCardMeeting .playerCompClockIcon{font-size:29px!important;height:27px!important;min-width:26px!important}}
-.photoSourceDialog{position:relative;max-width:540px;margin:10vh auto 0;background:#102534;color:#fff;border:1px solid #55798e;border-radius:18px;padding:22px;box-shadow:0 22px 80px #000a;text-align:center}
-.photoSourceDialog h2{margin:4px 0 8px;font-size:24px}.photoSourceDialog p{margin:0 0 16px;color:#c3d7e3}.photoSourceDialog>small{display:block;margin-top:14px;color:#9eb8c8}
-.photoSourceIcon{font-size:44px;line-height:1;margin-bottom:7px}.photoSourceClose{position:absolute;right:9px;top:9px;width:38px!important;min-width:38px!important;height:38px!important;min-height:38px!important;padding:0!important;border-radius:50%!important;font-size:25px!important;line-height:1!important}
-.photoSourceActions{display:grid;grid-template-columns:1fr 1fr;gap:12px}.photoSourcePrimary{min-height:96px!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:5px!important;font-size:16px!important}.photoSourcePrimary b{font-size:18px}.photoSourcePrimary span{font-size:12px;font-weight:700;opacity:.9}
-.photoBusyDialog{max-width:500px}.photoBusyDialog strong,.photoBusyDialog small{display:block}.photoBusyDialog strong{margin-top:12px;font-size:16px}.photoBusySpinner{width:58px;height:58px;border:6px solid #34576c;border-top-color:#65d58a;border-radius:50%;margin:0 auto 14px;animation:photoSpin .9s linear infinite}@keyframes photoSpin{to{transform:rotate(360deg)}}
-.photoErrorDialog p{padding:10px;border-radius:8px;background:#55212a;color:#ffd7dc;font-weight:800}.photoErrorDialog .photoSourceActions{margin-top:12px}
-@media(max-width:620px){.photoSourceDialog{margin:7vh 7px 0;padding:18px 12px}.photoSourceActions{grid-template-columns:1fr}.photoSourcePrimary{min-height:84px!important}.photoSourceDialog h2{font-size:20px}}
-
 .photoImportQuick,.photoPdfBox{margin:12px 0;padding:12px;border:1px solid #3d6a82;border-radius:12px;background:#0d2636;color:#eaf7ff}
 .photoImportQuick>b,.photoPdfBox>b{display:block;font-size:15px;margin-bottom:4px}.photoImportQuick>span,.photoPdfBox>span{display:block;font-size:12px;color:#b6cedd;margin-bottom:9px}
 .photoImportOverlay{position:fixed;inset:0;z-index:100000;background:#06101aeF;overflow:auto;padding:18px}
@@ -6309,7 +6120,7 @@ body.playerTheme #app .playerCompCardMeeting .playerCompClockIcon{display:inline
 </head>
 <body class="authMode">
 <div id="bootGuard"><img src="/icon-192.png" alt=""><b>Łowcy Methodowcy</b><span>Uruchamiam aplikację…</span><button id="bootRetry" class="hidden" type="button" onclick="retryLowcyBoot()">Spróbuj ponownie</button></div>
-<header><div class="row"><h1><img class="brandIcon" src="/icon-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V142</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
+<header><div class="row"><h1><img class="brandIcon" src="/icon-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V139</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
 <main>
 <div id="msg"></div>
 <section id="auth" class="card">
@@ -6322,7 +6133,7 @@ body.playerTheme #app .playerCompCardMeeting .playerCompClockIcon{display:inline
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="appVersionBadge">V142</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
+  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="appVersionBadge">V139</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-rules" class="hidden" onclick="showTab('rules')">Regulamin ogólny</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-profile" class="hidden" onclick="showTab('profile')">Mój profil</button><button id="btn-history" class="hidden" onclick="showTab('history')">Historia startów</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
     <details id="adminCreate" class="card hidden adminCreateV93"><summary class="adminCreateToggle">Robimy zawody</summary><div class="adminCreateBody"><h2>Utwórz zawody</h2><p class="small muted">Dane z tego formularza są później widoczne dla zawodnika.</p><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Zbiórka / godzina</label><input id="cMeetingTime" type="time" value="06:00"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div></div><div class="adminTextPair"><div><label>Tryb zawodów</label><select id="cStatus"><option value="OPEN">Zawody otwarte — każdy może się zapisać</option><option value="TEST">Zawody testowe — tylko admin</option><option value="CLOSED">Zapisy zakończone — widoczne, bez zapisów</option></select><label>Informacje organizacyjne</label><textarea id="cNotes" placeholder="Parking, miejsce zbiórki, godzina losowania, dodatkowe informacje…"></textarea></div><div><label>Program / regulamin tych zawodów</label><textarea id="cRegulations" class="rulesEditor" placeholder="Np. 06:00 zbiórka, 06:15 losowanie, 07:00–15:00 zawody, ważne zasady tylko dla tego wydarzenia…"></textarea></div></div><button onclick="createCompetition(event)">Utwórz zawody</button></div></details>
@@ -6339,14 +6150,14 @@ body.playerTheme #app .playerCompCardMeeting .playerCompClockIcon{display:inline
 <div class="quickScroll"><button onclick="scrollAppTop()">↑</button><button onclick="scrollAppBottom()">↓</button></div>
 <script>
 (function(){
- window.__lowcyRecover142=function(){var g=document.getElementById('bootGuard');if(!g)return;g.classList.remove('hidden');var sp=g.querySelector('span');if(sp)sp.textContent='Nie udało się pobrać aplikacji. Sprawdź połączenie i spróbuj ponownie.';var b=document.getElementById('bootRetry');if(b)b.classList.remove('hidden')};
+ window.__lowcyRecover139=function(){var g=document.getElementById('bootGuard');if(!g)return;g.classList.remove('hidden');var sp=g.querySelector('span');if(sp)sp.textContent='Nie udało się pobrać aplikacji. Sprawdź połączenie i spróbuj ponownie.';var b=document.getElementById('bootRetry');if(b)b.classList.remove('hidden')};
  window.retryLowcyBoot=function(){if(typeof startBoot==='function'){startBoot();return}location.reload()};
  if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'}).then(function(reg){return reg.update()}).catch(function(){});
- setTimeout(function(){if(!window.__LOWCY_JS_STARTED)window.__lowcyRecover142()},30000);
+ setTimeout(function(){if(!window.__LOWCY_JS_STARTED)window.__lowcyRecover139()},30000);
 })();
 </script>
-<script src="/pdf-vector.js?v=142" defer></script>
-<script src="/app.js?v=142" defer onerror="window.__lowcyRecover142&&window.__lowcyRecover142()"></script>
+<script src="/pdf-vector.js?v=139" defer></script>
+<script src="/app.js?v=139" defer onerror="window.__lowcyRecover139&&window.__lowcyRecover139()"></script>
 </body>
 </html>`;
 
@@ -6357,5 +6168,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V142_RAW_CELL_CLOUD_OCR_READY'); console.log('CARP_MOBILE_READY port=' + PORT); startPresenceReminderLoop(); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V139_HYBRID_CLOUD_VISION_READY'); console.log('CARP_MOBILE_READY port=' + PORT); startPresenceReminderLoop(); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });

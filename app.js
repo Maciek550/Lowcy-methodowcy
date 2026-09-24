@@ -1,4 +1,4 @@
-const CLIENT_VERSION='142';const CLIENT_VERSION_NAME='V142_RAW_CELL_CLOUD_OCR';window.__LOWCY_APP_JS_142=1;try{fetch('/__probe_js_v142',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V142_RAW_CELL_CLOUD_OCR_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='139';const CLIENT_VERSION_NAME='V139_HYBRID_CLOUD_VISION';window.__LOWCY_APP_JS_139=1;try{fetch('/__probe_js_v139',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V139_HYBRID_CLOUD_VISION_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -441,7 +441,7 @@ function renderPlayerCompetitionMobileItem(c){
   const st=playerCompetitionStatus(c),mine=playerCompetitionMineLabel(c),x=playerCompetitionDateInfo(c),cc=playerCompetitionCountdownClass(x),isMine=playerCompetitionMine(c),closed=c.status!=='OPEN'||c.signup_open===false,leavePending=String(c.my_leave_request_status||'').toUpperCase()==='PENDING';
   const action2=isMine?(leavePending?'<button type="button" class="secondary" disabled>PROŚBA WYSŁANA</button>':'<button type="button" class="warn" onclick="leaveComp('+c.id+')">REZYGNUJ</button>'):'<button type="button" '+(closed?'disabled':'')+' onclick="joinComp('+c.id+')">ZAPISZ</button>';
   return '<article class="playerCompCompactCard playerCompCardV96 playerCompCardV97 playerCompCardV98 '+(mine?'mine':'')+'">'
-    +'<div class="playerCompCardHead"><span class="playerCompNo">'+playerCompetitionNo(c)+'</span><b class="playerCompCardTitle">'+esc(c.title)+'</b>'+playerCompetitionAttentionBadge(c)+'<span class="playerCompMeeting playerCompCardMeeting"><span class="playerCompClockIcon" aria-hidden="true">◷</span> '+esc(meetingTimeText(c))+'</span></div>'
+    +'<div class="playerCompCardHead"><span class="playerCompNo">'+playerCompetitionNo(c)+'</span><b class="playerCompCardTitle">'+esc(c.title)+'</b>'+playerCompetitionAttentionBadge(c)+'<span class="playerCompMeeting playerCompCardMeeting">◷ '+esc(meetingTimeText(c))+'</span></div>'
     +'<div class="playerCompLocationDate"><span class="playerCompFishery">'+esc(c.fishery||'—')+'</span><strong class="playerCompDate">'+esc(x.date)+'</strong></div>'
     +'<div class="playerCompCardDate"><span class="playerCompWeekday">'+esc(x.weekday)+'</span>'+(x.countdown?'<em class="playerCompCountdown '+cc+'">'+esc(x.countdown)+'</em>':'')+'<span class="playerCompStatus '+st.cls+'">'+st.label+'</span></div>'
     +(mine?'<div class="playerCompCardFishery">'+renderPlayerMineStack(c,mine)+'</div>':'')
@@ -1108,7 +1108,7 @@ function photoGrayData(img){
   const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(img,0,0,w,h);
   const rgba=ctx.getImageData(0,0,w,h).data,gray=new Uint8Array(w*h);
   for(let i=0,p=0;i<rgba.length;i+=4,p++)gray[p]=Math.round(rgba[i]*.299+rgba[i+1]*.587+rgba[i+2]*.114);
-  return {w,h,gray,canvas,rgba};
+  return {w,h,gray,canvas};
 }
 function photoIntegralDark(gray,w,h,limit=92){
   const stride=w+1,ii=new Uint32Array((w+1)*(h+1));
@@ -1203,18 +1203,22 @@ function photoDetectInkSample(sample,reference=null){
   }
   return {blank,inkPixels,isBigFish:starCandidate};
 }
-function photoFieldRawData(image,H,rect,sw=700,sh=210){
-  // V142: Google dostaje naturalny, kolorowy fragment zdjęcia — bez progowania,
-  // bez sztucznego kontrastu i bez obcinania końcowych cyfr przy krawędzi komórki.
-  const {w,h,rgba}=image,out=document.createElement('canvas');out.width=sw;out.height=sh;
-  const ctx=out.getContext('2d'),dst=ctx.createImageData(sw,sh),data=dst.data;
-  for(let yy=0;yy<sh;yy++)for(let xx=0;xx<sw;xx++){
-    const lx=rect.x+(xx+.5)/sw*rect.w,ly=rect.y+(yy+.5)/sh*rect.h,p=photoMap(H,lx,ly);
-    const px=Math.max(0,Math.min(w-1,Math.round(p.x))),py=Math.max(0,Math.min(h-1,Math.round(p.y))),si=(py*w+px)*4,di=(yy*sw+xx)*4;
-    data[di]=rgba[si];data[di+1]=rgba[si+1];data[di+2]=rgba[si+2];data[di+3]=255;
+function photoSampleToPngData(sample){
+  const {vals,sw,sh}=sample,temp=document.createElement('canvas');temp.width=sw;temp.height=sh;
+  const tctx=temp.getContext('2d'),img=tctx.createImageData(sw,sh);
+  const sorted=Array.from(vals).sort((x,y)=>x-y),bg=sorted[Math.floor(sorted.length*.88)]||235,black=Math.max(35,Math.min(145,bg-95));
+  for(let i=0;i<vals.length;i++){
+    let v=vals[i];
+    v=Math.round((v-black)*255/Math.max(35,bg-black));
+    v=Math.max(0,Math.min(255,v));
+    const p=i*4;img.data[p]=img.data[p+1]=img.data[p+2]=v;img.data[p+3]=255;
   }
-  ctx.putImageData(dst,0,0);
-  return out.toDataURL('image/jpeg',0.95);
+  tctx.putImageData(img,0,0);
+  const out=document.createElement('canvas');out.width=720;out.height=220;const octx=out.getContext('2d');
+  octx.fillStyle='#fff';octx.fillRect(0,0,out.width,out.height);
+  octx.imageSmoothingEnabled=true;octx.imageSmoothingQuality='high';
+  octx.drawImage(temp,28,28,out.width-56,out.height-56);
+  return out.toDataURL('image/png');
 }
 function photoCloudField(result,local,allowStar){
   if(!result)return {value:'',isBigFish:false,low:true,blank:false,cloudMissing:true};
@@ -1225,10 +1229,6 @@ function photoCloudField(result,local,allowStar){
   return {value,isBigFish,low,blank:!value,confidence:Number(result.confidence||0),raw:String(result.raw||''),inkPixels:Number(local?.inkPixels||0)};
 }
 async function photoRecognizeSheet(file,round){
-  // Najpierw szybki preflight. Nie przetwarzamy i nie wysyłamy ciężkich wycinków,
-  // jeżeli backend nie ma jeszcze skonfigurowanego zewnętrznego OCR.
-  const cfg=await api('/api/config',{timeoutMs:6000});
-  if(!cfg.photoOcrReady)throw new Error('Google Cloud Vision nie jest jeszcze skonfigurowany na serwerze. Dodaj GOOGLE_VISION_API_KEY w Railway.');
   const img=await photoImageFromFile(file),image=photoGrayData(img),g=photoSheetGeometry((CURRENT_DETAIL.activeEntries||[]).length);
   const found=[
     photoFindMarker(image,.005,.08,.18,.22),photoFindMarker(image,.82,.08,.995,.22),
@@ -1244,12 +1244,12 @@ async function photoRecognizeSheet(file,round){
   for(let ri=0;ri<entries.length;ri++)for(let f=0;f<6;f++){
     const l=local[ri][f];if(l.blank)continue;
     const y=g.dataY+ri*g.rowH;
-    const rawRect={x:g.fieldStart+f*g.fieldW+1.5,y:y+1.5,w:g.fieldW-3,h:g.rowH-3};
-    requests.push({id:ri+':'+f,image:photoFieldRawData(image,H,rawRect),allowStar:f<5,localStarCandidate:!!l.isBigFish});
+    const hi=photoFieldPixels(image,H,{x:g.fieldStart+f*g.fieldW+7,y:y+5,w:g.fieldW-14,h:g.rowH-10},320,92);
+    requests.push({id:ri+':'+f,image:photoSampleToPngData(hi),allowStar:f<5,localStarCandidate:!!l.isBigFish});
   }
   let cloud={cells:[]};
   if(requests.length){
-    cloud=await api('/api/admin/photo-ocr',{method:'POST',body:JSON.stringify({cells:requests}),timeoutMs:50000});
+    cloud=await api('/api/admin/photo-ocr',{method:'POST',body:JSON.stringify({cells:requests}),timeoutMs:65000});
   }
   const byId=new Map((cloud.cells||[]).map(x=>[String(x.id),x]));
   const rows=entries.map((e,ri)=>{
@@ -1275,89 +1275,13 @@ function showPhotoImportReview(result){
     +'<div class="photoImportActions"><button type="button" class="blue" onclick="commitPhotoResultImport(this)">IMPORTUJ DO T'+result.round+'</button><button type="button" class="secondary" onclick="closePhotoImportReview()">Anuluj</button></div></div>';
   document.body.appendChild(overlay);overlay.querySelector('input')?.focus({preventScroll:true});
 }
-
-let PHOTO_IMPORT_SELECTION={round:1,files:[]};
-function closePhotoImportSource(){q('photoImportSourceOverlay')?.remove()}
-function photoImportReset(round){PHOTO_IMPORT_SELECTION={round:Number(round)===2?2:1,files:[]}}
-function photoImportGetFiles(round){round=Number(round)===2?2:1;if(Number(PHOTO_IMPORT_SELECTION.round)!==round)photoImportReset(round);return PHOTO_IMPORT_SELECTION.files}
-function photoImportAddFiles(round,list){const box=photoImportGetFiles(round);for(const f of Array.from(list||[])){if(!f)continue;box.push(f);if(box.length>=2)break}}
-function photoImportRemoveFile(round,index){const box=photoImportGetFiles(round);box.splice(index,1);startPhotoResultImport(round)}
-function closePhotoImportBusy(){q('photoImportBusyOverlay')?.remove()}
-function showPhotoImportBusy(round,files){
-  closePhotoImportBusy();const count=Array.isArray(files)?files.length:(files?1:0),label=count>1?count+' zdjęcia':'1 zdjęcie';
-  const o=document.createElement('div');o.id='photoImportBusyOverlay';o.className='photoImportOverlay photoImportBusyOverlay';
-  o.innerHTML='<div class="photoSourceDialog photoBusyDialog"><div class="photoBusySpinner" aria-hidden="true"></div><h2>Analizuję zdjęcia — T'+round+'</h2><p>'+esc(label)+'</p><strong>AI czyta całą kartkę i scala odczyt dla całej tury…</strong><small>Możesz dodać 1 albo 2 kartki dla tej samej tury. Nie zamykaj tego okna.</small></div>';
-  document.body.appendChild(o);
-}
-function showPhotoImportError(round,error){
-  closePhotoImportBusy();const o=document.createElement('div');o.id='photoImportBusyOverlay';o.className='photoImportOverlay photoImportBusyOverlay';
-  o.innerHTML='<div class="photoSourceDialog photoErrorDialog"><div class="photoSourceIcon">⚠️</div><h2>Nie udało się odczytać zdjęcia — T'+round+'</h2><p>'+esc(error||'Nieznany błąd')+'</p><div class="photoSourceActions"><button type="button" class="blue" onclick="closePhotoImportBusy();startPhotoResultImport('+round+')">SPRÓBUJ PONOWNIE</button><button type="button" class="secondary" onclick="closePhotoImportBusy()">ZAMKNIJ</button></div></div>';
-  document.body.appendChild(o);
-}
-async function photoPrepareUploadImage(file){
-  const img=await photoImageFromFile(file),max=2200,scale=Math.min(1,max/Math.max(img.naturalWidth||img.width,img.naturalHeight||img.height)),w=Math.max(1,Math.round((img.naturalWidth||img.width)*scale)),h=Math.max(1,Math.round((img.naturalHeight||img.height)*scale));
-  const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0,w,h);
-  return {name:file?.name||'zdjecie.jpg',image:canvas.toDataURL('image/jpeg',0.92)};
-}
-async function processPhotoResultImport(files,round){
-  round=Number(round)===2?2:1;files=Array.from(files||[]).slice(0,2);if(!files.length)return;showPhotoImportBusy(round,files);
-  const previewUrls=[];
-  try{
-    const images=[];
-    for(const f of files){previewUrls.push(URL.createObjectURL(f));images.push(await photoPrepareUploadImage(f))}
-    const entries=(CURRENT_DETAIL?.activeEntries||[]).map((e,i)=>({lp:i+1,userId:Number(e.user_id),name:String(e.first_name+' '+e.last_name)}));
-    const result=await api('/api/admin/photo-ocr',{method:'POST',body:JSON.stringify({round,images,entries}),timeoutMs:120000});
-    result.round=round;result.imageUrls=previewUrls;
-    closePhotoImportBusy();showPhotoImportReview(result);
-    const unmatched=(result.unmatched||[]).length?(' Nierozpoznane wiersze: '+(result.unmatched||[]).length+'.'):'';
-    msg('AI OCR: odczytano '+Number(result.sheetCount||files.length)+' kartki dla T'+round+'.'+unmatched+' Sprawdź dane przed importem.');
-    photoImportReset(round);
-  }catch(e){
-    previewUrls.forEach(u=>{try{URL.revokeObjectURL(u)}catch(_){}});
-    showPhotoImportError(round,e?.message||'Nie udało się odczytać zdjęcia');msg(e?.message||'Nie udało się odczytać zdjęcia','bad')
-  }
-}
-function choosePhotoResultImport(round,source){
-  if(!CURRENT_DETAIL||ME?.role!=='ADMIN')return;round=Number(round)===2?2:1;
-  const input=document.createElement('input');input.type='file';input.accept='image/*';input.style.position='fixed';input.style.left='-9999px';input.style.opacity='0';input.setAttribute('aria-hidden','true');
-  if(source==='camera')input.setAttribute('capture','environment');
-  if(source==='file')input.multiple=true;
-  const cleanup=()=>{if(input.isConnected)input.remove()};
-  input.onchange=()=>{const picked=Array.from(input.files||[]);cleanup();if(picked.length){photoImportAddFiles(round,picked);startPhotoResultImport(round)}};
-  input.addEventListener('cancel',()=>{cleanup();startPhotoResultImport(round)},{once:true});
-  document.body.appendChild(input);input.click();
+async function processPhotoResultImport(file,round){
+  try{msg('Namierzam komórki i odczytuję liczby…');const result=await photoRecognizeSheet(file,round);showPhotoImportReview(result);msg('Hybryda: wykryto '+Number(result.detectedCells||0)+' zapisanych komórek — sprawdź dane przed importem.')}
+  catch(e){msg(e.message||'Nie udało się odczytać zdjęcia','bad')}
 }
 function startPhotoResultImport(round){
-  if(!CURRENT_DETAIL||ME?.role!=='ADMIN')return;round=Number(round)===2?2:1;closePhotoImportSource();
-  const files=photoImportGetFiles(round),items=files.map((f,i)=>'<li><b>'+(i+1)+'.</b> '+esc(f.name||('Zdjęcie '+(i+1)))+' <button type="button" class="linklike" onclick="photoImportRemoveFile('+round+','+i+')">usuń</button></li>').join('');
-  const note=round===1?'Możesz dodać dwie kartki dla obu brzegów i zaimportować je razem do pełnych wyników T1.':'Możesz dodać jedną lub dwie kartki dla T2 i złączyć odczyt w jeden import.';
-  const ready=files.length>0;
-  const o=document.createElement('div');o.id='photoImportSourceOverlay';o.className='photoImportOverlay photoImportSourceOverlay';
-  o.innerHTML='<div class="photoSourceDialog"><button type="button" class="photoSourceClose" onclick="closePhotoImportSource()" aria-label="Zamknij">×</button><div class="photoSourceIcon">📷</div><h2>Import wyników ze zdjęcia — T'+round+'</h2><p>'+note+'</p><div class="photoSourceActions"><button type="button" class="blue photoSourcePrimary" onclick="choosePhotoResultImport('+round+',&quot;camera&quot;)" '+(files.length>=2?'disabled':'')+'><b>📸 DODAJ ZDJĘCIE</b><span>Zrób zdjęcie kartki aparatem</span></button><button type="button" class="secondary photoSourcePrimary" onclick="choosePhotoResultImport('+round+',&quot;file&quot;)" '+(files.length>=2?'disabled':'')+'><b>🖼️ DODAJ Z PLIKU</b><span>Wybierz 1 lub 2 wcześniej zrobione zdjęcia</span></button></div>'
-   +(ready?'<div class="photoImportPicked"><b>Wybrane kartki:</b><ol>'+items+'</ol></div>':'<small>Najpierw dodaj co najmniej jedno zdjęcie. Maksymalnie 2 kartki na jedną analizę.</small>')
-   +'<div class="photoSourceActions" style="margin-top:12px"><button type="button" class="blue photoSourcePrimary" onclick="analyzePhotoResultImport('+round+')" '+(ready?'':'disabled')+'><b>✅ ANALIZUJ '+(files.length?('('+files.length+')'):'')+'</b><span>Scal odczyt do pełnych wyników tury</span></button><button type="button" class="secondary photoSourcePrimary" onclick="photoImportReset('+round+');startPhotoResultImport('+round+')" '+(ready?'':'disabled')+'><b>WYCZYŚĆ WYBÓR</b><span>Usuń wybrane kartki</span></button></div></div>';
-  document.body.appendChild(o);
-}
-async function analyzePhotoResultImport(round){
-  const files=photoImportGetFiles(round).slice();if(!files.length){msg('Najpierw dodaj zdjęcie formularza.','bad');return}
-  closePhotoImportSource();await processPhotoResultImport(files,round)
-}
-function closePhotoImportReview(){const x=q('photoImportOverlay');if(x){for(const u of (x._imageUrls||[])){try{URL.revokeObjectURL(u)}catch(_){}}x.remove()}}
-function photoImportCell(field,key){
-  const value=(field?.isBigFish?'*':'')+(field?.value||''),low=!!field?.low;return '<td class="'+(low?'photoOcrLow':'')+'"><input inputmode="text" data-key="'+key+'" value="'+esc(value)+'" placeholder="—">'+(low?'<small>sprawdź</small>':'')+'</td>';
-}
-function showPhotoImportReview(result){
-  closePhotoImportReview();const overlay=document.createElement('div');overlay.id='photoImportOverlay';overlay.className='photoImportOverlay';overlay._imageUrls=[...(result.imageUrls||[])];overlay.dataset.round=String(result.round||1);
-  const rows=(result.rows||[]).map((r,i)=>{const sumVal=r.sum?.value||'',calc=Number(r.calculatedSum||0),warn=!!r.sum?.low,info=sumVal?'SUMA = wynik końcowy':'z W1–W5: '+fmtGram(calc);return '<tr data-user-id="'+r.userId+'"><td class="photoOcrName"><b>'+(i+1)+'. '+esc(r.name)+'</b></td>'+r.weights.map((f,j)=>photoImportCell(f,'w'+(j+1))).join('')+'<td class="'+(warn?'photoOcrLow':'')+'"><input inputmode="numeric" data-key="sum" value="'+esc(sumVal)+'" placeholder="—"><small>'+info+'</small></td></tr>'}).join('');
-  const previews=(result.imageUrls||[]).length?'<div class="photoImportPreview">'+(result.imageUrls||[]).map(u=>'<img src="'+esc(u)+'" alt="Zdjęcie formularza">').join('')+'</div>':'';
-  const unmatched=(result.unmatched||[]).length?'<div class="photoImportWarn">⚠ Nierozpoznane wiersze: '+esc((result.unmatched||[]).map(x=>[x.lp,x.name].filter(Boolean).join('. ')).join(' | '))+'</div>':'';
-  overlay.innerHTML='<div class="photoImportDialog"><div class="photoImportHead"><div><h2>Import ze zdjęcia — T'+(result.round||1)+'</h2><p>AI odczytała '+Number(result.sheetCount||1)+' kartki. <b>SUMA ma pierwszeństwo</b>. Zapis <b>*9890</b> oznacza BF 9890 g. Pole „sprawdź” oznacza niepewny odczyt.</p></div><button type="button" class="warn" onclick="closePhotoImportReview()">Zamknij</button></div>'
-    +previews
-    +'<div class="photoImportWarn">⚠ Zapis zastąpi wszystkie dotychczasowe wpisy wag w T'+(result.round||1)+'. Jeśli jest SUMA, stanie się wynikiem końcowym; z W1–W5 zachowane zostaną wtedy tylko wartości oznaczone * jako BF.</div>'
-    +unmatched
-    +'<div class="tablewrap"><table class="photoImportTable"><thead><tr><th>Zawodnik</th><th>W1</th><th>W2</th><th>W3</th><th>W4</th><th>W5</th><th>SUMA</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
-    +'<div class="photoImportActions"><button type="button" class="blue" onclick="commitPhotoResultImport(this)">IMPORTUJ DO T'+(result.round||1)+'</button><button type="button" class="secondary" onclick="closePhotoImportReview()">Anuluj</button></div></div>';
-  document.body.appendChild(overlay);overlay.querySelector('input')?.focus({preventScroll:true});
+  if(!CURRENT_DETAIL||ME?.role!=='ADMIN')return;const input=document.createElement('input');input.type='file';input.accept='image/*';input.setAttribute('capture','environment');input.style.display='none';
+  input.onchange=()=>{const f=input.files?.[0];input.remove();if(f)processPhotoResultImport(f,Number(round)===2?2:1)};document.body.appendChild(input);input.click();
 }
 async function commitPhotoResultImport(button){
   const overlay=q('photoImportOverlay');if(!overlay||!CURRENT_DETAIL)return;const round=Number(overlay.dataset.round)===2?2:1,rows=[];
@@ -1379,7 +1303,7 @@ async function commitPhotoResultImport(button){
   catch(e){msg(e.message,'bad');if(button){button.disabled=false;button.textContent='IMPORTUJ DO T'+round}}
 }
 
-function renderResultsEntryPanel(d){const c=d.competition;return '<div class="card"><h2>Wpisywanie wyników</h2><p class="small muted"><b>Przeliczanie jest automatyczne.</b> Po zapisaniu lub usunięciu każdej wagi klasyfikacje T1, T2 i końcowa są liczone ponownie. Wpisz wagę siatki albo dużej ryby i przejdź do innego pola.</p><div class="photoImportQuick"><b>📷 Import hybrydowy z papierowej tabeli</b><span>AI czyta całą kartkę i scala odczyt nawet z 2 zdjęć dla tej samej tury. Możesz wgrać obie kartki z dwóch brzegów naraz. Odczyt zawsze wymaga kontroli.</span><div class="grid"><button type="button" class="blue" onclick="startPhotoResultImport(1)">Import T1 — zdjęcie / plik</button><button type="button" class="blue" onclick="startPhotoResultImport(2)">Import T2 — zdjęcie / plik</button></div></div><div class="grid3"><button type="button" class="secondary" onclick="generateResults('+c.id+',1,event)">Generuj wyniki T1</button><button type="button" class="secondary" onclick="generateResults('+c.id+',2,event)">Generuj wyniki T2</button><button type="button" class="blue" onclick="generateResultsAll('+c.id+',event)">Generuj T1 + T2</button></div><button type="button" class="warn" style="margin-top:10px" onclick="clearResults('+c.id+',event)">Wyczyść wszystkie wyniki T1 i T2</button><div class="resultEntryRounds"><div class="resultRoundPanel"><h3>T1</h3>'+renderResultForm(d,1)+'</div><div class="resultRoundPanel"><h3>T2</h3>'+renderResultForm(d,2)+'</div></div></div>'}
+function renderResultsEntryPanel(d){const c=d.competition;return '<div class="card"><h2>Wpisywanie wyników</h2><p class="small muted"><b>Przeliczanie jest automatyczne.</b> Po zapisaniu lub usunięciu każdej wagi klasyfikacje T1, T2 i końcowa są liczone ponownie. Wpisz wagę siatki albo dużej ryby i przejdź do innego pola.</p><div class="photoImportQuick"><b>📷 Import hybrydowy z papierowej tabeli</b><span>Telefon namierza tylko zapisane komórki, a zewnętrzny silnik czyta same liczby. Cała kartka i nazwiska nie są wysyłane. Odczyt zawsze wymaga kontroli.</span><div class="grid"><button type="button" class="blue" onclick="startPhotoResultImport(1)">Wczytaj T1 ze zdjęcia</button><button type="button" class="blue" onclick="startPhotoResultImport(2)">Wczytaj T2 ze zdjęcia</button></div></div><div class="grid3"><button type="button" class="secondary" onclick="generateResults('+c.id+',1,event)">Generuj wyniki T1</button><button type="button" class="secondary" onclick="generateResults('+c.id+',2,event)">Generuj wyniki T2</button><button type="button" class="blue" onclick="generateResultsAll('+c.id+',event)">Generuj T1 + T2</button></div><button type="button" class="warn" style="margin-top:10px" onclick="clearResults('+c.id+',event)">Wyczyść wszystkie wyniki T1 i T2</button><div class="resultEntryRounds"><div class="resultRoundPanel"><h3>T1</h3>'+renderResultForm(d,1)+'</div><div class="resultRoundPanel"><h3>T2</h3>'+renderResultForm(d,2)+'</div></div></div>'}
 function renderResultsSummaryPanel(d){const c=d.competition;return '<div class="card"><h2>Wyniki i klasyfikacja</h2><div class="grid"><button type="button" class="blue" onclick="notifyResults('+c.id+',1)">Powiadom o wynikach T1</button><button type="button" class="blue" onclick="notifyResults('+c.id+',2)">Powiadom o wynikach T2</button></div><div class="inlineBtns"><button type="button" class="secondary" onclick="retryAchievementToasts('+c.id+',1,this)">Ponów dymki T1</button><button type="button" class="secondary" onclick="retryAchievementToasts('+c.id+',2,this)">Ponów dymki T2</button><button type="button" class="secondary" onclick="retryAchievementToasts('+c.id+',\'general\',this)">Ponów dymki generalne</button></div><p id="achievementPublishStatus" role="status"></p>'+renderSectorResultsBoard(d)+'<h3>Klasyfikacja T1</h3>'+renderClassTable(d.classification.round1)+'<h3>Klasyfikacja T2</h3>'+renderClassTable(d.classification.round2)+'<h3>Klasyfikacja końcowa</h3><button type="button" class="blue" onclick="notifyGeneralResults('+c.id+',this)">Powiadom o klasyfikacji końcowej</button><p id="generalPublishStatus" role="status"></p>'+renderFinalClubToggle()+renderGeneralTable(d.classification.general)+renderStationStatistics(d)+'</div>'}
 function placeRowClass(rank){const r=Number(rank);return r===1?'place1':r===2?'place2':r===3?'place3':''}
 function sortRowsBySectorPlace(rows){return [...(rows||[])].sort((a,b)=>Number(a.points||999)-Number(b.points||999)||Number(b.weight||0)-Number(a.weight||0)||String(a.name||'').localeCompare(String(b.name||''),'pl'))}
@@ -1741,10 +1665,10 @@ function bindAuthButtons(){
 }
 
 function scrollAppBottom(){window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})}
-Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,loadPlayerHistory,openHistoryCompetition,openCompetitionAttention,judgeCancelPending,saveGeneralRules,closePlayerCompetition,showAdminZone,loadCompetitions,createCompetition,openCompetitionEdit,deleteCompetition,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,editPlayerName,deletePlayer,deleteAllAdminPlayers,saveMyProfile,setPlayerCompetitionFilter,setPlayerCompetitionMonth,confirmPlayerPresence,enablePush,sendPushTest,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,setPlayerDrawView,openPlayerNotifications,fitPlayerMobileFullMaps,togglePlayerSectorAccordion,toggleFinalClub,generatePhotoResultSheetPdf,startPhotoResultImport,choosePhotoResultImport,closePhotoImportSource,closePhotoImportBusy,closePhotoImportReview,commitPhotoResultImport,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
-function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_142');sessionStorage.removeItem('lowcy_update_retry_141');sessionStorage.removeItem('lowcy_update_retry_140');sessionStorage.removeItem('lowcy_update_retry_139');sessionStorage.removeItem('lowcy_update_retry_138');sessionStorage.removeItem('lowcy_update_retry_102')}catch(_){}}
+Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,loadPlayerHistory,openHistoryCompetition,openCompetitionAttention,judgeCancelPending,saveGeneralRules,closePlayerCompetition,showAdminZone,loadCompetitions,createCompetition,openCompetitionEdit,deleteCompetition,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,editPlayerName,deletePlayer,deleteAllAdminPlayers,saveMyProfile,setPlayerCompetitionFilter,setPlayerCompetitionMonth,confirmPlayerPresence,enablePush,sendPushTest,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,setPlayerDrawView,openPlayerNotifications,fitPlayerMobileFullMaps,togglePlayerSectorAccordion,toggleFinalClub,generatePhotoResultSheetPdf,startPhotoResultImport,closePhotoImportReview,commitPhotoResultImport,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
+function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_139');sessionStorage.removeItem('lowcy_update_retry_138');sessionStorage.removeItem('lowcy_update_retry_102')}catch(_){}}
 let BOOT_RUNNING=false;
-function startBoot(){if(BOOT_RUNNING)return;BOOT_RUNNING=true;window.__LOWCY_JS_STARTED=true;try{syncStickyNavOffset();bindAuthButtons()}catch(e){console.error(e)}const guard=q('bootGuard');if(guard){guard.classList.remove('hidden');const text=guard.querySelector('span');if(text)text.textContent='Łączę z aplikacją…';q('bootRetry')?.classList.add('hidden')}boot().then(()=>{window.__LOWCY_BOOT_OK_142=1;for(const script of document.querySelectorAll('script[src*="/app.js"]')){const version=new URL(script.src,location.href).searchParams.get('v');if(version)window['__LOWCY_BOOT_OK_'+version]=1}hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);if(guard){guard.classList.remove('hidden');const text=guard.querySelector('span');if(text)text.textContent=e.message||'Nie udało się połączyć.';q('bootRetry')?.classList.remove('hidden')}}).finally(()=>{BOOT_RUNNING=false})}
+function startBoot(){if(BOOT_RUNNING)return;BOOT_RUNNING=true;window.__LOWCY_JS_STARTED=true;try{syncStickyNavOffset();bindAuthButtons()}catch(e){console.error(e)}const guard=q('bootGuard');if(guard){guard.classList.remove('hidden');const text=guard.querySelector('span');if(text)text.textContent='Łączę z aplikacją…';q('bootRetry')?.classList.add('hidden')}boot().then(()=>{window.__LOWCY_BOOT_OK_139=1;for(const script of document.querySelectorAll('script[src*="/app.js"]')){const version=new URL(script.src,location.href).searchParams.get('v');if(version)window['__LOWCY_BOOT_OK_'+version]=1}hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);if(guard){guard.classList.remove('hidden');const text=guard.querySelector('span');if(text)text.textContent=e.message||'Nie udało się połączyć.';q('bootRetry')?.classList.remove('hidden')}}).finally(()=>{BOOT_RUNNING=false})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();
 
 let JUDGE_VIEW='competitions',JUDGE_ROUND=1,JUDGE_COMPETITIONS=[],JUDGE_MANAGEMENT=null;
