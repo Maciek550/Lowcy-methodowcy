@@ -1,3 +1,9 @@
+V154 — KONTRAST NA TELEFONIE SĘDZIEGO
+
+- zapisane siatki i BF mają ciemne napisy na jasnych etykietach;
+- wpisy oczekujące mają ciemny tekst, a błędne jasny na ciemnym tle;
+- numer miejsca w klasyfikacji końcowej ma ciemny tekst na jasnym tle.
+
 V153 — CZYTELNE WYNIKI SĘDZIEGO NA KOMPUTERZE
 
 - w wynikach sektorowych i klasyfikacjach sędziego jasne komórki mają ciemne cyfry i nazwiska;
