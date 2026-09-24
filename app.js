@@ -1,4 +1,4 @@
-const CLIENT_VERSION='148';const CLIENT_VERSION_NAME='V148_LINE_GUIDED_PHOTO_FORM';window.__LOWCY_APP_JS_148=1;try{fetch('/__probe_js_v148',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V148_LINE_GUIDED_PHOTO_FORM_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='149';const CLIENT_VERSION_NAME='V149_PHOTO_PDF_DOWNLOAD_FIX';window.__LOWCY_APP_JS_149=1;try{fetch('/__probe_js_v149',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V149_PHOTO_PDF_DOWNLOAD_FIX_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -1127,16 +1127,18 @@ function drawPhotoResultSheetPage(round){
    * Wiersz = PAS pomiędzy dwiema poziomymi liniami.
    * Nie przeskakuj wpisu do sąsiedniego nazwiska przez perspektywę zdjęcia.
    */
-  ctx.strokeStyle='#111';ctx.lineCap='butt';
-  ctx.lineWidth=2.4;
+  // LowcyPDF używa lekkiego pseudo-canvasu bez beginPath/moveTo/stroke.
+  // Linie rysujemy jako czarne prostokąty, żeby PDF działał na telefonie i desktopie.
+  ctx.fillStyle='#111';
   const horizontal=[g.headerY,g.dataY];
   for(let ri=1;ri<=(d.activeEntries||[]).length;ri++)horizontal.push(g.dataY+ri*g.rowH);
-  for(const y of horizontal){ctx.beginPath();ctx.moveTo(g.x0,y);ctx.lineTo(right,y);ctx.stroke()}
+  for(const y of horizontal)ctx.fillRect(g.x0,y-1.2,totalW,2.4);
 
   let vx=g.x0;
+  const tableBottom=g.dataY+(d.activeEntries||[]).length*g.rowH;
   for(let i=0;i<=g.widths.length;i++){
-    ctx.lineWidth=(i===7||i===0||i===g.widths.length)?2.2:1.35;
-    ctx.beginPath();ctx.moveTo(vx,g.headerY);ctx.lineTo(vx,g.dataY+(d.activeEntries||[]).length*g.rowH);ctx.stroke();
+    const w=(i===7||i===0||i===g.widths.length)?2.2:1.35;
+    ctx.fillRect(vx-w/2,g.headerY,w,tableBottom-g.headerY);
     if(i<g.widths.length)vx+=g.widths[i];
   }
 
