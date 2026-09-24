@@ -1,4 +1,4 @@
-const CLIENT_VERSION='140';const CLIENT_VERSION_NAME='V140_PHOTO_SOURCE_CHOOSER';window.__LOWCY_APP_JS_140=1;try{fetch('/__probe_js_v140',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V140_PHOTO_SOURCE_CHOOSER_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='141';const CLIENT_VERSION_NAME='V141_PARALLEL_CLOUD_OCR';window.__LOWCY_APP_JS_141=1;try{fetch('/__probe_js_v141',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V141_PARALLEL_CLOUD_OCR_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -1214,11 +1214,13 @@ function photoSampleToPngData(sample){
     const p=i*4;img.data[p]=img.data[p+1]=img.data[p+2]=v;img.data[p+3]=255;
   }
   tctx.putImageData(img,0,0);
-  const out=document.createElement('canvas');out.width=720;out.height=220;const octx=out.getContext('2d');
+  // V141: nie wysyłamy już ogromnego PNG 720x220 dla każdej komórki.
+  // Lekki JPEG 420x128 zachowuje cyfry, a wielokrotnie zmniejsza JSON/base64 i czas uploadu z telefonu.
+  const out=document.createElement('canvas');out.width=420;out.height=128;const octx=out.getContext('2d');
   octx.fillStyle='#fff';octx.fillRect(0,0,out.width,out.height);
   octx.imageSmoothingEnabled=true;octx.imageSmoothingQuality='high';
-  octx.drawImage(temp,28,28,out.width-56,out.height-56);
-  return out.toDataURL('image/png');
+  octx.drawImage(temp,18,16,out.width-36,out.height-32);
+  return out.toDataURL('image/jpeg',0.82);
 }
 function photoCloudField(result,local,allowStar){
   if(!result)return {value:'',isBigFish:false,low:true,blank:false,cloudMissing:true};
@@ -1229,6 +1231,10 @@ function photoCloudField(result,local,allowStar){
   return {value,isBigFish,low,blank:!value,confidence:Number(result.confidence||0),raw:String(result.raw||''),inkPixels:Number(local?.inkPixels||0)};
 }
 async function photoRecognizeSheet(file,round){
+  // Najpierw szybki preflight. Nie przetwarzamy i nie wysyłamy ciężkich wycinków,
+  // jeżeli backend nie ma jeszcze skonfigurowanego zewnętrznego OCR.
+  const cfg=await api('/api/config',{timeoutMs:6000});
+  if(!cfg.photoOcrReady)throw new Error('Google Cloud Vision nie jest jeszcze skonfigurowany na serwerze. Dodaj GOOGLE_VISION_API_KEY w Railway.');
   const img=await photoImageFromFile(file),image=photoGrayData(img),g=photoSheetGeometry((CURRENT_DETAIL.activeEntries||[]).length);
   const found=[
     photoFindMarker(image,.005,.08,.18,.22),photoFindMarker(image,.82,.08,.995,.22),
@@ -1249,7 +1255,7 @@ async function photoRecognizeSheet(file,round){
   }
   let cloud={cells:[]};
   if(requests.length){
-    cloud=await api('/api/admin/photo-ocr',{method:'POST',body:JSON.stringify({cells:requests}),timeoutMs:65000});
+    cloud=await api('/api/admin/photo-ocr',{method:'POST',body:JSON.stringify({cells:requests}),timeoutMs:50000});
   }
   const byId=new Map((cloud.cells||[]).map(x=>[String(x.id),x]));
   const rows=entries.map((e,ri)=>{
@@ -1691,9 +1697,9 @@ function bindAuthButtons(){
 
 function scrollAppBottom(){window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})}
 Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,loadPlayerHistory,openHistoryCompetition,openCompetitionAttention,judgeCancelPending,saveGeneralRules,closePlayerCompetition,showAdminZone,loadCompetitions,createCompetition,openCompetitionEdit,deleteCompetition,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,editPlayerName,deletePlayer,deleteAllAdminPlayers,saveMyProfile,setPlayerCompetitionFilter,setPlayerCompetitionMonth,confirmPlayerPresence,enablePush,sendPushTest,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,setPlayerDrawView,openPlayerNotifications,fitPlayerMobileFullMaps,togglePlayerSectorAccordion,toggleFinalClub,generatePhotoResultSheetPdf,startPhotoResultImport,choosePhotoResultImport,closePhotoImportSource,closePhotoImportBusy,closePhotoImportReview,commitPhotoResultImport,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
-function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_140');sessionStorage.removeItem('lowcy_update_retry_139');sessionStorage.removeItem('lowcy_update_retry_138');sessionStorage.removeItem('lowcy_update_retry_102')}catch(_){}}
+function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_141');sessionStorage.removeItem('lowcy_update_retry_140');sessionStorage.removeItem('lowcy_update_retry_139');sessionStorage.removeItem('lowcy_update_retry_138');sessionStorage.removeItem('lowcy_update_retry_102')}catch(_){}}
 let BOOT_RUNNING=false;
-function startBoot(){if(BOOT_RUNNING)return;BOOT_RUNNING=true;window.__LOWCY_JS_STARTED=true;try{syncStickyNavOffset();bindAuthButtons()}catch(e){console.error(e)}const guard=q('bootGuard');if(guard){guard.classList.remove('hidden');const text=guard.querySelector('span');if(text)text.textContent='Łączę z aplikacją…';q('bootRetry')?.classList.add('hidden')}boot().then(()=>{window.__LOWCY_BOOT_OK_140=1;for(const script of document.querySelectorAll('script[src*="/app.js"]')){const version=new URL(script.src,location.href).searchParams.get('v');if(version)window['__LOWCY_BOOT_OK_'+version]=1}hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);if(guard){guard.classList.remove('hidden');const text=guard.querySelector('span');if(text)text.textContent=e.message||'Nie udało się połączyć.';q('bootRetry')?.classList.remove('hidden')}}).finally(()=>{BOOT_RUNNING=false})}
+function startBoot(){if(BOOT_RUNNING)return;BOOT_RUNNING=true;window.__LOWCY_JS_STARTED=true;try{syncStickyNavOffset();bindAuthButtons()}catch(e){console.error(e)}const guard=q('bootGuard');if(guard){guard.classList.remove('hidden');const text=guard.querySelector('span');if(text)text.textContent='Łączę z aplikacją…';q('bootRetry')?.classList.add('hidden')}boot().then(()=>{window.__LOWCY_BOOT_OK_141=1;for(const script of document.querySelectorAll('script[src*="/app.js"]')){const version=new URL(script.src,location.href).searchParams.get('v');if(version)window['__LOWCY_BOOT_OK_'+version]=1}hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);if(guard){guard.classList.remove('hidden');const text=guard.querySelector('span');if(text)text.textContent=e.message||'Nie udało się połączyć.';q('bootRetry')?.classList.remove('hidden')}}).finally(()=>{BOOT_RUNNING=false})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();
 
 let JUDGE_VIEW='competitions',JUDGE_ROUND=1,JUDGE_COMPETITIONS=[],JUDGE_MANAGEMENT=null;

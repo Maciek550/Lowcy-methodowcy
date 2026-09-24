@@ -1,22 +1,13 @@
-V140 — HYBRYDOWY ODCZYT FORMULARZA (Google Cloud Vision)
+V141 — HYBRYDOWY ODCZYT FORMULARZA / SZYBSZY CLOUD OCR
 
-Zmiany:
-- aplikacja lokalnie wykrywa kartkę, prostuje perspektywę i namierza dokładnie W1–W5/SUMA;
-- lokalny kod nie rozpoznaje już cyfr — tylko rozstrzyga, czy komórka jest pusta;
-- do zewnętrznego OCR wysyłane są wyłącznie małe wycinki komórek z odręcznym wpisem;
-- nazwiska i pełne zdjęcie formularza nie są wysyłane do zewnętrznego OCR;
-- zewnętrzny silnik: Google Cloud Vision DOCUMENT_TEXT_DETECTION (handwriting);
-- maksymalnie 16 wycinków na jedno zapytanie do Google, większe importy są automatycznie dzielone;
-- odczyt >5 cyfr jest odrzucany i oznaczany do sprawdzenia;
-- pojedyncze 1 g jest zamieniane na 0;
-- SUMA nadal jest nadrzędna;
-- * oznacza BF; jeżeli SUMA jest wpisana, zwykła waga = SUMA - suma BF;
-- ekran kontroli przed importem pozostaje obowiązkowy.
+Zmiany względem V140:
+- przed analizą zdjęcia aplikacja sprawdza /api/config; jeśli Cloud Vision nie ma klucza, pokazuje od razu konkretny komunikat zamiast czekać na timeout;
+- wycinki komórek są wysyłane jako lekkie JPEG 420×128 zamiast PNG 720×220 — znacznie mniejszy upload z telefonu;
+- paczki po maks. 16 komórek są wysyłane do Google Cloud Vision równolegle zamiast sekwencyjnie;
+- timeout każdej paczki backendu 35 s, timeout telefonu 50 s;
+- log PHOTO_OCR_V141 pokazuje liczbę komórek, paczek i rzeczywisty czas OCR;
+- zachowany wybór: ZRÓB ZDJĘCIE / WCZYTAJ Z PLIKU;
+- zachowana logika SUMA/BF, pojedyncze 1 g -> 0 i większy zegar z V140.
 
-Konfiguracja Railway:
-1. W Google Cloud włącz Cloud Vision API i utwórz API key.
-2. W Railway dla usługi lowcy-methodowcy-app dodaj zmienną:
-   GOOGLE_VISION_API_KEY=<Twój klucz>
-3. Railway wykona redeploy po dodaniu zmiennej.
-
-Klucz nigdy nie trafia do przeglądarki. Wywołanie Cloud Vision wykonuje backend.
+WYMAGANE W RAILWAY:
+GOOGLE_VISION_API_KEY oraz włączone Google Cloud Vision API.
