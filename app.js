@@ -1,4 +1,4 @@
-const CLIENT_VERSION='146';const CLIENT_VERSION_NAME='V146_CHATGPT_SHARE_IMPORT';window.__LOWCY_APP_JS_146=1;try{fetch('/__probe_js_v146',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V146_CHATGPT_SHARE_IMPORT_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='147';const CLIENT_VERSION_NAME='V147_MOBILE_CHATGPT_FAST_IMPORT';window.__LOWCY_APP_JS_147=1;try{fetch('/__probe_js_v147',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V147_MOBILE_CHATGPT_FAST_IMPORT_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -1344,20 +1344,24 @@ async function analyzePhotoResultImport(round){
 }
 function closePhotoImportReview(){const x=q('photoImportOverlay');if(x){for(const u of (x._imageUrls||[])){try{URL.revokeObjectURL(u)}catch(_){}}x.remove()}}
 function photoImportCell(field,key){
-  const value=(field?.isBigFish?'*':'')+(field?.value||''),low=!!field?.low;return '<td class="'+(low?'photoOcrLow':'')+'"><input inputmode="text" data-key="'+key+'" value="'+esc(value)+'" placeholder="—">'+(low?'<small>sprawdź</small>':'')+'</td>';
+  const value=(field?.isBigFish?'*':'')+(field?.value||''),low=!!field?.low,label=String(key||'').toUpperCase();
+  return '<td data-label="'+esc(label)+'" class="'+(low?'photoOcrLow':'')+'"><input inputmode="text" data-key="'+esc(key)+'" value="'+esc(value)+'" placeholder="—">'+(low?'<small>sprawdź</small>':'')+'</td>';
 }
 function showPhotoImportReview(result){
-  closePhotoImportReview();const overlay=document.createElement('div');overlay.id='photoImportOverlay';overlay.className='photoImportOverlay';overlay._imageUrls=[...(result.imageUrls||[])];overlay.dataset.round=String(result.round||1);
-  const rows=(result.rows||[]).map((r,i)=>{const sumVal=r.sum?.value||'',calc=Number(r.calculatedSum||0),warn=!!r.sum?.low,info=sumVal?'SUMA = wynik końcowy':'z W1–W5: '+fmtGram(calc);return '<tr data-user-id="'+r.userId+'"><td class="photoOcrName"><b>'+(i+1)+'. '+esc(r.name)+'</b></td>'+r.weights.map((f,j)=>photoImportCell(f,'w'+(j+1))).join('')+'<td class="'+(warn?'photoOcrLow':'')+'"><input inputmode="numeric" data-key="sum" value="'+esc(sumVal)+'" placeholder="—"><small>'+info+'</small></td></tr>'}).join('');
+  closePhotoImportReview();const overlay=document.createElement('div');overlay.id='photoImportOverlay';overlay.className='photoImportOverlay';overlay._imageUrls=[...(result.imageUrls||[])];overlay.dataset.round=String(result.round||1);if(result.manualChatGPT)overlay.dataset.manualChatgpt='1';
+  const sourceRows=(result.rows||[]),visibleRows=result.manualChatGPT?sourceRows.filter(r=>r?.weights?.some(f=>String(f?.value||'')!=='')||String(r?.sum?.value||'')!==''||r?.weights?.some(f=>f?.low)||r?.sum?.low):sourceRows;
+  const rows=visibleRows.map((r,i)=>{const sumVal=r.sum?.value||'',calc=Number(r.calculatedSum||0),warn=!!r.sum?.low,info=sumVal?'SUMA = wynik końcowy':'z W1–W5: '+fmtGram(calc);return '<tr data-user-id="'+r.userId+'"><td class="photoOcrName" data-label="Zawodnik"><b>'+(i+1)+'. '+esc(r.name)+'</b></td>'+r.weights.map((f,j)=>photoImportCell(f,'w'+(j+1))).join('')+'<td data-label="SUMA" class="'+(warn?'photoOcrLow':'')+'"><input inputmode="numeric" data-key="sum" value="'+esc(sumVal)+'" placeholder="—"><small>'+info+'</small></td></tr>'}).join('');
   const previews=(result.imageUrls||[]).length?'<div class="photoImportPreview">'+(result.imageUrls||[]).map(u=>'<img src="'+esc(u)+'" alt="Zdjęcie formularza">').join('')+'</div>':'';
   const unmatched=(result.unmatched||[]).length?'<div class="photoImportWarn">⚠ Nierozpoznane wiersze: '+esc((result.unmatched||[]).map(x=>[x.lp,x.name].filter(Boolean).join('. ')).join(' | '))+'</div>':'';
-  const reviewTitle=result.manualChatGPT?'Import z ChatGPT — T'+(result.round||1):'Import ze zdjęcia — T'+(result.round||1);const reviewDesc=result.manualChatGPT?'Wklejone dane zostały dopasowane do aktualnej listy zawodników. <b>Nic nie jest jeszcze zapisane.</b> Sprawdź pola przed importem.':'AI odczytała '+Number(result.sheetCount||1)+' kartki. <b>SUMA ma pierwszeństwo</b>. Zapis <b>*9890</b> oznacza BF 9890 g. Pole „sprawdź” oznacza niepewny odczyt.';overlay.innerHTML='<div class="photoImportDialog"><div class="photoImportHead"><div><h2>'+reviewTitle+'</h2><p>'+reviewDesc+'</p></div><button type="button" class="warn" onclick="closePhotoImportReview()">Zamknij</button></div>'
+  const reviewTitle=result.manualChatGPT?'Import z ChatGPT — T'+(result.round||1):'Import ze zdjęcia — T'+(result.round||1);
+  const reviewDesc=result.manualChatGPT?'Odczytano <b>'+visibleRows.length+'</b> zawodników z wpisami. <b>Nic nie jest jeszcze zapisane.</b> Sprawdź tylko te pozycje i zatwierdź.':'AI odczytała '+Number(result.sheetCount||1)+' kartki. <b>SUMA ma pierwszeństwo</b>. Zapis <b>*9890</b> oznacza BF 9890 g. Pole „sprawdź” oznacza niepewny odczyt.';
+  overlay.innerHTML='<div class="photoImportDialog"><div class="photoImportHead"><div><h2>'+reviewTitle+'</h2><p>'+reviewDesc+'</p></div><button type="button" class="warn" onclick="closePhotoImportReview()">Zamknij</button></div>'
     +previews
     +'<div class="photoImportWarn">⚠ Zapis zastąpi wszystkie dotychczasowe wpisy wag w T'+(result.round||1)+'. Jeśli jest SUMA, stanie się wynikiem końcowym; z W1–W5 zachowane zostaną wtedy tylko wartości oznaczone * jako BF.</div>'
     +unmatched
-    +'<div class="tablewrap"><table class="photoImportTable"><thead><tr><th>Zawodnik</th><th>W1</th><th>W2</th><th>W3</th><th>W4</th><th>W5</th><th>SUMA</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
-    +'<div class="photoImportActions"><button type="button" class="blue" onclick="commitPhotoResultImport(this)">IMPORTUJ DO T'+(result.round||1)+'</button><button type="button" class="secondary" onclick="closePhotoImportReview()">Anuluj</button></div></div>';
-  document.body.appendChild(overlay);overlay.querySelector('input')?.focus({preventScroll:true});
+    +(visibleRows.length?'<div class="tablewrap"><table class="photoImportTable"><thead><tr><th>Zawodnik</th><th>W1</th><th>W2</th><th>W3</th><th>W4</th><th>W5</th><th>SUMA</th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<div class="photoImportWarn"><b>Nie znaleziono żadnych wpisów do importu.</b></div>')
+    +'<div class="photoImportActions"><button type="button" class="blue" onclick="commitPhotoResultImport(this)" '+(visibleRows.length?'':'disabled')+'>IMPORTUJ DO T'+(result.round||1)+'</button><button type="button" class="secondary" onclick="closePhotoImportReview()">Anuluj</button></div></div>';
+  document.body.appendChild(overlay);
 }
 async function commitPhotoResultImport(button){
   const overlay=q('photoImportOverlay');if(!overlay||!CURRENT_DETAIL)return;const round=Number(overlay.dataset.round)===2?2:1,rows=[];
@@ -1380,105 +1384,132 @@ async function commitPhotoResultImport(button){
 }
 
 
-const CHATGPT_PENDING_KEY='lowcy_chatgpt_pending_v146';
+const CHATGPT_PENDING_KEY='lowcy_chatgpt_pending_v147';
 let CHATGPT_SHARE_SELECTION={round:1,files:[]};
+function installChatGptMobileStyles(){if(q('chatGptV147Styles'))return;const s=document.createElement('style');s.id='chatGptV147Styles';s.textContent=`
+@media(max-width:760px){
+#chatGptPasteImportOverlay{padding:0!important;align-items:stretch!important}
+#chatGptPasteImportOverlay .photoImportDialog{width:100%!important;max-width:none!important;height:100dvh!important;max-height:100dvh!important;border-radius:0!important;padding:12px!important;overflow:auto!important}
+#chatGptPasteImportOverlay .photoImportHead{position:sticky;top:0;z-index:4;background:#102735;padding:4px 0 8px;margin-bottom:8px}
+#chatGptPasteImportOverlay .photoImportHead h2{font-size:21px!important;margin:0 0 4px!important}
+#chatGptPasteImportOverlay .photoImportHead p{font-size:13px!important;margin:0!important}
+#chatGptPasteImportOverlay .photoSourceActions{grid-template-columns:1fr!important;gap:8px!important}
+#chatGptPasteImportOverlay .photoSourcePrimary{min-height:72px!important;font-size:18px!important;padding:12px!important}
+#chatGptPasteImportOverlay .photoSourcePrimary span{font-size:12px!important;line-height:1.2!important}
+#chatGptPasteImportOverlay textarea{min-height:110px!important;font-size:13px!important}
+#chatGptPasteImportOverlay .chatGptReturnBox{position:sticky;bottom:0;z-index:5;background:#102735;padding:8px 0 4px;border-top:1px solid #38627a}
+#chatGptPasteImportOverlay .chatGptReturnBox button{width:100%!important;min-height:74px!important;font-size:18px!important}
+#photoImportOverlay[data-manual-chatgpt='1']{padding:0!important;align-items:stretch!important}
+#photoImportOverlay[data-manual-chatgpt='1'] .photoImportDialog{width:100%!important;max-width:none!important;height:100dvh!important;max-height:100dvh!important;border-radius:0!important;padding:10px!important;overflow:auto!important}
+#photoImportOverlay[data-manual-chatgpt='1'] .photoImportTable thead{display:none!important}
+#photoImportOverlay[data-manual-chatgpt='1'] .photoImportTable,#photoImportOverlay[data-manual-chatgpt='1'] .photoImportTable tbody{display:block!important;width:100%!important}
+#photoImportOverlay[data-manual-chatgpt='1'] .photoImportTable tr{display:block!important;margin:0 0 10px!important;padding:10px!important;border:1px solid #42677b!important;border-radius:12px!important;background:#0c2230!important}
+#photoImportOverlay[data-manual-chatgpt='1'] .photoImportTable td{display:grid!important;grid-template-columns:72px 1fr!important;align-items:center!important;gap:8px!important;width:100%!important;border:0!important;padding:4px 0!important}
+#photoImportOverlay[data-manual-chatgpt='1'] .photoImportTable td:before{content:attr(data-label);font-size:12px;font-weight:800;opacity:.8}
+#photoImportOverlay[data-manual-chatgpt='1'] .photoImportTable td.photoOcrName{display:block!important;font-size:16px!important;padding:2px 0 8px!important}
+#photoImportOverlay[data-manual-chatgpt='1'] .photoImportTable td.photoOcrName:before{display:none!important}
+#photoImportOverlay[data-manual-chatgpt='1'] .photoImportTable input{min-height:42px!important;font-size:18px!important}
+#photoImportOverlay[data-manual-chatgpt='1'] .photoImportActions{position:sticky;bottom:0;background:#102735;padding:8px 0 4px;display:grid!important;grid-template-columns:1fr!important;gap:8px!important}
+#photoImportOverlay[data-manual-chatgpt='1'] .photoImportActions button{min-height:60px!important;font-size:17px!important}
+.photoImportQuick .mobileWaterHint{display:block!important;font-size:12px!important;margin-top:4px!important;opacity:.85}
+}
+`;document.head.appendChild(s)}
+installChatGptMobileStyles();
 function chatGptNormalizeName(v){return String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ł/g,'l').replace(/[^a-z0-9а-яёіїєґ\s-]/gi,' ').replace(/\s+/g,' ').trim()}
 function chatGptImportPrompt(round){
   round=Number(round)===2?2:1;
   const rows=(CURRENT_DETAIL?.activeEntries||[]).map((e,i)=>({lp:i+1,userId:Number(e.user_id),name:String(e.first_name+' '+e.last_name)}));
   const roster=rows.map(r=>r.lp+'|'+r.userId+'|'+r.name).join('\n');
-  return 'Odczytaj wyniki z 1–2 zdjęć formularza T'+round+'. Jeśli są 2 kartki, połącz je w jedną turę.\n'
-    +'Kolumny: W1,W2,W3,W4,W5,SUMA. Nie zgaduj. *5250 zachowaj jako *5250 (BF). Puste pole="". Samotne 1=>0. SUMA przepisz dokładnie. Dopasuj po LP/nazwisku.\n'
-    +'Zwróć WYŁĄCZNIE JSON bez komentarza: {"round":'+round+',"sheetCount":2,"rows":[{"userId":123,"lp":1,"name":"Imię Nazwisko","w1":"*5250","w2":"","w3":"","w4":"","w5":"","sum":"32650","reviewFields":[]}]}\n'
-    +'W rows zwracaj tylko zawodników z jakimkolwiek wpisem. reviewFields tylko dla niepewnych pól.\nLISTA lp|userId|nazwisko:\n'+roster;
+  return 'SZYBKI ODCZYT T'+round+'. Odczytaj 1–2 zdjęcia tej samej tury i połącz je. Bez opisu i bez dodatkowej analizy.\n'
+    +'Kolumny W1,W2,W3,W4,W5,SUMA. Przepisuj tylko ręczne wpisy. Nie zgaduj. *5250=>*5250 (BF), puste=>"", samotne 1=>0. SUMA przepisz dokładnie.\n'
+    +'Dopasuj po LP/nazwisku. Zwróć TYLKO jeden blok ```json``` z MINIFIKOWANYM JSON: {"round":'+round+',"sheetCount":2,"rows":[{"userId":123,"lp":1,"name":"Imię Nazwisko","w1":"*5250","w2":"","w3":"","w4":"","w5":"","sum":"32650","reviewFields":[]}]}\n'
+    +'W rows tylko osoby z jakimkolwiek wpisem. reviewFields tylko przy niepewnym polu.\nLISTA lp|userId|nazwisko:\n'+roster;
 }
-async function chatGptWriteClipboard(text){
-  try{await navigator.clipboard.writeText(text);return true}catch(_){try{const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.left='-9999px';document.body.appendChild(ta);ta.select();const ok=document.execCommand('copy');ta.remove();return !!ok}catch(__){return false}}
-}
-async function chatGptCopyPrompt(round){
-  const ok=await chatGptWriteClipboard(chatGptImportPrompt(round));
-  msg(ok?'Skopiowano polecenie i listę zawodników dla T'+round+'.':'Nie udało się skopiować polecenia.',''+(ok?'':'bad'));
-}
+async function chatGptWriteClipboard(text){try{await navigator.clipboard.writeText(text);return true}catch(_){try{const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.left='-9999px';document.body.appendChild(ta);ta.select();const ok=document.execCommand('copy');ta.remove();return !!ok}catch(__){return false}}}
+async function chatGptCopyPrompt(round){const ok=await chatGptWriteClipboard(chatGptImportPrompt(round));msg(ok?'Skopiowano szybkie polecenie dla T'+round+'.':'Nie udało się skopiować polecenia.',ok?'':'bad')}
 function chatGptPendingRead(){try{const p=JSON.parse(STORE.get(CHATGPT_PENDING_KEY)||'null');if(!p||!p.round||!p.competitionId)return null;if(Date.now()-Number(p.at||0)>12*60*60*1000){STORE.del(CHATGPT_PENDING_KEY);return null}return p}catch(_){return null}}
 function chatGptPendingSave(round){const id=Number(CURRENT_DETAIL?.competition?.id||0);if(!id)return;STORE.set(CHATGPT_PENDING_KEY,JSON.stringify({round:Number(round)===2?2:1,competitionId:id,at:Date.now()}))}
 function chatGptPendingClear(){STORE.del(CHATGPT_PENDING_KEY)}
 function chatGptPendingForCurrent(){const p=chatGptPendingRead(),id=Number(CURRENT_DETAIL?.competition?.id||0);return p&&id&&Number(p.competitionId)===id?p:null}
 function chatGptShareReset(round){CHATGPT_SHARE_SELECTION={round:Number(round)===2?2:1,files:[]}}
 function chatGptShareFiles(round){round=Number(round)===2?2:1;if(Number(CHATGPT_SHARE_SELECTION.round)!==round)chatGptShareReset(round);return CHATGPT_SHARE_SELECTION.files}
-function chatGptShareAddFiles(round,list){const box=chatGptShareFiles(round);for(const f of Array.from(list||[])){if(!f||!String(f.type||'').startsWith('image/'))continue;box.push(f);if(box.length>=2)break}}
-function chatGptShareRemoveFile(round,index){const box=chatGptShareFiles(round);box.splice(index,1);openChatGptPasteImport(round,false)}
-function chatGptChoosePhotos(round,source){
-  round=Number(round)===2?2:1;const input=document.createElement('input');input.type='file';input.accept='image/*';input.style.position='fixed';input.style.left='-9999px';input.style.opacity='0';
-  if(source==='camera')input.setAttribute('capture','environment');else input.multiple=true;
-  const cleanup=()=>{if(input.isConnected)input.remove()};
-  input.onchange=()=>{const picked=Array.from(input.files||[]);cleanup();if(picked.length){chatGptShareAddFiles(round,picked);openChatGptPasteImport(round,false)}};
-  input.addEventListener('cancel',()=>{cleanup();openChatGptPasteImport(round,false)},{once:true});document.body.appendChild(input);input.click();
-}
+function chatGptShareAddFiles(round,list){const box=chatGptShareFiles(round);for(const f of Array.from(list||[])){if(!f||!String(f.type||'').startsWith('image/'))continue;if(box.some(x=>x.name===f.name&&x.size===f.size))continue;box.push(f);if(box.length>=2)break}}
+function chatGptShareRemoveFile(round,index){chatGptShareFiles(round).splice(index,1);openChatGptPasteImport(round,false)}
+function chatGptChoosePhotos(round,source){round=Number(round)===2?2:1;const input=document.createElement('input');input.type='file';input.accept='image/*';input.style.position='fixed';input.style.left='-9999px';input.style.opacity='0';if(source==='camera')input.setAttribute('capture','environment');else input.multiple=true;const cleanup=()=>{if(input.isConnected)input.remove()};input.onchange=()=>{const picked=Array.from(input.files||[]);cleanup();if(picked.length){chatGptShareAddFiles(round,picked);openChatGptPasteImport(round,false)}};input.addEventListener('cancel',()=>{cleanup();openChatGptPasteImport(round,false)},{once:true});document.body.appendChild(input);input.click()}
 function closeChatGptPasteImport(){q('chatGptPasteImportOverlay')?.remove()}
+function chatGptSetError(text){const el=q('chatGptImportError');if(!el)return;el.textContent=String(text||'');el.style.display=text?'block':'none'}
 async function chatGptShareToChatGPT(round){
-  round=Number(round)===2?2:1;const files=chatGptShareFiles(round).slice();if(!files.length){msg('Najpierw dodaj 1 albo 2 zdjęcia kartek.','bad');return}
-  const prompt=chatGptImportPrompt(round);const copied=await chatGptWriteClipboard(prompt);chatGptPendingSave(round);
+  round=Number(round)===2?2:1;const files=chatGptShareFiles(round).slice();if(!files.length){chatGptSetError('Najpierw dodaj 1 albo 2 zdjęcia kartek.');return}
+  const prompt=chatGptImportPrompt(round),copied=await chatGptWriteClipboard(prompt);chatGptPendingSave(round);
   let canFileShare=false;try{canFileShare=!!navigator.share&&(!navigator.canShare||navigator.canShare({files}))}catch(_){}
-  if(canFileShare){
-    try{await navigator.share({title:'Łowcy Methodowcy — T'+round,text:prompt,files});closeChatGptPasteImport();msg('Przekazano zdjęcia do udostępnienia. Wybierz ChatGPT. Polecenie jest też w schowku.');return}
-    catch(e){if(e&&e.name==='AbortError'){chatGptPendingClear();msg('Udostępnianie anulowane.');return}}
-  }
-  const w=window.open('https://chatgpt.com/','_blank','noopener');closeChatGptPasteImport();msg((w?'Otworzyłem ChatGPT. ':'Nie udało się automatycznie otworzyć ChatGPT. ')+(copied?'Polecenie jest w schowku. Dodaj tam wybrane zdjęcia.':'Skopiuj polecenie ręcznie.'),copied?'':'bad');
+  if(canFileShare){try{await navigator.share({title:'Łowcy Methodowcy — T'+round,text:prompt,files});closeChatGptPasteImport();msg('Zdjęcia przekazane. W ChatGPT polecenie powinno być razem z nimi; jest też w schowku.');return}catch(e){if(e&&e.name==='AbortError'){chatGptPendingClear();msg('Udostępnianie anulowane.');return}}}
+  const w=window.open('https://chatgpt.com/','_blank','noopener');closeChatGptPasteImport();msg((w?'Otworzyłem ChatGPT. ':'Nie udało się automatycznie otworzyć ChatGPT. ')+(copied?'Polecenie jest już w schowku. Dodaj tam zdjęcie/zdjęcia i wklej Ctrl+V.':'Skopiuj polecenie ręcznie.'),copied?'':'bad');
 }
 async function chatGptPasteFromClipboard(round){
-  round=Number(round)===2?2:1;let raw='';try{raw=await navigator.clipboard.readText()}catch(_){}
-  if(!raw.trim()){msg('Nie mogę odczytać schowka. Wklej JSON ręcznie w pole poniżej.','bad');q('chatGptPasteText')?.focus({preventScroll:true});return}
-  const ta=q('chatGptPasteText');if(ta)ta.value=raw;parseChatGptPasteImport(round);
+  round=Number(round)===2?2:1;chatGptSetError('');let raw='';try{raw=await navigator.clipboard.readText()}catch(e){chatGptSetError('Telefon nie pozwolił automatycznie odczytać schowka. Przytrzymaj pole poniżej, wybierz Wklej — po wklejeniu aplikacja spróbuje odczytać dane sama.');q('chatGptPasteText')?.focus({preventScroll:true});return}
+  const ta=q('chatGptPasteText');if(ta)ta.value=raw;if(!raw.trim()){chatGptSetError('Schowek jest pusty. W ChatGPT użyj Kopiuj przy bloku JSON, wróć tutaj i spróbuj ponownie.');return}parseChatGptPasteImport(round,true);
 }
 function chatGptAbortPending(round){chatGptPendingClear();chatGptShareReset(round);closeChatGptPasteImport();msg('Anulowano oczekujący import z ChatGPT.')}
 function openChatGptPasteImport(round,returning){
-  round=Number(round)===2?2:1;closeChatGptPasteImport();const files=chatGptShareFiles(round),pending=chatGptPendingForCurrent();
+  round=Number(round)===2?2:1;closeChatGptPasteImport();installChatGptMobileStyles();const files=chatGptShareFiles(round),pending=chatGptPendingForCurrent();
   const items=files.map((f,i)=>'<li><b>'+(i+1)+'.</b> '+esc(f.name||('Zdjęcie '+(i+1)))+' <button type="button" class="linklike" onclick="chatGptShareRemoveFile('+round+','+i+')">usuń</button></li>').join('');
   const o=document.createElement('div');o.id='chatGptPasteImportOverlay';o.className='photoImportOverlay';
-  o.innerHTML='<div class="photoImportDialog"><div class="photoImportHead"><div><h2>ChatGPT — import T'+round+'</h2><p>Bez płatnego API. Wybierz 1 albo 2 kartki, a aplikacja przekaże je do ChatGPT i skopiuje gotowe polecenie.</p></div><button type="button" class="warn" onclick="closeChatGptPasteImport()">Zamknij</button></div>'
-    +(pending?'<div class="photoImportWarn"><b>✓ Oczekuje import T'+pending.round+'.</b> Po skopiowaniu odpowiedzi w ChatGPT wróć tutaj i naciśnij „WKLEJ ZE SCHOWKA”.</div>':'')
-    +'<div class="photoSourceActions"><button type="button" class="blue photoSourcePrimary" onclick="chatGptChoosePhotos('+round+',&quot;camera&quot;)" '+(files.length>=2?'disabled':'')+'><b>📸 ZRÓB ZDJĘCIE</b><span>Dodaj kartkę aparatem</span></button><button type="button" class="secondary photoSourcePrimary" onclick="chatGptChoosePhotos('+round+',&quot;file&quot;)" '+(files.length>=2?'disabled':'')+'><b>🖼️ WYBIERZ ZDJĘCIA</b><span>1 albo 2 kartki z galerii</span></button></div>'
-    +(files.length?'<div class="photoImportPicked"><b>Wybrane kartki:</b><ol>'+items+'</ol></div>':'<small>Możesz wysłać jedną kartkę albo dwie kartki obu brzegów jednocześnie.</small>')
-    +'<div class="photoSourceActions" style="margin-top:12px"><button type="button" class="blue photoSourcePrimary" onclick="chatGptShareToChatGPT('+round+')" '+(files.length?'':'disabled')+'><b>🚀 WYŚLIJ DO CHATGPT '+(files.length?('('+files.length+')'):'')+'</b><span>Android: wybierz ChatGPT z systemowego Udostępnij. Polecenie kopiuję też do schowka.</span></button></div>'
-    +'<details style="margin-top:10px"><summary><b>Awaryjnie: otwórz ChatGPT ręcznie</b></summary><div class="grid" style="margin-top:8px"><button type="button" class="secondary" onclick="chatGptCopyPrompt('+round+')">KOPIUJ POLECENIE</button><button type="button" class="secondary" onclick="window.open(\'https://chatgpt.com/\',\'_blank\')">OTWÓRZ CHATGPT</button></div></details>'
-    +'<hr><label><b>Po odpowiedzi ChatGPT</b></label><div class="photoSourceActions" style="margin:8px 0"><button type="button" class="blue photoSourcePrimary" onclick="chatGptPasteFromClipboard('+round+')"><b>📋 WKLEJ ZE SCHOWKA I SPRAWDŹ</b><span>Najkrótsza droga po powrocie z ChatGPT</span></button></div>'
-    +'<textarea id="chatGptPasteText" rows="9" style="width:100%;margin-top:6px;font-family:ui-monospace,Consolas,monospace" placeholder=\'{"round":'+round+',"rows":[...]}\'></textarea>'
-    +'<div class="photoImportActions"><button type="button" class="secondary" onclick="parseChatGptPasteImport('+round+')">WCZYTAJ WPISANY JSON</button>'+(pending?'<button type="button" class="warn" onclick="chatGptAbortPending('+round+')">ANULUJ OCZEKUJĄCY IMPORT</button>':'')+'</div></div>';
-  document.body.appendChild(o);if(returning)q('chatGptPasteText')?.focus({preventScroll:true});
+  const afterOne=files.length===1?'<div class="photoImportWarn"><b>Masz 1 kartkę.</b> Jeśli druga kartka tego brzegu/tury istnieje, dodaj ją teraz. Jeśli nie — wyślij jedną.</div>':'';
+  o.innerHTML='<div class="photoImportDialog"><div class="photoImportHead"><div><h2>📸 Szybki import T'+round+'</h2><p>Nad wodą: zdjęcie → ChatGPT → kopiuj JSON → wróć → wklej.</p></div><button type="button" class="warn" onclick="closeChatGptPasteImport()">×</button></div>'
+    +(pending?'<div class="photoImportWarn"><b>✓ Czekam na odpowiedź ChatGPT dla T'+pending.round+'.</b> Skopiuj blok JSON w ChatGPT i wróć tutaj.</div>':'')
+    +'<div class="photoSourceActions"><button type="button" class="blue photoSourcePrimary" onclick="chatGptChoosePhotos('+round+',&quot;camera&quot;)" '+(files.length>=2?'disabled':'')+'><b>📸 ZRÓB ZDJĘCIE</b><span>'+(files.length?'Dodaj drugą kartkę':'Pierwsza kartka aparatem')+'</span></button><button type="button" class="secondary photoSourcePrimary" onclick="chatGptChoosePhotos('+round+',&quot;file&quot;)" '+(files.length>=2?'disabled':'')+'><b>🖼️ GALERIA</b><span>Wybierz 1 albo 2 zdjęcia</span></button></div>'
+    +(files.length?'<div class="photoImportPicked"><b>Wybrane:</b><ol>'+items+'</ol></div>':'<small>Możesz wysłać 1 kartkę albo obie kartki tej samej tury.</small>')+afterOne
+    +'<div class="photoSourceActions" style="margin-top:10px"><button type="button" class="blue photoSourcePrimary" onclick="chatGptShareToChatGPT('+round+')" '+(files.length?'':'disabled')+'><b>🚀 WYŚLIJ DO CHATGPT '+(files.length?('('+files.length+')'):'')+'</b><span>Na telefonie wybierz ChatGPT z „Udostępnij”. Prompt wysyłam razem ze zdjęciami i kopiuję do schowka.</span></button></div>'
+    +'<details style="margin-top:8px"><summary><b>Awaryjnie / komputer</b></summary><div class="grid" style="margin-top:8px"><button type="button" class="secondary" onclick="chatGptCopyPrompt('+round+')">KOPIUJ PROMPT</button><button type="button" class="secondary" onclick="window.open(\'https://chatgpt.com/\',\'_blank\')">OTWÓRZ CHATGPT</button></div></details>'
+    +'<div id="chatGptImportError" class="photoImportWarn" style="display:none;margin-top:8px"></div>'
+    +'<label style="display:block;margin-top:10px"><b>JSON z ChatGPT</b></label><textarea id="chatGptPasteText" rows="7" style="width:100%;margin-top:5px;font-family:ui-monospace,Consolas,monospace" placeholder="Wklej tutaj odpowiedź JSON"></textarea>'
+    +'<div class="chatGptReturnBox"><button type="button" class="blue" onclick="chatGptPasteFromClipboard('+round+')">📋 WKLEJ ZE SCHOWKA I WCZYTAJ</button></div>'
+    +'<div class="photoImportActions"><button type="button" class="secondary" onclick="parseChatGptPasteImport('+round+',false)">WCZYTAJ WPISANY JSON</button>'+(pending?'<button type="button" class="warn" onclick="chatGptAbortPending('+round+')">ANULUJ IMPORT</button>':'')+'</div></div>';
+  document.body.appendChild(o);const ta=q('chatGptPasteText');if(ta){ta.addEventListener('paste',()=>setTimeout(()=>parseChatGptPasteImport(round,true),40));if(returning)ta.focus({preventScroll:true})}
 }
 function chatGptParseJson(raw){
-  let t=String(raw||'').trim();t=t.replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'').trim();const a=t.indexOf('{'),b=t.lastIndexOf('}');if(a>=0&&b>a)t=t.slice(a,b+1);return JSON.parse(t);
+  let t=String(raw||'').replace(/^\uFEFF/,'').replace(/[\u200B-\u200D\u2060]/g,'').trim();
+  t=t.replace(/^```(?:json)?\s*/i,'').replace(/\s*```\s*$/,'').trim();
+  const objA=t.indexOf('{'),objB=t.lastIndexOf('}'),arrA=t.indexOf('['),arrB=t.lastIndexOf(']');
+  if(objA>=0&&objB>objA)t=t.slice(objA,objB+1);else if(arrA>=0&&arrB>arrA)t=t.slice(arrA,arrB+1);
+  const attempts=[t,t.replace(/[“”]/g,'"').replace(/[‘’]/g,"'").replace(/,\s*([}\]])/g,'$1')];
+  let last;for(const x of attempts){try{return JSON.parse(x)}catch(e){last=e}}throw last||Error('Niepoprawny JSON');
 }
+function chatGptRowsFromData(data){if(Array.isArray(data))return data;if(Array.isArray(data?.rows))return data.rows;if(Array.isArray(data?.Rows))return data.Rows;if(Array.isArray(data?.data?.rows))return data.data.rows;if(Array.isArray(data?.result?.rows))return data.result.rows;return []}
+function chatGptValue(src,key){const upper=key.toUpperCase(),alt=key==='sum'?'suma':key;return src?.[key]??src?.[upper]??src?.[alt]??src?.[alt.toUpperCase()]??''}
 function chatGptField(raw,low){let text=String(raw??'').trim(),isBigFish=/^\s*\*/.test(text),value=(text.match(/\d/g)||[]).join('').slice(0,7);if(value==='1')value='0';return {value,isBigFish:isBigFish&&Number(value||0)>0,low:!!low,blank:!value,raw:text}}
 function chatGptMergeField(oldField,newField){if(!newField?.value)return oldField;if(!oldField?.value)return newField;if(oldField.value===newField.value&&!!oldField.isBigFish===!!newField.isBigFish)return {...oldField,low:oldField.low||newField.low};return {...oldField,low:true,raw:[oldField.raw,newField.raw].filter(Boolean).join(' | ')}}
-function parseChatGptPasteImport(round){
-  round=Number(round)===2?2:1;const raw=q('chatGptPasteText')?.value||'';if(!raw.trim()){msg('Wklej najpierw JSON z ChatGPT.','bad');return}
-  let data;try{data=chatGptParseJson(raw)}catch(e){msg('Nie udało się odczytać JSON. Wklej odpowiedź ChatGPT jeszcze raz.','bad');return}
-  const entries=(CURRENT_DETAIL?.activeEntries||[]).map((e,i)=>({lp:i+1,userId:Number(e.user_id),name:String(e.first_name+' '+e.last_name)}));
-  const byId=new Map(entries.map(x=>[x.userId,x])),byLp=new Map(entries.map(x=>[x.lp,x])),byName=new Map(entries.map(x=>[chatGptNormalizeName(x.name),x]));
-  const mkBlank=()=>({value:'',isBigFish:false,low:false,blank:true,raw:''});
-  const rows=entries.map(e=>({userId:e.userId,name:e.name,weights:[mkBlank(),mkBlank(),mkBlank(),mkBlank(),mkBlank()],sum:mkBlank(),calculatedSum:0,bigFishTotal:0}));
-  const targetById=new Map(rows.map(r=>[r.userId,r])),unmatched=[];
-  for(const src of (Array.isArray(data?.rows)?data.rows:[])){
-    let match=byId.get(Number(src?.userId||0))||byLp.get(Number(src?.lp||0))||byName.get(chatGptNormalizeName(src?.name||''));
-    if(!match){unmatched.push({lp:src?.lp||'',name:String(src?.name||''),note:'Nie znaleziono na aktualnej liście'});continue}
-    const dst=targetById.get(match.userId),review=new Set(Array.isArray(src?.reviewFields)?src.reviewFields.map(x=>String(x||'').toLowerCase()):[]);
-    for(let i=0;i<5;i++){const key='w'+(i+1),f=chatGptField(src?.[key]||'',review.has(key));dst.weights[i]=chatGptMergeField(dst.weights[i],f)}
-    dst.sum=chatGptMergeField(dst.sum,chatGptField(src?.sum||'',review.has('sum')));
-  }
-  for(const r of rows){r.calculatedSum=r.weights.reduce((a,f)=>a+(Number(f.value)||0),0);r.bigFishTotal=r.weights.filter(f=>f.isBigFish).reduce((a,f)=>a+(Number(f.value)||0),0);if((Number(r.sum.value)||0)&&r.bigFishTotal>Number(r.sum.value||0))r.sum.low=true}
-  chatGptPendingClear();chatGptShareReset(round);closeChatGptPasteImport();showPhotoImportReview({round,rows,unmatched,sheetCount:Number(data?.sheetCount||0)||1,imageUrls:[],manualChatGPT:true,provider:'ChatGPT'});
-  msg('Wczytano dane z ChatGPT do kontroli. Nic nie zostało jeszcze zapisane.');
+function parseChatGptPasteImport(round,auto){
+  try{
+    round=Number(round)===2?2:1;chatGptSetError('');const raw=q('chatGptPasteText')?.value||'';if(!raw.trim()){if(!auto)chatGptSetError('Wklej najpierw JSON z ChatGPT.');return false}
+    let data;try{data=chatGptParseJson(raw)}catch(e){chatGptSetError('Nie rozpoznaję JSON. W ChatGPT naciśnij „Kopiuj” przy bloku JSON i wklej ponownie.');return false}
+    const srcRows=chatGptRowsFromData(data);if(!srcRows.length){chatGptSetError('JSON nie zawiera wierszy wyników (rows). Skopiuj cały blok JSON z ChatGPT.');return false}
+    const entries=(CURRENT_DETAIL?.activeEntries||[]).map((e,i)=>({lp:i+1,userId:Number(e.user_id),name:String(e.first_name+' '+e.last_name)}));if(!entries.length){chatGptSetError('Brak aktualnej listy zawodników. Zamknij okno i otwórz zawody ponownie.');return false}
+    const byId=new Map(entries.map(x=>[x.userId,x])),byLp=new Map(entries.map(x=>[x.lp,x])),byName=new Map(entries.map(x=>[chatGptNormalizeName(x.name),x]));
+    const mkBlank=()=>({value:'',isBigFish:false,low:false,blank:true,raw:''});
+    const rows=entries.map(e=>({userId:e.userId,name:e.name,weights:[mkBlank(),mkBlank(),mkBlank(),mkBlank(),mkBlank()],sum:mkBlank(),calculatedSum:0,bigFishTotal:0}));
+    const targetById=new Map(rows.map(r=>[r.userId,r])),unmatched=[];let matched=0,fields=0;
+    for(const src of srcRows){
+      const uid=Number(src?.userId??src?.userid??src?.user_id??0),lp=Number(src?.lp??src?.LP??0),nm=chatGptNormalizeName(src?.name??src?.nazwisko??src?.player??'');
+      const match=byId.get(uid)||byLp.get(lp)||byName.get(nm);if(!match){unmatched.push({lp:lp||'',name:String(src?.name??src?.nazwisko??''),note:'Nie znaleziono na aktualnej liście'});continue}
+      matched++;const dst=targetById.get(match.userId),reviewRaw=src?.reviewFields??src?.review_fields??[],review=new Set(Array.isArray(reviewRaw)?reviewRaw.map(x=>String(x||'').toLowerCase()):[]);
+      for(let i=0;i<5;i++){const key='w'+(i+1),rawVal=chatGptValue(src,key),f=chatGptField(rawVal,review.has(key));if(String(rawVal??'').trim()!=='')fields++;dst.weights[i]=chatGptMergeField(dst.weights[i],f)}
+      const rawSum=chatGptValue(src,'sum');if(String(rawSum??'').trim()!=='')fields++;dst.sum=chatGptMergeField(dst.sum,chatGptField(rawSum,review.has('sum')||review.has('suma')));
+    }
+    if(!matched){chatGptSetError('JSON jest poprawny, ale nie udało się dopasować żadnego zawodnika. Skopiuj odpowiedź wygenerowaną z promptu tych zawodów.');return false}
+    if(!fields){chatGptSetError('Dopasowano zawodników, ale JSON nie zawiera żadnych wpisanych wag/SUMA.');return false}
+    for(const r of rows){r.calculatedSum=r.weights.reduce((a,f)=>a+(Number(f.value)||0),0);r.bigFishTotal=r.weights.filter(f=>f.isBigFish).reduce((a,f)=>a+(Number(f.value)||0),0);if((Number(r.sum.value)||0)&&r.bigFishTotal>Number(r.sum.value||0))r.sum.low=true}
+    chatGptPendingClear();chatGptShareReset(round);closeChatGptPasteImport();showPhotoImportReview({round,rows,unmatched,sheetCount:Number(data?.sheetCount??data?.sheet_count??0)||1,imageUrls:[],manualChatGPT:true,provider:'ChatGPT'});
+    msg('Wczytano '+matched+' zawodników z ChatGPT do kontroli.');return true;
+  }catch(e){console.error('CHATGPT_IMPORT_V147',e);chatGptSetError('Błąd importu: '+(e?.message||'nieznany błąd'));return false}
 }
-function chatGptMaybeResume(){
-  const p=chatGptPendingForCurrent();if(!p||ME?.role!=='ADMIN'||q('chatGptPasteImportOverlay')||q('photoImportOverlay'))return;setTimeout(()=>{const now=chatGptPendingForCurrent();if(now&&!q('chatGptPasteImportOverlay')&&!q('photoImportOverlay'))openChatGptPasteImport(now.round,true)},250);
-}
+function chatGptMaybeResume(){const p=chatGptPendingForCurrent();if(!p||ME?.role!=='ADMIN'||q('chatGptPasteImportOverlay')||q('photoImportOverlay'))return;setTimeout(()=>{const now=chatGptPendingForCurrent();if(now&&!q('chatGptPasteImportOverlay')&&!q('photoImportOverlay'))openChatGptPasteImport(now.round,true)},180)}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')chatGptMaybeResume()});
 window.addEventListener('focus',()=>chatGptMaybeResume());
 function renderResultsEntryPanel(d){
   const c=d.competition,p=chatGptPendingForCurrent();
-  const pending=p?'<div class="photoImportWarn" style="margin-bottom:10px"><b>📋 Oczekuje wynik z ChatGPT — T'+p.round+'</b><div style="margin-top:8px"><button type="button" class="blue" onclick="openChatGptPasteImport('+p.round+',true)">WKLEJ ODCZYT T'+p.round+'</button></div></div>':'';
-  return '<div class="card"><h2>Wpisywanie wyników</h2><p class="small muted"><b>Przeliczanie jest automatyczne.</b> Po zapisaniu lub usunięciu każdej wagi klasyfikacje T1, T2 i końcowa są liczone ponownie. Wpisz wagę siatki albo dużej ryby i przejdź do innego pola.</p>'+pending+'<div class="photoImportQuick"><b>💬 ChatGPT ze zdjęć — bez API</b><span>Wybierz 1 albo 2 kartki. Aplikacja przekaże zdjęcia przez systemowe Udostępnij i skopiuje krótki prompt. Po odpowiedzi wracasz i klikasz „Wklej ze schowka”.</span><div class="grid"><button type="button" class="blue" onclick="openChatGptPasteImport(1,false)">T1 — zdjęcia → ChatGPT</button><button type="button" class="blue" onclick="openChatGptPasteImport(2,false)">T2 — zdjęcia → ChatGPT</button></div></div><details class="card" style="margin-top:10px"><summary><b>Automatyczny import OpenAI API (opcjonalny / płatny)</b></summary><p class="small muted">Ten tryb wysyła zdjęcie bezpośrednio przez klucz API. Do testów bez kosztów użyj trybu ChatGPT powyżej.</p><div class="grid"><button type="button" class="secondary" onclick="startPhotoResultImport(1)">API T1 — zdjęcie / plik</button><button type="button" class="secondary" onclick="startPhotoResultImport(2)">API T2 — zdjęcie / plik</button></div></details><div class="grid3"><button type="button" class="secondary" onclick="generateResults('+c.id+',1,event)">Generuj wyniki T1</button><button type="button" class="secondary" onclick="generateResults('+c.id+',2,event)">Generuj wyniki T2</button><button type="button" class="blue" onclick="generateResultsAll('+c.id+',event)">Generuj T1 + T2</button></div><button type="button" class="warn" style="margin-top:10px" onclick="clearResults('+c.id+',event)">Wyczyść wszystkie wyniki T1 i T2</button><div class="resultEntryRounds"><div class="resultRoundPanel"><h3>T1</h3>'+renderResultForm(d,1)+'</div><div class="resultRoundPanel"><h3>T2</h3>'+renderResultForm(d,2)+'</div></div></div>';
+  const pending=p?'<div class="photoImportWarn" style="margin-bottom:10px"><b>📋 CZEKA ODCZYT Z CHATGPT — T'+p.round+'</b><div style="margin-top:8px"><button type="button" class="blue" onclick="openChatGptPasteImport('+p.round+',true)">WKLEJ I WCZYTAJ T'+p.round+'</button></div></div>':'';
+  return '<div class="card"><h2>Wpisywanie wyników</h2>'+pending+'<div class="photoImportQuick"><b>📸 SZYBKI IMPORT ZE ZDJĘCIA</b><span class="mobileWaterHint">Telefon nad wodą: zrób 1–2 zdjęcia → ChatGPT → skopiuj JSON → wróć i wklej.</span><div class="grid"><button type="button" class="blue" onclick="openChatGptPasteImport(1,false)">📸 T1 — ZE ZDJĘCIA</button><button type="button" class="blue" onclick="openChatGptPasteImport(2,false)">📸 T2 — ZE ZDJĘCIA</button></div></div><details class="card" style="margin-top:10px"><summary><b>OpenAI API (opcjonalny / płatny)</b></summary><div class="grid"><button type="button" class="secondary" onclick="startPhotoResultImport(1)">API T1</button><button type="button" class="secondary" onclick="startPhotoResultImport(2)">API T2</button></div></details><div class="grid3"><button type="button" class="secondary" onclick="generateResults('+c.id+',1,event)">Generuj wyniki T1</button><button type="button" class="secondary" onclick="generateResults('+c.id+',2,event)">Generuj wyniki T2</button><button type="button" class="blue" onclick="generateResultsAll('+c.id+',event)">Generuj T1 + T2</button></div><button type="button" class="warn" style="margin-top:10px" onclick="clearResults('+c.id+',event)">Wyczyść wszystkie wyniki T1 i T2</button><div class="resultEntryRounds"><div class="resultRoundPanel"><h3>T1</h3>'+renderResultForm(d,1)+'</div><div class="resultRoundPanel"><h3>T2</h3>'+renderResultForm(d,2)+'</div></div></div>';
 }
 function renderResultsSummaryPanel(d){const c=d.competition;return '<div class="card"><h2>Wyniki i klasyfikacja</h2><div class="grid"><button type="button" class="blue" onclick="notifyResults('+c.id+',1)">Powiadom o wynikach T1</button><button type="button" class="blue" onclick="notifyResults('+c.id+',2)">Powiadom o wynikach T2</button></div><div class="inlineBtns"><button type="button" class="secondary" onclick="retryAchievementToasts('+c.id+',1,this)">Ponów dymki T1</button><button type="button" class="secondary" onclick="retryAchievementToasts('+c.id+',2,this)">Ponów dymki T2</button><button type="button" class="secondary" onclick="retryAchievementToasts('+c.id+',\'general\',this)">Ponów dymki generalne</button></div><p id="achievementPublishStatus" role="status"></p>'+renderSectorResultsBoard(d)+'<h3>Klasyfikacja T1</h3>'+renderClassTable(d.classification.round1)+'<h3>Klasyfikacja T2</h3>'+renderClassTable(d.classification.round2)+'<h3>Klasyfikacja końcowa</h3><button type="button" class="blue" onclick="notifyGeneralResults('+c.id+',this)">Powiadom o klasyfikacji końcowej</button><p id="generalPublishStatus" role="status"></p>'+renderFinalClubToggle()+renderGeneralTable(d.classification.general)+renderStationStatistics(d)+'</div>'}
 function placeRowClass(rank){const r=Number(rank);return r===1?'place1':r===2?'place2':r===3?'place3':''}
