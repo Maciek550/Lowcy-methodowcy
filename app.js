@@ -1277,7 +1277,6 @@ function showPhotoImportReview(result){
 }
 
 let PHOTO_IMPORT_SELECTION={round:1,files:[]};
-let PHOTO_IMPORT_SELECTION={round:1,files:[]};
 function closePhotoImportSource(){q('photoImportSourceOverlay')?.remove()}
 function photoImportReset(round){PHOTO_IMPORT_SELECTION={round:Number(round)===2?2:1,files:[]}}
 function photoImportGetFiles(round){round=Number(round)===2?2:1;if(Number(PHOTO_IMPORT_SELECTION.round)!==round)photoImportReset(round);return PHOTO_IMPORT_SELECTION.files}
