@@ -18,7 +18,7 @@ let VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const GOOGLE_VISION_API_KEY = process.env.GOOGLE_VISION_API_KEY || process.env.OCR_GOOGLE_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.PHOTO_OCR_OPENAI_API_KEY || '';
-const PHOTO_OCR_MODEL = process.env.PHOTO_OCR_OPENAI_MODEL || 'gpt-6-astra';
+const PHOTO_OCR_MODEL = process.env.PHOTO_OCR_OPENAI_MODEL || 'gpt-5.6-sol';
 const APP_VERSION = '143';
 const APP_VERSION_NAME = 'V143_OPENAI_MULTI_SHEET_OCR';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
@@ -216,8 +216,10 @@ Zwróć WYŁĄCZNIE poprawny JSON w formacie:
    +`Bez komentarza poza JSON.`;
 
   const input=[{role:'user',content:[{type:'input_text',text:prompt}, ...safeImages.map(img=>({type:'input_image',image_url:img.dataUrl,detail:'original'}))]}];
-  const body={model:PHOTO_OCR_MODEL,input};
-  const ctrl=new AbortController(), timer=setTimeout(()=>ctrl.abort(),120000);
+  const body={model:PHOTO_OCR_MODEL,input,reasoning:{effort:'none'},max_output_tokens:3000};
+  const started=Date.now();
+  console.log('PHOTO_OCR_OPENAI_START model='+PHOTO_OCR_MODEL+' sheets='+safeImages.length+' roster='+roster.length);
+  const ctrl=new AbortController(), timer=setTimeout(()=>ctrl.abort(),60000);
   let r,j;
   try{
     r=await fetch('https://api.openai.com/v1/responses',{
@@ -228,10 +230,12 @@ Zwróć WYŁĄCZNIE poprawny JSON w formacie:
     });
     j=await r.json().catch(()=>({}));
   }catch(err){
-    const e=new Error(err?.name==='AbortError'?'OpenAI OCR nie odpowiedział w 120 s.':'Nie udało się połączyć z OpenAI OCR.');
+    console.error('PHOTO_OCR_OPENAI_FETCH_ERR ms='+(Date.now()-started),err?.name||'',err?.message||'');
+    const e=new Error(err?.name==='AbortError'?'OpenAI OCR nie odpowiedział w 60 s.':'Nie udało się połączyć z OpenAI OCR.');
     e.status=502; throw e;
   }finally{ clearTimeout(timer); }
-  if(!r.ok){ const e=new Error(j?.error?.message||'OpenAI OCR odrzucił żądanie.'); e.status=502; throw e; }
+  if(!r.ok){ console.error('PHOTO_OCR_OPENAI_HTTP_ERR status='+r.status+' ms='+(Date.now()-started)+' code='+(j?.error?.code||'')+' msg='+(j?.error?.message||'')); const e=new Error(j?.error?.message||'OpenAI OCR odrzucił żądanie.'); e.status=502; throw e; }
+  console.log('PHOTO_OCR_OPENAI_OK model='+PHOTO_OCR_MODEL+' ms='+(Date.now()-started));
   const text=responseOutputText(j);
   const parsed=extractJsonObject(text);
 
