@@ -1,3 +1,11 @@
+V151 — ZWARTY IMPORT Z CHATGPT
+
+- na telefonie każdy zawodnik mieści W1–W5 i SUMA w jednym wierszu, z numerem i inicjałami po prawej;
+- jasne pola pokazują odczytane wagi bez przewijania przez puste, wysokie pola;
+- lista kontrolna przewija się wewnątrz ekranu, a przyciski importu pozostają na dole;
+- import wysyła pełną listę zawodników, również osoby bez wpisów niewidoczne w podglądzie;
+- wersja/cache/probe zaktualizowane do V151.
+
 V142 — HYBRYDOWY OCR / SUROWA KOLOROWA KOMÓRKA
 
 - Google Vision dostaje prawie całą komórkę W1–W5/SUMA w oryginalnym kolorze;

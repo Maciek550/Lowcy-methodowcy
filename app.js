@@ -1,4 +1,4 @@
-const CLIENT_VERSION='150';const CLIENT_VERSION_NAME='V150_PRINT_SAFE_PDFS';window.__LOWCY_APP_JS_150=1;try{fetch('/__probe_js_v150',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V150_PRINT_SAFE_PDFS_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='151';const CLIENT_VERSION_NAME='V151_COMPACT_CHATGPT_IMPORT';window.__LOWCY_APP_JS_151=1;try{fetch('/__probe_js_v151',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V151_COMPACT_CHATGPT_IMPORT_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -1400,17 +1400,18 @@ function photoImportCell(field,key){
   const value=(field?.isBigFish?'*':'')+(field?.value||''),low=!!field?.low,label=String(key||'').toUpperCase();
   return '<td data-label="'+esc(label)+'" class="'+(low?'photoOcrLow':'')+'"><input inputmode="text" data-key="'+esc(key)+'" value="'+esc(value)+'" placeholder="—">'+(low?'<small>sprawdź</small>':'')+'</td>';
 }
+function photoImportInitials(name){return String(name||'').trim().split(/\s+/).filter(Boolean).map(part=>Array.from(part)[0].toLocaleUpperCase('pl')+'.').join('')}
 function showPhotoImportReview(result){
-  closePhotoImportReview();const overlay=document.createElement('div');overlay.id='photoImportOverlay';overlay.className='photoImportOverlay';overlay._imageUrls=[...(result.imageUrls||[])];overlay.dataset.round=String(result.round||1);if(result.manualChatGPT)overlay.dataset.manualChatgpt='1';
+  closePhotoImportReview();const overlay=document.createElement('div');overlay.id='photoImportOverlay';overlay.className='photoImportOverlay';overlay._imageUrls=[...(result.imageUrls||[])];overlay._allUserIds=(result.rows||[]).map(r=>Number(r.userId));overlay.dataset.round=String(result.round||1);if(result.manualChatGPT)overlay.dataset.manualChatgpt='1';
   const sourceRows=(result.rows||[]),visibleRows=result.manualChatGPT?sourceRows.filter(r=>r?.weights?.some(f=>String(f?.value||'')!=='')||String(r?.sum?.value||'')!==''||r?.weights?.some(f=>f?.low)||r?.sum?.low):sourceRows;
-  const rows=visibleRows.map((r,i)=>{const sumVal=r.sum?.value||'',calc=Number(r.calculatedSum||0),warn=!!r.sum?.low,info=sumVal?'SUMA = wynik końcowy':'z W1–W5: '+fmtGram(calc);return '<tr data-user-id="'+r.userId+'"><td class="photoOcrName" data-label="Zawodnik"><b>'+(i+1)+'. '+esc(r.name)+'</b></td>'+r.weights.map((f,j)=>photoImportCell(f,'w'+(j+1))).join('')+'<td data-label="SUMA" class="'+(warn?'photoOcrLow':'')+'"><input inputmode="numeric" data-key="sum" value="'+esc(sumVal)+'" placeholder="—"><small>'+info+'</small></td></tr>'}).join('');
+  const rows=visibleRows.map(r=>{const sumVal=r.sum?.value||'',calc=Number(r.calculatedSum||0),warn=!!r.sum?.low,info=sumVal?'SUMA = wynik końcowy':'z W1–W5: '+fmtGram(calc),lp=sourceRows.indexOf(r)+1;return '<tr data-user-id="'+r.userId+'"><td class="photoOcrName" data-label="Zawodnik"><b>'+lp+'. '+esc(r.name)+'</b><span class="photoOcrBadge" aria-label="Numer '+lp+', '+esc(r.name)+'">'+lp+' '+esc(photoImportInitials(r.name))+'</span></td>'+r.weights.map((f,j)=>photoImportCell(f,'w'+(j+1))).join('')+'<td data-label="SUMA" class="'+(warn?'photoOcrLow':'')+'"><input inputmode="numeric" data-key="sum" value="'+esc(sumVal)+'" placeholder="—"><small>'+info+'</small></td></tr>'}).join('');
   const previews=(result.imageUrls||[]).length?'<div class="photoImportPreview">'+(result.imageUrls||[]).map(u=>'<img src="'+esc(u)+'" alt="Zdjęcie formularza">').join('')+'</div>':'';
   const unmatched=(result.unmatched||[]).length?'<div class="photoImportWarn">⚠ Nierozpoznane wiersze: '+esc((result.unmatched||[]).map(x=>[x.lp,x.name].filter(Boolean).join('. ')).join(' | '))+'</div>':'';
   const reviewTitle=result.manualChatGPT?'Import z ChatGPT — T'+(result.round||1):'Import ze zdjęcia — T'+(result.round||1);
   const reviewDesc=result.manualChatGPT?'Odczytano <b>'+visibleRows.length+'</b> zawodników z wpisami. <b>Nic nie jest jeszcze zapisane.</b> Sprawdź tylko te pozycje i zatwierdź.':'AI odczytała '+Number(result.sheetCount||1)+' kartki. <b>SUMA ma pierwszeństwo</b>. Zapis <b>*9890</b> oznacza BF 9890 g. Pole „sprawdź” oznacza niepewny odczyt.';
   overlay.innerHTML='<div class="photoImportDialog"><div class="photoImportHead"><div><h2>'+reviewTitle+'</h2><p>'+reviewDesc+'</p></div><button type="button" class="warn" onclick="closePhotoImportReview()">Zamknij</button></div>'
     +previews
-    +'<div class="photoImportWarn">⚠ Zapis zastąpi wszystkie dotychczasowe wpisy wag w T'+(result.round||1)+'. Jeśli jest SUMA, stanie się wynikiem końcowym; z W1–W5 zachowane zostaną wtedy tylko wartości oznaczone * jako BF.</div>'
+    +(result.manualChatGPT?'<details class="photoImportWarn photoImportRules"><summary>⚠ Zapis zastąpi dotychczasowe wyniki T'+(result.round||1)+' — szczegóły</summary><p>Jeśli jest SUMA, stanie się wynikiem końcowym. Z W1–W5 zachowane zostaną wtedy tylko wartości oznaczone * jako BF.</p></details>':'<div class="photoImportWarn">⚠ Zapis zastąpi wszystkie dotychczasowe wpisy wag w T'+(result.round||1)+'. Jeśli jest SUMA, stanie się wynikiem końcowym; z W1–W5 zachowane zostaną wtedy tylko wartości oznaczone * jako BF.</div>')
     +unmatched
     +(visibleRows.length?'<div class="tablewrap"><table class="photoImportTable"><thead><tr><th>Zawodnik</th><th>W1</th><th>W2</th><th>W3</th><th>W4</th><th>W5</th><th>SUMA</th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<div class="photoImportWarn"><b>Nie znaleziono żadnych wpisów do importu.</b></div>')
     +'<div class="photoImportActions"><button type="button" class="blue" onclick="commitPhotoResultImport(this)" '+(visibleRows.length?'':'disabled')+'>IMPORTUJ DO T'+(result.round||1)+'</button><button type="button" class="secondary" onclick="closePhotoImportReview()">Anuluj</button></div></div>';
@@ -1429,6 +1430,11 @@ async function commitPhotoResultImport(button){
       items=bfItems.map(x=>({weight:x.weight,bigFish:true}));const remainder=writtenSum-bfTotal;if(remainder>0)items.push({weight:remainder,bigFish:false});
     }else items=sourceItems.map(x=>({weight:x.weight,bigFish:x.bigFish}));
     rows.push({userId:Number(tr.dataset.userId),items,sourceItems,writtenSum,sumAuthoritative:writtenSum>0});
+  }
+  // The preview omits empty people; the endpoint still requires every active person.
+  if(overlay.dataset.manualChatgpt==='1'){
+    const shown=new Set(rows.map(r=>r.userId));
+    for(const userId of (overlay._allUserIds||[]))if(!shown.has(userId))rows.push({userId,items:[],sourceItems:[],writtenSum:0,sumAuthoritative:false});
   }
   if(!confirm('Zaimportować odczytane dane i ZASTĄPIĆ wszystkie obecne wpisy T'+round+'?'))return;
   if(button){button.disabled=true;button.textContent='Importuję…'}
@@ -1452,18 +1458,33 @@ function installChatGptMobileStyles(){if(q('chatGptV147Styles'))return;const s=d
 #chatGptPasteImportOverlay textarea{min-height:110px!important;font-size:13px!important}
 #chatGptPasteImportOverlay .chatGptReturnBox{position:sticky;bottom:0;z-index:5;background:#102735;padding:8px 0 4px;border-top:1px solid #38627a}
 #chatGptPasteImportOverlay .chatGptReturnBox button{width:100%!important;min-height:74px!important;font-size:18px!important}
-#photoImportOverlay[data-manual-chatgpt='1']{padding:0!important;align-items:stretch!important}
-#photoImportOverlay[data-manual-chatgpt='1'] .photoImportDialog{width:100%!important;max-width:none!important;height:100dvh!important;max-height:100dvh!important;border-radius:0!important;padding:10px!important;overflow:auto!important}
+#photoImportOverlay[data-manual-chatgpt='1']{padding:0!important;overflow:hidden!important}
+#photoImportOverlay[data-manual-chatgpt='1'] .photoImportDialog{display:flex!important;flex-direction:column!important;width:100%!important;max-width:none!important;height:100dvh!important;max-height:100dvh!important;border-radius:0!important;padding:8px 10px calc(5px + env(safe-area-inset-bottom,0px))!important;overflow:hidden!important}
+#photoImportOverlay[data-manual-chatgpt='1'] .photoImportHead{display:flex!important;align-items:center!important;gap:8px!important;flex:none!important}
+#photoImportOverlay[data-manual-chatgpt='1'] .photoImportHead>div{min-width:0;flex:1}
+#photoImportOverlay[data-manual-chatgpt='1'] .photoImportHead h2{font-size:17px!important;line-height:1.15!important;margin:0 0 2px!important}
+#photoImportOverlay[data-manual-chatgpt='1'] .photoImportHead p{font-size:11px!important;line-height:1.2!important}
+#photoImportOverlay[data-manual-chatgpt='1'] .photoImportHead button{width:auto!important;min-width:66px!important;min-height:38px!important;margin:0!important;padding:5px 7px!important;font-size:12px!important}
+#photoImportOverlay[data-manual-chatgpt='1'] .photoImportRules{flex:none!important;margin:6px 0!important;padding:6px 8px!important;font-size:11px!important;line-height:1.25!important}
+#photoImportOverlay[data-manual-chatgpt='1'] .photoImportRules summary{cursor:pointer}
+#photoImportOverlay[data-manual-chatgpt='1'] .photoImportRules p{margin:5px 0 0}
+#photoImportOverlay[data-manual-chatgpt='1'] .photoImportDialog>.tablewrap{flex:1 1 auto!important;min-height:0!important;max-width:100%!important;overflow-x:hidden!important;overflow-y:auto!important;border:0!important}
 #photoImportOverlay[data-manual-chatgpt='1'] .photoImportTable thead{display:none!important}
-#photoImportOverlay[data-manual-chatgpt='1'] .photoImportTable,#photoImportOverlay[data-manual-chatgpt='1'] .photoImportTable tbody{display:block!important;width:100%!important}
-#photoImportOverlay[data-manual-chatgpt='1'] .photoImportTable tr{display:block!important;margin:0 0 10px!important;padding:10px!important;border:1px solid #42677b!important;border-radius:12px!important;background:#0c2230!important}
-#photoImportOverlay[data-manual-chatgpt='1'] .photoImportTable td{display:grid!important;grid-template-columns:72px 1fr!important;align-items:center!important;gap:8px!important;width:100%!important;border:0!important;padding:4px 0!important}
-#photoImportOverlay[data-manual-chatgpt='1'] .photoImportTable td:before{content:attr(data-label);font-size:12px;font-weight:800;opacity:.8}
-#photoImportOverlay[data-manual-chatgpt='1'] .photoImportTable td.photoOcrName{display:block!important;font-size:16px!important;padding:2px 0 8px!important}
+#photoImportOverlay[data-manual-chatgpt='1'] .photoImportTable,#photoImportOverlay[data-manual-chatgpt='1'] .photoImportTable tbody{display:block!important;width:100%!important;min-width:0!important;background:transparent!important}
+#photoImportOverlay[data-manual-chatgpt='1'] .photoImportTable tr{display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr))!important;gap:3px!important;margin:0 0 5px!important;padding:5px!important;border:1px solid #42677b!important;border-radius:8px!important;background:#0c2230!important}
+#photoImportOverlay[data-manual-chatgpt='1'] .photoImportTable td{display:block!important;min-width:0!important;width:auto!important;border:0!important;padding:0!important;font-size:11px!important}
+#photoImportOverlay[data-manual-chatgpt='1'] .photoImportTable td:before{content:attr(data-label);display:block;font-size:10px;font-weight:900;line-height:1.1;margin-bottom:2px;color:#bad4e3}
+#photoImportOverlay[data-manual-chatgpt='1'] .photoImportTable td.photoOcrName{grid-column:1/-1!important;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:5px!important;min-width:0!important;font-size:12px!important;line-height:1.15!important;padding:0 0 2px!important}
 #photoImportOverlay[data-manual-chatgpt='1'] .photoImportTable td.photoOcrName:before{display:none!important}
-#photoImportOverlay[data-manual-chatgpt='1'] .photoImportTable input{min-height:42px!important;font-size:18px!important}
-#photoImportOverlay[data-manual-chatgpt='1'] .photoImportActions{position:sticky;bottom:0;background:#102735;padding:8px 0 4px;display:grid!important;grid-template-columns:1fr!important;gap:8px!important}
-#photoImportOverlay[data-manual-chatgpt='1'] .photoImportActions button{min-height:60px!important;font-size:17px!important}
+#photoImportOverlay[data-manual-chatgpt='1'] .photoImportTable td.photoOcrName>b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#photoImportOverlay[data-manual-chatgpt='1'] .photoOcrBadge{display:block!important;position:sticky!important;right:0!important;flex:none!important;min-width:53px!important;padding:3px!important;border-radius:5px!important;background:#145e46!important;color:#fff!important;text-align:center!important;font-size:11px!important;font-weight:900!important}
+#photoImportOverlay[data-manual-chatgpt='1'] .photoImportTable input{display:block!important;width:100%!important;min-width:0!important;height:34px!important;min-height:34px!important;padding:2px 0!important;border-radius:5px!important;background:#f6fbff!important;color:#102534!important;-webkit-text-fill-color:#102534!important;font-size:clamp(10px,3vw,13px)!important;text-align:center!important;letter-spacing:-.3px!important}
+#photoImportOverlay[data-manual-chatgpt='1'] .photoImportTable input::placeholder{color:#8799a3!important;-webkit-text-fill-color:#8799a3!important}
+#photoImportOverlay[data-manual-chatgpt='1'] .photoImportTable td[data-label='SUMA'] input{border:2px solid #67bde8!important}
+#photoImportOverlay[data-manual-chatgpt='1'] .photoImportTable td small{font-size:9px!important;line-height:1.1!important}
+#photoImportOverlay[data-manual-chatgpt='1'] .photoImportTable td[data-label='SUMA'] small{display:none!important}
+#photoImportOverlay[data-manual-chatgpt='1'] .photoImportActions{flex:none!important;position:static!important;display:grid!important;grid-template-columns:2fr 1fr!important;gap:6px!important;margin:0!important;padding:6px 0 0!important;background:#102735!important}
+#photoImportOverlay[data-manual-chatgpt='1'] .photoImportActions button{width:100%!important;min-width:0!important;min-height:44px!important;padding:6px 4px!important;font-size:13px!important}
 .photoImportQuick .mobileWaterHint{display:block!important;font-size:12px!important;margin-top:4px!important;opacity:.85}
 }
 `;document.head.appendChild(s)}
