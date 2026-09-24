@@ -1,3 +1,10 @@
+V152 — CZYTELNE WAGI SĘDZIEGO NA KOMPUTERZE
+
+- biała tabela wpisywania wyników sędziego ma ciemny tekst w wierszach;
+- zapisane wagi siatek i BF mają ciemny tekst na jasnych etykietach;
+- oczekujące i błędne wpisy oraz pola nowej wagi zachowują czytelny kontrast;
+- układ mobilny V151 pozostaje bez zmian.
+
 V151 — ZWARTY IMPORT Z CHATGPT
 
 - na telefonie każdy zawodnik mieści W1–W5 i SUMA w jednym wierszu, z numerem i inicjałami po prawej;
