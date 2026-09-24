@@ -1,4 +1,4 @@
-const CLIENT_VERSION='141';const CLIENT_VERSION_NAME='V141_PARALLEL_CLOUD_OCR';window.__LOWCY_APP_JS_141=1;try{fetch('/__probe_js_v141',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V141_PARALLEL_CLOUD_OCR_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='142';const CLIENT_VERSION_NAME='V142_RAW_CELL_CLOUD_OCR';window.__LOWCY_APP_JS_142=1;try{fetch('/__probe_js_v142',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V142_RAW_CELL_CLOUD_OCR_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -1108,7 +1108,7 @@ function photoGrayData(img){
   const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(img,0,0,w,h);
   const rgba=ctx.getImageData(0,0,w,h).data,gray=new Uint8Array(w*h);
   for(let i=0,p=0;i<rgba.length;i+=4,p++)gray[p]=Math.round(rgba[i]*.299+rgba[i+1]*.587+rgba[i+2]*.114);
-  return {w,h,gray,canvas};
+  return {w,h,gray,canvas,rgba};
 }
 function photoIntegralDark(gray,w,h,limit=92){
   const stride=w+1,ii=new Uint32Array((w+1)*(h+1));
@@ -1203,24 +1203,18 @@ function photoDetectInkSample(sample,reference=null){
   }
   return {blank,inkPixels,isBigFish:starCandidate};
 }
-function photoSampleToPngData(sample){
-  const {vals,sw,sh}=sample,temp=document.createElement('canvas');temp.width=sw;temp.height=sh;
-  const tctx=temp.getContext('2d'),img=tctx.createImageData(sw,sh);
-  const sorted=Array.from(vals).sort((x,y)=>x-y),bg=sorted[Math.floor(sorted.length*.88)]||235,black=Math.max(35,Math.min(145,bg-95));
-  for(let i=0;i<vals.length;i++){
-    let v=vals[i];
-    v=Math.round((v-black)*255/Math.max(35,bg-black));
-    v=Math.max(0,Math.min(255,v));
-    const p=i*4;img.data[p]=img.data[p+1]=img.data[p+2]=v;img.data[p+3]=255;
+function photoFieldRawData(image,H,rect,sw=700,sh=210){
+  // V142: Google dostaje naturalny, kolorowy fragment zdjęcia — bez progowania,
+  // bez sztucznego kontrastu i bez obcinania końcowych cyfr przy krawędzi komórki.
+  const {w,h,rgba}=image,out=document.createElement('canvas');out.width=sw;out.height=sh;
+  const ctx=out.getContext('2d'),dst=ctx.createImageData(sw,sh),data=dst.data;
+  for(let yy=0;yy<sh;yy++)for(let xx=0;xx<sw;xx++){
+    const lx=rect.x+(xx+.5)/sw*rect.w,ly=rect.y+(yy+.5)/sh*rect.h,p=photoMap(H,lx,ly);
+    const px=Math.max(0,Math.min(w-1,Math.round(p.x))),py=Math.max(0,Math.min(h-1,Math.round(p.y))),si=(py*w+px)*4,di=(yy*sw+xx)*4;
+    data[di]=rgba[si];data[di+1]=rgba[si+1];data[di+2]=rgba[si+2];data[di+3]=255;
   }
-  tctx.putImageData(img,0,0);
-  // V141: nie wysyłamy już ogromnego PNG 720x220 dla każdej komórki.
-  // Lekki JPEG 420x128 zachowuje cyfry, a wielokrotnie zmniejsza JSON/base64 i czas uploadu z telefonu.
-  const out=document.createElement('canvas');out.width=420;out.height=128;const octx=out.getContext('2d');
-  octx.fillStyle='#fff';octx.fillRect(0,0,out.width,out.height);
-  octx.imageSmoothingEnabled=true;octx.imageSmoothingQuality='high';
-  octx.drawImage(temp,18,16,out.width-36,out.height-32);
-  return out.toDataURL('image/jpeg',0.82);
+  ctx.putImageData(dst,0,0);
+  return out.toDataURL('image/jpeg',0.95);
 }
 function photoCloudField(result,local,allowStar){
   if(!result)return {value:'',isBigFish:false,low:true,blank:false,cloudMissing:true};
@@ -1250,8 +1244,8 @@ async function photoRecognizeSheet(file,round){
   for(let ri=0;ri<entries.length;ri++)for(let f=0;f<6;f++){
     const l=local[ri][f];if(l.blank)continue;
     const y=g.dataY+ri*g.rowH;
-    const hi=photoFieldPixels(image,H,{x:g.fieldStart+f*g.fieldW+7,y:y+5,w:g.fieldW-14,h:g.rowH-10},320,92);
-    requests.push({id:ri+':'+f,image:photoSampleToPngData(hi),allowStar:f<5,localStarCandidate:!!l.isBigFish});
+    const rawRect={x:g.fieldStart+f*g.fieldW+1.5,y:y+1.5,w:g.fieldW-3,h:g.rowH-3};
+    requests.push({id:ri+':'+f,image:photoFieldRawData(image,H,rawRect),allowStar:f<5,localStarCandidate:!!l.isBigFish});
   }
   let cloud={cells:[]};
   if(requests.length){
@@ -1697,9 +1691,9 @@ function bindAuthButtons(){
 
 function scrollAppBottom(){window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})}
 Object.assign(window,{boot,login,registerPlayer,setupAdmin,logout,showTab,loadPlayerHistory,openHistoryCompetition,openCompetitionAttention,judgeCancelPending,saveGeneralRules,closePlayerCompetition,showAdminZone,loadCompetitions,createCompetition,openCompetitionEdit,deleteCompetition,joinComp,leaveComp,openCompetition,saveCompetition,drawRound,publishDraw,resetDraw,saveResults,generateResults,generateResultsAll,clearResults,addWeightItem,deleteWeightItem,notifyResults,readNotif,confirmAllNotifications,deleteAllNotifications,decideLeaveRequest,loadNotifications,loadPlayers,editPlayerName,deletePlayer,deleteAllAdminPlayers,saveMyProfile,setPlayerCompetitionFilter,setPlayerCompetitionMonth,confirmPlayerPresence,enablePush,sendPushTest,resetPush,clearSession,importZawodyPro,addManualPlayer,setEntryStatus,toggleEntryConfirm,setupStructureAuto,autoFillBanksFromRoster,updateStructurePreview,sectorCardsChanged,resetSectorLayout,scrollAppTop,scrollAppBottom,showPlayerDraw,showPlayerResults,showPlayerMobilePanel,setPlayerDrawView,openPlayerNotifications,fitPlayerMobileFullMaps,togglePlayerSectorAccordion,toggleFinalClub,generatePhotoResultSheetPdf,startPhotoResultImport,choosePhotoResultImport,closePhotoImportSource,closePhotoImportBusy,closePhotoImportReview,commitPhotoResultImport,generateDrawPdf,generateResultsPdfV33,generateStartListPdf});
-function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_141');sessionStorage.removeItem('lowcy_update_retry_140');sessionStorage.removeItem('lowcy_update_retry_139');sessionStorage.removeItem('lowcy_update_retry_138');sessionStorage.removeItem('lowcy_update_retry_102')}catch(_){}}
+function hideBootGuard(){const g=q('bootGuard');if(g)g.classList.add('hidden');try{sessionStorage.removeItem('lowcy_update_retry_142');sessionStorage.removeItem('lowcy_update_retry_141');sessionStorage.removeItem('lowcy_update_retry_140');sessionStorage.removeItem('lowcy_update_retry_139');sessionStorage.removeItem('lowcy_update_retry_138');sessionStorage.removeItem('lowcy_update_retry_102')}catch(_){}}
 let BOOT_RUNNING=false;
-function startBoot(){if(BOOT_RUNNING)return;BOOT_RUNNING=true;window.__LOWCY_JS_STARTED=true;try{syncStickyNavOffset();bindAuthButtons()}catch(e){console.error(e)}const guard=q('bootGuard');if(guard){guard.classList.remove('hidden');const text=guard.querySelector('span');if(text)text.textContent='Łączę z aplikacją…';q('bootRetry')?.classList.add('hidden')}boot().then(()=>{window.__LOWCY_BOOT_OK_141=1;for(const script of document.querySelectorAll('script[src*="/app.js"]')){const version=new URL(script.src,location.href).searchParams.get('v');if(version)window['__LOWCY_BOOT_OK_'+version]=1}hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);if(guard){guard.classList.remove('hidden');const text=guard.querySelector('span');if(text)text.textContent=e.message||'Nie udało się połączyć.';q('bootRetry')?.classList.remove('hidden')}}).finally(()=>{BOOT_RUNNING=false})}
+function startBoot(){if(BOOT_RUNNING)return;BOOT_RUNNING=true;window.__LOWCY_JS_STARTED=true;try{syncStickyNavOffset();bindAuthButtons()}catch(e){console.error(e)}const guard=q('bootGuard');if(guard){guard.classList.remove('hidden');const text=guard.querySelector('span');if(text)text.textContent='Łączę z aplikacją…';q('bootRetry')?.classList.add('hidden')}boot().then(()=>{window.__LOWCY_BOOT_OK_142=1;for(const script of document.querySelectorAll('script[src*="/app.js"]')){const version=new URL(script.src,location.href).searchParams.get('v');if(version)window['__LOWCY_BOOT_OK_'+version]=1}hideBootGuard()}).catch(e=>{console.error('BOOT_FATAL',e);if(guard){guard.classList.remove('hidden');const text=guard.querySelector('span');if(text)text.textContent=e.message||'Nie udało się połączyć.';q('bootRetry')?.classList.remove('hidden')}}).finally(()=>{BOOT_RUNNING=false})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startBoot);else startBoot();
 
 let JUDGE_VIEW='competitions',JUDGE_ROUND=1,JUDGE_COMPETITIONS=[],JUDGE_MANAGEMENT=null;
