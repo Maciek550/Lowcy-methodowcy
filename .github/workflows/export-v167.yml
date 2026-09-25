@@ -1,0 +1,22 @@
+name: Export source V167
+
+on:
+  push:
+    paths:
+      - '.github/workflows/export-v167.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Upload source ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: Lowcy-methodowcy-V167
+          path: .
+          include-hidden-files: false
+          retention-days: 7
