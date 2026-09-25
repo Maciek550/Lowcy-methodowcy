@@ -1,4 +1,4 @@
-const CLIENT_VERSION='164';const CLIENT_VERSION_NAME='V164_FOTO_FB_CLEAN_MASTER_CROPS';window.__LOWCY_APP_JS_164=1;try{fetch('/__probe_js_v164',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V164_FOTO_FB_CLEAN_MASTER_CROPS_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='165';const CLIENT_VERSION_NAME='V165_FOTO_FB_CLEAN_LAYERS';window.__LOWCY_APP_JS_165=1;try{fetch('/__probe_js_v165',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V165_FOTO_FB_CLEAN_LAYERS_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -1782,6 +1782,108 @@ async function fotoFbUploadMaster(kind,input){
 async function fotoFbDeleteMaster(kind){
   if(!confirm('Usunąć zapisany wzorzec FotoFB?'))return;
   try{await api('/api/admin/fotofb/templates/'+kind,{method:'DELETE'});delete FOTO_FB_MASTER_CACHE[kind];await fotoFbLoadMasterStatus();msg('Usunięto wzorzec FotoFB.')}catch(e){msg(e.message,'bad')}
+}
+
+function fotoFbEditText(id,fallback){
+  const el=q(id);return el?String(el.value||'').trim():String(fallback||'');
+}
+function fotoFbEditedDetail(d){
+  const c=Object.assign({},d.competition||{});
+  c.title=fotoFbEditText('fotoFbEditTitle',c.title||'Zawody');
+  c.__fbSubtitle=fotoFbEditText('fotoFbEditSubtitle','');
+  c.competition_date=fotoFbEditText('fotoFbEditDate',c.competition_date||'');
+  c.fishery=fotoFbEditText('fotoFbEditFishery',c.fishery||'');
+  c.__fbCount=Math.max(0,Number(fotoFbEditText('fotoFbEditCount',(d.activeEntries||[]).length))||0);
+  c.__fbFooter=fotoFbEditText('fotoFbEditFooter','Carp & Caraś & Asiotr & Hamur 🐳');
+  c.__fbSpecies=fotoFbEditText('fotoFbEditSpecies','');
+  return Object.assign({},d,{competition:c});
+}
+function fotoFbPosterHeader165(c,w,label,logo){
+  const title=String(c.title||'ZAWODY'),subtitle=String(c.__fbSubtitle||''),count=Number(c.__fbCount||0);
+  const fs=fotoFbTitleSize(title,72,40),metaY=subtitle?126:108,barY=subtitle?181:163,titleY=82;
+  let x='<rect x="0" y="0" width="'+w+'" height="292" fill="#04121e" opacity=".93"/>'+
+    '<path d="M0 270 Q190 300 380 274 T760 274 T'+w+' 270 V306 H0Z" fill="#04121e" opacity=".96"/>';
+  if(logo)x+='<image href="'+logo+'" x="24" y="15" width="150" height="150" preserveAspectRatio="xMidYMid meet" filter="url(#shadow)"/>';
+  x+='<text x="'+(w*.56)+'" y="'+titleY+'" text-anchor="middle" font-family="Arial Black,Arial" font-size="'+fs+'" font-weight="1000" fill="url(#gold)" stroke="#000" stroke-width="8" paint-order="stroke">'+fotoFbEscXml(title)+'</text>';
+  if(subtitle)x+='<text x="'+(w*.56)+'" y="122" text-anchor="middle" font-family="Arial Black,Arial" font-size="28" font-style="italic" font-weight="900" fill="#eef6ff" stroke="#06131d" stroke-width="5" paint-order="stroke">'+fotoFbEscXml(subtitle)+'</text>';
+  const metaW=w-290,part=metaW/3;
+  x+='<g transform="translate(190 '+metaY+')">'+
+    '<rect x="0" y="0" width="'+(part-8)+'" height="48" rx="12" fill="#073763" stroke="#4fa7de" stroke-width="2"/>'+
+    '<rect x="'+part+'" y="0" width="'+(part-8)+'" height="48" rx="12" fill="#073763" stroke="#4fa7de" stroke-width="2"/>'+
+    '<rect x="'+(part*2)+'" y="0" width="'+(part-8)+'" height="48" rx="12" fill="#073763" stroke="#4fa7de" stroke-width="2"/>'+
+    '<text x="'+((part-8)/2)+'" y="33" text-anchor="middle" font-family="Arial Black,Arial" font-size="22" fill="#fff">'+fotoFbEscXml(fotoFbDate(c))+'</text>'+
+    '<text x="'+(part+(part-8)/2)+'" y="33" text-anchor="middle" font-family="Arial Black,Arial" font-size="22" fill="#fff">'+fotoFbEscXml(c.fishery||'Łowisko')+'</text>'+
+    '<text x="'+(part*2+(part-8)/2)+'" y="33" text-anchor="middle" font-family="Arial Black,Arial" font-size="22" fill="#fff">'+count+' zawodników</text>'+
+    '</g>'+
+    '<g transform="translate('+(w-132)+' '+metaY+')"><rect width="112" height="48" rx="10" fill="url(#gold)" stroke="#6c4500" stroke-width="2"/><text x="56" y="33" text-anchor="middle" font-family="Arial Black,Arial" font-size="22" fill="#08131b">2 TURY</text></g>'+
+    '<g transform="translate(155 '+barY+')"><path d="M0 16 L28 0 H'+(w-350)+' L'+(w-305)+' 18 L'+(w-330)+' 82 H22 L0 65Z" fill="#07131d" opacity=".98" stroke="#dba31f" stroke-width="4"/><text x="'+((w-305)/2)+'" y="58" text-anchor="middle" font-family="Arial Black,Arial" font-size="44" font-weight="1000" fill="#fff">'+fotoFbEscXml(label)+'</text></g>';
+  return x;
+}
+function fotoFbPosterFooter165(w,h,c){
+  const footer=String(c.__fbFooter||'Carp & Caraś & Asiotr & Hamur 🐳');
+  return '<g transform="translate(0 '+(h-104)+')"><rect width="'+w+'" height="104" fill="#03111c" opacity=".98"/><path d="M0 4 Q210 28 420 6 T840 6 T'+w+' 4" stroke="#dfa52d" stroke-width="5" fill="none"/><text x="'+(w*.38)+'" y="57" text-anchor="middle" font-family="Arial Black,Arial" font-size="43" font-style="italic" font-weight="1000" fill="url(#gold)" stroke="#000" stroke-width="4" paint-order="stroke">METHOD FEEDER</text><text x="'+(w*.68)+'" y="59" text-anchor="middle" font-family="Georgia,serif" font-size="28" font-style="italic" font-weight="800" fill="#fff">'+fotoFbEscXml(footer)+'</text></g>';
+}
+function fotoFbTrophy165(x,y,scale,metal,place){
+  const g=metal==='silver'?'url(#silver)':metal==='bronze'?'url(#bronze)':'url(#gold)';
+  return '<g transform="translate('+x+' '+y+') scale('+scale+')" filter="url(#shadow)">'+
+    '<path d="M-104 2 Q-96 112 -65 164 Q-37 207 0 212 Q37 207 65 164 Q96 112 104 2Z" fill="'+g+'" stroke="#5b3605" stroke-width="6"/>'+
+    '<ellipse cx="0" cy="2" rx="108" ry="22" fill="'+g+'" stroke="#5b3605" stroke-width="5"/>'+
+    '<path d="M-94 33 Q-174 8 -176 98 Q-170 174 -87 169" fill="none" stroke="'+g+'" stroke-width="31"/>'+
+    '<path d="M94 33 Q174 8 176 98 Q170 174 87 169" fill="none" stroke="'+g+'" stroke-width="31"/>'+
+    '<path d="M-54 17 Q-28 145 0 179 Q28 145 54 17" fill="#fff" opacity=".20"/>'+
+    '<path d="M-78 62 Q-36 44 0 52 Q36 44 78 62" stroke="#fff" stroke-width="4" fill="none" opacity=".22"/>'+
+    '<circle cx="0" cy="105" r="51" fill="#07121b" stroke="'+g+'" stroke-width="10"/>'+
+    '<path d="M-37 218 H37 L44 286 H-44Z" fill="'+g+'" stroke="#5b3605" stroke-width="4"/>'+
+    '<rect x="-91" y="278" width="182" height="35" rx="7" fill="'+g+'" stroke="#5b3605" stroke-width="4"/>'+
+    '<text x="0" y="128" text-anchor="middle" font-family="Arial Black,Arial" font-size="72" font-weight="1000" fill="'+g+'">'+place+'</text></g>';
+}
+function fotoFbWinnerCard165(x,y,w,h,d,metal){
+  const fill=metal==='silver'?'url(#silver)':metal==='bronze'?'url(#bronze)':'url(#gold)',headFg=metal==='silver'?'#09131b':'#fff';
+  const r1=d.r1||{},r2=d.r2||{},nm=String(d.name||''),nf=nm.length>22?26:nm.length>18?29:32,half=(w-48)/2;
+  const round=function(r,label,xx){
+    return '<g transform="translate('+xx+' 170)"><rect width="'+half+'" height="108" rx="8" fill="#12191f" stroke="#ffffff35" stroke-width="2"/><text x="'+(half/2)+'" y="27" text-anchor="middle" font-family="Arial Black,Arial" font-size="19" fill="#f4c85b">'+label+'</text><text x="'+(half/2)+'" y="62" text-anchor="middle" font-family="Arial Black,Arial" font-size="27" fill="#fff">'+fotoFbEscXml(fotoFbGram(r.weight||0))+'</text><text x="'+(half/2)+'" y="91" text-anchor="middle" font-family="Arial Black,Arial" font-size="17" fill="#edf3f6">miejsce '+fotoFbEscXml(placeText(r.points))+' • sektor '+fotoFbEscXml(r.sector||'—')+'</text></g>';
+  };
+  return '<g transform="translate('+x+' '+y+')" filter="url(#shadow)"><rect width="'+w+'" height="'+h+'" rx="15" fill="#071018" stroke="'+fill+'" stroke-width="5"/>'+
+    '<rect x="8" y="8" width="'+(w-16)+'" height="50" rx="8" fill="'+fill+'"/><text x="'+(w/2)+'" y="42" text-anchor="middle" font-family="Arial Black,Arial" font-size="27" fill="'+headFg+'">'+d.rank+'. MIEJSCE</text>'+
+    '<text x="'+(w/2)+'" y="98" text-anchor="middle" font-family="Arial Black,Arial" font-size="'+nf+'" fill="#fff"'+(nm.length>20?' textLength="'+(w-42)+'" lengthAdjust="spacingAndGlyphs"':'')+'>'+fotoFbEscXml(nm)+'</text>'+
+    '<text x="24" y="137" font-family="Arial Black,Arial" font-size="20" fill="#d4dde3">Waga łączna:</text><text x="'+(w-22)+'" y="142" text-anchor="end" font-family="Arial Black,Arial" font-size="35" fill="'+fill+'">'+fotoFbEscXml(fotoFbGram(d.total))+'</text>'+
+    round(r1,'TURA 1',14)+round(r2,'TURA 2',34+half)+'</g>';
+}
+async function fotoFbSvgWinnersClean165(d,bg){
+  const w=1400,h=1167,c=d.competition,logo=await fotoFbAssetData('/icon-512.png'),list=fotoFbWinnerData(d);
+  if(list.length<3)throw new Error('Klasyfikacja końcowa musi zawierać co najmniej 3 zawodników.');
+  const by={};list.forEach(function(r){by[r.rank]=r});
+  let svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">'+fotoFbDefs()+
+    '<image href="'+bg+'" x="0" y="0" width="'+w+'" height="'+h+'" preserveAspectRatio="xMidYMid slice"/>'+
+    '<rect width="'+w+'" height="305" fill="#02101b" opacity=".28"/>'+
+    '<rect y="1010" width="'+w+'" height="157" fill="#02101b" opacity=".34"/>'+
+    fotoFbPosterHeader165(c,w,'ZWYCIĘZCY ZAWODÓW',logo);
+  svg+=fotoFbTrophy165(700,320,1.04,'gold',1)+fotoFbTrophy165(270,365,.82,'silver',2)+fotoFbTrophy165(1130,372,.78,'bronze',3);
+  svg+=fotoFbWinnerCard165(78,635,370,292,by[2]||list[1],'silver');
+  svg+=fotoFbWinnerCard165(485,600,430,325,by[1]||list[0],'gold');
+  svg+=fotoFbWinnerCard165(952,642,370,285,by[3]||list[2],'bronze');
+  svg+=fotoFbPosterFooter165(w,h,c)+'</svg>';
+  return {svg:svg,w:w,h:h,name:'FotoFB_Zwyciezcy_'+fotoFbSafeFile(c.title)+'.jpg'};
+}
+async function fotoFbSvgBigFishClean165(d,bg){
+  const w=1400,h=1000,c=d.competition,logo=await fotoFbAssetData('/icon-512.png'),rows=fotoFbBigFishRows(d).slice(0,5),species=String(c.__fbSpecies||'');
+  if(!rows.length)throw new Error('Brak wpisanych największych ryb BF.');
+  let svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">'+fotoFbDefs()+
+    '<image href="'+bg+'" x="0" y="0" width="'+w+'" height="'+h+'" preserveAspectRatio="xMidYMid slice"/>'+
+    '<rect width="'+w+'" height="292" fill="#02101b" opacity=".34"/>'+
+    '<rect x="650" y="295" width="730" height="575" rx="26" fill="#06121b" opacity=".96" stroke="#d8a127" stroke-width="3"/>'+
+    fotoFbPosterHeader165(c,w,'NAJWIĘKSZE RYBY ZAWODÓW',logo);
+  const x=675,top=320,ww=680,rowH=99,gap=10;
+  rows.forEach(function(r,i){
+    const rank=i+1,y=top+i*(rowH+gap),medal=rank===1?'url(#gold)':rank===2?'url(#silver)':rank===3?'url(#bronze)':'#284456',fg=rank===2?'#09131b':'#fff',nm=String(r.name||''),nf=nm.length>24?23:nm.length>19?26:29;
+    svg+='<g transform="translate('+x+' '+y+')"><rect width="'+ww+'" height="'+rowH+'" rx="13" fill="#07151f" stroke="'+(rank<=3?'#e0a72d':'#3c708c')+'" stroke-width="'+(rank<=3?4:2)+'"/><circle cx="48" cy="'+(rowH/2)+'" r="32" fill="'+medal+'"/><text x="48" y="60" text-anchor="middle" font-family="Arial Black,Arial" font-size="31" fill="'+fg+'">'+rank+'</text>'+
+      (species?'<text x="96" y="27" font-family="Arial Black,Arial" font-size="16" fill="#f4c75a">'+fotoFbEscXml(species)+'</text>':'')+
+      '<text x="96" y="'+(species?54:40)+'" font-family="Arial Black,Arial" font-size="'+nf+'" fill="#fff"'+(nm.length>22?' textLength="320" lengthAdjust="spacingAndGlyphs"':'')+'>'+fotoFbEscXml(nm)+'</text>'+
+      '<text x="96" y="'+(species?79:72)+'" font-family="Arial Black,Arial" font-size="18" fill="#d1dde5">Tura '+r.round+' • Stan. '+fotoFbEscXml(r.stand||'—')+(r.sector?' • sektor '+fotoFbEscXml(r.sector):'')+'</text>'+
+      '<text x="'+(ww-22)+'" y="62" text-anchor="end" font-family="Arial Black,Arial" font-size="39" fill="#ffd03d">'+fotoFbEscXml(fotoFbGram(r.weight))+'</text></g>';
+  });
+  svg+=fotoFbPosterFooter165(w,h,c)+'</svg>';
+  return {svg:svg,w:w,h:h,name:'FotoFB_TOP5_Najwieksze_Ryby_'+fotoFbSafeFile(c.title)+'.jpg'};
 }
 function fotoFbMasterTop(c,w,label,logo){
   const title=String(c.title||'ZAWODY'),fs=fotoFbTitleSize(title,78,46),n=(CURRENT_DETAIL&&CURRENT_DETAIL.activeEntries||[]).length;
