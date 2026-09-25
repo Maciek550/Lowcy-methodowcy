@@ -1,4 +1,4 @@
-const CLIENT_VERSION='168';const CLIENT_VERSION_NAME='V168_FOTO_FB_WINNERS_NO_FALLBACK';window.__LOWCY_APP_JS_168=1;try{fetch('/__probe_js_v168',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V168_FOTO_FB_WINNERS_NO_FALLBACK_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='169';const CLIENT_VERSION_NAME='V169_FOTO_FB_REAL_TROPHIES';window.__LOWCY_APP_JS_169=1;try{fetch('/__probe_js_v169',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V169_FOTO_FB_REAL_TROPHIES_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -1824,7 +1824,10 @@ function fotoFbPosterHeader165(c,w,label,logo){
 }
 function fotoFbPosterFooter165(w,h,c){
   const footer=String(c.__fbFooter||'Carp & Caraś & Asiotr & Hamur 🐳');
-  return '<g transform="translate(0 '+(h-104)+')"><rect width="'+w+'" height="104" fill="#03111c" opacity=".98"/><path d="M0 4 Q210 28 420 6 T840 6 T'+w+' 4" stroke="#dfa52d" stroke-width="5" fill="none"/><text x="'+(w*.38)+'" y="57" text-anchor="middle" font-family="Arial Black,Arial" font-size="43" font-style="italic" font-weight="1000" fill="url(#gold)" stroke="#000" stroke-width="4" paint-order="stroke">METHOD FEEDER</text><text x="'+(w*.68)+'" y="59" text-anchor="middle" font-family="Georgia,serif" font-size="28" font-style="italic" font-weight="800" fill="#fff">'+fotoFbEscXml(footer)+'</text></g>';
+  return '<g transform="translate(0 '+(h-104)+')"><rect width="'+w+'" height="104" fill="#03111c" opacity=".98"/>'+
+    '<path d="M0 4 Q210 28 420 6 T840 6 T'+w+' 4" stroke="#dfa52d" stroke-width="5" fill="none"/>'+
+    '<text x="'+(w/2)+'" y="48" text-anchor="middle" font-family="Arial Black,Arial" font-size="38" font-style="italic" font-weight="1000" fill="url(#gold)" stroke="#000" stroke-width="4" paint-order="stroke">METHOD FEEDER</text>'+
+    '<text x="'+(w/2)+'" y="82" text-anchor="middle" font-family="Georgia,serif" font-size="24" font-style="italic" font-weight="800" fill="#fff">'+fotoFbEscXml(footer)+'</text></g>';
 }
 function fotoFbTrophy165(x,y,scale,metal,place){
   const fill=metal==='silver'?'url(#silver)':metal==='bronze'?'url(#bronze)':'url(#gold)';
@@ -1852,22 +1855,24 @@ function fotoFbWinnerCard165(x,y,w,h,d,metal){
   const head=metal==='silver'?'url(#silver)':metal==='bronze'?'url(#bronze)':'url(#gold)';
   const headFg=metal==='silver'?'#07131b':'#fff';
   const r1=d.r1||{},r2=d.r2||{},nm=String(d.name||'');
-  const nf=nm.length>24?26:nm.length>20?29:nm.length>16?31:34;
-  const line=function(r,label,yy){
-    return '<g transform="translate(18 '+yy+')"><rect width="'+(w-36)+'" height="78" rx="9" fill="#111a21" stroke="#ffffff3d" stroke-width="2"/>'+
-      '<text x="16" y="29" font-family="Arial Black,Arial" font-size="21" fill="#f4ca62">'+label+'</text>'+
-      '<text x="16" y="61" font-family="Arial Black,Arial" font-size="30" fill="#fff">'+fotoFbEscXml(fotoFbGram(r.weight||0))+'</text>'+
-      '<text x="'+(w-54)+'" y="31" text-anchor="end" font-family="Arial Black,Arial" font-size="20" fill="#f4f7f9">MIEJSCE '+fotoFbEscXml(placeText(r.points))+'</text>'+
-      '<text x="'+(w-54)+'" y="60" text-anchor="end" font-family="Arial Black,Arial" font-size="20" fill="#f4f7f9">SEKTOR '+fotoFbEscXml(r.sector||'—')+'</text></g>';
+  const nf=nm.length>24?23:nm.length>20?26:nm.length>16?29:31;
+  const gap=12,inner=w-36,col=(inner-gap)/2;
+  const roundBox=function(r,label,xx){
+    return '<g transform="translate('+xx+' 168)"><rect width="'+col+'" height="112" rx="9" fill="#111a21" stroke="#ffffff44" stroke-width="2"/>'+
+      '<text x="'+(col/2)+'" y="26" text-anchor="middle" font-family="Arial Black,Arial" font-size="18" fill="#f4ca62">'+label+'</text>'+
+      '<text x="'+(col/2)+'" y="60" text-anchor="middle" font-family="Arial Black,Arial" font-size="26" fill="#fff">'+fotoFbEscXml(fotoFbGram(r.weight||0))+'</text>'+
+      '<text x="'+(col/2)+'" y="84" text-anchor="middle" font-family="Arial Black,Arial" font-size="16" fill="#f4f7f9">M. '+fotoFbEscXml(placeText(r.points))+'</text>'+
+      '<text x="'+(col/2)+'" y="104" text-anchor="middle" font-family="Arial Black,Arial" font-size="16" fill="#f4f7f9">SEKTOR '+fotoFbEscXml(r.sector||'—')+'</text></g>';
   };
   return '<g transform="translate('+x+' '+y+')" filter="url(#shadow)"><rect width="'+w+'" height="'+h+'" rx="16" fill="#071018" fill-opacity=".97" stroke="'+border+'" stroke-width="5"/>'+
-    '<rect x="8" y="8" width="'+(w-16)+'" height="56" rx="8" fill="'+head+'"/><text x="'+(w/2)+'" y="46" text-anchor="middle" font-family="Arial Black,Arial" font-size="28" fill="'+headFg+'" stroke="'+(metal==='silver'?'none':'#000')+'" stroke-width="2" paint-order="stroke">'+d.rank+'. MIEJSCE</text>'+
-    '<text x="'+(w/2)+'" y="111" text-anchor="middle" font-family="Arial Black,Arial" font-size="'+nf+'" fill="#fff"'+(nm.length>21?' textLength="'+(w-44)+'" lengthAdjust="spacingAndGlyphs"':'')+'>'+fotoFbEscXml(nm)+'</text>'+
-    '<line x1="20" y1="128" x2="'+(w-20)+'" y2="128" stroke="'+border+'" stroke-opacity=".75"/>'+
-    '<text x="20" y="163" font-family="Arial Black,Arial" font-size="20" fill="#dbe5eb">WAGA ŁĄCZNA</text><text x="'+(w-20)+'" y="168" text-anchor="end" font-family="Arial Black,Arial" font-size="34" fill="'+border+'">'+fotoFbEscXml(fotoFbGram(d.total))+'</text>'+
-    line(r1,'TURA 1',184)+line(r2,'TURA 2',268)+
-    '<rect x="18" y="'+(h-47)+'" width="'+(w-36)+'" height="31" rx="7" fill="#0b1821" stroke="'+border+'" stroke-opacity=".45"/>'+
-    '<text x="'+(w/2)+'" y="'+(h-24)+'" text-anchor="middle" font-family="Arial Black,Arial" font-size="22" fill="#fff">SUMA MIEJSC: '+fotoFbEscXml(placeText(d.sum))+'</text></g>';
+    '<rect x="8" y="8" width="'+(w-16)+'" height="52" rx="8" fill="'+head+'"/><text x="'+(w/2)+'" y="43" text-anchor="middle" font-family="Arial Black,Arial" font-size="25" fill="'+headFg+'" stroke="'+(metal==='silver'?'none':'#000')+'" stroke-width="2" paint-order="stroke">'+d.rank+'. MIEJSCE</text>'+
+    '<text x="'+(w/2)+'" y="101" text-anchor="middle" font-family="Arial Black,Arial" font-size="'+nf+'" fill="#fff"'+(nm.length>21?' textLength="'+(w-42)+'" lengthAdjust="spacingAndGlyphs"':'')+'>'+fotoFbEscXml(nm)+'</text>'+
+    '<line x1="20" y1="116" x2="'+(w-20)+'" y2="116" stroke="'+border+'" stroke-opacity=".70"/>'+
+    '<text x="20" y="145" font-family="Arial Black,Arial" font-size="17" fill="#dbe5eb">WAGA ŁĄCZNA</text>'+
+    '<text x="'+(w-20)+'" y="149" text-anchor="end" font-family="Arial Black,Arial" font-size="29" fill="'+border+'">'+fotoFbEscXml(fotoFbGram(d.total))+'</text>'+
+    roundBox(r1,'TURA 1',18)+roundBox(r2,'TURA 2',18+col+gap)+
+    '<rect x="18" y="'+(h-42)+'" width="'+(w-36)+'" height="27" rx="7" fill="#0b1821" stroke="'+border+'" stroke-opacity=".45"/>'+
+    '<text x="'+(w/2)+'" y="'+(h-21)+'" text-anchor="middle" font-family="Arial Black,Arial" font-size="19" fill="#fff">SUMA MIEJSC: '+fotoFbEscXml(placeText(d.sum))+'</text></g>';
 }
 async function fotoFbSvgWinnersClean165(d,bg){
   const w=1400,h=1167,c=d.competition,logo=await fotoFbAssetData('/icon-512.png'),list=fotoFbWinnerData(d);
@@ -1876,15 +1881,13 @@ async function fotoFbSvgWinnersClean165(d,bg){
   let svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">'+fotoFbDefs()+
     '<image href="'+bg+'" x="0" y="0" width="'+w+'" height="'+h+'" preserveAspectRatio="xMidYMid slice"/>'+
     '<rect width="'+w+'" height="292" fill="#02101b" opacity=".30"/>'+
-    '<rect x="0" y="298" width="'+w+'" height="690" fill="#03121b" opacity=".10"/>'+
+    '<rect x="0" y="300" width="'+w+'" height="705" fill="#03121b" opacity=".05"/>'+
     '<rect y="1012" width="'+w+'" height="155" fill="#02101b" opacity=".24"/>'+
     fotoFbPosterHeader165(c,w,'ZWYCIĘZCY ZAWODÓW',logo);
-  svg+=fotoFbTrophy165(700,286,1.08,'gold',1);
-  svg+=fotoFbTrophy165(258,340,.86,'silver',2);
-  svg+=fotoFbTrophy165(1142,347,.82,'bronze',3);
-  svg+=fotoFbWinnerCard165(52,625,410,370,by[2]||list[1],'silver');
-  svg+=fotoFbWinnerCard165(477,568,446,427,by[1]||list[0],'gold');
-  svg+=fotoFbWinnerCard165(938,630,410,365,by[3]||list[2],'bronze');
+  /* V169: puchary są wyłącznie na fotograficznym tle. Nie nakładamy już rysowanych SVG. */
+  svg+=fotoFbWinnerCard165(48,680,405,300,by[2]||list[1],'silver');
+  svg+=fotoFbWinnerCard165(475,650,450,330,by[1]||list[0],'gold');
+  svg+=fotoFbWinnerCard165(947,685,405,295,by[3]||list[2],'bronze');
   svg+=fotoFbPosterFooter165(w,h,c)+'</svg>';
   return {svg:svg,w:w,h:h,name:'FotoFB_Zwyciezcy_'+fotoFbSafeFile(c.title)+'.jpg'};
 }
