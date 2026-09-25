@@ -1,4 +1,4 @@
-const CLIENT_VERSION='163';const CLIENT_VERSION_NAME='V163_FOTO_FB_SHARP_FOOTER';window.__LOWCY_APP_JS_163=1;try{fetch('/__probe_js_v163',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V163_FOTO_FB_SHARP_FOOTER_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='164';const CLIENT_VERSION_NAME='V164_FOTO_FB_CLEAN_MASTER_CROPS';window.__LOWCY_APP_JS_164=1;try{fetch('/__probe_js_v164',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V164_FOTO_FB_CLEAN_MASTER_CROPS_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -1815,12 +1815,13 @@ async function fotoFbSvgWinnersMaster(d,master){
   if(list.length<3)throw new Error('Klasyfikacja końcowa musi zawierać co najmniej 3 zawodników.');
   const by={};list.forEach(function(r){by[r.rank]=r});
   let svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">'+fotoFbDefs()+
-    '<image href="'+master+'" x="0" y="60" width="'+w+'" height="1280" preserveAspectRatio="none"/>'+
-    fotoFbMasterTop(c,w,'ZWYCIĘZCY ZAWODÓW',logo);
-  /* V162: puchary mają więcej oddechu od belki, a tablice nie zachodzą na siebie. */
-  svg+=fotoFbMasterWinnerCard(65,735,400,330,by[2]||list[1],'silver');
-  svg+=fotoFbMasterWinnerCard(500,670,400,365,by[1]||list[0],'gold');
-  svg+=fotoFbMasterWinnerCard(935,735,400,330,by[3]||list[2],'bronze');
+    '<rect width="'+w+'" height="'+h+'" fill="#06131d"/>'+
+    '<svg x="0" y="300" width="'+w+'" height="760" viewBox="0 235 1312 690" preserveAspectRatio="xMidYMid slice"><image href="'+master+'" x="0" y="0" width="1312" height="1199"/></svg>'+
+    fotoFbMasterTop(c,w,'ZWYCIĘZCY ZAWODÓW',logo)+
+    '<rect x="35" y="660" width="1330" height="430" rx="30" fill="#071018" opacity=".985" stroke="#d6a334" stroke-width="2"/>';
+  svg+=fotoFbMasterWinnerCard(55,735,400,330,by[2]||list[1],'silver');
+  svg+=fotoFbMasterWinnerCard(500,675,400,370,by[1]||list[0],'gold');
+  svg+=fotoFbMasterWinnerCard(945,735,400,330,by[3]||list[2],'bronze');
   svg+=fotoFbFooter(w,h);
   svg+='</svg>';
   return {svg:svg,w:w,h:h,name:'FotoFB_Zwyciezcy_'+fotoFbSafeFile(c.title)+'.jpg'};
@@ -1828,9 +1829,12 @@ async function fotoFbSvgWinnersMaster(d,master){
 async function fotoFbSvgBigFishMaster(d,master){
   const w=1400,h=990,c=d.competition,logo=await fotoFbAssetData('/icon-512.png'),rows=fotoFbBigFishRows(d).slice(0,5);
   if(!rows.length)throw new Error('Brak wpisanych największych ryb BF.');
-  let svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">'+fotoFbDefs()+'<image href="'+master+'" x="0" y="0" width="'+w+'" height="'+h+'" preserveAspectRatio="none"/>'+fotoFbMasterTop(c,w,'NAJWIĘKSZE RYBY ZAWODÓW',logo);
-  svg+='<rect x="655" y="294" width="725" height="575" rx="28" fill="#06121b" opacity=".985" stroke="#d9a127" stroke-width="3"/>';
-  const x=675,top=315,ww=685,rowH=101,gap=8;
+  let svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">'+fotoFbDefs()+
+    '<rect width="'+w+'" height="'+h+'" fill="#06131d"/>'+
+    '<svg x="0" y="300" width="650" height="565" viewBox="0 58 214 182" preserveAspectRatio="xMidYMid slice"><image href="'+master+'" x="0" y="0" width="406" height="287"/></svg>'+
+    '<rect x="640" y="294" width="740" height="575" rx="28" fill="#06121b" opacity=".995" stroke="#d9a127" stroke-width="3"/>'+
+    fotoFbMasterTop(c,w,'NAJWIĘKSZE RYBY ZAWODÓW',logo);
+  const x=665,top=315,ww=690,rowH=101,gap=8;
   rows.forEach(function(r,i){
     const rank=i+1,y=top+i*(rowH+gap),medal=rank===1?'url(#gold)':rank===2?'url(#silver)':rank===3?'url(#bronze)':'#263e4d',fg=rank===2?'#08131b':'#fff',nm=String(r.name||''),nf=nm.length>24?24:nm.length>19?27:30;
     svg+='<g transform="translate('+x+' '+y+')"><rect width="'+ww+'" height="'+rowH+'" rx="15" fill="#081721" stroke="'+(rank<=3?'#e1a72e':'#3c708c')+'" stroke-width="'+(rank<=3?4:2)+'"/><circle cx="50" cy="'+(rowH/2)+'" r="33" fill="'+medal+'"/><text x="50" y="'+(rowH*.61)+'" text-anchor="middle" font-family="Arial Black,Arial" font-size="32" fill="'+fg+'">'+rank+'</text><text x="100" y="41" font-family="Arial Black,Arial" font-size="'+nf+'" fill="#fff"'+(nm.length>22?' textLength="330" lengthAdjust="spacingAndGlyphs"':'')+'>'+fotoFbEscXml(nm)+'</text><text x="100" y="73" font-family="Arial Black,Arial" font-size="20" fill="#cbd8df">Tura '+r.round+' • Stan. '+fotoFbEscXml(r.stand||'—')+(r.sector?' • sektor '+fotoFbEscXml(r.sector):'')+'</text><text x="'+(ww-22)+'" y="64" text-anchor="end" font-family="Arial Black,Arial" font-size="39" fill="#ffd03b">'+fotoFbEscXml(fotoFbGram(r.weight))+'</text></g>';
