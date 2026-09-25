@@ -1,4 +1,4 @@
-const CLIENT_VERSION='157';const CLIENT_VERSION_NAME='V157_FOTO_FB';window.__LOWCY_APP_JS_157=1;try{fetch('/__probe_js_v157',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V157_FOTO_FB_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='158';const CLIENT_VERSION_NAME='V158_FOTO_FB_MASTER';window.__LOWCY_APP_JS_158=1;try{fetch('/__probe_js_v158',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V158_FOTO_FB_MASTER_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -1762,29 +1762,27 @@ function fotoFbDefs(){
     '</defs>';
 }
 function fotoFbScene(w,h,logo,carp){
-  const lakeY=Math.round(h*.42),sunX=Math.round(w*.77),sunY=Math.round(h*.28);
-  let x='<rect width="'+w+'" height="'+h+'" fill="#06131f"/>'+
+  const lakeY=Math.round(h*.43),sunX=Math.round(w*.78),sunY=Math.round(h*.29);
+  let x='<rect width="'+w+'" height="'+h+'" fill="#071520"/>'+
     '<rect width="'+w+'" height="'+lakeY+'" fill="url(#sky)"/>'+
-    '<circle cx="'+sunX+'" cy="'+sunY+'" r="'+Math.round(w*.05)+'" fill="#fff7c7" opacity=".96" filter="url(#glow)"/>'+
-    '<path d="M0 '+lakeY+' Q180 '+(lakeY-35)+' 340 '+lakeY+' T680 '+lakeY+' T1020 '+lakeY+' T'+w+' '+lakeY+' V'+h+' H0Z" fill="url(#water)"/>'+
-    '<path d="M0 '+(lakeY-18)+' Q140 '+(lakeY-90)+' 290 '+(lakeY-28)+' Q430 '+(lakeY-115)+' 600 '+(lakeY-38)+' Q760 '+(lakeY-100)+' 930 '+(lakeY-30)+' Q1060 '+(lakeY-72)+' '+w+' '+(lakeY-28)+' V'+(lakeY+18)+' H0Z" fill="#0b211b" opacity=".92"/>'+
-    '<path d="M0 '+(h-155)+' C190 '+(h-220)+' 360 '+(h-135)+' 540 '+(h-190)+' C750 '+(h-250)+' 925 '+(h-120)+' '+w+' '+(h-200)+' V'+h+' H0Z" fill="#07110d"/>'+
-    '<g opacity=".75" stroke="#0a0d0c" stroke-width="9" fill="none"><path d="M64 '+(h-40)+' Q110 '+(h-260)+' 175 '+(h-390)+'"/><path d="M1080 '+(h-45)+' Q1030 '+(h-265)+' 965 '+(h-390)+'"/></g>'+
-    '<g opacity=".88" fill="#0a0d0c"><circle cx="170" cy="'+(lakeY+32)+'" r="20"/><path d="M149 '+(lakeY+54)+' h42 l25 100 h-84z"/><rect x="130" y="'+(lakeY+148)+'" width="92" height="13" rx="5"/><path d="M195 '+(lakeY+62)+' Q355 '+(lakeY-85)+' 515 '+(lakeY-10)+'" stroke="#0a0d0c" stroke-width="7" fill="none"/></g>';
-  if(carp)x+='<image href="'+carp+'" x="'+Math.round(w*.77)+'" y="'+Math.round(h*.57)+'" width="'+Math.round(w*.29)+'" height="'+Math.round(h*.26)+'" preserveAspectRatio="xMidYMid meet" opacity=".62"/>';
-  if(logo)x+='<image href="'+logo+'" x="28" y="24" width="125" height="125" preserveAspectRatio="xMidYMid meet" filter="url(#shadow)"/>';
-  x+='<rect width="'+w+'" height="'+h+'" fill="url(#dark)" opacity=".14"/>';
+    '<circle cx="'+sunX+'" cy="'+sunY+'" r="'+Math.round(w*.045)+'" fill="#fff8c7" opacity=".98" filter="url(#glow)"/>'+
+    '<ellipse cx="'+sunX+'" cy="'+(lakeY+60)+'" rx="'+Math.round(w*.055)+'" ry="'+Math.round(h*.25)+'" fill="#ffce58" opacity=".2"/>'+
+    '<rect y="'+lakeY+'" width="'+w+'" height="'+(h-lakeY)+'" fill="url(#water)"/>'+
+    '<path d="M0 '+(lakeY-22)+' Q120 '+(lakeY-78)+' 260 '+(lakeY-30)+' Q410 '+(lakeY-112)+' 575 '+(lakeY-35)+' Q760 '+(lakeY-92)+' 910 '+(lakeY-30)+' Q1100 '+(lakeY-80)+' '+w+' '+(lakeY-28)+' V'+(lakeY+12)+' H0Z" fill="#0b211c" opacity=".94"/>'+
+    '<g opacity=".2" stroke="#ffd66b" stroke-width="4"><path d="M'+(sunX-85)+' '+(lakeY+20)+' L'+(sunX+65)+' '+(h-130)+'"/><path d="M'+(sunX-55)+' '+(lakeY+16)+' L'+(sunX+110)+' '+(h-160)+'"/></g>'+
+    '<g fill="#102a18" opacity=".98"><path d="M0 '+(h-135)+' Q80 '+(h-230)+' 155 '+(h-118)+' Q215 '+(h-245)+' 280 '+(h-115)+' Q345 '+(h-235)+' 420 '+(h-120)+' V'+h+' H0Z"/><path d="M'+w+' '+(h-140)+' Q'+(w-90)+' '+(h-245)+' '+(w-165)+' '+(h-120)+' Q'+(w-225)+' '+(h-250)+' '+(w-310)+' '+(h-118)+' V'+h+' H'+w+'Z"/></g>'+
+    '<g opacity=".93" fill="#070b0c"><circle cx="'+Math.round(w*.12)+'" cy="'+(lakeY+50)+'" r="24"/><path d="M'+Math.round(w*.10)+' '+(lakeY+75)+' h54 l35 140 h-112z"/><rect x="'+Math.round(w*.085)+'" y="'+(lakeY+202)+'" width="118" height="15" rx="6"/><path d="M'+Math.round(w*.15)+' '+(lakeY+86)+' Q'+Math.round(w*.32)+' '+(lakeY-80)+' '+Math.round(w*.47)+' '+(lakeY-8)+'" stroke="#080b0c" stroke-width="8" fill="none"/></g>';
+  if(carp)x+='<image href="'+carp+'" x="'+Math.round(w*.78)+'" y="'+Math.round(h*.59)+'" width="'+Math.round(w*.26)+'" height="'+Math.round(h*.24)+'" preserveAspectRatio="xMidYMid meet" opacity=".6"/>';
+  if(logo)x+='<image href="'+logo+'" x="22" y="18" width="'+Math.round(w*.115)+'" height="'+Math.round(w*.115)+'" preserveAspectRatio="xMidYMid meet" filter="url(#shadow)"/>';
+  x+='<rect width="'+w+'" height="'+h+'" fill="url(#dark)" opacity=".08"/>';
   return x;
 }
 function fotoFbHeader(c,w,subtitle,logo){
   const title=fotoFbEscXml(c.title||'ZAWODY');
-  const fs=fotoFbTitleSize(title,70,42);
-  const n=(CURRENT_DETAIL&&CURRENT_DETAIL.activeEntries||[]).length;
-  let x='<text x="'+(w/2)+'" y="88" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="'+fs+'" font-weight="1000" fill="url(#gold)" stroke="#07121b" stroke-width="8" paint-order="stroke" filter="url(#shadow)">'+title+'</text>';
-  x+='<g transform="translate(170 116)"><rect x="0" y="0" width="'+(w-205)+'" height="58" rx="18" fill="#071a2b" opacity=".94" stroke="#8fc6e5" stroke-width="2"/>'+
-    '<text x="'+((w-205)/2)+'" y="38" text-anchor="middle" font-family="Arial,sans-serif" font-size="24" font-weight="900" fill="#fff">'+fotoFbEscXml(fotoFbDate(c))+'  •  '+fotoFbEscXml(c.fishery||'Łowisko')+'  •  '+n+' zawodników</text></g>';
-  x+='<g transform="translate(110 192)"><path d="M0 18 Q18 0 44 0 H'+(w-264)+' Q'+(w-220)+' 0 '+(w-202)+' 18 L'+(w-220)+' 83 Q'+(w-236)+' 102 '+(w-264)+' 102 H44 Q18 102 0 83Z" fill="#071a2b" opacity=".96" stroke="#d69b21" stroke-width="3"/>'+
-    '<text x="'+((w-220)/2)+'" y="68" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="50" font-weight="1000" fill="#fff" stroke="#000" stroke-width="2" paint-order="stroke">'+fotoFbEscXml(subtitle)+'</text></g>';
+  const fs=fotoFbTitleSize(title,74,42),n=(CURRENT_DETAIL&&CURRENT_DETAIL.activeEntries||[]).length;
+  let x='<text x="'+(w*.55)+'" y="86" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="'+fs+'" font-weight="1000" fill="url(#gold)" stroke="#06121c" stroke-width="9" paint-order="stroke" filter="url(#shadow)">'+title+'</text>';
+  x+='<g transform="translate('+Math.round(w*.15)+' 112)"><rect x="0" y="0" width="'+Math.round(w*.80)+'" height="62" rx="20" fill="#071a2b" opacity=".96" stroke="#9dd6f1" stroke-width="2"/><text x="'+Math.round(w*.40)+'" y="41" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="'+Math.round(w*.021)+'" font-weight="900" fill="#fff">'+fotoFbEscXml(fotoFbDate(c))+'  •  '+fotoFbEscXml(c.fishery||'Łowisko')+'  •  '+n+' zawodników</text></g>';
+  x+='<g transform="translate('+Math.round(w*.10)+' 196)"><path d="M0 18 Q18 0 46 0 H'+Math.round(w*.75)+' Q'+Math.round(w*.79)+' 0 '+Math.round(w*.81)+' 18 L'+Math.round(w*.79)+' 92 Q'+Math.round(w*.77)+' 108 '+Math.round(w*.73)+' 108 H46 Q18 108 0 88Z" fill="#071a2b" opacity=".98" stroke="#d89d1e" stroke-width="3"/><text x="'+Math.round(w*.405)+'" y="72" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="'+Math.round(w*.043)+'" font-weight="1000" fill="#fff" stroke="#000" stroke-width="2" paint-order="stroke">'+fotoFbEscXml(subtitle)+'</text></g>';
   return x;
 }
 function fotoFbFooter(w,h){
@@ -1794,12 +1792,7 @@ function fotoFbFooter(w,h){
 }
 function fotoFbTrophy(x,y,scale,metal,place){
   const g=metal==='silver'?'url(#silver)':metal==='bronze'?'url(#bronze)':'url(#gold)';
-  return '<g transform="translate('+x+' '+y+') scale('+scale+')" filter="url(#shadow)">'+
-    '<path d="M-94 0 H94 L74 122 Q52 188 0 190 Q-52 188 -74 122Z" fill="'+g+'" stroke="#4b2d05" stroke-width="5"/>'+
-    '<path d="M-91 26 Q-160 18 -154 88 Q-145 142 -72 130" fill="none" stroke="'+g+'" stroke-width="28"/>'+
-    '<path d="M91 26 Q160 18 154 88 Q145 142 72 130" fill="none" stroke="'+g+'" stroke-width="28"/>'+
-    '<rect x="-27" y="184" width="54" height="76" rx="12" fill="'+g+'"/><rect x="-78" y="247" width="156" height="34" rx="10" fill="'+g+'"/>'+
-    '<circle cx="0" cy="96" r="47" fill="#09131b" stroke="'+g+'" stroke-width="10"/><text x="0" y="116" text-anchor="middle" font-family="Arial Black,Arial" font-size="66" font-weight="1000" fill="'+g+'">'+place+'</text></g>';
+  return '<g transform="translate('+x+' '+y+') scale('+scale+')" filter="url(#shadow)"><ellipse cx="0" cy="3" rx="112" ry="22" fill="'+g+'" stroke="#4b2d05" stroke-width="5"/><path d="M-102 6 Q-94 118 -62 168 Q-36 205 0 208 Q36 205 62 168 Q94 118 102 6Z" fill="'+g+'" stroke="#4b2d05" stroke-width="6"/><path d="M-92 34 Q-174 12 -172 104 Q-168 171 -87 170" fill="none" stroke="'+g+'" stroke-width="30"/><path d="M92 34 Q174 12 172 104 Q168 171 87 170" fill="none" stroke="'+g+'" stroke-width="30"/><path d="M-55 18 Q-31 138 0 172 Q31 138 55 18" fill="#fff" opacity=".20"/><circle cx="0" cy="102" r="49" fill="#07121b" stroke="'+g+'" stroke-width="11"/><path d="M-24 211 H24 L34 274 H-34Z" fill="'+g+'" stroke="#4b2d05" stroke-width="4"/><rect x="-83" y="268" width="166" height="32" rx="8" fill="'+g+'" stroke="#4b2d05" stroke-width="4"/><text x="0" y="124" text-anchor="middle" font-family="Arial Black,Arial" font-size="70" font-weight="1000" fill="'+g+'">'+place+'</text></g>';
 }
 function fotoFbWinnerData(d){
   const gen=(d.classification&&d.classification.general||[]).slice().sort(function(a,b){return Number(a.rank||999)-Number(b.rank||999)}).slice(0,3);
@@ -1809,29 +1802,21 @@ function fotoFbWinnerData(d){
 }
 function fotoFbWinnerPlaque(x,y,w,h,d,metal){
   const fill=metal==='silver'?'#dfe6ee':metal==='bronze'?'#c97842':'#dca80f';
-  const border=metal==='silver'?'#eff6ff':metal==='bronze'?'#ffbb84':'#ffe98e';
-  const text=metal==='silver'?'#07121b':'#fff';
-  const r1=d.r1||{},r2=d.r2||{};
-  return '<g transform="translate('+x+' '+y+')" filter="url(#shadow)"><rect width="'+w+'" height="'+h+'" rx="22" fill="#07131d" stroke="'+border+'" stroke-width="6"/>'+
-    '<rect width="'+w+'" height="70" rx="18" fill="'+fill+'"/><text x="'+(w/2)+'" y="50" text-anchor="middle" font-family="Arial Black,Arial" font-size="34" font-weight="1000" fill="'+text+'">'+d.rank+'. MIEJSCE</text>'+
-    '<text x="'+(w/2)+'" y="118" text-anchor="middle" font-family="Arial Black,Arial" font-size="'+(d.name.length>18?30:36)+'" font-weight="1000" fill="#fff">'+fotoFbEscXml(d.name)+'</text>'+
-    '<line x1="32" y1="139" x2="'+(w-32)+'" y2="139" stroke="'+border+'" stroke-width="2" opacity=".7"/>'+
-    '<text x="28" y="182" font-family="Arial,sans-serif" font-size="25" font-weight="900" fill="#d8e4ee">Tura 1:</text><text x="'+(w-28)+'" y="182" text-anchor="end" font-family="Arial Black,Arial" font-size="26" fill="#fff">'+fotoFbEscXml(fotoFbGram(r1.weight||0))+'  ('+fotoFbEscXml(placeText(r1.points))+', sektor '+fotoFbEscXml(r1.sector||'—')+')</text>'+
-    '<text x="28" y="224" font-family="Arial,sans-serif" font-size="25" font-weight="900" fill="#d8e4ee">Tura 2:</text><text x="'+(w-28)+'" y="224" text-anchor="end" font-family="Arial Black,Arial" font-size="26" fill="#fff">'+fotoFbEscXml(fotoFbGram(r2.weight||0))+'  ('+fotoFbEscXml(placeText(r2.points))+', sektor '+fotoFbEscXml(r2.sector||'—')+')</text>'+
-    '<rect x="18" y="'+(h-78)+'" width="'+(w-36)+'" height="60" rx="14" fill="'+fill+'" opacity=".95"/>'+
-    '<text x="32" y="'+(h-38)+'" font-family="Arial Black,Arial" font-size="25" fill="'+text+'">SUMA '+fotoFbEscXml(placeText(d.sum))+' pkt</text>'+
-    '<text x="'+(w-30)+'" y="'+(h-38)+'" text-anchor="end" font-family="Arial Black,Arial" font-size="31" fill="'+text+'">'+fotoFbEscXml(fotoFbGram(d.total))+'</text></g>';
+  const border=metal==='silver'?'#eef5fc':metal==='bronze'?'#ffb779':'#ffe284';
+  const headText=metal==='silver'?'#07121b':'#fff';
+  const r1=d.r1||{},r2=d.r2||{},nameFs=d.name.length>22?27:d.name.length>17?31:35;
+  return '<g transform="translate('+x+' '+y+')" filter="url(#shadow)"><rect width="'+w+'" height="'+h+'" rx="22" fill="#06131d" stroke="'+border+'" stroke-width="6"/><rect x="0" y="0" width="'+w+'" height="66" rx="17" fill="'+fill+'"/><text x="'+(w/2)+'" y="46" text-anchor="middle" font-family="Arial Black,Arial" font-size="31" font-weight="1000" fill="'+headText+'">'+d.rank+'. MIEJSCE</text><text x="'+(w/2)+'" y="112" text-anchor="middle" font-family="Arial Black,Arial" font-size="'+nameFs+'" font-weight="1000" fill="#fff">'+fotoFbEscXml(d.name)+'</text><line x1="28" y1="132" x2="'+(w-28)+'" y2="132" stroke="'+border+'" stroke-width="2" opacity=".75"/><text x="28" y="174" font-family="Arial Black,Arial" font-size="22" fill="#bcd2df">TURA 1</text><text x="'+(w-25)+'" y="174" text-anchor="end" font-family="Arial Black,Arial" font-size="24" fill="#fff">'+fotoFbEscXml(fotoFbGram(r1.weight||0))+' • m. '+fotoFbEscXml(placeText(r1.points))+' • sektor '+fotoFbEscXml(r1.sector||'—')+'</text><text x="28" y="214" font-family="Arial Black,Arial" font-size="22" fill="#bcd2df">TURA 2</text><text x="'+(w-25)+'" y="214" text-anchor="end" font-family="Arial Black,Arial" font-size="24" fill="#fff">'+fotoFbEscXml(fotoFbGram(r2.weight||0))+' • m. '+fotoFbEscXml(placeText(r2.points))+' • sektor '+fotoFbEscXml(r2.sector||'—')+'</text><rect x="16" y="'+(h-78)+'" width="'+(w-32)+'" height="60" rx="14" fill="'+fill+'" opacity=".98"/><text x="30" y="'+(h-39)+'" font-family="Arial Black,Arial" font-size="23" fill="'+headText+'">SUMA '+fotoFbEscXml(placeText(d.sum))+' pkt</text><text x="'+(w-27)+'" y="'+(h-38)+'" text-anchor="end" font-family="Arial Black,Arial" font-size="31" fill="'+headText+'">'+fotoFbEscXml(fotoFbGram(d.total))+'</text></g>';
 }
 async function fotoFbSvgWinners(d){
-  const w=1200,h=1000,c=d.competition,assets=await Promise.all([fotoFbAssetData('/icon-512.png'),fotoFbAssetData('/carp-real-v116.png')]),logo=assets[0],carp=assets[1];
+  const w=1400,h=1250,c=d.competition,assets=await Promise.all([fotoFbAssetData('/icon-512.png'),fotoFbAssetData('/carp-real-v116.png')]),logo=assets[0],carp=assets[1];
   const list=fotoFbWinnerData(d);
   if(list.length<3)throw new Error('Klasyfikacja końcowa musi zawierać co najmniej 3 zawodników.');
   let svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">'+fotoFbDefs()+fotoFbScene(w,h,logo,carp)+fotoFbHeader(c,w,'ZWYCIĘZCY ZAWODÓW',logo);
   const byRank={};list.forEach(function(x){byRank[x.rank]=x});
-  svg+=fotoFbTrophy(600,330,1.18,'gold',1)+fotoFbTrophy(220,390,.88,'silver',2)+fotoFbTrophy(980,402,.82,'bronze',3);
-  svg+=fotoFbWinnerPlaque(408,605,384,275,byRank[1]||list[0],'gold');
-  svg+=fotoFbWinnerPlaque(35,640,350,240,byRank[2]||list[1],'silver');
-  svg+=fotoFbWinnerPlaque(815,650,350,230,byRank[3]||list[2],'bronze');
+  svg+=fotoFbTrophy(700,350,1.28,'gold',1)+fotoFbTrophy(255,425,.97,'silver',2)+fotoFbTrophy(1140,430,.92,'bronze',3);
+  svg+=fotoFbWinnerPlaque(470,720,460,350,byRank[1]||list[0],'gold');
+  svg+=fotoFbWinnerPlaque(35,760,405,310,byRank[2]||list[1],'silver');
+  svg+=fotoFbWinnerPlaque(960,760,405,310,byRank[3]||list[2],'bronze');
   svg+=fotoFbFooter(w,h)+'</svg>';
   return {svg:svg,w:w,h:h,name:'FotoFB_Zwyciezcy_'+fotoFbSafeFile(c.title)+'.jpg'};
 }
@@ -1844,49 +1829,40 @@ function fotoFbBigFishRows(d){
   return a.sort(function(x,y){return y.weight-x.weight||x.round-y.round||String(x.name).localeCompare(String(y.name),'pl')});
 }
 async function fotoFbSvgBigFish(d){
-  const w=1200,h=1350,c=d.competition,assets=await Promise.all([fotoFbAssetData('/icon-512.png'),fotoFbAssetData('/carp-real-v116.png')]),logo=assets[0],carp=assets[1];
+  const w=1400,h=1750,c=d.competition,assets=await Promise.all([fotoFbAssetData('/icon-512.png'),fotoFbAssetData('/carp-real-v116.png')]),logo=assets[0],carp=assets[1];
   const rows=fotoFbBigFishRows(d);
   if(!rows.length)throw new Error('Brak wpisanych największych ryb BF.');
   let svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">'+fotoFbDefs()+fotoFbScene(w,h,logo,carp)+fotoFbHeader(c,w,'NAJWIĘKSZE RYBY',logo);
-  const cols=rows.length>10?2:1,perCol=Math.ceil(rows.length/cols),top=345,bottom=h-145,avail=bottom-top,gap=14,rowH=Math.max(46,Math.min(84,Math.floor((avail-gap*(perCol-1))/perCol))),font=rowH<58?22:28;
+  if(carp)svg+='<image href="'+carp+'" x="390" y="315" width="620" height="300" preserveAspectRatio="xMidYMid meet" opacity=".92" filter="url(#shadow)"/>';
+  const cols=rows.length>14?2:1,perCol=Math.ceil(rows.length/cols),top=575,bottom=h-145,avail=bottom-top,gap=8,rowH=Math.max(44,Math.min(68,Math.floor((avail-gap*(perCol-1))/perCol))),font=Math.max(18,Math.min(27,rowH*.42));
   for(let i=0;i<rows.length;i++){
-    const col=Math.floor(i/perCol),ri=i%perCol,x=cols===1?120:(col===0?45:615),ww=cols===1?960:540,y=top+ri*(rowH+gap),r=rows[i],rank=i+1;
-    const metal=rank===1?'url(#gold)':rank===2?'url(#silver)':rank===3?'url(#bronze)':'#203747';
-    svg+='<g transform="translate('+x+' '+y+')" filter="url(#shadow)"><rect width="'+ww+'" height="'+rowH+'" rx="16" fill="#07131d" stroke="'+(rank<=3?'#e3b04d':'#3f708e')+'" stroke-width="'+(rank<=3?4:2)+'"/>'+
-      '<circle cx="'+(rowH/2)+'" cy="'+(rowH/2)+'" r="'+(rowH*.34)+'" fill="'+metal+'"/><text x="'+(rowH/2)+'" y="'+(rowH*.68)+'" text-anchor="middle" font-family="Arial Black,Arial" font-size="'+(font+3)+'" font-weight="1000" fill="'+(rank===2?'#07121b':'#fff')+'">'+rank+'</text>'+
-      '<text x="'+(rowH+18)+'" y="'+(rowH*.45)+'" font-family="Arial Black,Arial" font-size="'+font+'" font-weight="1000" fill="#fff">'+fotoFbEscXml(r.name||('Zawodnik '+r.user_id))+'</text>'+
-      '<text x="'+(rowH+18)+'" y="'+(rowH*.78)+'" font-family="Arial,sans-serif" font-size="'+Math.max(18,font-7)+'" font-weight="800" fill="#bcd2df">Tura '+r.round+' • Stan. '+fotoFbEscXml(r.stand||'—')+'</text>'+
-      '<text x="'+(ww-22)+'" y="'+(rowH*.64)+'" text-anchor="end" font-family="Arial Black,Arial" font-size="'+(font+8)+'" font-weight="1000" fill="#ffcf45">'+fotoFbEscXml(fotoFbGram(r.weight))+'</text></g>';
+    const col=Math.floor(i/perCol),ri=i%perCol,x=cols===1?120:(col===0?45:715),ww=cols===1?1160:640,y=top+ri*(rowH+gap),r=rows[i],rank=i+1;
+    const metal=rank===1?'url(#gold)':rank===2?'url(#silver)':rank===3?'url(#bronze)':'#203747',name=String(r.name||('Zawodnik '+r.user_id)),nameFs=name.length>22?font-4:name.length>17?font-2:font;
+    svg+='<g transform="translate('+x+' '+y+')" filter="url(#shadow)"><rect width="'+ww+'" height="'+rowH+'" rx="15" fill="#07131d" stroke="'+(rank<=3?'#e3b04d':'#3f708e')+'" stroke-width="'+(rank<=3?4:2)+'"/><circle cx="'+(rowH/2)+'" cy="'+(rowH/2)+'" r="'+(rowH*.34)+'" fill="'+metal+'"/><text x="'+(rowH/2)+'" y="'+(rowH*.68)+'" text-anchor="middle" font-family="Arial Black,Arial" font-size="'+(font+2)+'" font-weight="1000" fill="'+(rank===2?'#07121b':'#fff')+'">'+rank+'</text><text x="'+(rowH+15)+'" y="'+(rowH*.43)+'" font-family="Arial Black,Arial" font-size="'+nameFs+'" font-weight="1000" fill="#fff">'+fotoFbEscXml(name)+'</text><text x="'+(rowH+15)+'" y="'+(rowH*.77)+'" font-family="Arial,sans-serif" font-size="'+Math.max(15,font-6)+'" font-weight="800" fill="#bcd2df">Tura '+r.round+' • Stan. '+fotoFbEscXml(r.stand||'—')+'</text><text x="'+(ww-18)+'" y="'+(rowH*.62)+'" text-anchor="end" font-family="Arial Black,Arial" font-size="'+(font+7)+'" font-weight="1000" fill="#ffcf45">'+fotoFbEscXml(fotoFbGram(r.weight))+'</text></g>';
   }
   svg+=fotoFbFooter(w,h)+'</svg>';
   return {svg:svg,w:w,h:h,name:'FotoFB_Najwieksze_Ryby_'+fotoFbSafeFile(c.title)+'.jpg'};
 }
 function fotoFbSectorBox(group,x,y,w,h,color){
-  const rows=group.rows||[],headH=66,colH=38,rowH=Math.max(24,Math.min(46,Math.floor((h-headH-colH-8)/Math.max(1,rows.length)))),fs=Math.max(17,Math.min(25,rowH*.55));
-  let z='<g transform="translate('+x+' '+y+')" filter="url(#shadow)"><rect width="'+w+'" height="'+h+'" rx="18" fill="#07131d" stroke="'+color+'" stroke-width="5"/>'+
-    '<rect width="'+w+'" height="'+headH+'" rx="14" fill="'+color+'" opacity=".94"/><text x="'+(w/2)+'" y="45" text-anchor="middle" font-family="Arial Black,Arial" font-size="34" font-weight="1000" fill="#fff">SEKTOR '+fotoFbEscXml(group.sector)+'</text>'+
-    '<rect x="8" y="'+headH+'" width="'+(w-16)+'" height="'+colH+'" fill="#0a2435"/>'+
-    '<text x="36" y="'+(headH+26)+'" font-family="Arial Black,Arial" font-size="17" fill="#fff">M-ce</text><text x="105" y="'+(headH+26)+'" font-family="Arial Black,Arial" font-size="17" fill="#fff">Stan.</text><text x="170" y="'+(headH+26)+'" font-family="Arial Black,Arial" font-size="17" fill="#fff">Zawodnik</text><text x="'+(w-22)+'" y="'+(headH+26)+'" text-anchor="end" font-family="Arial Black,Arial" font-size="17" fill="#fff">Waga</text>';
+  const rows=group.rows||[],headH=72,colH=42,rowH=Math.max(31,Math.min(54,Math.floor((h-headH-colH-12)/Math.max(1,rows.length)))),fs=Math.max(18,Math.min(27,rowH*.52));
+  const nameX=166,weightX=w-18,weightW=155,nameMax=weightX-weightW-nameX-12;
+  let z='<g transform="translate('+x+' '+y+')" filter="url(#shadow)"><rect width="'+w+'" height="'+h+'" rx="18" fill="#06131d" stroke="'+color+'" stroke-width="5"/><rect width="'+w+'" height="'+headH+'" rx="14" fill="'+color+'" opacity=".96"/><text x="'+(w/2)+'" y="49" text-anchor="middle" font-family="Arial Black,Arial" font-size="36" font-weight="1000" fill="#fff">SEKTOR '+fotoFbEscXml(group.sector)+'</text><rect x="8" y="'+headH+'" width="'+(w-16)+'" height="'+colH+'" fill="#0a2435"/><text x="42" y="'+(headH+28)+'" text-anchor="middle" font-family="Arial Black,Arial" font-size="18" fill="#fff">M-ce</text><text x="112" y="'+(headH+28)+'" text-anchor="middle" font-family="Arial Black,Arial" font-size="18" fill="#fff">Stan.</text><text x="'+nameX+'" y="'+(headH+28)+'" font-family="Arial Black,Arial" font-size="18" fill="#fff">Zawodnik</text><text x="'+weightX+'" y="'+(headH+28)+'" text-anchor="end" font-family="Arial Black,Arial" font-size="18" fill="#fff">Waga</text>';
   rows.forEach(function(r,i){
-    const yy=headH+colH+i*rowH,rank=Number(r.points||0),bg=rank===1?'#d7a416':rank===2?'#c7d0da':rank===3?'#a85c35':(i%2?'#102536':'#091a27'),fg=rank===2?'#08131c':'#fff';
-    z+='<rect x="8" y="'+yy+'" width="'+(w-16)+'" height="'+rowH+'" fill="'+bg+'" opacity="'+(rank<=3?'.96':'.94')+'"/>'+
-      '<text x="48" y="'+(yy+rowH*.7)+'" text-anchor="middle" font-family="Arial Black,Arial" font-size="'+(fs+2)+'" fill="'+fg+'">'+fotoFbEscXml(placeText(r.points))+'</text>'+
-      '<text x="122" y="'+(yy+rowH*.7)+'" text-anchor="middle" font-family="Arial Black,Arial" font-size="'+fs+'" fill="'+fg+'">'+fotoFbEscXml(r.stand||'—')+'</text>'+
-      '<text x="170" y="'+(yy+rowH*.7)+'" font-family="Arial,sans-serif" font-size="'+fs+'" font-weight="900" fill="'+fg+'">'+fotoFbEscXml(r.name||'')+'</text>'+
-      '<text x="'+(w-22)+'" y="'+(yy+rowH*.7)+'" text-anchor="end" font-family="Arial Black,Arial" font-size="'+fs+'" fill="'+fg+'">'+fotoFbEscXml(fotoFbGram(r.weight||0))+'</text>';
+    const yy=headH+colH+i*rowH,rank=Number(r.points||0),bg=rank===1?'#d7a416':rank===2?'#c7d0da':rank===3?'#a85c35':(i%2?'#102536':'#091a27'),fg=rank===2?'#08131c':'#fff',nm=String(r.name||''),nameFs=nm.length>24?Math.max(15,fs-6):nm.length>20?Math.max(16,fs-4):nm.length>16?Math.max(17,fs-2):fs;
+    z+='<rect x="8" y="'+yy+'" width="'+(w-16)+'" height="'+rowH+'" fill="'+bg+'" opacity="'+(rank<=3?'.98':'.95')+'"/><line x1="'+(nameX-18)+'" y1="'+yy+'" x2="'+(nameX-18)+'" y2="'+(yy+rowH)+'" stroke="#ffffff22"/><line x1="'+(weightX-weightW)+'" y1="'+yy+'" x2="'+(weightX-weightW)+'" y2="'+(yy+rowH)+'" stroke="#ffffff33" stroke-width="2"/><text x="42" y="'+(yy+rowH*.69)+'" text-anchor="middle" font-family="Arial Black,Arial" font-size="'+(fs+2)+'" fill="'+fg+'">'+fotoFbEscXml(placeText(r.points))+'</text><text x="112" y="'+(yy+rowH*.69)+'" text-anchor="middle" font-family="Arial Black,Arial" font-size="'+fs+'" fill="'+fg+'">'+fotoFbEscXml(r.stand||'—')+'</text><text x="'+nameX+'" y="'+(yy+rowH*.69)+'" font-family="Arial Black,Arial" font-size="'+nameFs+'" font-weight="1000" fill="'+fg+'"'+(nm.length>18?' textLength="'+nameMax+'" lengthAdjust="spacingAndGlyphs"':'')+'>'+fotoFbEscXml(nm)+'</text><text x="'+weightX+'" y="'+(yy+rowH*.69)+'" text-anchor="end" font-family="Arial Black,Arial" font-size="'+fs+'" fill="'+fg+'">'+fotoFbEscXml(fotoFbGram(r.weight||0))+'</text>';
   });
   z+='</g>';return z;
 }
 async function fotoFbSvgSectors(d,round){
   round=Number(round)===2?2:1;
-  const w=1200,h=1600,c=d.competition,assets=await Promise.all([fotoFbAssetData('/icon-512.png'),fotoFbAssetData('/carp-real-v116.png')]),logo=assets[0],carp=assets[1];
+  const w=1400,h=1800,c=d.competition,assets=await Promise.all([fotoFbAssetData('/icon-512.png'),fotoFbAssetData('/carp-real-v116.png')]),logo=assets[0],carp=assets[1];
   const rows=round===2?(d.classification&&d.classification.round2||[]):(d.classification&&d.classification.round1||[]);
   const groups=groupRowsBySector(rows);
   if(!groups.length)throw new Error('Brak wyników sektorowych Tury '+round+'.');
   let svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">'+fotoFbDefs()+fotoFbScene(w,h,logo,carp)+fotoFbHeader(c,w,'WYNIKI SEKTOROWE — TURA '+round,logo);
-  const top=330,bottom=h-135,contentH=bottom-top,cols=groups.length===1?1:2,gridRows=Math.ceil(groups.length/cols),gapX=22,gapY=22,boxW=cols===1?1080:(w-80-gapX)/2,boxH=(contentH-gapY*(gridRows-1))/gridRows;
+  const top=350,bottom=h-135,contentH=bottom-top,cols=groups.length===1?1:2,gridRows=Math.ceil(groups.length/cols),gapX=28,gapY=26,boxW=cols===1?1280:(w-100-gapX)/2,boxH=(contentH-gapY*(gridRows-1))/gridRows;
   const colors=['#176fc1','#14883d','#b88b16','#b62b25','#7047a5','#008b8b'];
-  groups.forEach(function(g,i){const col=i%cols,row=Math.floor(i/cols),x=cols===1?60:40+col*(boxW+gapX),y=top+row*(boxH+gapY);svg+=fotoFbSectorBox(g,x,y,boxW,boxH,colors[i%colors.length])});
+  groups.forEach(function(g,i){const col=i%cols,row=Math.floor(i/cols),x=cols===1?60:36+col*(boxW+gapX),y=top+row*(boxH+gapY);svg+=fotoFbSectorBox(g,x,y,boxW,boxH,colors[i%colors.length])});
   svg+=fotoFbFooter(w,h)+'</svg>';
   return {svg:svg,w:w,h:h,name:'FotoFB_Wyniki_Sektorowe_T'+round+'_'+fotoFbSafeFile(c.title)+'.jpg'};
 }
