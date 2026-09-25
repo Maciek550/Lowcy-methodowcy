@@ -1,4 +1,4 @@
-const CLIENT_VERSION='161';const CLIENT_VERSION_NAME='V161_FOTO_FB_ZONES_READABLE';window.__LOWCY_APP_JS_161=1;try{fetch('/__probe_js_v161',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V161_FOTO_FB_ZONES_READABLE_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='162';const CLIENT_VERSION_NAME='V162_FOTO_FB_WINNERS_READABLE';window.__LOWCY_APP_JS_162=1;try{fetch('/__probe_js_v162',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V162_FOTO_FB_WINNERS_READABLE_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -1795,23 +1795,32 @@ function fotoFbMasterTop(c,w,label,logo){
 }
 function fotoFbMasterWinnerCard(x,y,w,h,d,metal){
   const fill=metal==='silver'?'url(#silver)':metal==='bronze'?'url(#bronze)':'url(#gold)',fg=metal==='silver'?'#08131b':'#fff',r1=d.r1||{},r2=d.r2||{};
-  const nm=String(d.name||''),nf=nm.length>23?25:nm.length>19?28:nm.length>15?31:34,half=(w-48)/2;
+  const nm=String(d.name||''),nf=nm.length>23?27:nm.length>19?30:nm.length>15?33:36,half=(w-52)/2;
   const roundBox=function(r,label,xx){
-    return '<g transform="translate('+xx+' 82)"><rect width="'+half+'" height="112" rx="7" fill="#111820" stroke="#ffffff44" stroke-width="2"/><text x="'+(half/2)+'" y="29" text-anchor="middle" font-family="Arial Black,Arial" font-size="20" fill="#f3c653">'+label+'</text><text x="'+(half/2)+'" y="69" text-anchor="middle" font-family="Arial Black,Arial" font-size="31" fill="#fff">'+fotoFbEscXml(fotoFbGram(r.weight||0))+'</text><text x="'+(half/2)+'" y="97" text-anchor="middle" font-family="Arial Black,Arial" font-size="17" fill="#e8eff3">m. '+fotoFbEscXml(placeText(r.points))+' • sektor '+fotoFbEscXml(r.sector||'—')+'</text></g>';
+    return '<g transform="translate('+xx+' 86)"><rect width="'+half+'" height="128" rx="9" fill="#111820" stroke="#ffffff55" stroke-width="2"/>'+
+      '<text x="'+(half/2)+'" y="30" text-anchor="middle" font-family="Arial Black,Arial" font-size="22" fill="#f3c653">'+label+'</text>'+
+      '<text x="'+(half/2)+'" y="72" text-anchor="middle" font-family="Arial Black,Arial" font-size="34" fill="#fff">'+fotoFbEscXml(fotoFbGram(r.weight||0))+'</text>'+
+      '<text x="'+(half/2)+'" y="105" text-anchor="middle" font-family="Arial Black,Arial" font-size="20" fill="#f4f7f8">M. '+fotoFbEscXml(placeText(r.points))+'  •  SEKTOR '+fotoFbEscXml(r.sector||'—')+'</text></g>';
   };
-  return '<g transform="translate('+x+' '+y+')" filter="url(#shadow)"><rect width="'+w+'" height="'+h+'" rx="16" fill="#070d12" stroke="'+fill+'" stroke-width="6"/><rect x="12" y="10" width="'+(w-24)+'" height="58" rx="9" fill="'+fill+'"/><text x="'+(w/2)+'" y="50" text-anchor="middle" font-family="Arial Black,Arial" font-size="'+nf+'" fill="'+fg+'"'+(nm.length>20?' textLength="'+(w-52)+'" lengthAdjust="spacingAndGlyphs"':'')+'>'+fotoFbEscXml(nm)+'</text>'+
-    roundBox(r1,'TURA 1',16)+roundBox(r2,'TURA 2',32+half)+
-    '<text x="'+(w/2)+'" y="'+(h-74)+'" text-anchor="middle" font-family="Arial Black,Arial" font-size="24" fill="#fff">SUMA MIEJSC: '+fotoFbEscXml(placeText(d.sum))+'</text><text x="'+(w/2)+'" y="'+(h-26)+'" text-anchor="middle" font-family="Arial Black,Arial" font-size="42" fill="'+fill+'">'+fotoFbEscXml(fotoFbGram(d.total))+'</text></g>';
+  return '<g transform="translate('+x+' '+y+')" filter="url(#shadow)">'+
+    '<rect width="'+w+'" height="'+h+'" rx="17" fill="#070d12" stroke="'+fill+'" stroke-width="6"/>'+
+    '<rect x="12" y="10" width="'+(w-24)+'" height="62" rx="9" fill="'+fill+'"/>'+
+    '<text x="'+(w/2)+'" y="53" text-anchor="middle" font-family="Arial Black,Arial" font-size="'+nf+'" fill="'+fg+'"'+(nm.length>20?' textLength="'+(w-54)+'" lengthAdjust="spacingAndGlyphs"':'')+'>'+fotoFbEscXml(nm)+'</text>'+
+    roundBox(r1,'TURA 1',16)+roundBox(r2,'TURA 2',36+half)+
+    '<text x="'+(w/2)+'" y="'+(h-79)+'" text-anchor="middle" font-family="Arial Black,Arial" font-size="27" fill="#fff">SUMA MIEJSC: '+fotoFbEscXml(placeText(d.sum))+'</text>'+
+    '<text x="'+(w/2)+'" y="'+(h-27)+'" text-anchor="middle" font-family="Arial Black,Arial" font-size="45" fill="'+fill+'">'+fotoFbEscXml(fotoFbGram(d.total))+'</text></g>';
 }
 async function fotoFbSvgWinnersMaster(d,master){
-  const w=1400,h=1280,c=d.competition,logo=await fotoFbAssetData('/icon-512.png'),list=fotoFbWinnerData(d);
+  const w=1400,h=1340,c=d.competition,logo=await fotoFbAssetData('/icon-512.png'),list=fotoFbWinnerData(d);
   if(list.length<3)throw new Error('Klasyfikacja końcowa musi zawierać co najmniej 3 zawodników.');
   const by={};list.forEach(function(r){by[r.rank]=r});
-  let svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">'+fotoFbDefs()+'<image href="'+master+'" x="0" y="0" width="'+w+'" height="'+h+'" preserveAspectRatio="none"/>'+fotoFbMasterTop(c,w,'ZWYCIĘZCY ZAWODÓW',logo);
-  svg+='<rect x="118" y="610" width="1164" height="355" rx="28" fill="#071018" opacity=".16"/>';
-  svg+=fotoFbMasterWinnerCard(132,675,390,292,by[2]||list[1],'silver');
-  svg+=fotoFbMasterWinnerCard(500,610,420,350,by[1]||list[0],'gold');
-  svg+=fotoFbMasterWinnerCard(900,680,370,287,by[3]||list[2],'bronze');
+  let svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">'+fotoFbDefs()+
+    '<image href="'+master+'" x="0" y="60" width="'+w+'" height="1280" preserveAspectRatio="none"/>'+
+    fotoFbMasterTop(c,w,'ZWYCIĘZCY ZAWODÓW',logo);
+  /* V162: puchary mają więcej oddechu od belki, a tablice nie zachodzą na siebie. */
+  svg+=fotoFbMasterWinnerCard(65,735,400,330,by[2]||list[1],'silver');
+  svg+=fotoFbMasterWinnerCard(500,670,400,365,by[1]||list[0],'gold');
+  svg+=fotoFbMasterWinnerCard(935,735,400,330,by[3]||list[2],'bronze');
   svg+='</svg>';
   return {svg:svg,w:w,h:h,name:'FotoFB_Zwyciezcy_'+fotoFbSafeFile(c.title)+'.jpg'};
 }
