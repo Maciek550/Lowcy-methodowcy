@@ -1,4 +1,4 @@
-name: Export source V169
+name: Export source V170
 
 on:
   push:
@@ -16,7 +16,7 @@ jobs:
       - name: Upload source ZIP
         uses: actions/upload-artifact@v4
         with:
-          name: Lowcy-methodowcy-V169
+          name: Lowcy-methodowcy-V170
           path: .
           include-hidden-files: false
           retention-days: 7
