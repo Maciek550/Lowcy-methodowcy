@@ -1,4 +1,4 @@
-const CLIENT_VERSION='156';const CLIENT_VERSION_NAME='V156_PLAYER_ARCHIVE';window.__LOWCY_APP_JS_156=1;try{fetch('/__probe_js_v156',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V156_PLAYER_ARCHIVE_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='157';const CLIENT_VERSION_NAME='V157_FOTO_FB';window.__LOWCY_APP_JS_157=1;try{fetch('/__probe_js_v157',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V157_FOTO_FB_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -548,19 +548,21 @@ function renderAdminDetail(d){
     +adminZoneButton('entry','3. Wpisywanie wyników')
     +adminZoneButton('results','4. Wyniki')
     +adminZoneButton('pdf','5. Generowanie PDF')
+    +adminZoneButton('fotofb','6. FotoFB')
     +'</div></div>'
     +renderCompetitionModeBar(d.competition)
     +'<section id="adminZone-roster" class="adminZone '+(ACTIVE_ADMIN_ZONE==='roster'?'':'hidden')+'">'+renderCountPanel(d)+renderRosterTools(d)+renderEntries(d)+'</section>'
     +'<section id="adminZone-draw" class="adminZone '+(ACTIVE_ADMIN_ZONE==='draw'?'':'hidden')+'">'+renderCompetitionSettings(d)+renderStructurePanel(d)+renderDrawPanel(d)+'</section>'
     +'<section id="adminZone-entry" class="adminZone '+(ACTIVE_ADMIN_ZONE==='entry'?'':'hidden')+'">'+renderResultsEntryPanel(d)+'</section>'
     +'<section id="adminZone-results" class="adminZone '+(ACTIVE_ADMIN_ZONE==='results'?'':'hidden')+'">'+renderResultsSummaryPanel(d)+'</section>'
-    +'<section id="adminZone-pdf" class="adminZone '+(ACTIVE_ADMIN_ZONE==='pdf'?'':'hidden')+'">'+renderPdfPanel(d)+'</section>';
+    +'<section id="adminZone-pdf" class="adminZone '+(ACTIVE_ADMIN_ZONE==='pdf'?'':'hidden')+'">'+renderPdfPanel(d)+'</section>'
+    +'<section id="adminZone-fotofb" class="adminZone '+(ACTIVE_ADMIN_ZONE==='fotofb'?'':'hidden')+'">'+renderFotoFbPanel(d)+'</section>';
 }
 function showAdminZone(zone,ev){
   if(ev){ev.preventDefault();ev.stopPropagation()}
-  if(!['roster','draw','entry','results','pdf'].includes(zone))zone='roster';
+  if(!['roster','draw','entry','results','pdf','fotofb'].includes(zone))zone='roster';
   ACTIVE_ADMIN_ZONE=zone;
-  ['roster','draw','entry','results','pdf'].forEach(name=>{q('adminZone-'+name)?.classList.toggle('hidden',name!==zone);q('adminZoneBtn-'+name)?.classList.toggle('active',name===zone)});
+  ['roster','draw','entry','results','pdf','fotofb'].forEach(name=>{q('adminZone-'+name)?.classList.toggle('hidden',name!==zone);q('adminZoneBtn-'+name)?.classList.toggle('active',name===zone)});
   if(zone==='draw'&&CURRENT_DETAIL)setTimeout(()=>setupStructureAuto(CURRENT_DETAIL.competition.id),0);
   const slot=document.querySelector('.workZoneTabsSlot');if(ev&&slot)slot.scrollIntoView({behavior:'smooth',block:'start'});setTimeout(syncFixedAdminNav,0);
 }
@@ -1719,6 +1721,235 @@ function renderClassTable(rows){rows=sortRowsBySectorPlace(rows||[]);if(!rows.le
 function placeText(v){return (v===0||v)?esc(String(v).replace('.',',')):'—'}
 function renderGeneralTable(rows){rows=rows||[];if(!rows.length)return '<p class="muted">Brak klasyfikacji końcowej.</p>';const desktop='<div class="tablewrap finalWrap adminDesktopOnly"><table class="generalTable sharpTable"><thead><tr><th class="colRank center">MSC</th><th class="colName">Zawodnik</th><th class="colRound center">T1</th><th class="colRound center">T2</th><th class="colSum center">Suma miejsc</th><th class="colWeight right">Waga</th></tr></thead><tbody>'+rows.map(r=>{const club=String(r.pzw_club||'').trim();return '<tr class="'+placeRowClass(r.rank)+' '+(Number(r.user_id)===Number(ME.id)?'mine':'')+'"><td class="colRank center"><b>'+r.rank+'</b></td><td class="colName nameCell"><b>'+esc(r.name)+'</b>'+(club?'<span class="finalClub small muted '+(SHOW_FINAL_CLUB?'':'hidden')+'"> • '+esc(club)+'</span>':'')+'</td><td class="colRound center scoreCell"><b>'+placeText(r.t1_points)+'</b></td><td class="colRound center scoreCell"><b>'+placeText(r.t2_points)+'</b></td><td class="colSum center sumCell"><b>'+placeText(r.sum_points)+'</b></td><td class="colWeight right weightCell"><b>'+fmtGram(r.total_weight)+'g</b>'+(Number(r.biggest_fish||0)?'<br><span class="bfLine">BF: '+fmtGram(r.biggest_fish)+'g</span>':'')+'</td></tr>'}).join('')+'</tbody></table></div>';const mobile='<div class="adminMobileOnly mobileGeneralList">'+rows.map(r=>{const club=String(r.pzw_club||'').trim();return '<article class="mobileAdminCard '+placeRowClass(r.rank)+'"><div class="mobileAdminCardHead"><strong class="mobileRank">'+r.rank+'</strong><b>'+esc(r.name)+'</b>'+(club?'<span class="finalClub small muted '+(SHOW_FINAL_CLUB?'':'hidden')+'"> • '+esc(club)+'</span>':'')+'</div><div class="mobileScoreGrid"><span><small>T1</small><b>'+placeText(r.t1_points)+'</b></span><span><small>T2</small><b>'+placeText(r.t2_points)+'</b></span><span><small>Suma</small><b>'+placeText(r.sum_points)+'</b></span><span><small>Waga</small><b>'+fmtGram(r.total_weight)+'g</b>'+(Number(r.biggest_fish||0)?'<em>BF '+fmtGram(r.biggest_fish)+'g</em>':'')+'</span></div></article>'}).join('')+'</div>';return desktop+mobile}
 function renderPdfPanel(d){const c=d.competition;return '<div class="card"><h2>Generowanie plików PDF</h2><p class="small muted">Wszystkie PDF-y mają bezpieczne marginesy do druku. Nagłówki są bez tła: nazwa zawodów granatowa, łowisko bordowe.</p><h3>Losowanie</h3><div class="grid3"><button type="button" onclick="generateDrawPdf(1)">PDF Losowanie T1</button><button type="button" onclick="generateDrawPdf(2)">PDF Losowanie T2</button><button type="button" class="secondary" onclick="generateDrawPdf(0)">PDF Losowanie T1 + T2</button></div><h3>Wyniki</h3>'+renderFinalClubToggle()+'<div class="grid3"><button type="button" onclick="generateResultsPdfV33(1)">PDF Wyniki T1</button><button type="button" onclick="generateResultsPdfV33(2)">PDF Wyniki T2</button><button type="button" class="secondary" onclick="generateResultsPdfV33(0)">PDF Klasyfikacja końcowa</button></div><div class="grid3"><button type="button" class="secondary" onclick="generateSectorPdf(1)">PDF Sektory T1</button><button type="button" class="secondary" onclick="generateSectorPdf(2)">PDF Sektory T2</button><button type="button" class="secondary" onclick="generateStatsPdf()">PDF Statystyki</button></div><h3>Tabelka wynikowa</h3><button type="button" class="secondary" onclick="generateWeightSheetPdf()">PDF Tabelka wynikowa — 1 strona</button><div class="photoPdfBox"><b>FORMULARZ DO ODCZYTU ZE ZDJĘCIA</b><span>Ma znaczniki do prostowania zdjęcia i szerokie pola na całe wagi. * przed wagą oznacza BF, ostatnia kolumna to SUMA.</span><div class="grid"><button type="button" class="blue" onclick="generatePhotoResultSheetPdf(1)">PDF do zdjęcia — T1</button><button type="button" class="blue" onclick="generatePhotoResultSheetPdf(2)">PDF do zdjęcia — T2</button></div></div><h3>Lista startowa</h3><button type="button" class="blue" onclick="generateStartListPdf()">PDF Tabela startowa zawodników — 1 strona</button><p class="small muted">Tabela startowa: Lp., Zawodnik, Potwierdzenie ✓, Wpisowe, Koszyk +, Uwagi. Układ automatycznie wykorzystuje całą stronę.</p></div>'}
+
+/* V157 — FotoFB: bezpieczny, deterministyczny generator JPG z gotowych wyników.
+   Nie zapisuje nic do bazy i nie zmienia klasyfikacji. */
+let FOTO_FB_LAST=null;
+let FOTO_FB_PREVIEW_URL='';
+const FOTO_FB_ASSET_CACHE={};
+
+function fotoFbEscXml(v){
+  return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]});
+}
+function fotoFbSafeFile(v){
+  return String(v||'zawody').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9_-]+/g,'_').replace(/^_+|_+$/g,'').slice(0,70)||'zawody';
+}
+function fotoFbGram(v){return fmtGram(Number(v||0))+' g'}
+function fotoFbDate(c){return fmtDate(c&&c.competition_date||'')}
+function fotoFbTitleSize(t,max,min){
+  const n=String(t||'').length;
+  return Math.max(min||38,Math.min(max||66,Math.round((max||66)*(n<=18?1:n<=28?.88:n<=40?.74:.62))));
+}
+async function fotoFbAssetData(path){
+  if(FOTO_FB_ASSET_CACHE[path])return FOTO_FB_ASSET_CACHE[path];
+  try{
+    const r=await fetch(path,{cache:'force-cache'});if(!r.ok)throw new Error('asset');
+    const b=await r.blob();
+    const u=await new Promise(function(resolve,reject){const fr=new FileReader();fr.onload=function(){resolve(fr.result)};fr.onerror=reject;fr.readAsDataURL(b)});
+    FOTO_FB_ASSET_CACHE[path]=String(u);return String(u);
+  }catch(_){return ''}
+}
+function fotoFbDefs(){
+  return '<defs>'+
+    '<linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0d4f83"/><stop offset=".46" stop-color="#f49b36"/><stop offset=".63" stop-color="#ffd66a"/><stop offset="1" stop-color="#16344a"/></linearGradient>'+
+    '<linearGradient id="water" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2777a7"/><stop offset=".45" stop-color="#174a69"/><stop offset="1" stop-color="#041521"/></linearGradient>'+
+    '<linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff1a8"/><stop offset=".24" stop-color="#f4b321"/><stop offset=".52" stop-color="#fff3a2"/><stop offset=".75" stop-color="#bd7100"/><stop offset="1" stop-color="#ffe07a"/></linearGradient>'+
+    '<linearGradient id="silver" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".28" stop-color="#adb8c6"/><stop offset=".55" stop-color="#f7fbff"/><stop offset="1" stop-color="#667486"/></linearGradient>'+
+    '<linearGradient id="bronze" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffd0a0"/><stop offset=".35" stop-color="#b65b24"/><stop offset=".64" stop-color="#f0a060"/><stop offset="1" stop-color="#713014"/></linearGradient>'+
+    '<linearGradient id="dark" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#122b3b"/><stop offset="1" stop-color="#02070b"/></linearGradient>'+
+    '<filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#000" flood-opacity=".75"/></filter>'+
+    '<filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="9" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>'+
+    '</defs>';
+}
+function fotoFbScene(w,h,logo,carp){
+  const lakeY=Math.round(h*.42),sunX=Math.round(w*.77),sunY=Math.round(h*.28);
+  let x='<rect width="'+w+'" height="'+h+'" fill="#06131f"/>'+
+    '<rect width="'+w+'" height="'+lakeY+'" fill="url(#sky)"/>'+
+    '<circle cx="'+sunX+'" cy="'+sunY+'" r="'+Math.round(w*.05)+'" fill="#fff7c7" opacity=".96" filter="url(#glow)"/>'+
+    '<path d="M0 '+lakeY+' Q180 '+(lakeY-35)+' 340 '+lakeY+' T680 '+lakeY+' T1020 '+lakeY+' T'+w+' '+lakeY+' V'+h+' H0Z" fill="url(#water)"/>'+
+    '<path d="M0 '+(lakeY-18)+' Q140 '+(lakeY-90)+' 290 '+(lakeY-28)+' Q430 '+(lakeY-115)+' 600 '+(lakeY-38)+' Q760 '+(lakeY-100)+' 930 '+(lakeY-30)+' Q1060 '+(lakeY-72)+' '+w+' '+(lakeY-28)+' V'+(lakeY+18)+' H0Z" fill="#0b211b" opacity=".92"/>'+
+    '<path d="M0 '+(h-155)+' C190 '+(h-220)+' 360 '+(h-135)+' 540 '+(h-190)+' C750 '+(h-250)+' 925 '+(h-120)+' '+w+' '+(h-200)+' V'+h+' H0Z" fill="#07110d"/>'+
+    '<g opacity=".75" stroke="#0a0d0c" stroke-width="9" fill="none"><path d="M64 '+(h-40)+' Q110 '+(h-260)+' 175 '+(h-390)+'"/><path d="M1080 '+(h-45)+' Q1030 '+(h-265)+' 965 '+(h-390)+'"/></g>'+
+    '<g opacity=".88" fill="#0a0d0c"><circle cx="170" cy="'+(lakeY+32)+'" r="20"/><path d="M149 '+(lakeY+54)+' h42 l25 100 h-84z"/><rect x="130" y="'+(lakeY+148)+'" width="92" height="13" rx="5"/><path d="M195 '+(lakeY+62)+' Q355 '+(lakeY-85)+' 515 '+(lakeY-10)+'" stroke="#0a0d0c" stroke-width="7" fill="none"/></g>';
+  if(carp)x+='<image href="'+carp+'" x="'+Math.round(w*.77)+'" y="'+Math.round(h*.57)+'" width="'+Math.round(w*.29)+'" height="'+Math.round(h*.26)+'" preserveAspectRatio="xMidYMid meet" opacity=".62"/>';
+  if(logo)x+='<image href="'+logo+'" x="28" y="24" width="125" height="125" preserveAspectRatio="xMidYMid meet" filter="url(#shadow)"/>';
+  x+='<rect width="'+w+'" height="'+h+'" fill="url(#dark)" opacity=".14"/>';
+  return x;
+}
+function fotoFbHeader(c,w,subtitle,logo){
+  const title=fotoFbEscXml(c.title||'ZAWODY');
+  const fs=fotoFbTitleSize(title,70,42);
+  const n=(CURRENT_DETAIL&&CURRENT_DETAIL.activeEntries||[]).length;
+  let x='<text x="'+(w/2)+'" y="88" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="'+fs+'" font-weight="1000" fill="url(#gold)" stroke="#07121b" stroke-width="8" paint-order="stroke" filter="url(#shadow)">'+title+'</text>';
+  x+='<g transform="translate(170 116)"><rect x="0" y="0" width="'+(w-205)+'" height="58" rx="18" fill="#071a2b" opacity=".94" stroke="#8fc6e5" stroke-width="2"/>'+
+    '<text x="'+((w-205)/2)+'" y="38" text-anchor="middle" font-family="Arial,sans-serif" font-size="24" font-weight="900" fill="#fff">'+fotoFbEscXml(fotoFbDate(c))+'  •  '+fotoFbEscXml(c.fishery||'Łowisko')+'  •  '+n+' zawodników</text></g>';
+  x+='<g transform="translate(110 192)"><path d="M0 18 Q18 0 44 0 H'+(w-264)+' Q'+(w-220)+' 0 '+(w-202)+' 18 L'+(w-220)+' 83 Q'+(w-236)+' 102 '+(w-264)+' 102 H44 Q18 102 0 83Z" fill="#071a2b" opacity=".96" stroke="#d69b21" stroke-width="3"/>'+
+    '<text x="'+((w-220)/2)+'" y="68" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="50" font-weight="1000" fill="#fff" stroke="#000" stroke-width="2" paint-order="stroke">'+fotoFbEscXml(subtitle)+'</text></g>';
+  return x;
+}
+function fotoFbFooter(w,h){
+  return '<g transform="translate(0 '+(h-112)+')"><rect width="'+w+'" height="112" fill="#03111c" opacity=".97"/><path d="M0 5 Q180 38 350 8 T720 8 T'+w+' 8" stroke="#dfa52d" stroke-width="5" fill="none"/>'+
+    '<text x="'+(w/2)+'" y="52" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="42" font-style="italic" font-weight="1000" fill="url(#gold)" stroke="#000" stroke-width="4" paint-order="stroke">METHOD FEEDER</text>'+
+    '<text x="'+(w/2)+'" y="91" text-anchor="middle" font-family="Georgia,serif" font-size="29" font-style="italic" font-weight="800" fill="#fff">Carp &amp; Caraś &amp; Asiotr &amp; Hamur 🐳</text></g>';
+}
+function fotoFbTrophy(x,y,scale,metal,place){
+  const g=metal==='silver'?'url(#silver)':metal==='bronze'?'url(#bronze)':'url(#gold)';
+  return '<g transform="translate('+x+' '+y+') scale('+scale+')" filter="url(#shadow)">'+
+    '<path d="M-94 0 H94 L74 122 Q52 188 0 190 Q-52 188 -74 122Z" fill="'+g+'" stroke="#4b2d05" stroke-width="5"/>'+
+    '<path d="M-91 26 Q-160 18 -154 88 Q-145 142 -72 130" fill="none" stroke="'+g+'" stroke-width="28"/>'+
+    '<path d="M91 26 Q160 18 154 88 Q145 142 72 130" fill="none" stroke="'+g+'" stroke-width="28"/>'+
+    '<rect x="-27" y="184" width="54" height="76" rx="12" fill="'+g+'"/><rect x="-78" y="247" width="156" height="34" rx="10" fill="'+g+'"/>'+
+    '<circle cx="0" cy="96" r="47" fill="#09131b" stroke="'+g+'" stroke-width="10"/><text x="0" y="116" text-anchor="middle" font-family="Arial Black,Arial" font-size="66" font-weight="1000" fill="'+g+'">'+place+'</text></g>';
+}
+function fotoFbWinnerData(d){
+  const gen=(d.classification&&d.classification.general||[]).slice().sort(function(a,b){return Number(a.rank||999)-Number(b.rank||999)}).slice(0,3);
+  const r1={};(d.classification&&d.classification.round1||[]).forEach(function(r){r1[Number(r.user_id)]=r});
+  const r2={};(d.classification&&d.classification.round2||[]).forEach(function(r){r2[Number(r.user_id)]=r});
+  return gen.map(function(g){return {rank:Number(g.rank),name:g.name||'',sum:Number(g.sum_points||0),total:Number(g.total_weight||0),r1:r1[Number(g.user_id)]||{},r2:r2[Number(g.user_id)]||{}}});
+}
+function fotoFbWinnerPlaque(x,y,w,h,d,metal){
+  const fill=metal==='silver'?'#dfe6ee':metal==='bronze'?'#c97842':'#dca80f';
+  const border=metal==='silver'?'#eff6ff':metal==='bronze'?'#ffbb84':'#ffe98e';
+  const text=metal==='silver'?'#07121b':'#fff';
+  const r1=d.r1||{},r2=d.r2||{};
+  return '<g transform="translate('+x+' '+y+')" filter="url(#shadow)"><rect width="'+w+'" height="'+h+'" rx="22" fill="#07131d" stroke="'+border+'" stroke-width="6"/>'+
+    '<rect width="'+w+'" height="70" rx="18" fill="'+fill+'"/><text x="'+(w/2)+'" y="50" text-anchor="middle" font-family="Arial Black,Arial" font-size="34" font-weight="1000" fill="'+text+'">'+d.rank+'. MIEJSCE</text>'+
+    '<text x="'+(w/2)+'" y="118" text-anchor="middle" font-family="Arial Black,Arial" font-size="'+(d.name.length>18?30:36)+'" font-weight="1000" fill="#fff">'+fotoFbEscXml(d.name)+'</text>'+
+    '<line x1="32" y1="139" x2="'+(w-32)+'" y2="139" stroke="'+border+'" stroke-width="2" opacity=".7"/>'+
+    '<text x="28" y="182" font-family="Arial,sans-serif" font-size="25" font-weight="900" fill="#d8e4ee">Tura 1:</text><text x="'+(w-28)+'" y="182" text-anchor="end" font-family="Arial Black,Arial" font-size="26" fill="#fff">'+fotoFbEscXml(fotoFbGram(r1.weight||0))+'  ('+fotoFbEscXml(placeText(r1.points))+', sektor '+fotoFbEscXml(r1.sector||'—')+')</text>'+
+    '<text x="28" y="224" font-family="Arial,sans-serif" font-size="25" font-weight="900" fill="#d8e4ee">Tura 2:</text><text x="'+(w-28)+'" y="224" text-anchor="end" font-family="Arial Black,Arial" font-size="26" fill="#fff">'+fotoFbEscXml(fotoFbGram(r2.weight||0))+'  ('+fotoFbEscXml(placeText(r2.points))+', sektor '+fotoFbEscXml(r2.sector||'—')+')</text>'+
+    '<rect x="18" y="'+(h-78)+'" width="'+(w-36)+'" height="60" rx="14" fill="'+fill+'" opacity=".95"/>'+
+    '<text x="32" y="'+(h-38)+'" font-family="Arial Black,Arial" font-size="25" fill="'+text+'">SUMA '+fotoFbEscXml(placeText(d.sum))+' pkt</text>'+
+    '<text x="'+(w-30)+'" y="'+(h-38)+'" text-anchor="end" font-family="Arial Black,Arial" font-size="31" fill="'+text+'">'+fotoFbEscXml(fotoFbGram(d.total))+'</text></g>';
+}
+async function fotoFbSvgWinners(d){
+  const w=1200,h=1000,c=d.competition,assets=await Promise.all([fotoFbAssetData('/icon-512.png'),fotoFbAssetData('/carp-real-v116.png')]),logo=assets[0],carp=assets[1];
+  const list=fotoFbWinnerData(d);
+  if(list.length<3)throw new Error('Klasyfikacja końcowa musi zawierać co najmniej 3 zawodników.');
+  let svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">'+fotoFbDefs()+fotoFbScene(w,h,logo,carp)+fotoFbHeader(c,w,'ZWYCIĘZCY ZAWODÓW',logo);
+  const byRank={};list.forEach(function(x){byRank[x.rank]=x});
+  svg+=fotoFbTrophy(600,330,1.18,'gold',1)+fotoFbTrophy(220,390,.88,'silver',2)+fotoFbTrophy(980,402,.82,'bronze',3);
+  svg+=fotoFbWinnerPlaque(408,605,384,275,byRank[1]||list[0],'gold');
+  svg+=fotoFbWinnerPlaque(35,640,350,240,byRank[2]||list[1],'silver');
+  svg+=fotoFbWinnerPlaque(815,650,350,230,byRank[3]||list[2],'bronze');
+  svg+=fotoFbFooter(w,h)+'</svg>';
+  return {svg:svg,w:w,h:h,name:'FotoFB_Zwyciezcy_'+fotoFbSafeFile(c.title)+'.jpg'};
+}
+function fotoFbBigFishRows(d){
+  const names={};
+  (d.classification&&d.classification.round1||[]).concat(d.classification&&d.classification.round2||[]).forEach(function(r){names[Number(r.user_id)]={name:r.name||'',standByRound:names[Number(r.user_id)]&&names[Number(r.user_id)].standByRound||{}};names[Number(r.user_id)].standByRound[Number(r.round||0)]=r.stand});
+  const draws={};(d.draws||[]).forEach(function(x){draws[Number(x.round)+'-'+Number(x.user_id)]=x});
+  let a=(d.resultItems||[]).filter(function(x){return String(x.kind)==='BF'&&Number(x.weight)>0}).map(function(x){return {user_id:Number(x.user_id),round:Number(x.round),weight:Number(x.weight),name:(names[Number(x.user_id)]&&names[Number(x.user_id)].name)||'',stand:(draws[Number(x.round)+'-'+Number(x.user_id)]||{}).stand||''}});
+  if(!a.length)a=(d.results||[]).filter(function(x){return Number(x.big_fish)>0}).map(function(x){return {user_id:Number(x.user_id),round:Number(x.round),weight:Number(x.big_fish),name:(names[Number(x.user_id)]&&names[Number(x.user_id)].name)||'',stand:(draws[Number(x.round)+'-'+Number(x.user_id)]||{}).stand||''}});
+  return a.sort(function(x,y){return y.weight-x.weight||x.round-y.round||String(x.name).localeCompare(String(y.name),'pl')});
+}
+async function fotoFbSvgBigFish(d){
+  const w=1200,h=1350,c=d.competition,assets=await Promise.all([fotoFbAssetData('/icon-512.png'),fotoFbAssetData('/carp-real-v116.png')]),logo=assets[0],carp=assets[1];
+  const rows=fotoFbBigFishRows(d);
+  if(!rows.length)throw new Error('Brak wpisanych największych ryb BF.');
+  let svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">'+fotoFbDefs()+fotoFbScene(w,h,logo,carp)+fotoFbHeader(c,w,'NAJWIĘKSZE RYBY',logo);
+  const cols=rows.length>10?2:1,perCol=Math.ceil(rows.length/cols),top=345,bottom=h-145,avail=bottom-top,gap=14,rowH=Math.max(46,Math.min(84,Math.floor((avail-gap*(perCol-1))/perCol))),font=rowH<58?22:28;
+  for(let i=0;i<rows.length;i++){
+    const col=Math.floor(i/perCol),ri=i%perCol,x=cols===1?120:(col===0?45:615),ww=cols===1?960:540,y=top+ri*(rowH+gap),r=rows[i],rank=i+1;
+    const metal=rank===1?'url(#gold)':rank===2?'url(#silver)':rank===3?'url(#bronze)':'#203747';
+    svg+='<g transform="translate('+x+' '+y+')" filter="url(#shadow)"><rect width="'+ww+'" height="'+rowH+'" rx="16" fill="#07131d" stroke="'+(rank<=3?'#e3b04d':'#3f708e')+'" stroke-width="'+(rank<=3?4:2)+'"/>'+
+      '<circle cx="'+(rowH/2)+'" cy="'+(rowH/2)+'" r="'+(rowH*.34)+'" fill="'+metal+'"/><text x="'+(rowH/2)+'" y="'+(rowH*.68)+'" text-anchor="middle" font-family="Arial Black,Arial" font-size="'+(font+3)+'" font-weight="1000" fill="'+(rank===2?'#07121b':'#fff')+'">'+rank+'</text>'+
+      '<text x="'+(rowH+18)+'" y="'+(rowH*.45)+'" font-family="Arial Black,Arial" font-size="'+font+'" font-weight="1000" fill="#fff">'+fotoFbEscXml(r.name||('Zawodnik '+r.user_id))+'</text>'+
+      '<text x="'+(rowH+18)+'" y="'+(rowH*.78)+'" font-family="Arial,sans-serif" font-size="'+Math.max(18,font-7)+'" font-weight="800" fill="#bcd2df">Tura '+r.round+' • Stan. '+fotoFbEscXml(r.stand||'—')+'</text>'+
+      '<text x="'+(ww-22)+'" y="'+(rowH*.64)+'" text-anchor="end" font-family="Arial Black,Arial" font-size="'+(font+8)+'" font-weight="1000" fill="#ffcf45">'+fotoFbEscXml(fotoFbGram(r.weight))+'</text></g>';
+  }
+  svg+=fotoFbFooter(w,h)+'</svg>';
+  return {svg:svg,w:w,h:h,name:'FotoFB_Najwieksze_Ryby_'+fotoFbSafeFile(c.title)+'.jpg'};
+}
+function fotoFbSectorBox(group,x,y,w,h,color){
+  const rows=group.rows||[],headH=66,colH=38,rowH=Math.max(24,Math.min(46,Math.floor((h-headH-colH-8)/Math.max(1,rows.length)))),fs=Math.max(17,Math.min(25,rowH*.55));
+  let z='<g transform="translate('+x+' '+y+')" filter="url(#shadow)"><rect width="'+w+'" height="'+h+'" rx="18" fill="#07131d" stroke="'+color+'" stroke-width="5"/>'+
+    '<rect width="'+w+'" height="'+headH+'" rx="14" fill="'+color+'" opacity=".94"/><text x="'+(w/2)+'" y="45" text-anchor="middle" font-family="Arial Black,Arial" font-size="34" font-weight="1000" fill="#fff">SEKTOR '+fotoFbEscXml(group.sector)+'</text>'+
+    '<rect x="8" y="'+headH+'" width="'+(w-16)+'" height="'+colH+'" fill="#0a2435"/>'+
+    '<text x="36" y="'+(headH+26)+'" font-family="Arial Black,Arial" font-size="17" fill="#fff">M-ce</text><text x="105" y="'+(headH+26)+'" font-family="Arial Black,Arial" font-size="17" fill="#fff">Stan.</text><text x="170" y="'+(headH+26)+'" font-family="Arial Black,Arial" font-size="17" fill="#fff">Zawodnik</text><text x="'+(w-22)+'" y="'+(headH+26)+'" text-anchor="end" font-family="Arial Black,Arial" font-size="17" fill="#fff">Waga</text>';
+  rows.forEach(function(r,i){
+    const yy=headH+colH+i*rowH,rank=Number(r.points||0),bg=rank===1?'#d7a416':rank===2?'#c7d0da':rank===3?'#a85c35':(i%2?'#102536':'#091a27'),fg=rank===2?'#08131c':'#fff';
+    z+='<rect x="8" y="'+yy+'" width="'+(w-16)+'" height="'+rowH+'" fill="'+bg+'" opacity="'+(rank<=3?'.96':'.94')+'"/>'+
+      '<text x="48" y="'+(yy+rowH*.7)+'" text-anchor="middle" font-family="Arial Black,Arial" font-size="'+(fs+2)+'" fill="'+fg+'">'+fotoFbEscXml(placeText(r.points))+'</text>'+
+      '<text x="122" y="'+(yy+rowH*.7)+'" text-anchor="middle" font-family="Arial Black,Arial" font-size="'+fs+'" fill="'+fg+'">'+fotoFbEscXml(r.stand||'—')+'</text>'+
+      '<text x="170" y="'+(yy+rowH*.7)+'" font-family="Arial,sans-serif" font-size="'+fs+'" font-weight="900" fill="'+fg+'">'+fotoFbEscXml(r.name||'')+'</text>'+
+      '<text x="'+(w-22)+'" y="'+(yy+rowH*.7)+'" text-anchor="end" font-family="Arial Black,Arial" font-size="'+fs+'" fill="'+fg+'">'+fotoFbEscXml(fotoFbGram(r.weight||0))+'</text>';
+  });
+  z+='</g>';return z;
+}
+async function fotoFbSvgSectors(d,round){
+  round=Number(round)===2?2:1;
+  const w=1200,h=1600,c=d.competition,assets=await Promise.all([fotoFbAssetData('/icon-512.png'),fotoFbAssetData('/carp-real-v116.png')]),logo=assets[0],carp=assets[1];
+  const rows=round===2?(d.classification&&d.classification.round2||[]):(d.classification&&d.classification.round1||[]);
+  const groups=groupRowsBySector(rows);
+  if(!groups.length)throw new Error('Brak wyników sektorowych Tury '+round+'.');
+  let svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">'+fotoFbDefs()+fotoFbScene(w,h,logo,carp)+fotoFbHeader(c,w,'WYNIKI SEKTOROWE — TURA '+round,logo);
+  const top=330,bottom=h-135,contentH=bottom-top,cols=groups.length===1?1:2,gridRows=Math.ceil(groups.length/cols),gapX=22,gapY=22,boxW=cols===1?1080:(w-80-gapX)/2,boxH=(contentH-gapY*(gridRows-1))/gridRows;
+  const colors=['#176fc1','#14883d','#b88b16','#b62b25','#7047a5','#008b8b'];
+  groups.forEach(function(g,i){const col=i%cols,row=Math.floor(i/cols),x=cols===1?60:40+col*(boxW+gapX),y=top+row*(boxH+gapY);svg+=fotoFbSectorBox(g,x,y,boxW,boxH,colors[i%colors.length])});
+  svg+=fotoFbFooter(w,h)+'</svg>';
+  return {svg:svg,w:w,h:h,name:'FotoFB_Wyniki_Sektorowe_T'+round+'_'+fotoFbSafeFile(c.title)+'.jpg'};
+}
+async function fotoFbMakeSpec(kind){
+  const d=CURRENT_DETAIL;if(!d)throw new Error('Otwórz najpierw zawody.');
+  if(kind==='winners')return fotoFbSvgWinners(d);
+  if(kind==='fish')return fotoFbSvgBigFish(d);
+  if(kind==='t2')return fotoFbSvgSectors(d,2);
+  return fotoFbSvgSectors(d,1);
+}
+function fotoFbSvgToBlob(spec){
+  return new Promise(function(resolve,reject){
+    const b=new Blob([spec.svg],{type:'image/svg+xml;charset=utf-8'}),u=URL.createObjectURL(b),img=new Image();
+    img.onload=function(){
+      try{
+        const canvas=document.createElement('canvas');canvas.width=spec.w;canvas.height=spec.h;
+        const ctx=canvas.getContext('2d');ctx.fillStyle='#06131f';ctx.fillRect(0,0,spec.w,spec.h);ctx.drawImage(img,0,0,spec.w,spec.h);
+        URL.revokeObjectURL(u);
+        canvas.toBlob(function(blob){if(blob)resolve(blob);else reject(new Error('Nie udało się utworzyć JPG.'))},'image/jpeg',.94);
+      }catch(e){URL.revokeObjectURL(u);reject(e)}
+    };
+    img.onerror=function(){URL.revokeObjectURL(u);reject(new Error('Nie udało się wyrenderować grafiki.'))};
+    img.src=u;
+  });
+}
+async function generateFotoFb(kind){
+  const preview=q('fotoFbPreview'),status=q('fotoFbStatus');
+  try{
+    if(status)status.textContent='Generuję grafikę…';
+    const spec=await fotoFbMakeSpec(kind),blob=await fotoFbSvgToBlob(spec);
+    if(FOTO_FB_PREVIEW_URL)URL.revokeObjectURL(FOTO_FB_PREVIEW_URL);
+    FOTO_FB_PREVIEW_URL=URL.createObjectURL(blob);FOTO_FB_LAST={blob:blob,name:spec.name};
+    if(preview)preview.innerHTML='<img src="'+FOTO_FB_PREVIEW_URL+'" alt="Podgląd FotoFB" style="display:block;width:100%;height:auto;border-radius:16px;border:1px solid #31556b;box-shadow:0 10px 28px #0005">';
+    const actions=q('fotoFbActions');if(actions)actions.classList.remove('hidden');
+    if(status)status.textContent='Gotowe: '+spec.name;
+    preview&&preview.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }catch(e){if(status)status.textContent='';msg(e.message||'Błąd FotoFB','bad')}
+}
+function downloadFotoFb(){
+  if(!FOTO_FB_LAST){msg('Najpierw wygeneruj grafikę.','bad');return}
+  const u=URL.createObjectURL(FOTO_FB_LAST.blob),a=document.createElement('a');a.href=u;a.download=FOTO_FB_LAST.name;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u)},1500);
+}
+async function shareFotoFb(){
+  if(!FOTO_FB_LAST){msg('Najpierw wygeneruj grafikę.','bad');return}
+  try{
+    const file=new File([FOTO_FB_LAST.blob],FOTO_FB_LAST.name,{type:'image/jpeg'});
+    if(navigator.share&&(!navigator.canShare||navigator.canShare({files:[file]}))){await navigator.share({files:[file],title:'Łowcy Methodowcy — FotoFB'});return}
+    downloadFotoFb();msg('Telefon nie obsługuje bezpośredniego udostępniania — zapisano JPG.');
+  }catch(e){if(e&&e.name!=='AbortError')msg(e.message||'Nie udało się udostępnić','bad')}
+}
+function renderFotoFbPanel(d){
+  return '<div class="card"><h2>FotoFB — grafiki wynikowe</h2>'+
+    '<p class="small muted">Generator tylko odczytuje gotowe wyniki. Nie zmienia zawodów, wag, losowania ani klasyfikacji.</p>'+
+    '<div style="background:linear-gradient(135deg,#071b2a,#0d3b57);border:1px solid #2b6f94;border-radius:18px;padding:14px;color:#fff;margin:10px 0 14px">'+
+      '<b style="font-size:18px">Stały styl FotoFB</b><div class="small" style="margin-top:5px;color:#d9e8f2">Nazwa zawodów • data • łowisko • duże czytelne wyniki • realistyczny klimat łowiska • stała stopka METHOD FEEDER.</div>'+
+    '</div>'+
+    '<div class="grid"><button type="button" class="blue" onclick="generateFotoFb(\'winners\')">🏆 Zwycięzcy zawodów</button><button type="button" class="blue" onclick="generateFotoFb(\'fish\')">🐟 Wszystkie największe ryby</button></div>'+
+    '<div class="grid"><button type="button" onclick="generateFotoFb(\'t1\')">📷 Wyniki sektorowe — Tura 1</button><button type="button" onclick="generateFotoFb(\'t2\')">📷 Wyniki sektorowe — Tura 2</button></div>'+
+    '<p id="fotoFbStatus" class="small muted"></p><div id="fotoFbPreview" style="max-width:900px;margin:12px auto"></div>'+
+    '<div id="fotoFbActions" class="inlineBtns hidden" style="justify-content:center"><button type="button" class="blue" onclick="downloadFotoFb()">Pobierz JPG</button><button type="button" class="secondary" onclick="shareFotoFb()">Udostępnij</button></div>'+
+    '<p class="small muted" style="margin-top:12px">Wyniki sektorowe są pełne: Tura 1 = jeden obraz, Tura 2 = drugi obraz. Żaden zawodnik nie jest pomijany.</p></div>';
+}
+
 function pdfAsciiBytes(x){return new TextEncoder().encode(x)}
 function pdfConcatBytes(chunks){let n=chunks.reduce((a,b)=>a+b.length,0),out=new Uint8Array(n),o=0;for(const c of chunks){out.set(c,o);o+=c.length}return out}
 function pdfDataUrlBytes(url){const b64=url.split(',')[1],bin=atob(b64),out=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)out[i]=bin.charCodeAt(i);return out}
