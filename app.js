@@ -1,4 +1,4 @@
-const CLIENT_VERSION='158';const CLIENT_VERSION_NAME='V158_FOTO_FB_MASTER';window.__LOWCY_APP_JS_158=1;try{fetch('/__probe_js_v158',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V158_FOTO_FB_MASTER_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='159';const CLIENT_VERSION_NAME='V159_FOTO_FB_PRODUCTION';window.__LOWCY_APP_JS_159=1;try{fetch('/__probe_js_v159',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V159_FOTO_FB_PRODUCTION_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -1786,9 +1786,8 @@ function fotoFbHeader(c,w,subtitle,logo){
   return x;
 }
 function fotoFbFooter(w,h){
-  return '<g transform="translate(0 '+(h-112)+')"><rect width="'+w+'" height="112" fill="#03111c" opacity=".97"/><path d="M0 5 Q180 38 350 8 T720 8 T'+w+' 8" stroke="#dfa52d" stroke-width="5" fill="none"/>'+
-    '<text x="'+(w/2)+'" y="52" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="42" font-style="italic" font-weight="1000" fill="url(#gold)" stroke="#000" stroke-width="4" paint-order="stroke">METHOD FEEDER</text>'+
-    '<text x="'+(w/2)+'" y="91" text-anchor="middle" font-family="Georgia,serif" font-size="29" font-style="italic" font-weight="800" fill="#fff">Carp &amp; Caraś &amp; Asiotr &amp; Hamur 🐳</text></g>';
+  const main=Math.round(w*.031),sub=Math.round(w*.021);
+  return '<g transform="translate(0 '+(h-118)+')"><rect width="'+w+'" height="118" fill="#03111c" opacity=".985"/><path d="M0 5 Q180 38 350 8 T720 8 T'+w+' 8" stroke="#dfa52d" stroke-width="5" fill="none"/><text x="'+(w*.42)+'" y="56" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="'+main+'" font-style="italic" font-weight="1000" fill="url(#gold)" stroke="#000" stroke-width="4" paint-order="stroke">METHOD FEEDER</text><text x="'+(w*.57)+'" y="96" text-anchor="middle" font-family="Georgia,serif" font-size="'+sub+'" font-style="italic" font-weight="800" fill="#fff">Carp &amp; Caraś &amp; Asiotr &amp; Hamur 🐳</text></g>';
 }
 function fotoFbTrophy(x,y,scale,metal,place){
   const g=metal==='silver'?'url(#silver)':metal==='bronze'?'url(#bronze)':'url(#gold)';
@@ -1804,8 +1803,12 @@ function fotoFbWinnerPlaque(x,y,w,h,d,metal){
   const fill=metal==='silver'?'#dfe6ee':metal==='bronze'?'#c97842':'#dca80f';
   const border=metal==='silver'?'#eef5fc':metal==='bronze'?'#ffb779':'#ffe284';
   const headText=metal==='silver'?'#07121b':'#fff';
-  const r1=d.r1||{},r2=d.r2||{},nameFs=d.name.length>22?27:d.name.length>17?31:35;
-  return '<g transform="translate('+x+' '+y+')" filter="url(#shadow)"><rect width="'+w+'" height="'+h+'" rx="22" fill="#06131d" stroke="'+border+'" stroke-width="6"/><rect x="0" y="0" width="'+w+'" height="66" rx="17" fill="'+fill+'"/><text x="'+(w/2)+'" y="46" text-anchor="middle" font-family="Arial Black,Arial" font-size="31" font-weight="1000" fill="'+headText+'">'+d.rank+'. MIEJSCE</text><text x="'+(w/2)+'" y="112" text-anchor="middle" font-family="Arial Black,Arial" font-size="'+nameFs+'" font-weight="1000" fill="#fff">'+fotoFbEscXml(d.name)+'</text><line x1="28" y1="132" x2="'+(w-28)+'" y2="132" stroke="'+border+'" stroke-width="2" opacity=".75"/><text x="28" y="174" font-family="Arial Black,Arial" font-size="22" fill="#bcd2df">TURA 1</text><text x="'+(w-25)+'" y="174" text-anchor="end" font-family="Arial Black,Arial" font-size="24" fill="#fff">'+fotoFbEscXml(fotoFbGram(r1.weight||0))+' • m. '+fotoFbEscXml(placeText(r1.points))+' • sektor '+fotoFbEscXml(r1.sector||'—')+'</text><text x="28" y="214" font-family="Arial Black,Arial" font-size="22" fill="#bcd2df">TURA 2</text><text x="'+(w-25)+'" y="214" text-anchor="end" font-family="Arial Black,Arial" font-size="24" fill="#fff">'+fotoFbEscXml(fotoFbGram(r2.weight||0))+' • m. '+fotoFbEscXml(placeText(r2.points))+' • sektor '+fotoFbEscXml(r2.sector||'—')+'</text><rect x="16" y="'+(h-78)+'" width="'+(w-32)+'" height="60" rx="14" fill="'+fill+'" opacity=".98"/><text x="30" y="'+(h-39)+'" font-family="Arial Black,Arial" font-size="23" fill="'+headText+'">SUMA '+fotoFbEscXml(placeText(d.sum))+' pkt</text><text x="'+(w-27)+'" y="'+(h-38)+'" text-anchor="end" font-family="Arial Black,Arial" font-size="31" fill="'+headText+'">'+fotoFbEscXml(fotoFbGram(d.total))+'</text></g>';
+  const r1=d.r1||{},r2=d.r2||{},nameFs=d.name.length>22?25:d.name.length>17?29:33;
+  const boxY=142,rowH=62,colGap=8,colW=(w-56-colGap)/2;
+  const one=function(r,label,xx){
+    return '<g transform="translate('+xx+' '+boxY+')"><rect width="'+colW+'" height="'+rowH+'" rx="10" fill="#101b23" stroke="'+border+'" stroke-width="1.5" opacity=".97"/><text x="'+(colW/2)+'" y="20" text-anchor="middle" font-family="Arial Black,Arial" font-size="17" fill="#e8eef2">'+label+'</text><text x="'+(colW/2)+'" y="45" text-anchor="middle" font-family="Arial Black,Arial" font-size="22" fill="#fff">'+fotoFbEscXml(fotoFbGram(r.weight||0))+'</text><text x="'+(colW/2)+'" y="59" text-anchor="middle" font-family="Arial,sans-serif" font-size="12" fill="#c9d6df">m. '+fotoFbEscXml(placeText(r.points))+' • sektor '+fotoFbEscXml(r.sector||'—')+'</text></g>';
+  };
+  return '<g transform="translate('+x+' '+y+')" filter="url(#shadow)"><rect width="'+w+'" height="'+h+'" rx="22" fill="#06131d" stroke="'+border+'" stroke-width="6"/><rect x="0" y="0" width="'+w+'" height="62" rx="17" fill="'+fill+'"/><text x="'+(w/2)+'" y="43" text-anchor="middle" font-family="Arial Black,Arial" font-size="29" font-weight="1000" fill="'+headText+'">'+d.rank+'. MIEJSCE</text><text x="'+(w/2)+'" y="112" text-anchor="middle" font-family="Arial Black,Arial" font-size="'+nameFs+'" font-weight="1000" fill="#fff">'+fotoFbEscXml(d.name)+'</text><line x1="28" y1="128" x2="'+(w-28)+'" y2="128" stroke="'+border+'" stroke-width="2" opacity=".75"/>'+one(r1,'TURA 1',28)+one(r2,'TURA 2',28+colW+colGap)+'<rect x="16" y="'+(h-70)+'" width="'+(w-32)+'" height="52" rx="13" fill="'+fill+'" opacity=".98"/><text x="28" y="'+(h-35)+'" font-family="Arial Black,Arial" font-size="21" fill="'+headText+'">SUMA '+fotoFbEscXml(placeText(d.sum))+' pkt</text><text x="'+(w-25)+'" y="'+(h-34)+'" text-anchor="end" font-family="Arial Black,Arial" font-size="28" fill="'+headText+'">'+fotoFbEscXml(fotoFbGram(d.total))+'</text></g>';
 }
 async function fotoFbSvgWinners(d){
   const w=1400,h=1250,c=d.competition,assets=await Promise.all([fotoFbAssetData('/icon-512.png'),fotoFbAssetData('/carp-real-v116.png')]),logo=assets[0],carp=assets[1];
@@ -1822,35 +1825,55 @@ async function fotoFbSvgWinners(d){
 }
 function fotoFbBigFishRows(d){
   const names={};
-  (d.classification&&d.classification.round1||[]).concat(d.classification&&d.classification.round2||[]).forEach(function(r){names[Number(r.user_id)]={name:r.name||'',standByRound:names[Number(r.user_id)]&&names[Number(r.user_id)].standByRound||{}};names[Number(r.user_id)].standByRound[Number(r.round||0)]=r.stand});
+  const all=(d.classification&&d.classification.round1||[]).concat(d.classification&&d.classification.round2||[]);
+  all.forEach(function(r){const id=Number(r.user_id);if(!names[id])names[id]={name:r.name||''};});
   const draws={};(d.draws||[]).forEach(function(x){draws[Number(x.round)+'-'+Number(x.user_id)]=x});
-  let a=(d.resultItems||[]).filter(function(x){return String(x.kind)==='BF'&&Number(x.weight)>0}).map(function(x){return {user_id:Number(x.user_id),round:Number(x.round),weight:Number(x.weight),name:(names[Number(x.user_id)]&&names[Number(x.user_id)].name)||'',stand:(draws[Number(x.round)+'-'+Number(x.user_id)]||{}).stand||''}});
-  if(!a.length)a=(d.results||[]).filter(function(x){return Number(x.big_fish)>0}).map(function(x){return {user_id:Number(x.user_id),round:Number(x.round),weight:Number(x.big_fish),name:(names[Number(x.user_id)]&&names[Number(x.user_id)].name)||'',stand:(draws[Number(x.round)+'-'+Number(x.user_id)]||{}).stand||''}});
+  let a=(d.resultItems||[]).filter(function(x){return String(x.kind)==='BF'&&Number(x.weight)>0}).map(function(x){const dr=draws[Number(x.round)+'-'+Number(x.user_id)]||{};return {user_id:Number(x.user_id),round:Number(x.round),weight:Number(x.weight),name:(names[Number(x.user_id)]&&names[Number(x.user_id)].name)||'',stand:dr.stand||'',sector:dr.sector||''}});
+  if(!a.length)a=(d.results||[]).filter(function(x){return Number(x.big_fish)>0}).map(function(x){const dr=draws[Number(x.round)+'-'+Number(x.user_id)]||{};return {user_id:Number(x.user_id),round:Number(x.round),weight:Number(x.big_fish),name:(names[Number(x.user_id)]&&names[Number(x.user_id)].name)||'',stand:dr.stand||'',sector:dr.sector||''}});
   return a.sort(function(x,y){return y.weight-x.weight||x.round-y.round||String(x.name).localeCompare(String(y.name),'pl')});
 }
 async function fotoFbSvgBigFish(d){
-  const w=1400,h=1750,c=d.competition,assets=await Promise.all([fotoFbAssetData('/icon-512.png'),fotoFbAssetData('/carp-real-v116.png')]),logo=assets[0],carp=assets[1];
-  const rows=fotoFbBigFishRows(d);
+  const w=1400,h=1000,c=d.competition,assets=await Promise.all([fotoFbAssetData('/icon-512.png'),fotoFbAssetData('/carp-real-v116.png')]),logo=assets[0],carp=assets[1];
+  const rows=fotoFbBigFishRows(d).slice(0,5);
   if(!rows.length)throw new Error('Brak wpisanych największych ryb BF.');
-  let svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">'+fotoFbDefs()+fotoFbScene(w,h,logo,carp)+fotoFbHeader(c,w,'NAJWIĘKSZE RYBY',logo);
-  if(carp)svg+='<image href="'+carp+'" x="390" y="315" width="620" height="300" preserveAspectRatio="xMidYMid meet" opacity=".92" filter="url(#shadow)"/>';
-  const cols=rows.length>14?2:1,perCol=Math.ceil(rows.length/cols),top=575,bottom=h-145,avail=bottom-top,gap=8,rowH=Math.max(44,Math.min(68,Math.floor((avail-gap*(perCol-1))/perCol))),font=Math.max(18,Math.min(27,rowH*.42));
+  let svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">'+fotoFbDefs()+fotoFbScene(w,h,logo,carp)+fotoFbHeader(c,w,'NAJWIĘKSZE RYBY ZAWODÓW',logo);
+  svg+='<rect x="34" y="326" width="620" height="485" rx="30" fill="#07131d" opacity=".22"/>';
+  if(carp)svg+='<image href="'+carp+'" x="5" y="295" width="690" height="540" preserveAspectRatio="xMidYMid meet" filter="url(#shadow)"/>';
+  const top=348,rowH=82,gap=14,x=685,ww=670;
   for(let i=0;i<rows.length;i++){
-    const col=Math.floor(i/perCol),ri=i%perCol,x=cols===1?120:(col===0?45:715),ww=cols===1?1160:640,y=top+ri*(rowH+gap),r=rows[i],rank=i+1;
-    const metal=rank===1?'url(#gold)':rank===2?'url(#silver)':rank===3?'url(#bronze)':'#203747',name=String(r.name||('Zawodnik '+r.user_id)),nameFs=name.length>22?font-4:name.length>17?font-2:font;
-    svg+='<g transform="translate('+x+' '+y+')" filter="url(#shadow)"><rect width="'+ww+'" height="'+rowH+'" rx="15" fill="#07131d" stroke="'+(rank<=3?'#e3b04d':'#3f708e')+'" stroke-width="'+(rank<=3?4:2)+'"/><circle cx="'+(rowH/2)+'" cy="'+(rowH/2)+'" r="'+(rowH*.34)+'" fill="'+metal+'"/><text x="'+(rowH/2)+'" y="'+(rowH*.68)+'" text-anchor="middle" font-family="Arial Black,Arial" font-size="'+(font+2)+'" font-weight="1000" fill="'+(rank===2?'#07121b':'#fff')+'">'+rank+'</text><text x="'+(rowH+15)+'" y="'+(rowH*.43)+'" font-family="Arial Black,Arial" font-size="'+nameFs+'" font-weight="1000" fill="#fff">'+fotoFbEscXml(name)+'</text><text x="'+(rowH+15)+'" y="'+(rowH*.77)+'" font-family="Arial,sans-serif" font-size="'+Math.max(15,font-6)+'" font-weight="800" fill="#bcd2df">Tura '+r.round+' • Stan. '+fotoFbEscXml(r.stand||'—')+'</text><text x="'+(ww-18)+'" y="'+(rowH*.62)+'" text-anchor="end" font-family="Arial Black,Arial" font-size="'+(font+7)+'" font-weight="1000" fill="#ffcf45">'+fotoFbEscXml(fotoFbGram(r.weight))+'</text></g>';
+    const r=rows[i],rank=i+1,y=top+i*(rowH+gap),medal=rank===1?'url(#gold)':rank===2?'url(#silver)':rank===3?'url(#bronze)':'#203747',name=String(r.name||('Zawodnik '+r.user_id)),nameFs=name.length>23?22:name.length>18?25:28;
+    svg+='<g transform="translate('+x+' '+y+')" filter="url(#shadow)"><rect width="'+ww+'" height="'+rowH+'" rx="18" fill="#07131d" stroke="'+(rank<=3?'#e1a72e':'#376985')+'" stroke-width="'+(rank<=3?4:2)+'"/><circle cx="43" cy="'+(rowH/2)+'" r="29" fill="'+medal+'" stroke="#fff" stroke-opacity=".35" stroke-width="2"/><text x="43" y="51" text-anchor="middle" font-family="Arial Black,Arial" font-size="28" font-weight="1000" fill="'+(rank===2?'#08131b':'#fff')+'">'+rank+'</text><text x="88" y="34" font-family="Arial Black,Arial" font-size="'+nameFs+'" font-weight="1000" fill="#fff">'+fotoFbEscXml(name)+'</text><text x="88" y="61" font-family="Arial,sans-serif" font-size="18" font-weight="900" fill="#c7d5df">Tura '+r.round+' • Stan. '+fotoFbEscXml(r.stand||'—')+(r.sector?' • sektor '+fotoFbEscXml(r.sector):'')+'</text><text x="'+(ww-24)+'" y="53" text-anchor="end" font-family="Arial Black,Arial" font-size="37" font-weight="1000" fill="#ffd142">'+fotoFbEscXml(fotoFbGram(r.weight))+'</text></g>';
   }
   svg+=fotoFbFooter(w,h)+'</svg>';
-  return {svg:svg,w:w,h:h,name:'FotoFB_Najwieksze_Ryby_'+fotoFbSafeFile(c.title)+'.jpg'};
+  return {svg:svg,w:w,h:h,name:'FotoFB_TOP5_Najwieksze_Ryby_'+fotoFbSafeFile(c.title)+'.jpg'};
 }
-function fotoFbSectorBox(group,x,y,w,h,color){
-  const rows=group.rows||[],headH=72,colH=42,rowH=Math.max(31,Math.min(54,Math.floor((h-headH-colH-12)/Math.max(1,rows.length)))),fs=Math.max(18,Math.min(27,rowH*.52));
-  const nameX=166,weightX=w-18,weightW=155,nameMax=weightX-weightW-nameX-12;
-  let z='<g transform="translate('+x+' '+y+')" filter="url(#shadow)"><rect width="'+w+'" height="'+h+'" rx="18" fill="#06131d" stroke="'+color+'" stroke-width="5"/><rect width="'+w+'" height="'+headH+'" rx="14" fill="'+color+'" opacity=".96"/><text x="'+(w/2)+'" y="49" text-anchor="middle" font-family="Arial Black,Arial" font-size="36" font-weight="1000" fill="#fff">SEKTOR '+fotoFbEscXml(group.sector)+'</text><rect x="8" y="'+headH+'" width="'+(w-16)+'" height="'+colH+'" fill="#0a2435"/><text x="42" y="'+(headH+28)+'" text-anchor="middle" font-family="Arial Black,Arial" font-size="18" fill="#fff">M-ce</text><text x="112" y="'+(headH+28)+'" text-anchor="middle" font-family="Arial Black,Arial" font-size="18" fill="#fff">Stan.</text><text x="'+nameX+'" y="'+(headH+28)+'" font-family="Arial Black,Arial" font-size="18" fill="#fff">Zawodnik</text><text x="'+weightX+'" y="'+(headH+28)+'" text-anchor="end" font-family="Arial Black,Arial" font-size="18" fill="#fff">Waga</text>';
-  rows.forEach(function(r,i){
-    const yy=headH+colH+i*rowH,rank=Number(r.points||0),bg=rank===1?'#d7a416':rank===2?'#c7d0da':rank===3?'#a85c35':(i%2?'#102536':'#091a27'),fg=rank===2?'#08131c':'#fff',nm=String(r.name||''),nameFs=nm.length>24?Math.max(15,fs-6):nm.length>20?Math.max(16,fs-4):nm.length>16?Math.max(17,fs-2):fs;
-    z+='<rect x="8" y="'+yy+'" width="'+(w-16)+'" height="'+rowH+'" fill="'+bg+'" opacity="'+(rank<=3?'.98':'.95')+'"/><line x1="'+(nameX-18)+'" y1="'+yy+'" x2="'+(nameX-18)+'" y2="'+(yy+rowH)+'" stroke="#ffffff22"/><line x1="'+(weightX-weightW)+'" y1="'+yy+'" x2="'+(weightX-weightW)+'" y2="'+(yy+rowH)+'" stroke="#ffffff33" stroke-width="2"/><text x="42" y="'+(yy+rowH*.69)+'" text-anchor="middle" font-family="Arial Black,Arial" font-size="'+(fs+2)+'" fill="'+fg+'">'+fotoFbEscXml(placeText(r.points))+'</text><text x="112" y="'+(yy+rowH*.69)+'" text-anchor="middle" font-family="Arial Black,Arial" font-size="'+fs+'" fill="'+fg+'">'+fotoFbEscXml(r.stand||'—')+'</text><text x="'+nameX+'" y="'+(yy+rowH*.69)+'" font-family="Arial Black,Arial" font-size="'+nameFs+'" font-weight="1000" fill="'+fg+'"'+(nm.length>18?' textLength="'+nameMax+'" lengthAdjust="spacingAndGlyphs"':'')+'>'+fotoFbEscXml(nm)+'</text><text x="'+weightX+'" y="'+(yy+rowH*.69)+'" text-anchor="end" font-family="Arial Black,Arial" font-size="'+fs+'" fill="'+fg+'">'+fotoFbEscXml(fotoFbGram(r.weight||0))+'</text>';
+
+function fotoFbSectorBigFish(d,round,sector){
+  const sec=String(sector||'').trim(),names={};
+  const classRows=Number(round)===2?(d.classification&&d.classification.round2||[]):(d.classification&&d.classification.round1||[]);
+  classRows.forEach(function(r){names[Number(r.user_id)]=r.name||''});
+  const draws={};(d.draws||[]).filter(function(x){return Number(x.round)===Number(round)}).forEach(function(x){draws[Number(x.user_id)]=x});
+  let best=null;
+  (d.resultItems||[]).filter(function(x){return Number(x.round)===Number(round)&&String(x.kind)==='BF'&&Number(x.weight)>0}).forEach(function(x){
+    const dr=draws[Number(x.user_id)]||{};if(String(dr.sector||'').trim()!==sec)return;
+    const item={weight:Number(x.weight),name:names[Number(x.user_id)]||'',stand:dr.stand||''};if(!best||item.weight>best.weight)best=item;
   });
+  if(!best)classRows.forEach(function(r){if(String(r.sector||'').trim()!==sec||Number(r.big_fish||0)<=0)return;const item={weight:Number(r.big_fish),name:r.name||'',stand:r.stand||''};if(!best||item.weight>best.weight)best=item});
+  return best;
+}
+
+function fotoFbSectorBox(group,x,y,w,h,color,bf){
+  const rows=group.rows||[],headH=64,colH=38,bfH=bf?100:22,rowH=Math.max(27,Math.min(46,Math.floor((h-headH-colH-bfH-8)/Math.max(1,rows.length)))),fs=Math.max(16,Math.min(24,rowH*.50));
+  const xM=38,xS=92,xN=132,xW=w-18,wWeight=138,nameMax=xW-wWeight-xN-10;
+  let z='<g transform="translate('+x+' '+y+')" filter="url(#shadow)"><rect width="'+w+'" height="'+h+'" rx="20" fill="#07131d" stroke="'+color+'" stroke-width="5"/><rect width="'+w+'" height="'+headH+'" rx="16" fill="'+color+'" stroke="#fff" stroke-opacity=".15" stroke-width="2"/><text x="'+(w/2)+'" y="44" text-anchor="middle" font-family="Arial Black,Arial" font-size="32" font-weight="1000" fill="#fff">SEKTOR '+fotoFbEscXml(group.sector)+'</text><rect x="8" y="'+headH+'" width="'+(w-16)+'" height="'+colH+'" fill="#06365c"/><text x="'+xM+'" y="'+(headH+26)+'" text-anchor="middle" font-family="Arial Black,Arial" font-size="16" fill="#fff">M-ce</text><text x="'+xS+'" y="'+(headH+26)+'" text-anchor="middle" font-family="Arial Black,Arial" font-size="16" fill="#fff">Stan</text><text x="'+xN+'" y="'+(headH+26)+'" font-family="Arial Black,Arial" font-size="16" fill="#fff">Zawodnik</text><text x="'+xW+'" y="'+(headH+26)+'" text-anchor="end" font-family="Arial Black,Arial" font-size="16" fill="#fff">Waga (g)</text>';
+  rows.forEach(function(r,i){
+    const yy=headH+colH+i*rowH,rank=Number(r.points||0),base=i%2?'#edf1f3':'#ffffff',fg='#07131d',nm=String(r.name||''),nameFs=nm.length>24?Math.max(14,fs-5):nm.length>20?Math.max(15,fs-3):nm.length>16?Math.max(16,fs-1):fs,placeColor=rank===1?'#ef1919':rank===2?'#2287e9':rank===3?'#16a64a':'#f5f5f5',placeFg=rank<=3?'#fff':'#07131d';
+    z+='<rect x="8" y="'+yy+'" width="'+(w-16)+'" height="'+rowH+'" fill="'+base+'"/><rect x="8" y="'+yy+'" width="60" height="'+rowH+'" fill="'+placeColor+'"/><line x1="68" y1="'+yy+'" x2="68" y2="'+(yy+rowH)+'" stroke="#b5c2ca"/><line x1="116" y1="'+yy+'" x2="116" y2="'+(yy+rowH)+'" stroke="#c5cdd2"/><line x1="'+(xW-wWeight)+'" y1="'+yy+'" x2="'+(xW-wWeight)+'" y2="'+(yy+rowH)+'" stroke="#c5cdd2"/><text x="'+xM+'" y="'+(yy+rowH*.69)+'" text-anchor="middle" font-family="Arial Black,Arial" font-size="'+(fs+2)+'" fill="'+placeFg+'">'+fotoFbEscXml(placeText(r.points))+'</text><text x="'+xS+'" y="'+(yy+rowH*.69)+'" text-anchor="middle" font-family="Arial Black,Arial" font-size="'+fs+'" fill="'+fg+'">'+fotoFbEscXml(r.stand||'—')+'</text><text x="'+xN+'" y="'+(yy+rowH*.69)+'" font-family="Arial,sans-serif" font-size="'+nameFs+'" font-weight="900" fill="'+fg+'"'+(nm.length>18?' textLength="'+nameMax+'" lengthAdjust="spacingAndGlyphs"':'')+'>'+fotoFbEscXml(nm)+'</text><text x="'+xW+'" y="'+(yy+rowH*.69)+'" text-anchor="end" font-family="Arial Black,Arial" font-size="'+fs+'" fill="'+fg+'">'+fotoFbEscXml(fotoFbGram(r.weight||0).replace(' g',''))+'</text>';
+  });
+  if(bf){
+    const by=h-90;
+    z+='<g transform="translate(16 '+by+')"><rect width="'+(w-32)+'" height="74" rx="13" fill="'+color+'" stroke="#ffc84d" stroke-width="3"/><text x="18" y="24" font-family="Arial Black,Arial" font-size="15" fill="#fff">NAJWIĘKSZA RYBA W SEKTORZE '+fotoFbEscXml(group.sector)+'</text><text x="18" y="53" font-family="Arial Black,Arial" font-size="20" fill="#fff">'+fotoFbEscXml(bf.name||'—')+' • Stan. '+fotoFbEscXml(bf.stand||'—')+'</text><text x="'+(w-62)+'" y="55" text-anchor="end" font-family="Arial Black,Arial" font-size="31" fill="#ffd34c">'+fotoFbEscXml(fotoFbGram(bf.weight))+'</text></g>';
+  }
   z+='</g>';return z;
 }
 async function fotoFbSvgSectors(d,round){
@@ -1860,9 +1883,12 @@ async function fotoFbSvgSectors(d,round){
   const groups=groupRowsBySector(rows);
   if(!groups.length)throw new Error('Brak wyników sektorowych Tury '+round+'.');
   let svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">'+fotoFbDefs()+fotoFbScene(w,h,logo,carp)+fotoFbHeader(c,w,'WYNIKI SEKTOROWE — TURA '+round,logo);
-  const top=350,bottom=h-135,contentH=bottom-top,cols=groups.length===1?1:2,gridRows=Math.ceil(groups.length/cols),gapX=28,gapY=26,boxW=cols===1?1280:(w-100-gapX)/2,boxH=(contentH-gapY*(gridRows-1))/gridRows;
-  const colors=['#176fc1','#14883d','#b88b16','#b62b25','#7047a5','#008b8b'];
-  groups.forEach(function(g,i){const col=i%cols,row=Math.floor(i/cols),x=cols===1?60:36+col*(boxW+gapX),y=top+row*(boxH+gapY);svg+=fotoFbSectorBox(g,x,y,boxW,boxH,colors[i%colors.length])});
+  svg+='<g opacity=".97"><path d="M0 310 Q350 280 700 310 T1400 310 V430 Q1070 390 700 425 Q350 390 0 430Z" fill="#0b151a" opacity=".55"/>';
+  if(carp)svg+='<image href="'+carp+'" x="990" y="255" width="390" height="260" preserveAspectRatio="xMidYMid meet" opacity=".82" filter="url(#shadow)"/>';
+  svg+='</g>';
+  const top=390,bottom=h-140,contentH=bottom-top,cols=groups.length===1?1:2,gridRows=Math.ceil(groups.length/cols),gapX=28,gapY=26,boxW=cols===1?1280:(w-100-gapX)/2,boxH=(contentH-gapY*(gridRows-1))/gridRows;
+  const colors=['#0876c9','#0d8b35','#bd8b08','#c32424','#6d46a6','#04858d'];
+  groups.forEach(function(g,i){const col=i%cols,row=Math.floor(i/cols),x=cols===1?60:36+col*(boxW+gapX),y=top+row*(boxH+gapY),bf=fotoFbSectorBigFish(d,round,g.sector);svg+=fotoFbSectorBox(g,x,y,boxW,boxH,colors[i%colors.length],bf)});
   svg+=fotoFbFooter(w,h)+'</svg>';
   return {svg:svg,w:w,h:h,name:'FotoFB_Wyniki_Sektorowe_T'+round+'_'+fotoFbSafeFile(c.title)+'.jpg'};
 }
@@ -1914,16 +1940,7 @@ async function shareFotoFb(){
   }catch(e){if(e&&e.name!=='AbortError')msg(e.message||'Nie udało się udostępnić','bad')}
 }
 function renderFotoFbPanel(d){
-  return '<div class="card"><h2>FotoFB — grafiki wynikowe</h2>'+
-    '<p class="small muted">Generator tylko odczytuje gotowe wyniki. Nie zmienia zawodów, wag, losowania ani klasyfikacji.</p>'+
-    '<div style="background:linear-gradient(135deg,#071b2a,#0d3b57);border:1px solid #2b6f94;border-radius:18px;padding:14px;color:#fff;margin:10px 0 14px">'+
-      '<b style="font-size:18px">Stały styl FotoFB</b><div class="small" style="margin-top:5px;color:#d9e8f2">Nazwa zawodów • data • łowisko • duże czytelne wyniki • realistyczny klimat łowiska • stała stopka METHOD FEEDER.</div>'+
-    '</div>'+
-    '<div class="grid"><button type="button" class="blue" onclick="generateFotoFb(\'winners\')">🏆 Zwycięzcy zawodów</button><button type="button" class="blue" onclick="generateFotoFb(\'fish\')">🐟 Wszystkie największe ryby</button></div>'+
-    '<div class="grid"><button type="button" onclick="generateFotoFb(\'t1\')">📷 Wyniki sektorowe — Tura 1</button><button type="button" onclick="generateFotoFb(\'t2\')">📷 Wyniki sektorowe — Tura 2</button></div>'+
-    '<p id="fotoFbStatus" class="small muted"></p><div id="fotoFbPreview" style="max-width:900px;margin:12px auto"></div>'+
-    '<div id="fotoFbActions" class="inlineBtns hidden" style="justify-content:center"><button type="button" class="blue" onclick="downloadFotoFb()">Pobierz JPG</button><button type="button" class="secondary" onclick="shareFotoFb()">Udostępnij</button></div>'+
-    '<p class="small muted" style="margin-top:12px">Wyniki sektorowe są pełne: Tura 1 = jeden obraz, Tura 2 = drugi obraz. Żaden zawodnik nie jest pomijany.</p></div>';
+  return '<div class="card"><h2>FotoFB — grafiki wynikowe</h2><p class="small muted">Generator korzysta wyłącznie z gotowych wyników. Nie zapisuje nic do zawodów i nie zmienia klasyfikacji.</p><div style="background:linear-gradient(135deg,#071b2a,#0d3b57);border:1px solid #2b6f94;border-radius:18px;padding:14px;color:#fff;margin:10px 0 14px"><b style="font-size:18px">MASTER FotoFB — wersja produkcyjna</b><div class="small" style="margin-top:5px;color:#d9e8f2">Zwycięzcy: puchary • Największe ryby: TOP 5 • Sektory: pełna Tura 1 na jednym JPG i pełna Tura 2 na drugim JPG.</div></div><div class="grid"><button type="button" class="blue" onclick="generateFotoFb(\'winners\')">🏆 Zwycięzcy zawodów</button><button type="button" class="blue" onclick="generateFotoFb(\'fish\')">🐟 TOP 5 największych ryb</button></div><div class="grid"><button type="button" onclick="generateFotoFb(\'t1\')">📷 Wyniki sektorowe — Tura 1</button><button type="button" onclick="generateFotoFb(\'t2\')">📷 Wyniki sektorowe — Tura 2</button></div><p id="fotoFbStatus" class="small muted"></p><div id="fotoFbPreview" style="max-width:900px;margin:12px auto"></div><div id="fotoFbActions" class="inlineBtns hidden" style="justify-content:center"><button type="button" class="blue" onclick="downloadFotoFb()">Pobierz JPG</button><button type="button" class="secondary" onclick="shareFotoFb()">Udostępnij</button></div><p class="small muted" style="margin-top:12px">Grafiki zawierają nazwę zawodów, datę, łowisko i liczbę zawodników. Gatunku ryby generator nie zgaduje — pokazuje wyłącznie dane, które są zapisane w aplikacji.</p></div>';
 }
 
 function pdfAsciiBytes(x){return new TextEncoder().encode(x)}
