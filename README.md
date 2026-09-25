@@ -1,3 +1,11 @@
+V156 — ARCHIWIZACJA ZAWODNIKA BEZ KASOWANIA HISTORII
+
+- „Usuń zawodnika” archiwizuje konto zamiast fizycznie usuwać rekord z bazy;
+- zapisane wyniki, wagi, losowania i udział w zawodach pozostają w historii i klasyfikacjach;
+- zarchiwizowany zawodnik znika z aktywnej listy, nie może się logować i nie dostaje nowych powiadomień;
+- ponowna rejestracja tym samym numerem telefonu przywraca ten sam rekord zawodnika wraz z historią;
+- import zawodnika dodanego przez administratora może ponownie aktywować zarchiwizowany rekord.
+
 V155 — CZYTELNY REGULAMIN OGÓLNY ADMINISTRATORA
 
 - na białej karcie nagłówek, podpis i opis mają ciemny, czytelny tekst na telefonie i komputerze;
