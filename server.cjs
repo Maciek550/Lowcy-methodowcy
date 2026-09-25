@@ -508,7 +508,46 @@ async function initDb() {
         where i.competition_id=r.competition_id and i.user_id=r.user_id and i.round=r.round and i.kind='BF'
       );
   `);
+  await repairV176DisabledStandInflation();
   await ensureVapidConfig();
+}
+
+async function repairV176DisabledStandInflation(){
+  try{
+    const { rows } = await pool.query(`
+      select c.*,
+        (select count(*)::int from entries e where e.competition_id=c.id and e.status='ACTIVE') as active_count,
+        (select count(*)::int from draws d where d.competition_id=c.id) as draw_count
+      from competitions c
+      where jsonb_typeof(c.disabled_stands)='array'
+        and jsonb_array_length(c.disabled_stands)>0
+        and coalesce(c.limit_places,0)>0
+        and (c.bank1_count+c.bank2_count)>c.limit_places
+    `);
+    for(const comp of rows){
+      const disabled=disabledStandsForCompetition(comp);
+      const total=competitionStandTotal(comp);
+      const limit=Math.max(0,Number(comp.limit_places||0));
+      const active=Math.max(0,Number(comp.active_count||0));
+      const draws=Math.max(0,Number(comp.draw_count||0));
+      if(
+        draws===0 &&
+        disabled.length>0 &&
+        total===active+disabled.length &&
+        total>limit &&
+        Math.max(...disabled)<=limit
+      ){
+        const split=autoBankSplit(limit,comp.map_mode||'TWO_OPPOSITE');
+        await pool.query(
+          'update competitions set bank1_count=$1, bank2_count=$2, sector_layout=null where id=$3',
+          [split.bank1,split.bank2,comp.id]
+        );
+        console.log('V177_REPAIRED_DISABLED_STANDS_STRUCTURE competition='+comp.id+' '+total+'->'+limit);
+      }
+    }
+  }catch(e){
+    console.error('V177_REPAIR_DISABLED_STANDS_ERR',e.message);
+  }
 }
 
 async function ensureVapidConfig(){
