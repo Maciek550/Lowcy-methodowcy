@@ -1,4 +1,4 @@
-const CLIENT_VERSION='167';const CLIENT_VERSION_NAME='V167_FOTO_FB_WINNERS_READABILITY';window.__LOWCY_APP_JS_167=1;try{fetch('/__probe_js_v167',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V167_FOTO_FB_WINNERS_READABILITY_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='168';const CLIENT_VERSION_NAME='V168_FOTO_FB_WINNERS_NO_FALLBACK';window.__LOWCY_APP_JS_168=1;try{fetch('/__probe_js_v168',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V168_FOTO_FB_WINNERS_NO_FALLBACK_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -1738,14 +1738,17 @@ async function fotoFbGetMaster(kind){
     FOTO_FB_MASTER_CACHE[kind]=data;return data;
   }catch(_){FOTO_FB_MASTER_CACHE[kind]='';return ''}
 }
-async function fotoFbLoadMasterStatus(){
+async async function fotoFbLoadMasterStatus(){
   try{
     const d=await api('/api/admin/fotofb/templates/status');
     FOTO_FB_MASTER_STATUS={};
     (d.templates||[]).forEach(function(t){FOTO_FB_MASTER_STATUS[t.kind]=t});
-    ['winners','fish','sectors'].forEach(function(kind){
+    ['winners_bg','fish','sectors'].forEach(function(kind){
       const el=q('fotoFbMasterStatus-'+kind),t=FOTO_FB_MASTER_STATUS[kind];
-      if(el){el.textContent=t?'Wzorzec zapisany ✓':'Brak wzorca';el.className='small '+(t?'ok':'bad')}
+      if(el){
+        el.textContent=t?(kind==='winners_bg'?'Czyste tło zapisane ✓':'Wzorzec zapisany ✓'):(kind==='winners_bg'?'Brak czystego tła':'Brak wzorca');
+        el.className='small '+(t?'ok':'bad');
+      }
     });
   }catch(_){}
 }
@@ -2093,18 +2096,9 @@ function fotoFbWinnerPlaque(x,y,w,h,d,metal){
   return '<g transform="translate('+x+' '+y+')" filter="url(#shadow)"><rect width="'+w+'" height="'+h+'" rx="22" fill="#06131d" stroke="'+border+'" stroke-width="6"/><rect x="0" y="0" width="'+w+'" height="62" rx="17" fill="'+fill+'"/><text x="'+(w/2)+'" y="43" text-anchor="middle" font-family="Arial Black,Arial" font-size="29" font-weight="1000" fill="'+headText+'">'+d.rank+'. MIEJSCE</text><text x="'+(w/2)+'" y="112" text-anchor="middle" font-family="Arial Black,Arial" font-size="'+nameFs+'" font-weight="1000" fill="#fff">'+fotoFbEscXml(d.name)+'</text><line x1="28" y1="128" x2="'+(w-28)+'" y2="128" stroke="'+border+'" stroke-width="2" opacity=".75"/>'+one(r1,'TURA 1',28)+one(r2,'TURA 2',28+colW+colGap)+'<rect x="16" y="'+(h-70)+'" width="'+(w-32)+'" height="52" rx="13" fill="'+fill+'" opacity=".98"/><text x="28" y="'+(h-35)+'" font-family="Arial Black,Arial" font-size="21" fill="'+headText+'">SUMA '+fotoFbEscXml(placeText(d.sum))+' pkt</text><text x="'+(w-25)+'" y="'+(h-34)+'" text-anchor="end" font-family="Arial Black,Arial" font-size="28" fill="'+headText+'">'+fotoFbEscXml(fotoFbGram(d.total))+'</text></g>';
 }
 async function fotoFbSvgWinners(d){
-  const master=await fotoFbGetMaster('winners');if(master)return fotoFbSvgWinnersMaster(d,master);
-  const w=1400,h=1250,c=d.competition,assets=await Promise.all([fotoFbAssetData('/icon-512.png'),fotoFbAssetData('/carp-real-v116.png')]),logo=assets[0],carp=assets[1];
-  const list=fotoFbWinnerData(d);
-  if(list.length<3)throw new Error('Klasyfikacja końcowa musi zawierać co najmniej 3 zawodników.');
-  let svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">'+fotoFbDefs()+fotoFbScene(w,h,logo,carp)+fotoFbHeader(c,w,'ZWYCIĘZCY ZAWODÓW',logo);
-  const byRank={};list.forEach(function(x){byRank[x.rank]=x});
-  svg+=fotoFbTrophy(700,350,1.28,'gold',1)+fotoFbTrophy(255,425,.97,'silver',2)+fotoFbTrophy(1140,430,.92,'bronze',3);
-  svg+=fotoFbWinnerPlaque(470,720,460,350,byRank[1]||list[0],'gold');
-  svg+=fotoFbWinnerPlaque(35,760,405,310,byRank[2]||list[1],'silver');
-  svg+=fotoFbWinnerPlaque(960,760,405,310,byRank[3]||list[2],'bronze');
-  svg+=fotoFbFooter(w,h)+'</svg>';
-  return {svg:svg,w:w,h:h,name:'FotoFB_Zwyciezcy_'+fotoFbSafeFile(c.title)+'.jpg'};
+  const bg=await fotoFbGetMaster('winners_bg');
+  if(!bg)throw new Error('Brak czystego tła dla Zwycięzców. Wgraj je w polu „Tło — Zwycięzcy”. Stary wzorzec nie jest już używany.');
+  return fotoFbSvgWinnersClean165(fotoFbEditedDetail(d),bg);
 }
 function fotoFbBigFishRows(d){
   const names={};
@@ -2226,15 +2220,30 @@ async function shareFotoFb(){
 }
 function renderFotoFbPanel(d){
   setTimeout(function(){fotoFbLoadMasterStatus()},0);
-  const masterCard=function(kind,label){
-    return '<div style="border:1px solid #31556b;border-radius:14px;padding:10px;background:#071b2a;color:#fff"><b>'+label+'</b><div id="fotoFbMasterStatus-'+kind+'" class="small muted" style="margin:4px 0 8px">Sprawdzam…</div><input id="fotoFbMasterInput-'+kind+'" type="file" accept="image/png,image/jpeg,image/webp" class="hidden" onchange="fotoFbUploadMaster(\''+kind+'\',this)"><div class="inlineBtns"><button type="button" class="secondary" onclick="fotoFbChooseMaster(\''+kind+'\')">Wgraj / zmień wzorzec</button><button type="button" class="danger" onclick="fotoFbDeleteMaster(\''+kind+'\')">Usuń</button></div></div>';
+  const bgCard=function(){
+    return '<div style="border:2px solid #d8a127;border-radius:14px;padding:12px;background:#071b2a;color:#fff">'+
+      '<b>🏆 Tło — Zwycięzcy</b>'+
+      '<div id="fotoFbMasterStatus-winners_bg" class="small muted" style="margin:5px 0 9px">Sprawdzam…</div>'+
+      '<div class="small muted" style="margin-bottom:9px">Wgraj samo zdjęcie/tło. Bez napisów, tabel, ramek i pucharów. V168 nakłada całą treść od zera.</div>'+
+      '<input id="fotoFbMasterInput-winners_bg" type="file" accept="image/png,image/jpeg,image/webp" class="hidden" onchange="fotoFbUploadMaster(\'winners_bg\',this)">'+
+      '<div class="inlineBtns"><button type="button" class="secondary" onclick="fotoFbChooseMaster(\'winners_bg\')">Wgraj / zmień czyste tło</button>'+
+      '<button type="button" class="danger" onclick="fotoFbDeleteMaster(\'winners_bg\')">Usuń tło</button></div></div>';
   };
-  return '<div class="card"><h2>FotoFB — grafiki wynikowe</h2><p class="small muted">V161: wzorzec daje klimat i fotografię, a dane są osadzane w czystych strefach roboczych. Stare napisy i tabele ze wzorca nie przebijają pod wynikami.</p>'+
-    '<h3>Wzorce FotoFB</h3><div class="grid">'+masterCard('winners','🏆 Zwycięzcy zawodów')+masterCard('fish','🐟 TOP 5 największych ryb')+'</div><div style="margin-top:10px">'+masterCard('sectors','📷 Wyniki sektorowe T1/T2')+'</div>'+
-    '<div style="background:#e8f5ec;border:1px solid #3b8c58;border-radius:14px;padding:10px;margin:12px 0;color:#153a22"><b>V161 — priorytet: czytelność.</b> Większe nazwiska, wagi i miejsca; sektorówki mają własne nieprzezroczyste pole robocze i dynamicznie dopasowują wysokość wierszy do liczby zawodników.</div>'+
+  const masterCard=function(kind,label){
+    return '<div style="border:1px solid #31556b;border-radius:14px;padding:10px;background:#071b2a;color:#fff"><b>'+label+'</b>'+
+      '<div id="fotoFbMasterStatus-'+kind+'" class="small muted" style="margin:4px 0 8px">Sprawdzam…</div>'+
+      '<input id="fotoFbMasterInput-'+kind+'" type="file" accept="image/png,image/jpeg,image/webp" class="hidden" onchange="fotoFbUploadMaster(\''+kind+'\',this)">'+
+      '<div class="inlineBtns"><button type="button" class="secondary" onclick="fotoFbChooseMaster(\''+kind+'\')">Wgraj / zmień wzorzec</button>'+
+      '<button type="button" class="danger" onclick="fotoFbDeleteMaster(\''+kind+'\')">Usuń</button></div></div>';
+  };
+  return '<div class="card"><h2>FotoFB — grafiki wynikowe</h2>'+
+    '<div style="background:#fff4d6;border:1px solid #d8a127;border-radius:14px;padding:10px;margin-bottom:12px;color:#4a3510"><b>V168 — Zwycięzcy bez starego generatora.</b> Bez czystego tła grafika Zwycięzców nie zostanie wygenerowana.</div>'+
+    '<h3>Zwycięzcy</h3>'+bgCard()+
+    '<h3 style="margin-top:14px">Pozostałe grafiki</h3><div class="grid">'+masterCard('fish','🐟 TOP 5 największych ryb')+masterCard('sectors','📷 Wyniki sektorowe T1/T2')+'</div>'+
     '<h3>Generuj</h3><div class="grid"><button type="button" class="blue" onclick="generateFotoFb(\'winners\')">🏆 Zwycięzcy zawodów</button><button type="button" class="blue" onclick="generateFotoFb(\'fish\')">🐟 TOP 5 największych ryb</button></div>'+
     '<div class="grid"><button type="button" onclick="generateFotoFb(\'t1\')">📷 Wyniki sektorowe — Tura 1</button><button type="button" onclick="generateFotoFb(\'t2\')">📷 Wyniki sektorowe — Tura 2</button></div>'+
-    '<p id="fotoFbStatus" class="small muted"></p><div id="fotoFbPreview" style="max-width:900px;margin:12px auto"></div><div id="fotoFbActions" class="inlineBtns hidden" style="justify-content:center"><button type="button" class="blue" onclick="downloadFotoFb()">Pobierz JPG</button><button type="button" class="secondary" onclick="shareFotoFb()">Udostępnij</button></div></div>';
+    '<p id="fotoFbStatus" class="small muted"></p><div id="fotoFbPreview" style="max-width:900px;margin:12px auto"></div>'+
+    '<div id="fotoFbActions" class="inlineBtns hidden"><button type="button" class="blue" onclick="downloadFotoFb()">Pobierz JPG</button><button type="button" class="secondary" onclick="shareFotoFb()">Udostępnij</button></div></div>';
 }
 
 function pdfAsciiBytes(x){return new TextEncoder().encode(x)}
