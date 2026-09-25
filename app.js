@@ -1,4 +1,4 @@
-const CLIENT_VERSION='162';const CLIENT_VERSION_NAME='V162_FOTO_FB_WINNERS_READABLE';window.__LOWCY_APP_JS_162=1;try{fetch('/__probe_js_v162',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V162_FOTO_FB_WINNERS_READABLE_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='163';const CLIENT_VERSION_NAME='V163_FOTO_FB_SHARP_FOOTER';window.__LOWCY_APP_JS_163=1;try{fetch('/__probe_js_v163',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V163_FOTO_FB_SHARP_FOOTER_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -1821,6 +1821,7 @@ async function fotoFbSvgWinnersMaster(d,master){
   svg+=fotoFbMasterWinnerCard(65,735,400,330,by[2]||list[1],'silver');
   svg+=fotoFbMasterWinnerCard(500,670,400,365,by[1]||list[0],'gold');
   svg+=fotoFbMasterWinnerCard(935,735,400,330,by[3]||list[2],'bronze');
+  svg+=fotoFbFooter(w,h);
   svg+='</svg>';
   return {svg:svg,w:w,h:h,name:'FotoFB_Zwyciezcy_'+fotoFbSafeFile(c.title)+'.jpg'};
 }
@@ -1834,6 +1835,7 @@ async function fotoFbSvgBigFishMaster(d,master){
     const rank=i+1,y=top+i*(rowH+gap),medal=rank===1?'url(#gold)':rank===2?'url(#silver)':rank===3?'url(#bronze)':'#263e4d',fg=rank===2?'#08131b':'#fff',nm=String(r.name||''),nf=nm.length>24?24:nm.length>19?27:30;
     svg+='<g transform="translate('+x+' '+y+')"><rect width="'+ww+'" height="'+rowH+'" rx="15" fill="#081721" stroke="'+(rank<=3?'#e1a72e':'#3c708c')+'" stroke-width="'+(rank<=3?4:2)+'"/><circle cx="50" cy="'+(rowH/2)+'" r="33" fill="'+medal+'"/><text x="50" y="'+(rowH*.61)+'" text-anchor="middle" font-family="Arial Black,Arial" font-size="32" fill="'+fg+'">'+rank+'</text><text x="100" y="41" font-family="Arial Black,Arial" font-size="'+nf+'" fill="#fff"'+(nm.length>22?' textLength="330" lengthAdjust="spacingAndGlyphs"':'')+'>'+fotoFbEscXml(nm)+'</text><text x="100" y="73" font-family="Arial Black,Arial" font-size="20" fill="#cbd8df">Tura '+r.round+' • Stan. '+fotoFbEscXml(r.stand||'—')+(r.sector?' • sektor '+fotoFbEscXml(r.sector):'')+'</text><text x="'+(ww-22)+'" y="64" text-anchor="end" font-family="Arial Black,Arial" font-size="39" fill="#ffd03b">'+fotoFbEscXml(fotoFbGram(r.weight))+'</text></g>';
   });
+  svg+=fotoFbFooter(w,h);
   svg+='</svg>';
   return {svg:svg,w:w,h:h,name:'FotoFB_TOP5_Najwieksze_Ryby_'+fotoFbSafeFile(c.title)+'.jpg'};
 }
@@ -1876,6 +1878,7 @@ async function fotoFbSvgSectorsMaster(d,round,master){
     const boxW=646,boxH=590,xs=[40,714],ys=[360,975];
     groups.forEach(function(g,i){svg+=fotoFbMasterSectorCard(g,xs[i%2],ys[Math.floor(i/2)],boxW,boxH,colors[i],fotoFbSectorBigFish(d,round,g.sector))});
   }
+  svg+=fotoFbFooter(w,h);
   svg+='</svg>';
   return {svg:svg,w:w,h:h,name:'FotoFB_Wyniki_Sektorowe_T'+round+'_'+fotoFbSafeFile(c.title)+'.jpg'};
 }
