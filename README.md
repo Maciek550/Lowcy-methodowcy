@@ -1,3 +1,8 @@
+V155 — CZYTELNY REGULAMIN OGÓLNY ADMINISTRATORA
+
+- na białej karcie nagłówek, podpis i opis mają ciemny, czytelny tekst na telefonie i komputerze;
+- ciemne karty pozostają czytelne, a wersja aplikacji i cache PWA są zaktualizowane do V155.
+
 V154 — KONTRAST NA TELEFONIE SĘDZIEGO
 
 - zapisane siatki i BF mają ciemne napisy na jasnych etykietach;
