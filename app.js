@@ -1738,7 +1738,7 @@ async function fotoFbGetMaster(kind){
     FOTO_FB_MASTER_CACHE[kind]=data;return data;
   }catch(_){FOTO_FB_MASTER_CACHE[kind]='';return ''}
 }
-async async function fotoFbLoadMasterStatus(){
+async function fotoFbLoadMasterStatus(){
   try{
     const d=await api('/api/admin/fotofb/templates/status');
     FOTO_FB_MASTER_STATUS={};
