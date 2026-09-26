@@ -20,7 +20,7 @@ const GOOGLE_VISION_API_KEY = process.env.GOOGLE_VISION_API_KEY || process.env.O
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.PHOTO_OCR_OPENAI_API_KEY || '';
 const PHOTO_OCR_MODEL = process.env.PHOTO_OCR_OPENAI_MODEL || 'gpt-5.6-sol';
 const APP_VERSION = '179';
-const APP_VERSION_NAME = 'V179_SECTOR_OVERLAY_SHIFT';
+const APP_VERSION_NAME = 'V180_MIN_SECTOR_ZERO_POINTS';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 const CARP_REAL = fs.readFileSync(pathModule.join(__dirname, 'carp-real-v116.png'));
 const ICON_192 = fs.readFileSync(pathModule.join(__dirname, 'icon-192.png'));
@@ -1329,7 +1329,8 @@ function computeClassification(comp, entries, draws, results) {
       if (!grouped.has(row.sector)) grouped.set(row.sector, []);
       grouped.get(row.sector).push(row);
     }
-    const maxSectorSize = Math.max(1, ...Array.from(grouped.values()).map(a => a.length));
+    const sectorGroupSizes = Array.from(grouped.values()).map(a => a.length);
+    const minSectorSize = sectorGroupSizes.length ? Math.max(1, Math.min(...sectorGroupSizes)) : 1;
     for (const rows of grouped.values()) {
       const positives = rows.filter(r => r.weight > 0).sort((a,b)=>b.weight-a.weight || a.name.localeCompare(b.name, 'pl'));
       for(let start=0;start<positives.length;){
@@ -1342,7 +1343,7 @@ function computeClassification(comp, entries, draws, results) {
         }
         start=end;
       }
-      rows.filter(r => r.weight <= 0).forEach(r => { r.sector_place = maxSectorSize; r.points = maxSectorSize; });
+      rows.filter(r => r.weight <= 0).forEach(r => { r.sector_place = minSectorSize; r.points = minSectorSize; });
     }
     roundRows[round] = Array.from(grouped.values()).flat().sort((a,b)=>(a.points-b.points) || (b.weight-a.weight) || String(a.sector).localeCompare(String(b.sector),'pl') || (a.stand||9999)-(b.stand||9999) || a.name.localeCompare(b.name,'pl'));
   }
