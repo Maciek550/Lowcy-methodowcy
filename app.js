@@ -1823,7 +1823,7 @@ window.addEventListener('focus',()=>chatGptMaybeResume());
 function renderResultsEntryPanel(d){
   const c=d.competition,p=chatGptPendingForCurrent();
   const pending=p?'<div class="photoImportWarn" style="margin-bottom:10px"><b>📋 CZEKA ODCZYT Z CHATGPT — T'+p.round+'</b><div style="margin-top:8px"><button type="button" class="blue" onclick="openChatGptPasteImport('+p.round+',true)">WKLEJ I WCZYTAJ T'+p.round+'</button></div></div>':'';
-  return '<div class="card"><h2>Wpisywanie wyników</h2>'+pending+'<div class="photoImportQuick"><b>📸 SZYBKI IMPORT ZE ZDJĘCIA</b><span class="mobileWaterHint">Telefon nad wodą: zrób 1–2 zdjęcia → ChatGPT → skopiuj JSON → wróć i wklej.</span><div class="grid"><button type="button" class="blue" onclick="openChatGptPasteImport(1,false)">📸 T1 — ZE ZDJĘCIA</button><button type="button" class="blue" onclick="openChatGptPasteImport(2,false)">📸 T2 — ZE ZDJĘCIA</button></div></div><details class="card" style="margin-top:10px"><summary><b>OpenAI API (opcjonalny / płatny)</b></summary><div class="grid"><button type="button" class="secondary" onclick="startPhotoResultImport(1)">API T1</button><button type="button" class="secondary" onclick="startPhotoResultImport(2)">API T2</button></div></details><div class="grid3"><button type="button" class="secondary" onclick="generateResults('+c.id+',1,event)">Generuj wyniki T1</button><button type="button" class="secondary" onclick="generateResults('+c.id+',2,event)">Generuj wyniki T2</button><button type="button" class="blue" onclick="generateResultsAll('+c.id+',event)">Generuj T1 + T2</button></div><button type="button" class="warn" style="margin-top:10px" onclick="clearResults('+c.id+',event)">Wyczyść wszystkie wyniki T1 i T2</button><div class="resultEntryRounds"><div class="resultRoundPanel"><h3>T1</h3>'+renderResultForm(d,1)+'</div><div class="resultRoundPanel"><h3>T2</h3>'+renderResultForm(d,2)+'</div></div></div>';
+  return '<div class="card"><h2>Wpisywanie wyników</h2>'+pending+'<div class="photoImportQuick"><b>📸 SZYBKI IMPORT ZE ZDJĘCIA</b><span class="mobileWaterHint">Telefon nad wodą: zrób 1–2 zdjęcia → ChatGPT → skopiuj JSON → wróć i wklej.</span><div class="grid"><button type="button" class="blue" onclick="openChatGptPasteImport(1,false)">📸 T1 — ZE ZDJĘCIA</button><button type="button" class="blue" onclick="openChatGptPasteImport(2,false)">📸 T2 — ZE ZDJĘCIA</button></div></div><details class="card" style="margin-top:10px"><summary><b>OpenAI API (opcjonalny / płatny)</b></summary><div class="grid"><button type="button" class="secondary" onclick="startPhotoResultImport(1)">API T1</button><button type="button" class="secondary" onclick="startPhotoResultImport(2)">API T2</button></div></details><div class="grid3"><button type="button" class="secondary" onclick="generateResults('+c.id+',1,event)">Generuj wyniki T1</button><button type="button" class="secondary" onclick="generateResults('+c.id+',2,event)">Generuj wyniki T2</button><button type="button" class="blue" onclick="generateResultsAll('+c.id+',event)">Generuj T1 + T2</button></div><button type="button" class="warn" style="margin-top:10px" onclick="clearResults('+c.id+',event)">Wyczyść wszystkie wyniki T1 i T2</button><div class="resultEntryRounds"><div class="resultRoundPanel resultRoundPanel1"><h3 class="resultRoundTitle resultRoundTitle1">TURA 1</h3>'+renderResultForm(d,1)+'</div><div class="resultRoundPanel resultRoundPanel2"><h3 class="resultRoundTitle resultRoundTitle2">TURA 2</h3>'+renderResultForm(d,2)+'</div></div></div>';
 }
 function renderResultsSummaryPanel(d){const c=d.competition;return '<div class="card"><h2>Wyniki i klasyfikacja</h2><div class="grid"><button type="button" class="blue" onclick="notifyResults('+c.id+',1)">Powiadom o wynikach T1</button><button type="button" class="blue" onclick="notifyResults('+c.id+',2)">Powiadom o wynikach T2</button></div><div class="inlineBtns"><button type="button" class="secondary" onclick="retryAchievementToasts('+c.id+',1,this)">Ponów dymki T1</button><button type="button" class="secondary" onclick="retryAchievementToasts('+c.id+',2,this)">Ponów dymki T2</button><button type="button" class="secondary" onclick="retryAchievementToasts('+c.id+',\'general\',this)">Ponów dymki generalne</button></div><p id="achievementPublishStatus" role="status"></p>'+renderSectorResultsBoard(d)+'<h3>Klasyfikacja T1</h3>'+renderClassTable(d.classification.round1)+'<h3>Klasyfikacja T2</h3>'+renderClassTable(d.classification.round2)+'<h3>Klasyfikacja końcowa</h3><button type="button" class="blue" onclick="notifyGeneralResults('+c.id+',this)">Powiadom o klasyfikacji końcowej</button><p id="generalPublishStatus" role="status"></p>'+renderFinalClubToggle()+renderGeneralTable(d.classification.general)+renderStationStatistics(d)+'</div>'}
 function placeRowClass(rank){const r=Number(rank);return r===1?'place1':r===2?'place2':r===3?'place3':''}
@@ -1866,7 +1866,7 @@ function judgeCancelPending(id){
 }
 async function flushJudgeQueue(silent=true){
   if(JUDGE_SYNC_BUSY||!ME||ME.role!=='JUDGE'||!navigator.onLine)return;
-  const pending=judgeOwnQueue();if(!pending.length){if(JUDGE_VIEW==='entry')renderJudgeWork();return}
+  const pending=judgeOwnQueue();if(!pending.length)return;
   JUDGE_SYNC_BUSY=true;
   let sent=0,failed=0;
   try{
@@ -1882,7 +1882,7 @@ async function flushJudgeQueue(silent=true){
     if(sent&&CURRENT_DETAIL?.competition?.id){
       try{CURRENT_DETAIL=await api('/api/competitions/'+CURRENT_DETAIL.competition.id);judgeCacheDetail(CURRENT_DETAIL)}catch(_){}
     }
-    if(JUDGE_VIEW==='entry')renderJudgeWork();
+    if(JUDGE_VIEW==='entry')renderJudgeWorkKeepWeightFocus();
     if(!silent&&sent)msg('Zsynchronizowano wpisy: '+sent);
     if(failed)msg('Niektóre wpisy offline wymagają sprawdzenia.','bad');
   }finally{JUDGE_SYNC_BUSY=false}
@@ -1899,19 +1899,49 @@ function renderWeightItems(round,uid,kind){const arr=resultItems(round,uid,kind)
 function resultCellSummary(r){r=r||{};const bf=Number(r.big_fish||0);return '<b>'+fmtGram(r.weight||0)+'g</b>'+(bf?'<br><span class="bfLine">BF: '+fmtGram(bf)+'g</span>':'')}
 function renderResultForm(d,round){const entries=d.activeEntries||[];const dm=drawMap(round);const rm=resMap(round);if(!entries.length)return '<p class="muted">Brak aktywnych zawodników.</p>';let desktop='<div class="tablewrap adminDesktopOnly"><table class="resultInputTable"><thead><tr><th style="width:42px">Lp.</th><th>Zawodnik</th><th>Stan.</th><th>Sektor</th><th>Wagi siatek</th><th>Duże ryby BF</th><th>Suma</th></tr></thead><tbody>';desktop+=entries.map((e,idx)=>{const uid=Number(e.user_id),dr=dm[uid],r=rm[uid]||{};return '<tr><td class="center"><b>'+(idx+1)+'</b></td><td><b>'+esc(e.first_name+' '+e.last_name)+'</b></td><td>'+(dr?esc(dr.stand):'—')+'</td><td>'+(dr?esc(dr.sector):'—')+'</td><td>'+renderWeightItems(round,uid,'NET')+'<input class="weightInput" inputmode="numeric" id="net-'+round+'-'+uid+'" placeholder="nowa waga siatki g" onblur="addWeightItem('+d.competition.id+','+round+','+uid+',\'NET\',this)" onkeydown="weightKey(event)"></td><td>'+renderWeightItems(round,uid,'BF')+'<input class="weightInput" inputmode="numeric" id="bf-'+round+'-'+uid+'" placeholder="nowa duża ryba g" onblur="addWeightItem('+d.competition.id+','+round+','+uid+',\'BF\',this)" onkeydown="weightKey(event)"></td><td class="nowrap">'+resultCellSummary(r)+'</td></tr>'}).join('');desktop+='</tbody></table></div>';const mobile='<div class="adminMobileOnly mobileResultEntryList">'+entries.map((e,idx)=>{const uid=Number(e.user_id),dr=dm[uid],r=rm[uid]||{};return '<article class="mobileAdminCard mobileResultEntryCard"><div class="mobileAdminCardHead"><span class="mobileLp">'+(idx+1)+'</span><b>'+esc(e.first_name+' '+e.last_name)+'</b><strong class="mobileResultSum">'+resultCellSummary(r)+'</strong></div><div class="mobileAdminMeta"><span><small>Stan.</small><b>'+(dr?esc(dr.stand):'—')+'</b></span><span><small>Sektor</small><b>'+(dr?esc(dr.sector):'—')+'</b></span></div><div class="mobileWeightBlock"><label>Wagi siatek</label>'+renderWeightItems(round,uid,'NET')+'<input class="weightInput" inputmode="numeric" id="mnet-'+round+'-'+uid+'" placeholder="Nowa waga siatki (g)" onblur="addWeightItem('+d.competition.id+','+round+','+uid+',\'NET\',this)" onkeydown="weightKey(event)"></div><div class="mobileWeightBlock"><label>Duże ryby BF</label>'+renderWeightItems(round,uid,'BF')+'<input class="weightInput" inputmode="numeric" id="mbf-'+round+'-'+uid+'" placeholder="Nowa duża ryba (g)" onblur="addWeightItem('+d.competition.id+','+round+','+uid+',\'BF\',this)" onkeydown="weightKey(event)"></div></article>'}).join('')+'</div>';return desktop+mobile}
 function weightKey(ev){if(ev.key==='Enter'){ev.preventDefault();ev.target.blur();}}
-async function refreshCompetitionKeepScroll(compId){try{const d=await api('/api/competitions/'+compId);CURRENT_DETAIL=d;renderDetail();q('competitionDetail').classList.remove('hidden');}catch(e){msg(e.message,'bad')}}
+function captureWeightEntryFocus(){
+  const el=document.activeElement;
+  if(!el||!el.classList?.contains('weightInput')||!el.id)return null;
+  return {id:el.id,value:String(el.value??''),start:Number.isInteger(el.selectionStart)?el.selectionStart:null,end:Number.isInteger(el.selectionEnd)?el.selectionEnd:null};
+}
+function restoreWeightEntryFocus(state,scrollY){
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    if(state){
+      const el=document.getElementById(state.id);
+      if(el){
+        el.value=state.value;
+        try{el.focus({preventScroll:true})}catch(_){try{el.focus()}catch(__){}}
+        if(state.start!==null&&state.end!==null&&typeof el.setSelectionRange==='function')try{el.setSelectionRange(state.start,state.end)}catch(_){}
+      }
+    }
+    if(Number.isFinite(scrollY))window.scrollTo(0,scrollY);
+  }));
+}
+function renderJudgeWorkKeepWeightFocus(){
+  const focus=captureWeightEntryFocus(),scrollY=window.scrollY;
+  renderJudgeWork();
+  restoreWeightEntryFocus(focus,scrollY);
+}
+async function refreshCompetitionKeepScroll(compId){
+  try{
+    const d=await api('/api/competitions/'+compId);
+    const focus=captureWeightEntryFocus(),scrollY=window.scrollY;
+    CURRENT_DETAIL=d;renderDetail();q('competitionDetail').classList.remove('hidden');
+    restoreWeightEntryFocus(focus,scrollY);
+  }catch(e){msg(e.message,'bad')}
+}
 async function addWeightItem(compId,round,userId,kind,el){
   const val=String(el?.value||'').trim();if(!val)return;if(el?.dataset?.saving==='1')return;
   if(el&&el.dataset)el.dataset.saving='1';const td=el?.closest('td');if(td)td.classList.add('flashSave');
   if(ME?.role==='JUDGE'){
     const item={id:judgeMutationId(),judgeUserId:Number(ME.id),compId:Number(compId),round:Number(round),userId:Number(userId),kind:String(kind),weight:val,createdAt:new Date().toISOString(),error:''};
-    const queueAndFinish=()=>{judgeAddPending(item);if(el)el.value='';if(el&&el.dataset)el.dataset.saving='0';renderJudgeWork();msg('Zapisano w telefonie. Wyślę automatycznie po odzyskaniu zasięgu.','ok')};
+    const queueAndFinish=()=>{judgeAddPending(item);if(el)el.value='';if(el&&el.dataset)el.dataset.saving='0';renderJudgeWorkKeepWeightFocus();msg('Zapisano w telefonie. Wyślę automatycznie po odzyskaniu zasięgu.','ok')};
     if(!navigator.onLine){queueAndFinish();return}
     try{
       await api('/api/admin/competitions/'+compId+'/results/'+round+'/items',{method:'POST',body:JSON.stringify({userId,kind,weight:val,clientMutationId:item.id}),timeoutMs:4000});
       if(el)el.value='';
       try{CURRENT_DETAIL=await api('/api/competitions/'+compId);judgeCacheDetail(CURRENT_DETAIL)}catch(_){}
-      if(el&&el.dataset)el.dataset.saving='0';renderJudgeWork();
+      if(el&&el.dataset)el.dataset.saving='0';renderJudgeWorkKeepWeightFocus();
     }catch(e){
       if(e&&Number(e.status)>=400&&Number(e.status)<500){if(el&&el.dataset)el.dataset.saving='0';msg(e.message,'bad');return}
       queueAndFinish();
