@@ -1,3 +1,9 @@
+V192 — ADMIN: TURA 1 / TURA 2 NIE CHOWA SIĘ POD MENU
+
+- pasek TURA 1 / TURA 2 u administratora ustawia się dynamicznie dokładnie pod przypiętym menu stref;
+- wysokość menu jest mierzona na żywo, więc poprawka działa również przy dwóch rzędach kafelków na telefonie;
+- logika wpisywania wag i zabezpieczenie kursora z V191 pozostają bez zmian.
+
 V191 — TURA ZAWSZE WIDOCZNA I KURSOR NIE UCIEKA
 
 - podczas wpisywania wag na telefonie oznaczenie TURA 1 / TURA 2 pozostaje widoczne przy przewijaniu;
