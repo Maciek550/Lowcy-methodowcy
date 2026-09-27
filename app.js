@@ -951,8 +951,8 @@ function rosterTable(title,rows,compId,kind){
       ?'<button type="button" class="rosterLeaveRequest" onclick="approveRosterLeaveRequest('+requestId+',this)">Prośba o wypisanie<small>Kliknij, aby wypisać</small></button>':'';
     return '<div class="rosterLeaveActions">'+baseButtons(e)+tile+'</div>';
   };
-  const confirmBtn=e=>kind==='ACTIVE'
-    ?'<button type="button" class="confirmEntryBtn '+(e.confirmed?'confirmed':'')+'" onclick="toggleEntryConfirm('+compId+','+e.id+',this)">'+(e.confirmed?'✓':'Potwierdź')+'</button>'
+  const confirmBtn=(e,compact=false)=>kind==='ACTIVE'
+    ?'<button type="button" class="confirmEntryBtn '+(e.confirmed?'confirmed':'')+'" aria-label="'+(e.confirmed?'Cofnij potwierdzenie obecności':'Potwierdź obecność')+'" onclick="toggleEntryConfirm('+compId+','+e.id+',this)">'+(e.confirmed?(compact?'✓ Obecny':'✓'):'Potwierdź')+'</button>'
     :'';
   const editBtn=e=>{const nm=String((e.first_name||'')+' '+(e.last_name||'')).trim(),safe=encodeURIComponent(nm);return '<button type="button" class="secondary rosterEditNameBtn" onclick="editPlayerName('+Number(e.user_id)+',decodeURIComponent(\''+safe+'\'))">Edytuj</button>'};
   const callEnabled=kind==='ACTIVE'||kind==='RESERVE';
@@ -961,9 +961,9 @@ function rosterTable(title,rows,compId,kind){
     +'</tbody></table></div>';
   const mobile='<div class="adminMobileOnly mobileRosterCompact">'
     +rows.map((e,idx)=>{const club=e.pzw_club?('K'+esc(e.pzw_club)):'';return '<div class="mobileRosterCompactRow">'
-        +'<div class="mobileRosterCompactHead"><span class="mobileRosterCompactLp">'+(idx+1)+'</span><b>'+esc(e.first_name+' '+e.last_name)+'</b>'+editBtn(e)+'<span class="mobileRosterCompactStatus">'+statusLabel(e.status)+'</span></div>'
+        +'<div class="mobileRosterCompactHead"><span class="mobileRosterCompactLp">'+(idx+1)+'</span><b>'+esc(e.first_name+' '+e.last_name)+'</b>'+editBtn(e)+'</div>'
         +'<div class="mobileRosterCompactMeta"><span>'+(callEnabled?renderPhoneCall(e.phone,'mobilePhoneCallBtn'):esc(e.phone||'—'))+'</span>'+(club?'<span>'+club+'</span>':'')+'</div>'
-        +'<div class="mobileRosterCompactActions">'+(confirmBtn(e)||'')+makeButtons(e)+'</div>'
+        +'<div class="mobileRosterCompactActions '+(kind==='ACTIVE'?'threeActions':'twoActions')+'">'+(confirmBtn(e,true)||'')+makeButtons(e)+'</div>'
         +'</div>';}).join('')
     +'</div>';
   return html+desktop+mobile;

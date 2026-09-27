@@ -1,3 +1,9 @@
+V185 — ZWARTA LISTA ZAWODNIKÓW ADMINA
+
+- na telefonie status listy jest w nagłówku sekcji, a w karcie pozostają numer, nazwisko, telefon i koło;
+- Potwierdź / Obecny, Rezerwa i Zrezygnuj mieszczą się w jednym rzędzie, z czytelnymi przyciskami;
+- sześć kafli sekcji admina układa się w dwóch rzędach po trzy.
+
 V184 — LICZNIKI FILTRÓW W JEDNYM WIERSZU
 
 - na telefonie liczba przy „Nadchodzące” i „Zapisane” jest obok nazwy, a nie pod nią;
