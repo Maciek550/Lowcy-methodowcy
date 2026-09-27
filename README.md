@@ -1,3 +1,12 @@
+V181 — CZYTELNE PRZYCISKI ZAWODNIKA
+
+- główna akcja na liście zawodów ma pełną szerokość: Zapisz się, Potwierdź obecność lub Losowanie / wyniki;
+- Zrezygnuj oraz potwierdzony stan obecności są mniejsze, a wyniki pozostają dostępne podczas oczekiwania na potwierdzenie;
+- data i godzina zbiórki mają mocny kontrast; godzina jest w prawym górnym rogu;
+- liczba zapisanych, rezerwa oraz odliczanie do zawodów pozostają widoczne na telefonie i komputerze;
+- przyciski i informacje zawijają się na węższych ekranach bez zmniejszania tekstu do nieczytelnych rozmiarów;
+- powiadomienie o nowym wyniku nadal otwiera właściwy widok po dotknięciu dużego przycisku.
+
 V156 — ARCHIWIZACJA ZAWODNIKA BEZ KASOWANIA HISTORII
 
 - „Usuń zawodnika” archiwizuje konto zamiast fizycznie usuwać rekord z bazy;

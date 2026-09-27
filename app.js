@@ -226,12 +226,15 @@ function playerCompetitionAttentionBadge(c){
   return n?'<span class="playerCompAttentionBadge" title="'+n+' rzeczy do sprawdzenia">'+(n>9?'9+':n)+'</span>':'';
 }
 function playerPrimaryButton(c,extraClass=''){
-  const a=playerAttentionPrimary(c),id=Number(c.id);
-  if(!a)return '<button type="button" class="'+esc(extraClass)+'" onclick="openCompetition('+id+')">LOSOWANIE / WYNIKI</button>';
-  if(a.kind==='PRESENCE_CONFIRM')return '<button type="button" class="playerCompAttentionMain '+esc(extraClass)+'" onclick="confirmPlayerPresence('+id+',this,event)">POTWIERDŹ OBECNOŚĆ</button>';
+  const id=Number(c.id),mine=playerCompetitionMine(c),confirmed=c.my_confirmed===true||String(c.my_confirmed).toLowerCase()==='true';
+  const pending=mine&&playerPresenceConfirmWindow(c)&&!confirmed;
+  if(pending)return '<button type="button" class="player181Main player181Confirm '+esc(extraClass)+'" onclick="confirmPlayerPresence('+id+',this,event)">POTWIERDŹ OBECNOŚĆ</button>';
+  if(!mine&&c.status==='OPEN'&&c.signup_open!==false&&!playerCompetitionPast(c))return '<button type="button" class="player181Main player181Join '+esc(extraClass)+'" onclick="joinComp('+id+')">ZAPISZ SIĘ</button>';
+  const a=playerAttentionPrimary(c);
+  if(!a||a.kind==='PRESENCE_CONFIRM')return '<button type="button" class="player181Main player181Results '+esc(extraClass)+'" onclick="openCompetition('+id+')">LOSOWANIE / WYNIKI</button>';
   const panel=String(a.panel||'').replace(/[^a-z0-9]/gi,'');
   const kind=String(a.kind||'').replace(/[^A-Z0-9_]/g,'');
-  return '<button type="button" class="playerCompAttentionMain '+esc(extraClass)+'" onclick="openCompetitionAttention('+id+',\''+panel+'\',\''+kind+'\',event)">★ '+esc(a.label||'NOWOŚĆ')+'</button>';
+  return '<button type="button" class="player181Main player181Results '+esc(extraClass)+'" onclick="openCompetitionAttention('+id+',\''+panel+'\',\''+kind+'\',event)">LOSOWANIE / WYNIKI</button>';
 }
 async function markPlayerAttentionRead(compId,types,rerender=true){
   types=(Array.isArray(types)?types:[types]).filter(Boolean);
@@ -377,7 +380,8 @@ function playerCompetitionDateInfo(c){
   const m=key.match(/^(\d{4})-(\d{2})-(\d{2})$/);if(!m)return {date:fmtDate(c.competition_date),weekday:'',countdown:''};
   const y=Number(m[1]),mo=Number(m[2])-1,d=Number(m[3]);
   const dt=new Date(y,mo,d,12,0,0);const now=new Date();
-  const todayUtc=Date.UTC(now.getFullYear(),now.getMonth(),now.getDate()),targetUtc=Date.UTC(y,mo,d);
+  const today=playerCompetitionTodayKey().split('-').map(Number);
+  const todayUtc=Date.UTC(today[0],today[1]-1,today[2]),targetUtc=Date.UTC(y,mo,d);
   const days=Math.round((targetUtc-todayUtc)/86400000);
   const weekday=dt.toLocaleDateString('pl-PL',{weekday:'long'}).toUpperCase();
   let countdown='';if(days===0)countdown='DZISIAJ';else if(days===1)countdown='JUTRO';else if(days>1)countdown='START ZA '+days+' DNI';else countdown='ZAKOŃCZONE';
@@ -436,19 +440,29 @@ function renderPlayerCompetitionFilters(arr){
   const opts=['<option value="all">Wszystkie miesiące</option>'].concat(months.map(m=>'<option value="'+esc(m)+'" '+(PLAYER_COMP_MONTH===m?'selected':'')+'>'+esc(playerCompetitionMonthLabel(m))+'</option>')).join('');
   return '<div class="playerCompetitionOrganizer"><div class="playerCompFilters">'+f('upcoming','NADCHODZĄCE',upcoming)+f('registered','ZAPISANE',registered)+f('completed','HISTORIA',completed)+'</div><select class="playerCompMonthSelect" onchange="setPlayerCompetitionMonth(this.value)">'+opts+'</select></div>';
 }
-function renderPlayerCompetitionCompactActions(c){const mine=playerCompetitionMine(c),closed=c.status!=='OPEN'||c.signup_open===false,leavePending=String(c.my_leave_request_status||'').toUpperCase()==='PENDING';let second='';if(mine)second=leavePending?'<button type="button" class="secondary" disabled>Prośba wysłana</button>':'<button type="button" class="warn" onclick="leaveComp('+c.id+')">Zrezygnuj</button>';else second='<button type="button" '+(closed?'disabled':'')+' onclick="joinComp('+c.id+')">Zapisz</button>';return '<div class="playerCompCompactActions">'+playerPrimaryButton(c)+second+'</div>'}
+function renderPlayerCompetitionCompactActions(c){
+  const mine=playerCompetitionMine(c),id=Number(c.id),confirmed=c.my_confirmed===true||String(c.my_confirmed).toLowerCase()==='true';
+  const pending=mine&&playerPresenceConfirmWindow(c)&&!confirmed;
+  const canJoin=!mine&&c.status==='OPEN'&&c.signup_open!==false&&!playerCompetitionPast(c);
+  const leavePending=String(c.my_leave_request_status||'').toUpperCase()==='PENDING';
+  const leave=leavePending?'<span class="player181Confirmed player181LeaveSent">PROŚBA WYSŁANA</span>':'<button type="button" class="player181Small player181Leave" onclick="leaveComp('+id+')">ZREZYGNUJ</button>';
+  const secondary=pending?'<button type="button" class="player181Small player181Open" onclick="openCompetition('+id+')">LOSOWANIE / WYNIKI</button>'+leave:
+    canJoin?'<button type="button" class="player181Small player181Open" onclick="openCompetition('+id+')">LOSOWANIE / WYNIKI</button>':
+    mine?(confirmed?'<span class="player181Confirmed">✓ OBECNOŚĆ POTWIERDZONA</span>':'')+leave:'';
+  const attention=playerAttentionPrimary(c),news=(!pending&&!canJoin&&attention&&attention.kind!=='PRESENCE_CONFIRM')?'<span class="player181News">★ '+esc(attention.label||'NOWOŚĆ')+'</span>':'';
+  return '<div class="player181Actions">'+news+playerPrimaryButton(c)+(secondary?'<div class="player181Secondary">'+secondary+'</div>':'')+'</div>';
+}
 function renderPlayerCompetitionMobileItem(c){
-  const st=playerCompetitionStatus(c),mine=playerCompetitionMineLabel(c),x=playerCompetitionDateInfo(c),cc=playerCompetitionCountdownClass(x),isMine=playerCompetitionMine(c),closed=c.status!=='OPEN'||c.signup_open===false,leavePending=String(c.my_leave_request_status||'').toUpperCase()==='PENDING';
-  const action2=isMine?(leavePending?'<button type="button" class="secondary" disabled>PROŚBA WYSŁANA</button>':'<button type="button" class="warn" onclick="leaveComp('+c.id+')">REZYGNUJ</button>'):'<button type="button" '+(closed?'disabled':'')+' onclick="joinComp('+c.id+')">ZAPISZ</button>';
-  return '<article class="playerCompCompactCard playerCompCardV96 playerCompCardV97 playerCompCardV98 '+(mine?'mine':'')+'">'
-    +'<div class="playerCompCardHead"><span class="playerCompNo">'+playerCompetitionNo(c)+'</span><b class="playerCompCardTitle">'+esc(c.title)+'</b>'+playerCompetitionAttentionBadge(c)+'<span class="playerCompMeeting playerCompCardMeeting"><span class="playerCompClockIcon" aria-hidden="true">◷</span> '+esc(meetingTimeText(c))+'</span></div>'
-    +'<div class="playerCompLocationDate"><span class="playerCompFishery">'+esc(c.fishery||'—')+'</span><strong class="playerCompDate">'+esc(x.date)+'</strong></div>'
-    +'<div class="playerCompCardDate"><span class="playerCompWeekday">'+esc(x.weekday)+'</span>'+(x.countdown?'<em class="playerCompCountdown '+cc+'">'+esc(x.countdown)+'</em>':'')+'<span class="playerCompStatus '+st.cls+'">'+st.label+'</span></div>'
-    +(mine?'<div class="playerCompCardFishery">'+renderPlayerMineStack(c,mine)+'</div>':'')
-    +'<div class="playerCompBottomRow"><span class="playerCompBottomCount">'+playerCompetitionCountHtml(c)+'</span>'+playerPrimaryButton(c,'playerCompBottomMain')+action2+'</div>'
+  const st=playerCompetitionStatus(c),mine=playerCompetitionMineLabel(c),x=playerCompetitionDateInfo(c),cc=playerCompetitionCountdownClass(x);
+  const main=Number(c.active_count||0),reserve=Number(c.reserve_count||0),limit=Number(c.limit_places||0);
+  return '<article class="playerCompCompactCard playerCompCardV181 '+(mine?'mine':'')+'">'
+    +'<div class="player181Header"><span class="player181No">'+playerCompetitionNo(c)+'</span><div class="player181Identity"><div class="player181Title"><b>'+esc(c.title)+'</b>'+playerCompetitionAttentionBadge(c)+'</div><span>'+esc(c.fishery||'—')+'</span></div><span class="player181Hour"><small>ZBIÓRKA</small><strong>'+esc(meetingTimeText(c))+'</strong></span></div>'
+    +'<div class="player181Date"><strong>'+esc(x.date)+'</strong><span class="player181Weekday">'+esc(x.weekday)+'</span>'+(mine?'<span class="player181Joined">'+esc(mine)+'</span>':'<span class="player181Status '+st.cls+'">'+esc(st.label)+'</span>')+'</div>'
+    +'<div class="player181Meta">'+(x.countdown?'<span class="player181Countdown '+cc+'">'+esc(x.countdown)+'</span>':'')+'<span class="player181Count"><small>ZAPISANI</small><b>'+main+(limit?'/'+limit:'')+'</b>'+(reserve?'<em>+ R:'+reserve+'</em>':'')+'</span></div>'
+    +renderPlayerCompetitionCompactActions(c)
     +'</article>';
 }
-function renderPlayerCompetitionDesktopItem(c){const st=playerCompetitionStatus(c),mine=playerCompetitionMineLabel(c);return '<div class="playerCompDesktopRow '+(mine?'mine':'')+'"><span class="playerCompNo">'+playerCompetitionNo(c)+'</span><div class="playerCompDesktopTitle"><b>'+esc(c.title)+'</b>'+playerCompetitionAttentionBadge(c)+'<span>'+esc(c.fishery||'—')+'</span></div><div class="playerCompDesktopDate">'+renderPlayerCompetitionDesktopDate(c)+'</div><div class="playerCompDesktopCount">'+playerCompetitionCountHtml(c)+'</div><div class="playerCompMineCell">'+renderPlayerMineStack(c,mine)+'</div><span class="playerCompStatus '+st.cls+'">'+st.label+'</span>'+renderPlayerCompetitionCompactActions(c)+'</div>'}
+function renderPlayerCompetitionDesktopItem(c){return renderPlayerCompetitionMobileItem(c)}
 function renderPlayerCompetitionGroups(arr,mode){
   if(!arr.length)return '<div class="playerCompEmpty">Brak zawodów w tej kategorii.</div>';
   const groups=[];for(const c of arr){const key=playerCompetitionMonthKey(c);let g=groups.find(x=>x.key===key);if(!g){g={key,items:[]};groups.push(g)}g.items.push(c)}

@@ -19,8 +19,8 @@ const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const GOOGLE_VISION_API_KEY = process.env.GOOGLE_VISION_API_KEY || process.env.OCR_GOOGLE_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.PHOTO_OCR_OPENAI_API_KEY || '';
 const PHOTO_OCR_MODEL = process.env.PHOTO_OCR_OPENAI_MODEL || 'gpt-5.6-sol';
-const APP_VERSION = '180';
-const APP_VERSION_NAME = 'V180_MIN_SECTOR_ZERO_POINTS';
+const APP_VERSION = '181';
+const APP_VERSION_NAME = 'V181_RESPONSIVE_PLAYER_ACTIONS';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 const CARP_REAL = fs.readFileSync(pathModule.join(__dirname, 'carp-real-v116.png'));
 const ICON_192 = fs.readFileSync(pathModule.join(__dirname, 'icon-192.png'));
@@ -1949,9 +1949,9 @@ body #app button.rosterLeaveRequest:disabled{opacity:.65;cursor:wait}
     ]
   }), {'Content-Type':'application/manifest+json; charset=utf-8','Cache-Control':'no-cache'});
   if (path === '/sw.js') return send(res, 200, `
-const SHELL_CACHE='lowcy-shell-v180';
-const APP_SHELL_JS='/app.js?v=179';
-const PDF_JS='/pdf-vector.js?v=179';
+const SHELL_CACHE='lowcy-shell-v181';
+const APP_SHELL_JS='/app.js?v=181';
+const PDF_JS='/pdf-vector.js?v=181';
 const SHELL=['/',APP_SHELL_JS,PDF_JS,'/icon-192.png','/icon-512.png'];
 async function fetchWithTimeout(req,ms=30000){const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),ms);try{return await fetch(req,{cache:'no-store',signal:ctrl.signal})}finally{clearTimeout(timer)}}
 self.addEventListener('install',event=>event.waitUntil((async()=>{const replies=await Promise.all(SHELL.map(url=>fetchWithTimeout(url)));if(replies.some(r=>!r.ok))throw Error('Incomplete shell');const cache=await caches.open(SHELL_CACHE);await Promise.all(SHELL.map((url,i)=>cache.put(url,replies[i])));await self.skipWaiting()})()));
@@ -3028,7 +3028,7 @@ const HTML = `<!doctype html>
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
 <script>try{if(localStorage.getItem('carp_token'))document.documentElement.classList.add('hasSavedSession')}catch(e){}</script>
-<title>Łowcy Methodowcy — V180</title>
+<title>Łowcy Methodowcy — V181</title>
 <style>
 :root{--green:#114b2f;--green2:#17643f;--bg:#f3f6ef;--card:#fff;--line:#cfd8cc;--txt:#18251d;--muted:#68746d;--red:#b32020;--gold:#ffc400;--blue:#1067c8;--soft:#eaf2eb}
 *{box-sizing:border-box}html,body{height:auto!important;min-height:100%!important;overflow-y:auto!important;overscroll-behavior:auto!important}body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}header{position:sticky;top:0;z-index:5;background:var(--green);color:white;padding:12px 14px;box-shadow:0 2px 8px #0002}header .row{display:flex;justify-content:space-between;gap:12px;align-items:center;max-width:1180px;margin:auto}h1{font-size:18px;margin:0}h2{font-size:18px;margin:0 0 8px}h3{font-size:16px;margin:12px 0 8px}main{max-width:1180px;margin:0 auto;padding:12px}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin:12px 0;box-shadow:0 2px 8px #0000000d}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}input,select,textarea,button{width:100%;font:inherit;border-radius:12px;border:1px solid var(--line);padding:10px 11px;background:white}textarea{min-height:70px}button{border:0;background:var(--green);color:white;font-weight:900;cursor:pointer}button.secondary{background:#e7eee7;color:var(--green);border:1px solid #bfd0c2}button.warn{background:var(--red)}button.blue{background:var(--blue)}button:disabled{opacity:.55;cursor:not-allowed}label{display:block;font-size:12px;font-weight:900;color:var(--muted);margin:8px 0 4px}.tabs{display:flex;gap:8px;overflow:auto;padding:8px 0}.tabs button{white-space:nowrap;width:auto;padding:9px 13px}.tabs button.active{background:#072e1c}.tablewrap{width:100%;overflow:auto;border-radius:12px;border:1px solid var(--line)}table{width:100%;border-collapse:collapse;background:white}th,td{border:1px solid var(--line);padding:8px 7px;text-align:left;vertical-align:middle}th{background:#e6f0e8;color:#106b28;font-size:12px;text-transform:uppercase}.nowrap{white-space:nowrap}.muted{color:var(--muted)}.ok{color:var(--green);font-weight:900}.bad{color:var(--red);font-weight:900}.pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#e6f0e8;font-weight:900}.hidden{display:none!important}.top-actions{display:flex;gap:8px;align-items:center}.top-actions button{width:auto;padding:8px 11px;background:#ffffff22;border:1px solid #ffffff55}.small{font-size:12px}.right{text-align:right}.mine{background:#fff4b8!important;outline:3px solid var(--gold);outline-offset:-3px;font-weight:900}.mine td{font-weight:900}.danger-line{border-left:6px solid var(--red)}.success-line{border-left:6px solid var(--green)}.mapbox{background:#f7faf4;border:1px solid var(--line);border-radius:14px;padding:10px;overflow:auto}.banktitle{font-size:12px;font-weight:900;color:var(--muted);margin:8px 0 5px}.bank{display:grid;grid-template-columns:repeat(auto-fit,minmax(42px,1fr));gap:5px;min-width:320px}.stand{min-height:42px;border:1px solid #a8b7aa;border-radius:9px;background:white;display:flex;align-items:center;justify-content:center;flex-direction:column;font-weight:900;font-size:12px}.stand small{font-size:9px;font-weight:800;color:#555}.stand.occ{box-shadow:inset 0 -4px 0 #cbd8cc}.stand.t1{background:#ffe1e1;border:3px solid #d00000;color:#8e0000}.stand.t2{background:#dfeaff;border:3px solid #005bd8;color:#003c91}.stand.both{background:#f0dcff;border:3px solid #7a1fc2;color:#461078}.ownbox{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.ownitem{border:2px solid var(--line);border-radius:14px;padding:12px;background:#fff}.ownitem strong{font-size:24px}.twoCols{display:grid;grid-template-columns:1fr 1fr;gap:12px}.inlineBtns{display:flex;gap:6px;flex-wrap:wrap}.inlineBtns button{width:auto}.competitionActions{gap:22px;align-items:center}.competitionActions button{min-width:96px}.adminbar{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.tag{font-size:11px;border-radius:999px;padding:3px 7px;background:#f0f4ee;font-weight:900}.t1tag{background:#ffe1e1;color:#8e0000}.t2tag{background:#dfeaff;color:#003c91}.sector-A{box-shadow:inset 0 0 0 2px #b32020}.sector-B{box-shadow:inset 0 0 0 2px #1067c8}.sector-C{box-shadow:inset 0 0 0 2px #14803a}.sector-D{box-shadow:inset 0 0 0 2px #7a1fc2}.sector-E{box-shadow:inset 0 0 0 2px #b36b00}.sector-F{box-shadow:inset 0 0 0 2px #006b7a}.checkline{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--txt);font-weight:800}.checkline input{width:auto}.sectorMap{background:#fbfdf9;border:1px solid var(--line);border-radius:14px;padding:12px;overflow:auto}.mapTitle,.bankLabel{font-weight:1000;color:#204b38;margin:5px 0}.standRow{display:grid;gap:0;min-width:640px}.standCell{min-height:45px;border:2px solid #446b56;display:flex;align-items:center;justify-content:center;flex-direction:column;font-weight:1000;color:#123827;margin:-1px 0 0 -1px}.standCell small{font-size:10px}.standCell.empty{border:0;background:transparent}.sectorBand{display:grid;min-width:640px;gap:0}.sectorBlock{min-height:78px;border:3px solid #38664d;display:flex;align-items:center;justify-content:center;flex-direction:column;margin:-1px 0 0 -1px;text-align:center}.sectorBlock span{font-size:22px;font-weight:1000}.sectorSummary{background:#ecf2ed;border-radius:10px;padding:10px;margin-top:10px;font-size:13px}.water{text-align:center;background:#f2f6f1;color:#6a756d;font-weight:1000;padding:12px;min-width:640px}.sectorFill-A{background:#d8f1dd}.sectorFill-B{background:#dbe8fb}.sectorFill-C{background:#ffe7bd}.sectorFill-D{background:#f6d9e3}.sectorFill-E{background:#eadffb}.sectorFill-F{background:#dff4f4}.sectorFill-G{background:#f7e8ce}.sectorFill-H{background:#e5f0d0}.standCell.t1{background:#ffb5b5!important;border:4px solid #d00000!important;color:#7c0000}.standCell.t2{background:#b9d2ff!important;border:4px solid #005bd8!important;color:#002c70}.standCell.both{background:#e1b8ff!important;border:4px solid #7a1fc2!important;color:#3c0060}.standCell.occ{box-shadow:inset 0 -5px 0 #244f36}.weightItems{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:5px}.weightTag{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:3px 6px;font-size:11px;font-weight:900;background:#edf4ec;border:1px solid #bfd0c2}.weightTag button{width:auto;padding:0 4px;border-radius:8px;background:#b91c1c;color:#fff;line-height:1.1}.bfTag{background:#fff0d6;border-color:#e5b965}.netTag{background:#e7f5e7}.bfLine{font-size:12px;font-weight:1000;color:#b91c1c}.flashSave{background:#bff7c8!important;transition:background .25s}.resultInputTable input{min-width:120px}.sectorBand.clean{margin:0}.sectorFlexRow{display:flex;gap:0;min-width:640px}.sectorGroup{display:grid;gap:0;margin:0}.sectorGroup .standCell{border-radius:0;margin:-1px 0 0 -1px}.sectorFlexRow .sectorBlock{border-radius:0;margin:-1px 0 0 -1px}.standFlex{align-items:stretch}.sectorBand.clean .sectorBlock{min-height:72px}.pushBox{margin-top:6px;line-height:1.35}.bankLabelBottom{margin-top:8px}.quickScroll{position:fixed;right:10px;bottom:14px;z-index:30;display:flex;flex-direction:column;gap:7px}.quickScroll button{width:52px;padding:9px 0;border-radius:999px;background:#123827cc;box-shadow:0 3px 10px #0003}.quickScroll button:last-child{background:#e7eee7;color:#123827;border:1px solid #bfd0c2}
@@ -6861,11 +6861,123 @@ body:not(.playerTheme):not(.authMode) #cRegulations{
   .disabledStandsHead{align-items:flex-start;flex-direction:column;gap:2px}
 }
 
+/* V181: jeden czytelny układ karty zawodów na różnych szerokościach. */
+body.playerTheme #app .playerCompCardV181{
+  display:block!important;box-sizing:border-box!important;min-width:0!important;
+  padding:13px!important;margin:0 0 9px!important;border-radius:12px!important;
+  background:linear-gradient(130deg,#18354b,#0e2537)!important;border:1px solid #456e8c!important;
+  color:#eef7ff!important;overflow:visible!important
+}
+body.playerTheme #app .playerCompCardV181 *{box-sizing:border-box}
+body.playerTheme #app .player181Header{display:flex;align-items:flex-start;gap:8px;min-width:0}
+body.playerTheme #app .player181No{
+  display:inline-flex;flex:none;align-items:center;justify-content:center;
+  min-width:37px;height:34px;border-radius:7px;background:#0b5184;border:1px solid #4083b2;
+  color:#fff;font-size:12px;font-weight:900
+}
+body.playerTheme #app .player181Identity{flex:1 1 auto;min-width:0}
+body.playerTheme #app .player181Title{display:flex;align-items:flex-start;gap:5px;min-width:0}
+body.playerTheme #app .player181Title>b{color:#fff!important;font-size:16px!important;line-height:1.2;overflow-wrap:anywhere;min-width:0}
+body.playerTheme #app .player181Title .playerCompAttentionBadge{
+  flex:none;min-width:22px;height:22px;margin:0!important;padding:0 5px;font-size:11px
+}
+body.playerTheme #app .player181Identity>span{display:block;margin-top:2px;color:#b9e6ff!important;font-size:13px;line-height:1.25;font-weight:700;overflow-wrap:anywhere}
+body.playerTheme #app .player181Hour{
+  display:flex;flex:none;flex-direction:column;align-items:center;justify-content:center;
+  min-width:88px;min-height:54px;padding:6px 8px;border-radius:9px;
+  background:#ffe393!important;border:2px solid #fff1b7!important;color:#172d3b!important;
+  box-shadow:0 2px 9px #0005
+}
+body.playerTheme #app .player181Hour small{color:#38401d!important;font-size:10px;font-weight:900;letter-spacing:.03em;line-height:1.1}
+body.playerTheme #app .player181Hour strong{color:#172d3b!important;font-size:21px;font-weight:900;line-height:1.12;font-variant-numeric:tabular-nums;white-space:nowrap}
+body.playerTheme #app .player181Date{display:flex;flex-wrap:wrap;align-items:center;gap:6px 9px;margin-top:10px;min-width:0}
+body.playerTheme #app .player181Date>strong{
+  display:inline-flex;align-items:center;min-height:36px;padding:5px 9px;border-radius:7px;
+  background:#eff8ff!important;color:#10283c!important;border:1px solid #b4d5e9!important;
+  font-size:17px!important;font-weight:900;font-variant-numeric:tabular-nums;white-space:nowrap
+}
+body.playerTheme #app .player181Weekday{color:#e9f5ff!important;font-size:13px;font-weight:800}
+body.playerTheme #app .player181Joined,body.playerTheme #app .player181Status{
+  padding:5px 7px;border-radius:6px;font-size:11px;line-height:1.2;font-weight:850
+}
+body.playerTheme #app .player181Joined{color:#083d24!important;background:#c8f2d5!important}
+body.playerTheme #app .player181Status{color:#d6ecfa!important;background:#173f5c!important;border:1px solid #447898}
+body.playerTheme #app .player181Status.open{color:#d9f9e3!important;background:#175036!important}
+body.playerTheme #app .player181Meta{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:7px;margin-top:8px}
+body.playerTheme #app .player181Countdown{
+  display:inline-flex;align-items:center;justify-content:center;min-height:32px;
+  padding:5px 8px;border-radius:7px;border:1px solid #dab661;background:#ffedb8!important;
+  color:#3d2c05!important;font-size:12px;font-weight:900;font-style:normal
+}
+body.playerTheme #app .player181Countdown.today{background:#ffdedb!important;color:#6c1e18!important;border-color:#e79e98}
+body.playerTheme #app .player181Countdown.past{background:#d7e1e8!important;color:#2d4251!important;border-color:#aab9c5}
+body.playerTheme #app .player181Count{
+  display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:5px 8px;
+  border-radius:7px;background:#17394f!important;color:#e9f6ff!important;
+  border:1px solid #5a829b;white-space:nowrap
+}
+body.playerTheme #app .player181Count small{color:#e9f6ff!important;font-size:11px;font-weight:800}
+body.playerTheme #app .player181Count b{color:#fff!important;font-size:16px;font-weight:900;font-variant-numeric:tabular-nums}
+body.playerTheme #app .player181Count em{color:#c1dfec!important;font-size:11px;font-style:normal}
+body.playerTheme #app .player181Actions{display:grid;gap:8px;margin-top:12px;padding-top:11px;border-top:1px solid #44677d;min-width:0}
+body.playerTheme #app .player181Main,body.playerTheme #app .player181Small{
+  display:flex;align-items:center;justify-content:center;box-sizing:border-box;
+  width:100%;min-width:0;white-space:normal!important;overflow:visible!important;
+  text-overflow:clip!important;text-align:center;font-weight:900!important;border-radius:9px!important
+}
+body.playerTheme #app .player181Main{
+  min-height:52px!important;height:auto!important;padding:12px 14px!important;
+  font-size:16px!important;line-height:1.18!important;letter-spacing:.01em
+}
+body.playerTheme #app .player181Join{background:linear-gradient(#15954e,#0c6e38)!important;color:#fff!important;border:1px solid #59c383!important}
+body.playerTheme #app .player181Confirm{background:linear-gradient(#ffd95c,#e9a623)!important;color:#1f2b32!important;border:1px solid #ffe68e!important}
+body.playerTheme #app .player181Results{background:linear-gradient(#1886cb,#095182)!important;color:#fff!important;border:1px solid #68b8e7!important}
+body.playerTheme #app .player181News{
+  justify-self:start;max-width:100%;padding:4px 8px;border-radius:6px;
+  background:#573d0a;color:#ffe598;border:1px solid #bc8e31;
+  font-size:12px;font-weight:850;overflow-wrap:anywhere
+}
+body.playerTheme #app .player181Secondary{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px;min-width:0}
+body.playerTheme #app .player181Small{
+  min-height:44px!important;height:auto!important;padding:8px 10px!important;
+  font-size:13px!important;line-height:1.18!important
+}
+body.playerTheme #app .player181Open{
+  flex:1 1 150px;width:auto;background:#143a57!important;color:#e1f4ff!important;border:1px solid #5394be!important
+}
+body.playerTheme #app .player181Leave{
+  flex:0 1 auto;width:auto;min-width:108px;background:#a52d31!important;
+  color:#fff!important;border:1px solid #f1898c!important
+}
+body.playerTheme #app .player181Confirmed{
+  display:flex;flex:1 1 160px;align-items:center;justify-content:center;min-height:44px;
+  padding:8px 10px;border-radius:9px;text-align:center;line-height:1.2;
+  background:#153d36!important;color:#c9f5d8!important;border:1px solid #408a63;
+  font-size:12px;font-weight:850
+}
+body.playerTheme #app .player181LeaveSent{color:#e3edf3!important;background:#334854!important;border-color:#69808f}
+@media(max-width:350px){
+  body.playerTheme #app .playerCompCardV181{padding:10px!important}
+  body.playerTheme #app .player181Title>b{font-size:15px!important}
+  body.playerTheme #app .player181Leave{min-width:98px}
+}
+@media(min-width:900px){
+  body.playerTheme #app .playerCompCardV181{
+    display:grid!important;grid-template-columns:minmax(0,1fr) minmax(270px,360px);
+    grid-template-areas:"head actions" "date actions" "meta actions";
+    column-gap:18px;align-items:start
+  }
+  body.playerTheme #app .player181Header{grid-area:head}
+  body.playerTheme #app .player181Date{grid-area:date}
+  body.playerTheme #app .player181Meta{grid-area:meta}
+  body.playerTheme #app .player181Actions{grid-area:actions;margin-top:0;padding-top:0;border-top:0;align-self:center}
+}
+
 </style>
 </head>
 <body class="authMode">
 <div id="bootGuard"><img src="/icon-192.png" alt=""><b>Łowcy Methodowcy</b><span>Uruchamiam aplikację…</span><button id="bootRetry" class="hidden" type="button" onclick="retryLowcyBoot()">Spróbuj ponownie</button></div>
-<header><div class="row"><h1><img class="brandIcon" src="/icon-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V180</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
+<header><div class="row"><h1><img class="brandIcon" src="/icon-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V181</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
 <main>
 <div id="msg"></div>
 <section id="auth" class="card">
@@ -6878,7 +6990,7 @@ body:not(.playerTheme):not(.authMode) #cRegulations{
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="appVersionBadge">V180</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
+  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="appVersionBadge">V181</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
   <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-rules" class="hidden" onclick="showTab('rules')">Regulamin ogólny</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-profile" class="hidden" onclick="showTab('profile')">Mój profil</button><button id="btn-history" class="hidden" onclick="showTab('history')">Historia startów</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions">
     <details id="adminCreate" class="card hidden adminCreateV93"><summary class="adminCreateToggle">Robimy zawody</summary><div class="adminCreateBody"><h2>Utwórz zawody</h2><p class="small muted">Dane z tego formularza są później widoczne dla zawodnika.</p><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Zbiórka / godzina</label><input id="cMeetingTime" type="time" value="06:00"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div></div><div class="adminTextPair"><div><label>Tryb zawodów</label><select id="cStatus"><option value="OPEN">Zawody otwarte — każdy może się zapisać</option><option value="TEST">Zawody testowe — tylko admin</option><option value="CLOSED">Zapisy zakończone — widoczne, bez zapisów</option></select><label>Informacje organizacyjne</label><textarea id="cNotes" placeholder="Parking, miejsce zbiórki, godzina losowania, dodatkowe informacje…"></textarea></div><div><label>Program / regulamin tych zawodów</label><textarea id="cRegulations" class="rulesEditor" placeholder="Np. 06:00 zbiórka, 06:15 losowanie, 07:00–15:00 zawody, ważne zasady tylko dla tego wydarzenia…"></textarea></div></div><button onclick="createCompetition(event)">Utwórz zawody</button></div></details>
@@ -6895,14 +7007,14 @@ body:not(.playerTheme):not(.authMode) #cRegulations{
 <div class="quickScroll"><button onclick="scrollAppTop()">↑</button><button onclick="scrollAppBottom()">↓</button></div>
 <script>
 (function(){
- window.__lowcyRecover179=function(){var g=document.getElementById('bootGuard');if(!g)return;g.classList.remove('hidden');var sp=g.querySelector('span');if(sp)sp.textContent='Nie udało się pobrać aplikacji. Sprawdź połączenie i spróbuj ponownie.';var b=document.getElementById('bootRetry');if(b)b.classList.remove('hidden')};
+ window.__lowcyRecover181=function(){var g=document.getElementById('bootGuard');if(!g)return;g.classList.remove('hidden');var sp=g.querySelector('span');if(sp)sp.textContent='Nie udało się pobrać aplikacji. Sprawdź połączenie i spróbuj ponownie.';var b=document.getElementById('bootRetry');if(b)b.classList.remove('hidden')};
  window.retryLowcyBoot=function(){if(typeof startBoot==='function'){startBoot();return}location.reload()};
  if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'}).then(function(reg){return reg.update()}).catch(function(){});
- setTimeout(function(){if(!window.__LOWCY_JS_STARTED)window.__lowcyRecover179()},30000);
+ setTimeout(function(){if(!window.__LOWCY_JS_STARTED)window.__lowcyRecover181()},30000);
 })();
 </script>
-<script src="/pdf-vector.js?v=179" defer></script>
-<script src="/app.js?v=179" defer onerror="window.__lowcyRecover179&&window.__lowcyRecover179()"></script>
+<script src="/pdf-vector.js?v=181" defer></script>
+<script src="/app.js?v=181" defer onerror="window.__lowcyRecover181&&window.__lowcyRecover181()"></script>
 </body>
 </html>`;
 
@@ -6913,5 +7025,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V180_MIN_SECTOR_ZERO_POINTS_READY'); console.log('CARP_MOBILE_READY port=' + PORT); startPresenceReminderLoop(); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V181_RESPONSIVE_PLAYER_ACTIONS_READY'); console.log('CARP_MOBILE_READY port=' + PORT); startPresenceReminderLoop(); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });
