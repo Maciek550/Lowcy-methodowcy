@@ -1,3 +1,9 @@
+V193 — ADMIN: PASEK TURY POD RZECZYWISTĄ WYSOKOŚCIĄ MENU
+
+- pasek TURA 1 / TURA 2 jest pozycjonowany względem faktycznej dolnej krawędzi przypiętego menu admina;
+- wysokość menu jest ponownie mierzona po ułożeniu widoku i przy zmianie rozmiaru;
+- mobilny fallback zwiększony do 112 px, żeby pasek nie chował się pod dwurzędowym menu nawet przed pomiarem.
+
 V192 — ADMIN: TURA 1 / TURA 2 NIE CHOWA SIĘ POD MENU
 
 - pasek TURA 1 / TURA 2 u administratora ustawia się dynamicznie dokładnie pod przypiętym menu stref;
