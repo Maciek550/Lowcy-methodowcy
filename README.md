@@ -1,3 +1,9 @@
+V187 — LEPSZY PANEL STARTOWY ADMINA
+
+- „Otwórz panel zawodów” jest dużą główną akcją; „Edytuj” i „Usuń” są poniżej, z mniejszym naciskiem na usuwanie;
+- status zawodów jest przy nazwie, a miniona data pokazuje „Zawody zakończone” zamiast samego zamknięcia zapisów;
+- górne przyciski na telefonie są wyższe, a dostęp do sędziów wizualnie odróżnia się od tworzenia zawodów.
+
 V186 — TELEFON OBOK NAZWISKA
 
 - na mobilnej liście admina przy nazwisku jest przycisk telefonu bez wypisywania numeru;
