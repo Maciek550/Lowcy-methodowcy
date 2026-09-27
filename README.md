@@ -1,3 +1,9 @@
+V182 — ZAKOŃCZONE ZAWODY TYLKO W HISTORII
+
+- „Zapisane” pokazuje i liczy jedynie nadchodzące zawody, na które zawodnik jest zapisany;
+- zawody z wcześniejszą datą pozostają w „Historii” i znikają z listy „Zapisane”;
+- po dacie zawodów znika przycisk „Zrezygnuj”, a „Losowanie / wyniki” nadal otwiera szczegóły.
+
 V181 — CZYTELNE PRZYCISKI ZAWODNIKA
 
 - główna akcja na liście zawodów ma pełną szerokość: Zapisz się, Potwierdź obecność lub Losowanie / wyniki;

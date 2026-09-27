@@ -373,6 +373,7 @@ function playerCompetitionMine(c){return c.my_status==='ACTIVE'||c.my_status==='
 function playerCompetitionDateKey(c){return dateInputValue(c?.competition_date)||''}
 function playerCompetitionTodayKey(){const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Warsaw',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());const val=t=>parts.find(p=>p.type===t).value;return val('year')+'-'+val('month')+'-'+val('day')}
 function playerCompetitionPast(c){const k=playerCompetitionDateKey(c);return !!k&&k<playerCompetitionTodayKey()}
+function playerCompetitionRegisteredUpcoming(c){return playerCompetitionMine(c)&&!playerCompetitionPast(c)}
 function playerCompetitionMonthKey(c){const k=playerCompetitionDateKey(c);return k?k.slice(0,7):'no-date'}
 function playerCompetitionMonthLabel(key){if(key==='no-date')return 'BEZ DATY';const m=String(key).match(/^(\d{4})-(\d{2})$/);if(!m)return String(key).toUpperCase();const d=new Date(Number(m[1]),Number(m[2])-1,1);return d.toLocaleDateString('pl-PL',{month:'long',year:'numeric'}).toUpperCase()}
 function playerCompetitionDateInfo(c){
@@ -424,15 +425,15 @@ async function confirmPlayerPresence(id,el,ev){
   }catch(e){msg(e.message,'bad');if(el){el.disabled=false;el.textContent='POTWIERDŹ OBECNOŚĆ'}}
 }
 function filterPlayerCompetitions(arr,filter,applyMonth=true){
-  let out=(arr||[]).filter(c=>filter==='registered'?playerCompetitionMine(c):filter==='completed'?playerCompetitionPast(c):!playerCompetitionPast(c));
+  let out=(arr||[]).filter(c=>filter==='registered'?playerCompetitionRegisteredUpcoming(c):filter==='completed'?playerCompetitionPast(c):!playerCompetitionPast(c));
   if(applyMonth&&PLAYER_COMP_MONTH!=='all')out=out.filter(c=>playerCompetitionMonthKey(c)===PLAYER_COMP_MONTH);
-  out.sort((a,b)=>{const ak=playerCompetitionDateKey(a)||'9999-99-99',bk=playerCompetitionDateKey(b)||'9999-99-99';if(filter==='completed')return bk.localeCompare(ak)||Number(b.id)-Number(a.id);if(filter==='registered'){const ap=playerCompetitionPast(a),bp=playerCompetitionPast(b);if(ap!==bp)return ap?1:-1;return ap?(bk.localeCompare(ak)||Number(b.id)-Number(a.id)):(ak.localeCompare(bk)||Number(a.id)-Number(b.id))}return ak.localeCompare(bk)||Number(a.id)-Number(b.id)});
+  out.sort((a,b)=>{const ak=playerCompetitionDateKey(a)||'9999-99-99',bk=playerCompetitionDateKey(b)||'9999-99-99';if(filter==='completed')return bk.localeCompare(ak)||Number(b.id)-Number(a.id);return ak.localeCompare(bk)||Number(a.id)-Number(b.id)});
   return out;
 }
 function setPlayerCompetitionFilter(filter){if(!['upcoming','registered','completed'].includes(filter))return;PLAYER_COMP_FILTER=filter;PLAYER_COMP_MONTH='all';renderPlayerCompetitionList();requestAnimationFrame(()=>{const el=[...document.querySelectorAll('.playerFilteredResults')].find(x=>x.getClientRects().length);el?.scrollIntoView({behavior:'smooth',block:'start'})})}
 function setPlayerCompetitionMonth(value){PLAYER_COMP_MONTH=String(value||'all');renderPlayerCompetitionList()}
 function renderPlayerCompetitionFilters(arr){
-  const upcoming=(arr||[]).filter(c=>!playerCompetitionPast(c)).length,registered=(arr||[]).filter(playerCompetitionMine).length,completed=(arr||[]).filter(playerCompetitionPast).length;
+  const upcoming=(arr||[]).filter(c=>!playerCompetitionPast(c)).length,registered=(arr||[]).filter(playerCompetitionRegisteredUpcoming).length,completed=(arr||[]).filter(playerCompetitionPast).length;
   const base=filterPlayerCompetitions(arr,PLAYER_COMP_FILTER,false),months=[...new Set(base.map(playerCompetitionMonthKey))];
   months.sort((a,b)=>PLAYER_COMP_FILTER==='completed'?b.localeCompare(a):a.localeCompare(b));
   if(PLAYER_COMP_MONTH!=='all'&&!months.includes(PLAYER_COMP_MONTH))PLAYER_COMP_MONTH='all';
@@ -448,7 +449,7 @@ function renderPlayerCompetitionCompactActions(c){
   const leave=leavePending?'<span class="player181Confirmed player181LeaveSent">PROŚBA WYSŁANA</span>':'<button type="button" class="player181Small player181Leave" onclick="leaveComp('+id+')">ZREZYGNUJ</button>';
   const secondary=pending?'<button type="button" class="player181Small player181Open" onclick="openCompetition('+id+')">LOSOWANIE / WYNIKI</button>'+leave:
     canJoin?'<button type="button" class="player181Small player181Open" onclick="openCompetition('+id+')">LOSOWANIE / WYNIKI</button>':
-    mine?(confirmed?'<span class="player181Confirmed">✓ OBECNOŚĆ POTWIERDZONA</span>':'')+leave:'';
+    mine?(confirmed?'<span class="player181Confirmed">✓ OBECNOŚĆ POTWIERDZONA</span>':'')+(playerCompetitionPast(c)?'':leave):'';
   const attention=playerAttentionPrimary(c),news=(!pending&&!canJoin&&attention&&attention.kind!=='PRESENCE_CONFIRM')?'<span class="player181News">★ '+esc(attention.label||'NOWOŚĆ')+'</span>':'';
   return '<div class="player181Actions">'+news+playerPrimaryButton(c)+(secondary?'<div class="player181Secondary">'+secondary+'</div>':'')+'</div>';
 }
