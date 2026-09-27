@@ -1,3 +1,10 @@
+V183 — CZYTELNE KAFLE FILTRÓW ZAWODÓW
+
+- większe napisy i liczniki „Nadchodzące”, „Zapisane”, „Historia”;
+- na węższych telefonach dwa kafle są w pierwszym rzędzie, a „Historia” na całą szerokość w drugim;
+- aktywny filtr ma mocny niebieski kolor i wyraźną krawędź;
+- wybór miesiąca jest większy i czytelniejszy.
+
 V182 — ZAKOŃCZONE ZAWODY TYLKO W HISTORII
 
 - „Zapisane” pokazuje i liczy jedynie nadchodzące zawody, na które zawodnik jest zapisany;
