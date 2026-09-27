@@ -1,3 +1,10 @@
+V188 — PRZYCISK WSTECZ NA TELEFONIE
+
+- Android „Wstecz” cofa najpierw widok w aplikacji: zakładkę, panel zawodów i jego sekcje;
+- zawodnik może wracać między losowaniem, wynikami i listą, a sędzia między turami i listą zawodów;
+- na stronie głównej pierwsze „Wstecz” zostawia aplikację otwartą i wyświetla krótką informację; kolejne może ją zamknąć;
+- odświeżenie aplikacji nadal rozpoczyna od listy zawodów.
+
 V187 — LEPSZY PANEL STARTOWY ADMINA
 
 - „Otwórz panel zawodów” jest dużą główną akcją; „Edytuj” i „Usuń” są poniżej, z mniejszym naciskiem na usuwanie;

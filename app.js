@@ -77,6 +77,105 @@ let PLAYER_DRAW_ROUND = 1;
 let PLAYER_DRAW_VIEW = 'map';
 let PLAYER_RESULTS_TAB = 't1';
 let PLAYER_MOBILE_PANEL = null;
+let APP_NAV_SESSION = '', APP_NAV_READY = false, APP_NAV_RESTORING = false, APP_NAV_RESTORE_ID = 0;
+function appNavView(){
+  if(!ME)return null;
+  if(ME.role==='JUDGE')return {role:'JUDGE',userId:String(ME.id),judgeView:JUDGE_VIEW,
+    competitionId:JUDGE_VIEW==='competitions'?null:Number(CURRENT_DETAIL?.competition?.id||0),judgeRound:JUDGE_ROUND};
+  const tab=['competitions','rules','notifications','players','profile','history']
+    .find(name=>q('tab-'+name)&&!q('tab-'+name).classList.contains('hidden'))||'competitions';
+  const detail=q('competitionDetail');
+  const competitionId=tab==='competitions'&&detail&&!detail.classList.contains('hidden')
+    ?Number(CURRENT_DETAIL?.competition?.id||0):0;
+  return {role:ME.role,userId:String(ME.id),tab,competitionId:competitionId||null,
+    adminZone:competitionId&&ME.role==='ADMIN'?ACTIVE_ADMIN_ZONE:null,
+    playerPanel:competitionId&&ME.role!=='ADMIN'?PLAYER_MOBILE_PANEL:null,
+    drawRound:PLAYER_DRAW_ROUND,resultsTab:PLAYER_RESULTS_TAB,
+    createOpen:ME.role==='ADMIN'&&Boolean(q('adminCreate')?.open),
+    judgesOpen:ME.role==='ADMIN'&&Boolean(q('judgeManagement')?.open)};
+}
+function recordAppNavigation(scrollYOverride){
+  if(!APP_NAV_READY||APP_NAV_RESTORING||!ME)return;
+  const view=appNavView();if(!view)return;
+  const current=history.state?.lowcyNav;
+  if(current?.session===APP_NAV_SESSION&&JSON.stringify(current.view)===JSON.stringify(view))return;
+  try{
+    if(current?.session===APP_NAV_SESSION)history.replaceState({lowcyNav:{...current,scrollY:Math.round(window.scrollY||0)}},'',location.href);
+    const scrollY=Number.isFinite(scrollYOverride)?Math.max(0,Math.round(scrollYOverride)):Math.round(window.scrollY||0);
+    history.pushState({lowcyNav:{session:APP_NAV_SESSION,view,scrollY}},'',location.href);
+  }catch(e){console.warn('Nie zapisano nawigacji aplikacji:',e)}
+}
+function initAppBackNavigation(){
+  if(!ME)return;
+  APP_NAV_READY=false;APP_NAV_SESSION=Date.now().toString(36)+Math.random().toString(36).slice(2);
+  const view=appNavView();if(!view)return;
+  try{
+    history.scrollRestoration='manual';
+    history.replaceState({lowcyNav:{session:APP_NAV_SESSION,view,scrollY:0,base:true}},'',location.href);
+    history.pushState({lowcyNav:{session:APP_NAV_SESSION,view,scrollY:0}},'',location.href);
+    APP_NAV_READY=true;
+  }catch(e){console.warn('Nawigacja Wstecz jest niedostępna:',e)}
+}
+async function restoreAppNavigation(view,scrollY,restoreId){
+  if(!ME||view?.role!==ME.role||String(view.userId)!==String(ME.id))return;
+  if(ME.role==='JUDGE'){
+    const id=Number(view.competitionId||0);
+    if(id&&Number(CURRENT_DETAIL?.competition?.id)!==id){
+      let detail=null;
+      if(navigator.onLine)try{detail=await api('/api/competitions/'+id)}catch(_){}
+      if(!detail)detail=judgeCachedDetail(id);
+      if(restoreId!==APP_NAV_RESTORE_ID)return;
+      if(detail)CURRENT_DETAIL=detail;else{JUDGE_VIEW='competitions';renderJudgeWork();msg('Nie udało się wczytać tych zawodów.','bad');return}
+    }
+    JUDGE_VIEW=id&&['entry','results'].includes(view.judgeView)?view.judgeView:'competitions';
+    JUDGE_ROUND=Number(view.judgeRound)===2?2:1;renderJudgeWork();
+  }else{
+    const tab=['competitions','rules','notifications','players','profile','history'].includes(view.tab)?view.tab:'competitions';
+    showTab(tab);
+    const detail=q('competitionDetail'),id=tab==='competitions'?Number(view.competitionId||0):0;
+    if(!id){detail?.classList.add('hidden');PLAYER_MOBILE_PANEL=null}
+    else{
+      const oldId=Number(CURRENT_DETAIL?.competition?.id||0);
+      if(oldId!==id){
+        const data=await api('/api/competitions/'+id).catch(()=>null);
+        if(restoreId!==APP_NAV_RESTORE_ID)return;
+        if(!data){detail?.classList.add('hidden');msg('Nie udało się wczytać tych zawodów.','bad');return}
+        CURRENT_DETAIL=data;
+      }
+      if(ME.role==='ADMIN')ACTIVE_ADMIN_ZONE=view.adminZone||'roster';
+      else PLAYER_MOBILE_PANEL=view.playerPanel||'draw1';
+      const needsRender=oldId!==id||!detail?.innerHTML||detail.classList.contains('hidden');
+      if(needsRender)renderDetail();
+      detail?.classList.remove('hidden');
+      if(ME.role==='ADMIN'&&!needsRender)showAdminZone(ACTIVE_ADMIN_ZONE);
+      if(ME.role!=='ADMIN'&&!needsRender&&view.playerPanel)showPlayerMobilePanel(view.playerPanel);
+      if(ME.role!=='ADMIN'){
+        if(Number(view.drawRound)===2||Number(view.drawRound)===1)showPlayerDraw(view.drawRound);
+        if(['t1','t2','general','stats'].includes(view.resultsTab))showPlayerResults(view.resultsTab);
+      }
+    }
+    if(ME.role==='ADMIN'){
+      for(const [name,open] of [['adminCreate',Boolean(view.createOpen)],['judgeManagement',Boolean(view.judgesOpen)]]){
+        const panel=q(name),button=q('adminQuickActions')?.querySelector('[aria-controls="'+name+'"]');
+        if(panel)panel.open=open;
+        if(button)button.setAttribute('aria-expanded',String(open));
+      }
+    }
+  }
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    if(restoreId!==APP_NAV_RESTORE_ID)return;
+    window.scrollTo(0,Math.max(0,Number(scrollY)||0));syncPlayerStickyBars();syncFixedAdminNav();
+  }));
+}
+window.addEventListener('popstate',event=>{
+  const entry=event.state?.lowcyNav;
+  if(!APP_NAV_READY||!ME||entry?.session!==APP_NAV_SESSION)return;
+  const restoreId=++APP_NAV_RESTORE_ID;
+  APP_NAV_RESTORING=true;
+  restoreAppNavigation(entry.view,entry.scrollY,restoreId)
+    .catch(e=>{console.error('Błąd powrotu w aplikacji:',e);msg('Nie udało się wrócić do poprzedniego widoku.','bad')})
+    .finally(()=>{if(restoreId===APP_NAV_RESTORE_ID){APP_NAV_RESTORING=false;if(entry.base)msg('Jesteś na stronie głównej. Ponowne Wstecz zamknie aplikację.')}});
+});
 const UI_STATE_KEY='lowcy_player_ui_state_v2';
 try{if(STORE.get('lowcy_ui_fix_version')!=='78'){STORE.del(UI_STATE_KEY);STORE.set('lowcy_ui_fix_version','78')}}catch(_){}
 function readPersistentUiState(){try{return JSON.parse(STORE.get(UI_STATE_KEY)||'{}')||{}}catch(_){return {}}}
@@ -121,6 +220,13 @@ function closePlayerCompetition(ev){
   CURRENT_DETAIL=null;PLAYER_MOBILE_PANEL=null;PLAYER_RESULTS_TAB='t1';PLAYER_DRAW_ROUND=1;PLAYER_DRAW_VIEW='map';
   try{STORE.del(UI_STATE_KEY)}catch(_){ }
   requestAnimationFrame(()=>{syncPlayerStickyBars();window.scrollTo({top:0,behavior:'smooth'})});
+  recordAppNavigation(0);
+}
+function closeCompetitionDetail(){
+  if(ME?.role!=='ADMIN'){closePlayerCompetition();return}
+  q('competitionDetail')?.classList.add('hidden');
+  recordAppNavigation(0);
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 window.addEventListener('pagehide',savePersistentUiState,{capture:true});
 window.addEventListener('beforeunload',savePersistentUiState,{capture:true});
@@ -247,7 +353,7 @@ async function openCompetitionAttention(id,panel,kind,ev){
   if(panel)showPlayerMobilePanel(panel);
   await markPlayerAttentionRead(Number(id),kind,true);
 }
-function setLoggedOut(showMsg){q('accountSwitch')?.remove();q('accountLinkDialog')?.remove();document.body.classList.remove('judgeTheme');q('judgeShell')?.remove();stopAchievements();
+function setLoggedOut(showMsg){APP_NAV_READY=false;q('accountSwitch')?.remove();q('accountLinkDialog')?.remove();document.body.classList.remove('judgeTheme');q('judgeShell')?.remove();stopAchievements();
   try{document.documentElement.classList.remove('hasSavedSession');document.body.classList.add('authMode')}catch(_){}
   stopPlayerResultPolling();
   q('playerGlobalBottomNav')?.remove();
@@ -261,6 +367,7 @@ function setLoggedOut(showMsg){q('accountSwitch')?.remove();q('accountLinkDialog
   if(showMsg)msg('Sesja wyczyszczona. Zaloguj się ponownie.','ok');
 }
 async function boot(){
+  APP_NAV_READY=false;
   const logout=q('logoutBtn'), auth=q('auth'), app=q('app');
   if(logout)logout.classList.add('hidden');
   if(!TOKEN){if(auth)auth.classList.remove('hidden');if(app)app.classList.add('hidden');setLoggedOut(false);return}
@@ -272,8 +379,10 @@ async function boot(){
   if(logout)logout.classList.remove('hidden');
   mountAccountSwitch();
   document.body.classList.toggle('judgeTheme',ME.role==='JUDGE');
-  if(ME.role==='JUDGE'){mountJudgeShell();hideBootGuard();await judgeLoadCompetitions();if(navigator.onLine)flushJudgeQueue(true).catch(()=>{});return}
+  if(ME.role==='JUDGE'){mountJudgeShell();initAppBackNavigation();hideBootGuard();await judgeLoadCompetitions();if(navigator.onLine)flushJudgeQueue(true).catch(()=>{});return}
   q('judgeShell')?.remove();
+  const detail=q('competitionDetail');if(detail){detail.classList.add('hidden');detail.innerHTML=''}
+  CURRENT_DETAIL=null;PLAYER_MOBILE_PANEL=null;ACTIVE_ADMIN_ZONE='roster';
   if(ME.role==='ADMIN')await loadJudgeManagement();else {q('judgeManagement')?.remove();q('adminQuickActions')?.remove()}
   q('who').textContent=ME.first_name+' '+ME.last_name+' — Koło PZW '+(ME.pzw_club||'');q('role').textContent=ME.role==='ADMIN'?'Administrator':'Zawodnik';
   const admin=ME.role==='ADMIN';document.body.classList.remove('authMode');document.body.classList.toggle('playerTheme',!admin);q('btn-players').classList.toggle('hidden',!admin);q('btn-profile')?.classList.toggle('hidden',admin);q('btn-history')?.classList.toggle('hidden',admin);q('btn-rules')?.classList.remove('hidden');q('adminCreate').classList.toggle('hidden',!admin);if(q('adminCreate'))q('adminCreate').open=false;const notifTop=q('btn-notifications');if(notifTop)notifTop.textContent=admin?'Powiadomienia':'NOWOŚCI';const rulesTop=q('btn-rules');if(rulesTop)rulesTop.innerHTML=admin?'Regulamin ogólny':'Regulamin<br>ogólny';const historyTop=q('btn-history');if(historyTop&&!admin)historyTop.innerHTML='Historia<br>startów';
@@ -281,6 +390,7 @@ async function boot(){
   renderPushStatus();
   showTab('competitions');
   if(!admin){const detail=q('competitionDetail');if(detail)detail.classList.add('hidden')}
+  initAppBackNavigation();
   hideBootGuard();
   await Promise.allSettled([loadCompetitions(),loadNotifications(),admin?loadPlayers():Promise.resolve()]);
   startAchievements();
@@ -358,7 +468,7 @@ async function loadPlayerHistory(){
   const box=q('playerHistoryContent');if(box)box.innerHTML='<div class="card"><p class="muted">Wczytuję historię startów…</p></div>';
   try{const d=await api('/api/me/history');renderPlayerHistory(d.history||[])}catch(e){if(box)box.innerHTML='<div class="card bad danger-line">Nie udało się wczytać historii startów.</div>';msg(e.message,'bad')}
 }
-function showTab(n){syncPlayerStickyBars();['competitions','rules','notifications','players','profile','history'].forEach(x=>{q('tab-'+x)?.classList.toggle('hidden',x!==n);q('btn-'+x)?.classList.toggle('active',x===n)});if(n==='rules')renderPlayerRules();if(n==='notifications')loadNotifications();if(n==='players')loadPlayers();if(n==='profile')renderMyProfile();if(n==='history')loadPlayerHistory()}
+function showTab(n){syncPlayerStickyBars();['competitions','rules','notifications','players','profile','history'].forEach(x=>{q('tab-'+x)?.classList.toggle('hidden',x!==n);q('btn-'+x)?.classList.toggle('active',x===n)});if(n==='rules')renderPlayerRules();if(n==='notifications')loadNotifications();if(n==='players')loadPlayers();if(n==='profile')renderMyProfile();if(n==='history')loadPlayerHistory();recordAppNavigation()}
 function competitionActionHtml(c,admin,mine,closed,cardMode=false){
   if(admin)return '<div class="inlineBtns adminCompetitionActions '+(cardMode?'competitionCardActions adminCompetitionCardActions':'')+'"><button type="button" class="adminOpenCompetitionBtn" onclick="openCompetition('+c.id+')">Otwórz panel zawodów <span aria-hidden="true">→</span></button><button type="button" class="secondary adminEditCompetitionBtn" onclick="openCompetitionEdit('+c.id+')">Edytuj</button><button type="button" class="warn adminDeleteCompetitionBtn" onclick="deleteCompetition('+c.id+')">Usuń</button></div>';
   const leavePending=String(c.my_leave_request_status||'').toUpperCase()==='PENDING';
@@ -509,7 +619,7 @@ async function loadCompetitions(){
   if(q('tab-rules')&&!q('tab-rules').classList.contains('hidden'))renderPlayerRules();
 }
 async function createCompetition(ev){if(CREATING_COMPETITION)return;CREATING_COMPETITION=true;const btn=ev?.target;if(btn){btn.disabled=true;btn.textContent='Tworzę...'}try{const limit=q('cLimit').value.trim();if(!limit)throw new Error('Podaj liczbę osób');await api('/api/competitions',{method:'POST',body:JSON.stringify({title:q('cTitle')?.value||'Method Feeder',fishery:q('cFishery').value,competitionDate:q('cDate').value,meetingTime:q('cMeetingTime')?.value||'06:00',limitPlaces:limit,notes:q('cNotes').value,regulations:q('cRegulations')?.value||'',status:q('cStatus')?.value||'OPEN'})});['cFishery','cDate','cLimit','cNotes','cRegulations'].forEach(id=>{const el=q(id);if(el)el.value=''});if(q('cMeetingTime'))q('cMeetingTime').value='06:00';if(q('cTitle'))q('cTitle').value='Method Feeder';await loadCompetitions();await loadNotifications();q('adminCreate').open=false;msg('Utworzono zawody')}catch(e){msg(e.message,'bad')}finally{CREATING_COMPETITION=false;if(btn){btn.disabled=false;btn.textContent='Utwórz zawody'}}}
-async function deleteCompetition(id){try{if(!confirm('Usunąć te zawody?'))return;await api('/api/competitions/'+id,{method:'DELETE'});q('competitionDetail').classList.add('hidden');msg('Usunięto zawody');await loadCompetitions();await loadNotifications()}catch(e){msg(e.message,'bad')}}
+async function deleteCompetition(id){try{if(!confirm('Usunąć te zawody?'))return;await api('/api/competitions/'+id,{method:'DELETE'});q('competitionDetail').classList.add('hidden');recordAppNavigation(0);msg('Usunięto zawody');await loadCompetitions();await loadNotifications()}catch(e){msg(e.message,'bad')}}
 async function joinComp(id){try{await api('/api/competitions/'+id+'/join',{method:'POST',body:'{}'});msg('Zapisano na zawody');await loadCompetitions();if(CURRENT_DETAIL?.competition?.id==id)await refreshCompetitionKeepScroll(id)}catch(e){msg(e.message,'bad')}}
 async function leaveComp(id){try{if(!confirm('Wysłać do administratora prośbę o wypisanie z tych zawodów?'))return;await api('/api/competitions/'+id+'/leave',{method:'POST',body:'{}'});msg('Prośba o wypisanie została wysłana do administratora');await loadCompetitions();await loadNotifications();if(CURRENT_DETAIL?.competition?.id==id)await refreshCompetitionKeepScroll(id)}catch(e){msg(e.message,'bad')}}
 async function openCompetition(id,preserve=false){
@@ -521,6 +631,7 @@ async function openCompetition(id,preserve=false){
     renderDetail();
     const detail=q('competitionDetail');
     detail.classList.remove('hidden');
+    recordAppNavigation();
     if(!preserve){
       if(ME?.role==='ADMIN')detail.scrollIntoView({behavior:'smooth',block:'start'});
       else focusPlayerNavOnOpen();
@@ -540,7 +651,7 @@ function resultItems(round,userId,kind){return (CURRENT_DETAIL.resultItems||[]).
 function drawMap(round){const m={};(CURRENT_DETAIL.draws||[]).forEach(r=>{if(Number(r.round)===round)m[Number(r.user_id)]=r});return m}
 function renderDetail(){
   if(ME?.role==='JUDGE'){renderJudgeWork();return}
-  const d=CURRENT_DETAIL;const c=d.competition;const admin=ME.role==='ADMIN';const confirmed=(d.activeEntries||[]).filter(e=>e.confirmed===true||String(e.confirmed).toLowerCase()==='true').length;let html='<div class="card competitionDetailHead '+(admin?'adminDetailHead':'playerDetailHead')+'"><div class="inlineBtns"><button type="button" class="secondary" onclick="q(\'competitionDetail\').classList.add(\'hidden\')">Zamknij panel zawodów</button><button type="button" onclick="openCompetition('+c.id+')">Odśwież</button></div><h2>'+esc(c.title)+'</h2><div class="competitionDetailMeta"><span>📅 '+fmtDate(c.competition_date)+'</span><span>📍 '+esc(c.fishery||'—')+'</span><span class="meetingStrong">⏰ Zbiórka '+esc(meetingTimeText(c))+'</span>'+(admin?'<span>👥 '+Number(d.rosterCounts?.active_count||0)+' + R'+Number(d.rosterCounts?.reserve_count||0)+'</span><span>✓ '+confirmed+' potwierdzonych</span>':'')+'</div></div>';if(!admin&&(String(c.notes||'').trim()||String(c.regulations||'').trim()))html+='<div class="playerEventInfo card">'+(String(c.notes||'').trim()?'<div class="playerEventNote"><b>INFORMACJE</b><span>'+esc(c.notes).replace(/\n/g,'<br>')+'</span></div>':'')+(String(c.regulations||'').trim()?'<details class="playerEventRules" open><summary>PROGRAM / REGULAMIN ZAWODÓW</summary><div>'+esc(c.regulations).replace(/\n/g,'<br>')+'</div></details>':'')+'</div>';
+  const d=CURRENT_DETAIL;const c=d.competition;const admin=ME.role==='ADMIN';const confirmed=(d.activeEntries||[]).filter(e=>e.confirmed===true||String(e.confirmed).toLowerCase()==='true').length;let html='<div class="card competitionDetailHead '+(admin?'adminDetailHead':'playerDetailHead')+'"><div class="inlineBtns"><button type="button" class="secondary" onclick="closeCompetitionDetail()">Zamknij panel zawodów</button><button type="button" onclick="openCompetition('+c.id+')">Odśwież</button></div><h2>'+esc(c.title)+'</h2><div class="competitionDetailMeta"><span>📅 '+fmtDate(c.competition_date)+'</span><span>📍 '+esc(c.fishery||'—')+'</span><span class="meetingStrong">⏰ Zbiórka '+esc(meetingTimeText(c))+'</span>'+(admin?'<span>👥 '+Number(d.rosterCounts?.active_count||0)+' + R'+Number(d.rosterCounts?.reserve_count||0)+'</span><span>✓ '+confirmed+' potwierdzonych</span>':'')+'</div></div>';if(!admin&&(String(c.notes||'').trim()||String(c.regulations||'').trim()))html+='<div class="playerEventInfo card">'+(String(c.notes||'').trim()?'<div class="playerEventNote"><b>INFORMACJE</b><span>'+esc(c.notes).replace(/\n/g,'<br>')+'</span></div>':'')+(String(c.regulations||'').trim()?'<details class="playerEventRules" open><summary>PROGRAM / REGULAMIN ZAWODÓW</summary><div>'+esc(c.regulations).replace(/\n/g,'<br>')+'</div></details>':'')+'</div>';
   SECTOR_MANUAL_DRAFT=undefined;
   if(admin) html+=renderAdminDetail(d); else html+=renderPlayerDetail(d);
   q('competitionDetail').innerHTML=html;
@@ -581,6 +692,7 @@ function showAdminZone(zone,ev){
   ['roster','draw','entry','results','pdf','fotofb'].forEach(name=>{q('adminZone-'+name)?.classList.toggle('hidden',name!==zone);q('adminZoneBtn-'+name)?.classList.toggle('active',name===zone)});
   if(zone==='draw'&&CURRENT_DETAIL)setTimeout(()=>setupStructureAuto(CURRENT_DETAIL.competition.id),0);
   const slot=document.querySelector('.workZoneTabsSlot');if(ev&&slot)slot.scrollIntoView({behavior:'smooth',block:'start'});setTimeout(syncFixedAdminNav,0);
+  recordAppNavigation();
 }
 function renderFinalClubToggle(){return '<label class="checkline finalClubToggle"><input type="checkbox" '+(SHOW_FINAL_CLUB?'checked':'')+' onchange="toggleFinalClub(this)"> Pokaż koło — tylko w klasyfikacji końcowej</label>'}
 function toggleFinalClub(el){SHOW_FINAL_CLUB=!!(el&&typeof el==='object'?el.checked:el);document.querySelectorAll('.finalClub').forEach(x=>x.classList.toggle('hidden',!SHOW_FINAL_CLUB));document.querySelectorAll('.finalClubToggle input').forEach(x=>{x.checked=SHOW_FINAL_CLUB})}
@@ -868,6 +980,7 @@ function showPlayerMobilePanel(panel,ev){
   if(desktopBox&&CURRENT_DETAIL)desktopBox.innerHTML=renderPlayerDesktopPanelContent(CURRENT_DETAIL,panel);
   document.querySelectorAll('.playerUnifiedNav button,.playerDesktopUnifiedNav button').forEach(btn=>btn.classList.toggle('active',btn.getAttribute('onclick')?.includes("'"+panel+"'")));
   restorePlayerViewport(keepY);
+  recordAppNavigation();
 }
 function fitPlayerMobileFullMaps(){
   document.querySelectorAll('.playerMobileFullMapViewport').forEach(viewport=>{
@@ -904,9 +1017,10 @@ function showPlayerResults(tab,ev){
   q('playerResults-'+tab)?.classList.remove('hidden');
   document.querySelectorAll('.playerResultsNav button').forEach(b=>b.classList.toggle('active',b.getAttribute('onclick')?.includes("'"+tab+"'")));
   setTimeout(syncPlayerStickyBars,0);
+  recordAppNavigation();
 }
 
-function showPlayerDraw(round,ev){if(ev){ev.preventDefault();ev.stopPropagation()}PLAYER_DRAW_ROUND=Number(round)===2?2:1;const box=q('playerDrawView');if(box&&CURRENT_DETAIL)box.innerHTML=renderRoundDrawView(CURRENT_DETAIL,PLAYER_DRAW_ROUND,true);document.querySelectorAll('.playerDrawTabs button').forEach((b,i)=>b.classList.toggle('active',i===PLAYER_DRAW_ROUND-1));setTimeout(syncPlayerStickyBars,0)}
+function showPlayerDraw(round,ev){if(ev){ev.preventDefault();ev.stopPropagation()}PLAYER_DRAW_ROUND=Number(round)===2?2:1;const box=q('playerDrawView');if(box&&CURRENT_DETAIL)box.innerHTML=renderRoundDrawView(CURRENT_DETAIL,PLAYER_DRAW_ROUND,true);document.querySelectorAll('.playerDrawTabs button').forEach((b,i)=>b.classList.toggle('active',i===PLAYER_DRAW_ROUND-1));setTimeout(syncPlayerStickyBars,0);recordAppNavigation()}
 async function saveCompetition(id,quiet=false,ev){const btn=ev?.target;try{if(btn){btn.disabled=true}const sectorLayout=sectorLayoutPayloadForSave();await api('/api/competitions/'+id,{method:'PATCH',body:JSON.stringify({title:q('dTitle')?.value||'',fishery:q('dFishery')?.value||'',competitionDate:q('dDate')?.value||'',meetingTime:q('dMeetingTime')?.value||'',limitPlaces:q('dLimit')?.value||'',status:q('dStatus')?.value||'OPEN',mapMode:q('dMapMode')?.value||'TWO_OPPOSITE',bank1Count:q('dBank1')?.value||0,bank2Count:q('dBank2')?.value||0,sectorsCount:q('dSectors')?.value||1,sectorLayout,autoBanks:Boolean(q('dAutoBanks')?.checked),notes:q('dNotes')?.value||'',regulations:q('dRegulations')?.value||''})});if(!quiet)msg('Zapisano strukturę, sektory i zakresy stanowisk');await loadCompetitions();if(!quiet)await refreshCompetitionKeepScroll(id)}catch(e){msg(e.message,'bad')}finally{if(btn){btn.disabled=false}}}
 function renderRosterTools(d){const c=d.competition;return '<div class="card"><h2>Wgranie listy zawodników</h2><p class="small muted">Import i ręczne dopisanie uzupełniają najpierw listę główną do limitu, a nadmiar idzie na rezerwę. Admin może później przenieść rezerwowego na listę główną nawet powyżej limitu.</p><label>Link zawody.pro</label><input id="zproUrl" placeholder="https://www.zawody.pro/competitions/79/details"><button type="button" class="blue" onclick="importZawodyPro('+c.id+',event)">Importuj listę z zawody.pro</button><hr style="border:0;border-top:1px solid var(--line);margin:14px 0"><h3>Ręcznie dopisz zawodnika</h3><div class="grid"><div><label>Imię i nazwisko</label><input id="manualFullName" placeholder="Jan Kowalski"></div><div><label>Telefon — opcjonalnie</label><input id="manualPhone" placeholder="np. 501222333"></div><div><label>Nr Koła PZW — opcjonalnie</label><input id="manualClub"></div><div><label>Hasło — opcjonalnie, jeśli ma się logować</label><input id="manualPassword" type="password"></div><div><label>Gdzie dopisać</label><select id="manualStatus"><option value="AUTO">Auto: główna do limitu, potem rezerwa</option><option value="ACTIVE">Od razu lista główna</option><option value="RESERVE">Od razu rezerwa</option></select></div></div><button type="button" onclick="addManualPlayer('+c.id+',event)">Dopisz zawodnika</button></div>'}
 function importZawodyPro(id,ev){const btn=ev?.target;if(btn){btn.disabled=true;btn.textContent='Importuję...'}try{const url=q('zproUrl').value.trim();api('/api/admin/competitions/'+id+'/import-zawody-pro',{method:'POST',body:JSON.stringify({url})}).then(async d=>{const r=d.result||{};msg('Import: główna '+(r.main||0)+', rezerwa '+(r.reserve||0)+', razem '+(r.imported||0));await refreshCompetitionKeepScroll(id);await loadCompetitions();await loadPlayers();await loadNotifications()}).catch(e=>msg(e.message,'bad')).finally(()=>{if(btn){btn.disabled=false;btn.textContent='Importuj listę z zawody.pro'}})}catch(e){msg(e.message,'bad');if(btn){btn.disabled=false;btn.textContent='Importuj listę z zawody.pro'}}}
@@ -2631,18 +2745,18 @@ async function judgeOpenCompetition(id){
   if(!navigator.onLine){CURRENT_DETAIL=judgeCachedDetail(id);if(!CURRENT_DETAIL){msg('Brak zapisanych danych tych zawodów. Otwórz je raz z internetem przed startem.','bad');return false}}
   else try{CURRENT_DETAIL=await api('/api/competitions/'+id);judgeCacheDetail(CURRENT_DETAIL)}
   catch(e){CURRENT_DETAIL=judgeCachedDetail(id);if(!CURRENT_DETAIL){msg('Nie udało się pobrać ani znaleźć zapisanych danych tych zawodów.','bad');return false}}
-  JUDGE_VIEW='entry';JUDGE_ROUND=1;renderJudgeWork();scrollAppTop();if(navigator.onLine)flushJudgeQueue(true).catch(()=>{});return true;
+  JUDGE_VIEW='entry';JUDGE_ROUND=1;renderJudgeWork();recordAppNavigation();scrollAppTop();if(navigator.onLine)flushJudgeQueue(true).catch(()=>{});return true;
 }
 async function judgeNavigate(view){
   if(view!=='competitions'&&!CURRENT_DETAIL)return;
-  if(view==='competitions'){JUDGE_VIEW=view;await judgeLoadCompetitions();scrollAppTop();return}
+  if(view==='competitions'){JUDGE_VIEW=view;await judgeLoadCompetitions();recordAppNavigation();scrollAppTop();return}
   const id=Number(CURRENT_DETAIL.competition.id);
   if(!navigator.onLine){const cached=judgeCachedDetail(id);if(cached)CURRENT_DETAIL=cached;else{msg('Brak zapisanych danych zawodów.','bad');return}}
   else try{CURRENT_DETAIL=await api('/api/competitions/'+id);judgeCacheDetail(CURRENT_DETAIL)}
   catch(e){const cached=judgeCachedDetail(id);if(cached)CURRENT_DETAIL=cached;else{msg('Brak połączenia i brak zapisanych danych zawodów.','bad');return}}
-  JUDGE_VIEW=view;renderJudgeWork();scrollAppTop();
+  JUDGE_VIEW=view;renderJudgeWork();recordAppNavigation();scrollAppTop();
 }
-function judgeChooseRound(round){JUDGE_ROUND=Number(round)===2?2:1;renderJudgeWork()}
+function judgeChooseRound(round){JUDGE_ROUND=Number(round)===2?2:1;renderJudgeWork();recordAppNavigation()}
 function renderJudgeWork(){
   const box=q('judgeWork');if(!box)return;
   q('judge-entry').disabled=!CURRENT_DETAIL;q('judge-results').disabled=!CURRENT_DETAIL;
@@ -2676,7 +2790,7 @@ async function saveJudgeAccount(ev,id){
   catch(e){msg(e.message,'bad');button.disabled=false}
 }
 
-function toggleAdminQuickPanel(id,button){const panel=q(id);if(!panel)return;panel.open=!panel.open;button.setAttribute('aria-expanded',String(panel.open))}
+function toggleAdminQuickPanel(id,button){const panel=q(id);if(!panel)return;panel.open=!panel.open;button.setAttribute('aria-expanded',String(panel.open));recordAppNavigation()}
 
 // Account switching remembers independently authenticated sessions on this device.
 function savedAccountSessions(){try{return JSON.parse(STORE.get('lowcy_account_sessions')||'{}')}catch(_){return {}}}
