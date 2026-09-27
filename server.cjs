@@ -1932,25 +1932,6 @@ body #app button.rosterLeaveRequest:disabled{opacity:.65;cursor:wait}
 
 
 
-/* V194 — pewny kontekst rundy: stały kolor po prawej stronie całej sekcji T1/T2. */
-#adminZone-entry .resultRoundPanel{
-  position:relative;
-  border-right:10px solid transparent;
-  padding-right:8px;
-}
-#adminZone-entry .resultRoundPanel1{border-right-color:#124e85}
-#adminZone-entry .resultRoundPanel2{border-right-color:#7a3b12}
-@media(max-width:760px){
-  #adminZone-entry .resultRoundTitle{
-    position:static!important;
-    top:auto!important;
-    z-index:auto!important;
-  }
-  #adminZone-entry .resultRoundPanel{
-    border-right-width:10px;
-    padding-right:7px;
-  }
-}
 </head><body><div class="card"><h2>Reset pamięci aplikacji</h2><p>Usuwam cache i starego service workera. Przekierowanie jest natychmiastowe, bez czekania na zawieszone obietnice przeglądarki.</p><button onclick="go()">Wyczyść teraz</button></div><script>function go(){try{localStorage.removeItem('carp_token');localStorage.removeItem('lowcy_app_version_seen');sessionStorage.clear();if('serviceWorker'in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister()})}).catch(function(){})}if('caches'in window){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k)})}).catch(function(){})}}catch(e){}setTimeout(function(){location.replace('/?hard=36&t='+Date.now())},50)}go();</script></body></html>`, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate'});
 
   if (path === '/carp-real-v116.png') return sendBinary(res,200,CARP_REAL,'image/png','public, max-age=31536000, immutable');
@@ -7269,6 +7250,26 @@ body:not(.playerTheme):not(.authMode) #app #competitionsList .adminCompState.end
 }
 @media(min-width:761px){
   #judgeShell .judgeRoundTabs{position:sticky;top:74px;z-index:4990;background:#0c2331;padding-top:6px}
+}
+
+/* V194 — pewny kontekst rundy: stały kolor po prawej stronie całej sekcji T1/T2. */
+#adminZone-entry .resultRoundPanel{
+  position:relative;
+  border-right:10px solid transparent;
+  padding-right:8px;
+}
+#adminZone-entry .resultRoundPanel1{border-right-color:#124e85}
+#adminZone-entry .resultRoundPanel2{border-right-color:#7a3b12}
+@media(max-width:760px){
+  #adminZone-entry .resultRoundTitle{
+    position:static!important;
+    top:auto!important;
+    z-index:auto!important;
+  }
+  #adminZone-entry .resultRoundPanel{
+    border-right-width:10px;
+    padding-right:7px;
+  }
 }
 </style>
 </head>
