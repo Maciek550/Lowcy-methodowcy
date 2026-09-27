@@ -1,3 +1,10 @@
+V189 — ZWARTA LISTA ZAWODNIKÓW ADMINA
+
+- na telefonie numer, nazwisko, oznaczenia V/A i przycisk połączenia mieszczą się w nagłówku karty;
+- koło i liczba zapisów są w jednym wierszu, a Edytuj i Usuń w dwóch niskich przyciskach;
+- techniczne identyfikatory kont bez numeru (np. MANUAL-...) nie otwierają już przypadkowych połączeń;
+- zachowano wygodne pola dotykowe i dopasowanie do wąskich telefonów.
+
 V188 — PRZYCISK WSTECZ NA TELEFONIE
 
 - Android „Wstecz” cofa najpierw widok w aplikacji: zakładkę, panel zawodów i jego sekcje;
