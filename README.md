@@ -1,3 +1,9 @@
+V186 — TELEFON OBOK NAZWISKA
+
+- na mobilnej liście admina przy nazwisku jest przycisk telefonu bez wypisywania numeru;
+- przycisk zachowuje ten sam podpięty numer i otwiera połączenie, a koło widnieje obok nazwiska;
+- usunięty wiersz telefonu dodatkowo zmniejsza wysokość kart.
+
 V185 — ZWARTA LISTA ZAWODNIKÓW ADMINA
 
 - na telefonie status listy jest w nagłówku sekcji, a w karcie pozostają numer, nazwisko, telefon i koło;

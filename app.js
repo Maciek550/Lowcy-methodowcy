@@ -147,10 +147,10 @@ function phoneTelHref(phone){
   if(!compact)return '';
   return compact.startsWith('+')?('+'+compact.slice(1).replace(/\+/g,'')):compact.replace(/\+/g,'');
 }
-function renderPhoneCall(phone,cls=''){
+function renderPhoneCall(phone,cls='',iconOnly=false){
   const raw=String(phone||'').trim(),href=phoneTelHref(raw);
   if(!href)return '<span class="muted">—</span>';
-  return '<a class="phoneCallBtn '+esc(cls)+'" href="tel:'+esc(href)+'" title="Zadzwoń: '+esc(raw)+'" aria-label="Zadzwoń pod numer '+esc(raw)+'"><span class="phoneCallIcon">☎</span><span>'+esc(raw)+'</span></a>';
+  return '<a class="phoneCallBtn '+esc(cls)+'" href="tel:'+esc(href)+'" title="Zadzwoń: '+esc(raw)+'" aria-label="Zadzwoń pod numer '+esc(raw)+'"><span class="phoneCallIcon" aria-hidden="true">☎</span>'+(iconOnly?'':'<span>'+esc(raw)+'</span>')+'</a>';
 }
 function msg(t,type='ok'){const el=q('msg');if(!el)return;el.innerHTML='<div class="card '+(type==='bad'?'bad danger-line':'ok success-line')+'">'+esc(t)+'</div>';setTimeout(()=>{const x=q('msg');if(x)x.innerHTML=''},3500)}
 async function api(path, opts={}){const fetchOpts={...opts},timeoutMs=Math.max(800,Number(fetchOpts.timeoutMs||30000));delete fetchOpts.timeoutMs;const ctrl=typeof AbortController!=='undefined'?new AbortController():null;const to=ctrl?setTimeout(()=>ctrl.abort(),timeoutMs):null;try{const res=await fetch(path,Object.assign({cache:'no-store',signal:ctrl?ctrl.signal:undefined,headers:{'Content-Type':'application/json',...(TOKEN?{Authorization:'Bearer '+TOKEN}:{})}},fetchOpts));const data=await res.json().catch(()=>({ok:false,error:'Błąd odpowiedzi'}));if(!res.ok||data.ok===false){const error=new Error(data.error||'Błąd');error.status=res.status;throw error}return data}catch(e){if(e&&e.name==='AbortError'){const error=new Error('Serwer jeszcze nie odpowiada. Spróbuj ponownie.');error.timeout=true;throw error}throw e}finally{if(to)clearTimeout(to)}}
@@ -960,9 +960,8 @@ function rosterTable(title,rows,compId,kind){
     +rows.map((e,idx)=>'<tr><td class="center"><b>'+(idx+1)+'</b></td><td><div class="rosterNameEdit"><b>'+esc(e.first_name+' '+e.last_name)+'</b>'+editBtn(e)+'</div></td><td class="nowrap">'+(callEnabled?renderPhoneCall(e.phone):esc(e.phone||'—'))+'</td><td>'+esc(e.pzw_club||'')+'</td><td>'+statusLabel(e.status)+'</td><td class="center">'+(confirmBtn(e)||'—')+'</td><td>'+makeButtons(e)+'</td></tr>').join('')
     +'</tbody></table></div>';
   const mobile='<div class="adminMobileOnly mobileRosterCompact">'
-    +rows.map((e,idx)=>{const club=e.pzw_club?('K'+esc(e.pzw_club)):'';return '<div class="mobileRosterCompactRow">'
-        +'<div class="mobileRosterCompactHead"><span class="mobileRosterCompactLp">'+(idx+1)+'</span><b>'+esc(e.first_name+' '+e.last_name)+'</b>'+editBtn(e)+'</div>'
-        +'<div class="mobileRosterCompactMeta"><span>'+(callEnabled?renderPhoneCall(e.phone,'mobilePhoneCallBtn'):esc(e.phone||'—'))+'</span>'+(club?'<span>'+club+'</span>':'')+'</div>'
+    +rows.map((e,idx)=>{const club=e.pzw_club?('K'+esc(e.pzw_club)):'',hasCall=Boolean(phoneTelHref(e.phone));return '<div class="mobileRosterCompactRow">'
+        +'<div class="mobileRosterCompactHead '+(hasCall?'hasCall':'')+'"><span class="mobileRosterCompactLp">'+(idx+1)+'</span><div class="mobileRosterCompactIdentity"><b>'+esc(e.first_name+' '+e.last_name)+'</b>'+(club?'<small>'+club+'</small>':'')+'</div>'+(hasCall?renderPhoneCall(e.phone,'mobileRosterCallIcon',true):'')+editBtn(e)+'</div>'
         +'<div class="mobileRosterCompactActions '+(kind==='ACTIVE'?'threeActions':'twoActions')+'">'+(confirmBtn(e,true)||'')+makeButtons(e)+'</div>'
         +'</div>';}).join('')
     +'</div>';
