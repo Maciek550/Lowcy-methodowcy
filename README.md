@@ -1,3 +1,9 @@
+V190 — LICZNIK PRÓŚB TYLKO GDY SĄ OCZEKUJĄCE
+
+- czerwona liczba przy „Prośby o wypisanie” pojawia się tylko, gdy admin ma co najmniej jedną oczekującą prośbę;
+- po rozpatrzeniu ostatniej prośby oznaczenie znika; przycisk zakładki i komunikat o braku próśb pozostają czytelne;
+- licznik przy górnej zakładce „Powiadomienia” nadal pojawia się, gdy trzeba zareagować.
+
 V189 — ZWARTA LISTA ZAWODNIKÓW ADMINA
 
 - na telefonie numer, nazwisko, oznaczenia V/A i przycisk połączenia mieszczą się w nagłówku karty;
