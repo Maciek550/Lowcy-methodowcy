@@ -1,3 +1,8 @@
+V184 — LICZNIKI FILTRÓW W JEDNYM WIERSZU
+
+- na telefonie liczba przy „Nadchodzące” i „Zapisane” jest obok nazwy, a nie pod nią;
+- napisy i liczniki dopasowują się do szerokości ekranu, „Historia” pozostaje w drugim wierszu.
+
 V183 — CZYTELNE KAFLE FILTRÓW ZAWODÓW
 
 - większe napisy i liczniki „Nadchodzące”, „Zapisane”, „Historia”;
