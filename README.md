@@ -1,3 +1,10 @@
+V191 — TURA ZAWSZE WIDOCZNA I KURSOR NIE UCIEKA
+
+- podczas wpisywania wag na telefonie oznaczenie TURA 1 / TURA 2 pozostaje widoczne przy przewijaniu;
+- u sędziego przyciski Tura 1 / Tura 2 są przypięte pod górnym menu;
+- zapis wagi nie zrywa pracy w następnym polu: zachowane są aktywne pole, wpisana wartość, pozycja kursora i przewinięcie;
+- automatyczna synchronizacja sędziego nie przebudowuje już ekranu co 15 sekund, gdy nie ma nic do wysłania.
+
 V190 — LICZNIK PRÓŚB TYLKO GDY SĄ OCZEKUJĄCE
 
 - czerwona liczba przy „Prośby o wypisanie” pojawia się tylko, gdy admin ma co najmniej jedną oczekującą prośbę;
