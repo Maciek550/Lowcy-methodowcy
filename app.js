@@ -2670,6 +2670,7 @@ function syncFixedAdminNav(){
     if(!slot||!tabs||!detail||detail.classList.contains('hidden')||ME?.role!=='ADMIN'){
       if(tabs){tabs.classList.remove('fixedAdminNav');tabs.style.left='';tabs.style.width='';tabs.style.top=''}
       if(slot)slot.style.height='';
+      document.documentElement.style.setProperty('--admin-zone-nav-bottom','4px');
       return;
     }
     const top=0;
@@ -2687,12 +2688,14 @@ function syncFixedAdminNav(){
       tabs.style.left=Math.round(r.left)+'px';
       tabs.style.width=Math.round(r.width)+'px';
       tabs.style.top=top+'px';
+      document.documentElement.style.setProperty('--admin-zone-nav-bottom',(top+tabH+4)+'px');
     }else{
       tabs.classList.remove('fixedAdminNav');
       tabs.style.left='';
       tabs.style.width='';
       tabs.style.top='';
       slot.style.height='';
+      document.documentElement.style.setProperty('--admin-zone-nav-bottom','4px');
     }
   });
 }
