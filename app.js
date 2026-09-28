@@ -1,4 +1,4 @@
-const CLIENT_VERSION='216';const CLIENT_VERSION_NAME='V216_BEZPIECZNA_OBSLUGA_ZAWODOW';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='217';const CLIENT_VERSION_NAME='V217_PANEL_I_LOGO_HD';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -591,18 +591,28 @@ function renderPlayerNearestThree(arr,mode){
   const items=nearest.map(c=>mode==='desktop'?renderPlayerCompetitionDesktopItem(c):renderPlayerCompetitionMobileItem(c)).join('');
   return '<section class="playerNearestThree '+(mode==='desktop'?'desktop':'mobile')+'"><div class="playerNearestThreeHead"><b>NAJBLIŻSZE 3 ZAWODY</b><span>Według daty</span></div><div class="playerNearestThreeBody">'+items+'</div></section>';
 }
+function renderPlayerMyUpcoming(arr,mode){
+  const mine=(arr||[]).filter(playerCompetitionRegisteredUpcoming).sort((a,b)=>(playerCompetitionDateKey(a)||'').localeCompare(playerCompetitionDateKey(b)||''));
+  if(!mine.length)return '';
+  const item=c=>mode==='desktop'?renderPlayerCompetitionDesktopItem(c):renderPlayerCompetitionMobileItem(c);
+  return '<details class="playerMyUpcoming"><summary><span>MOJE NADCHODZĄCE STARTY</span><b>'+mine.length+'</b></summary><div class="playerMyUpcomingBody">'+mine.map(item).join('')+'</div></details>';
+}
 function renderPlayerCompetitionList(){
   const box=q('competitionsList');if(!box)return;
-  const arr=PLAYER_COMPETITIONS_CACHE||[];
+  const arr=PLAYER_COMPETITIONS_CACHE||[],nearest=getPlayerNearestThree(arr);
+  const nearestIds=new Set(nearest.map(c=>Number(c.id)));
   const filtersHtml=renderPlayerCompetitionFilters(arr);
   const filtered=filterPlayerCompetitions(arr,PLAYER_COMP_FILTER,true);
-  const filteredView=mode=>'<section class="playerFilteredResults">'+renderPlayerCompetitionGroups(filtered,mode)+'</section>';
-  const defaultNearestOnly=PLAYER_COMP_FILTER==='upcoming'&&PLAYER_COMP_MONTH==='all';
-  const desktopContent=defaultNearestOnly?renderPlayerNearestThree(arr,'desktop'):filteredView('desktop');
-  const mobileContent=defaultNearestOnly?renderPlayerNearestThree(arr,'mobile'):filteredView('mobile');
-  box.innerHTML=filtersHtml
-    +'<div class="playerCompetitionDesktopOnly">'+desktopContent+'</div>'
-    +'<div class="playerCompetitionMobileOnly">'+mobileContent+'</div>';
+  const remaining=PLAYER_COMP_FILTER==='upcoming'?filtered.filter(c=>!nearestIds.has(Number(c.id))):filtered;
+  const defaultUpcoming=PLAYER_COMP_FILTER==='upcoming'&&PLAYER_COMP_MONTH==='all';
+  const filteredView=mode=>remaining.length
+    ?(defaultUpcoming?'<details class="playerMoreUpcoming"><summary>POZOSTAŁE NADCHODZĄCE <b>'+remaining.length+'</b></summary>'+renderPlayerCompetitionGroups(remaining,mode)+'</details>':renderPlayerCompetitionGroups(remaining,mode))
+    :'<div class="playerCompEmpty">'+(defaultUpcoming?'Wszystkie najbliższe zawody są wyżej.':'Brak innych zawodów w tym filtrze.')+'</div>';
+  const view=mode=>renderPlayerNearestThree(arr,mode)+
+    (PLAYER_COMP_FILTER==='upcoming'?renderPlayerMyUpcoming(arr,mode):'')+
+    filtersHtml+filteredView(mode);
+  box.innerHTML='<div class="playerCompetitionDesktopOnly">'+view('desktop')+'</div>'+
+    '<div class="playerCompetitionMobileOnly">'+view('mobile')+'</div>';
 }
 async function loadCompetitions(){
   if(ME?.role==='JUDGE')return judgeLoadCompetitions();
@@ -657,6 +667,7 @@ function renderDetail(){
   SECTOR_MANUAL_DRAFT=undefined;
   if(admin) html+=renderAdminDetail(d); else html+=renderPlayerDetail(d);
   q('competitionDetail').innerHTML=html;
+  if(admin)setTimeout(applyAdminRosterFilter,0);
   syncStickyNavOffset();
   setTimeout(syncFixedAdminNav,0);
   setTimeout(syncPlayerStickyBars,0);
@@ -1204,7 +1215,54 @@ function rosterTable(title,rows,compId,kind){
     +'</div>';
   return html+desktop+mobile;
 }
-function renderEntries(d){const c=d.competition;return '<div class="card"><h2>Panel zapisów — lista główna i rezerwa</h2>'+rosterTable('Lista główna — bierze udział w losowaniu',d.activeEntries||[],c.id,'ACTIVE')+rosterTable('Lista rezerwowa',d.reserveEntries||[],c.id,'RESERVE')+rosterTable('Wypisani',d.cancelledEntries||[],c.id,'CANCELLED')+'</div>'}
+/* V217: one search/filter applies to desktop and mobile rosters without rerendering cards. */
+let ADMIN_ROSTER_SEARCH='', ADMIN_ROSTER_STATUS='ALL';
+function normalizeRosterSearch(value){return String(value||'').toLocaleLowerCase('pl').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ł/g,'l').trim()}
+function setAdminRosterStatus(status){
+  ADMIN_ROSTER_STATUS=['ALL','ACTIVE','RESERVE','CANCELLED'].includes(status)?status:'ALL';
+  document.querySelectorAll('#adminRosterEntries .adminRosterFilterBtn').forEach(el=>{
+    const selected=el.dataset.status===ADMIN_ROSTER_STATUS;el.classList.toggle('selected',selected);el.setAttribute('aria-pressed',String(selected));
+  });
+  applyAdminRosterFilter();
+}
+function applyAdminRosterFilter(){
+  const root=q('adminRosterEntries');if(!root)return;
+  const input=q('adminRosterSearch');
+  if(input)ADMIN_ROSTER_SEARCH=input.value;
+  const term=normalizeRosterSearch(ADMIN_ROSTER_SEARCH);
+  let visible=0;
+  root.querySelectorAll('.adminRosterGroup').forEach(group=>{
+    const allow=ADMIN_ROSTER_STATUS==='ALL'||group.dataset.kind===ADMIN_ROSTER_STATUS;
+    const desktop=[...group.querySelectorAll('tbody tr')],mobile=[...group.querySelectorAll('.mobileRosterCompactRow')];
+    const count=Math.max(desktop.length,mobile.length);
+    let shown=0;
+    for(let i=0;i<count;i++){
+      const row=desktop[i]||mobile[i],isMatch=allow&&normalizeRosterSearch(row?.textContent||'').includes(term);
+      if(desktop[i])desktop[i].classList.toggle('hidden',!isMatch);
+      if(mobile[i])mobile[i].classList.toggle('hidden',!isMatch);
+      if(isMatch)shown++;
+    }
+    group.classList.toggle('hidden',!allow||shown===0);
+    const badge=group.querySelector('.rosterSectionTitle .pill');if(badge)badge.textContent=shown;
+    visible+=shown;
+  });
+  const summary=q('adminRosterFilterCount');if(summary)summary.textContent='Widocznych: '+visible;
+  const empty=q('adminRosterFilterEmpty');if(empty)empty.classList.toggle('hidden',visible!==0);
+}
+function renderEntries(d){
+  const c=d.competition;
+  const choices=[['ALL','Wszyscy'],['ACTIVE','Lista główna'],['RESERVE','Rezerwa'],['CANCELLED','Wypisani']];
+  const buttons=choices.map(([status,label])=>'<button type="button" data-status="'+status+'" aria-pressed="'+(status===ADMIN_ROSTER_STATUS)+'" class="adminRosterFilterBtn '+(status===ADMIN_ROSTER_STATUS?'selected':'')+'" onclick="setAdminRosterStatus(\''+status+'\')">'+label+'</button>').join('');
+  const group=(kind,label,rows)=>'<section class="adminRosterGroup" data-kind="'+kind+'">'+rosterTable(label,rows||[],c.id,kind)+'</section>';
+  return '<div class="card adminRosterEntries" id="adminRosterEntries"><h2>Panel zapisów — lista główna i rezerwa</h2>'+
+    '<div class="adminRosterSearchBar"><label for="adminRosterSearch">Szukaj zawodnika lub koła</label>'+
+    '<input id="adminRosterSearch" type="search" autocomplete="off" placeholder="Nazwisko, imię, koło…" value="'+esc(ADMIN_ROSTER_SEARCH)+'" oninput="applyAdminRosterFilter()" aria-label="Szukaj zawodnika na liście">'+
+    '<div class="adminRosterFilters" role="group" aria-label="Filtr listy">'+buttons+'</div>'+
+    '<div id="adminRosterFilterCount" aria-live="polite" class="adminRosterFilterCount"></div></div>'+
+    group('ACTIVE','Lista główna — bierze udział w losowaniu',d.activeEntries)+
+    group('RESERVE','Lista rezerwowa',d.reserveEntries)+group('CANCELLED','Wypisani',d.cancelledEntries)+
+    '<p id="adminRosterFilterEmpty" class="muted hidden">Brak osób pasujących do filtra.</p></div>';
+}
 function disabledStandList(c){
   let raw=c?.disabled_stands;
   if(typeof raw==='string'){try{raw=JSON.parse(raw)}catch(_){raw=String(raw||'').split(/[;,\s]+/)}}
@@ -1255,17 +1313,33 @@ function renderResultsPreflight(d){
  '<div><b>Wynik 0 g ('+r.zero.length+'):</b> '+label(r.zero)+'</div></section>').join('')+
  '<p class="small">Niewysłane wpisy offline pozostają na urządzeniu sędziego. Przed publikacją poproś go o sprawdzenie synchronizacji.</p></div></details>';
 }
+/* V217: read-only checklist: the server remains authoritative for the draw. */
+function renderDrawChecklist(d){
+  const c=d.competition,x=rosterCounts(d),total=x.stands,disabled=disabledStandList(c),active=total-disabled.length;
+  const layout=sectorLayoutClient(c),covered=new Set(layout.flatMap(sec=>[...(sec.bottom||[]),...(sec.top||[])]).map(Number).filter(n=>!disabled.includes(n)));
+  const rounds=[1,2].map(r=>(d.draws||[]).filter(x=>Number(x.round)===r).length);
+  const rows=[
+    ['Lista główna',x.draw+' osób',x.draw>0],
+    ['Dostępne stanowiska',active+' / '+x.draw,active===x.draw&&x.draw>0],
+    ['Stanowiska przypisane do sektorów',covered.size+' / '+active,covered.size===active&&active>0],
+    ['Stan losowań','T1: '+rounds[0]+' · T2: '+rounds[1],true]
+  ];
+  return '<details class="drawChecklist" '+((active!==x.draw||covered.size!==active)?'open':'')+'><summary>Kontrola przed losowaniem '+(active===x.draw&&covered.size===active?'✓':'⚠')+'</summary><div class="drawChecklistRows">'+
+    rows.map(([label,value,ok])=>'<div class="'+(ok?'ready':'warning')+'"><span>'+label+'</span><b>'+value+'</b></div>').join('')+
+    '</div><p>Losowanie jest aktywne dopiero przy zgodnej liczbie zawodników i dostępnych stanowisk. Brzegi i numery fizyczne pozostają niezmienione.</p></details>';
+}
 function renderDrawPanel(d){
   const c=d.competition,x=rosterCounts(d),disabled=disabledStandList(c),addon=disabled.length>0,physical=Math.max(0,Number(c.bank1_count||0)+Number(c.bank2_count||0)),available=physical-disabled.length,hasDraw=(d.draws||[]).length>0;
   const hasResults=((d.results||[]).length>0)||((d.resultItems||[]).length>0)||((d.classification?.round1||[]).length>0)||((d.classification?.round2||[]).length>0);
   const ready=available>0&&available===x.draw;
   const normalStructureOk=x.stands===x.draw;
   return '<div class="card"><h2>Losowanie stanowisk</h2>'
+    +renderDrawChecklist(d)
     +renderDisabledStandsTool(d)
     +'<div class="card '+((addon?ready:normalStructureOk)?'success-line':'danger-line')+'"><b>Do losowania: '+x.draw+' zawodników z listy głównej.</b><br><span class="small muted">'+(addon?('Stanowiska fizyczne: '+physical+'. Dostępne po wyłączeniach: '+available+'.'):('Stanowiska w strukturze: '+x.stands+'.'))+' Rezerwa nie jest losowana.</span></div>'
     +'<div class="grid3"><button type="button" '+(ready?'':'disabled')+' onclick="drawRound('+c.id+',1,event)">Losuj T1</button><button type="button" class="blue" '+(ready?'':'disabled')+' onclick="drawRound('+c.id+',2,event)">Losuj T2</button><button type="button" class="secondary" onclick="publishDraw('+c.id+',event)">Publikuj losowanie</button></div>'
     +'<details class="adminDeleteDrawTile dangerousOps"><summary>Operacje awaryjne: reset losowania i wyników</summary><button type="button" class="warn adminDeleteDrawBtn" '+((hasDraw||hasResults)?'':'disabled')+' onclick="resetDraw('+c.id+',event)">USUŃ CAŁE LOSOWANIE + WYNIKI</button><div class="small"><b>Uwaga:</b> usuwa jednocześnie losowanie T1/T2 oraz wszystkie wpisane wyniki T1/T2 i klasyfikację. Zostawia listę zawodników, sektory i ustawienia zawodów. Przed resetem powstaje kopia danych.</div>'+renderRecoveryAction(d)+'</details>'
-    +renderRoundDrawView(d,1,false)+renderRoundDrawView(d,2,false)+'<h3>Tabela zbiorcza losowania</h3>'+renderDrawTable(d,true)+'</div>';
+    +[1,2].map(round=>'<details class="adminDrawPreview" '+(window.__lowcyAdminDrawPreview===round?'open':'')+' ontoggle="window.__lowcyAdminDrawPreview=this.open?'+round+':0"><summary>Mapa i sektory — losowanie T'+round+((d.draws||[]).some(x=>Number(x.round)===round)?' ✓':' · oczekuje')+'</summary>'+renderRoundDrawView(d,round,false)+'</details>').join('')+'<details class="adminDrawPreview adminDrawSummary"><summary>Pełna tabela losowania T1 / T2</summary>'+renderDrawTable(d,true)+'</details></div>';
 }
 async function saveDisabledStands(id,ev){
   const btn=ev?.target;
@@ -2008,10 +2082,13 @@ function judgeCachedDetail(id){try{return JSON.parse(STORE.get('lowcy_judge_deta
 function judgeCacheCompetitions(arr){try{STORE.set(JUDGE_COMP_CACHE,JSON.stringify(arr||[]))}catch(_){}}
 function judgeCachedCompetitions(){try{const a=JSON.parse(STORE.get(JUDGE_COMP_CACHE)||'[]');return Array.isArray(a)?a:[]}catch(_){return []}}
 function judgeQueueStatus(){
-  const n=judgeOwnQueue().length;
+  const own=judgeOwnQueue(),n=own.length,failed=own.filter(x=>x.error).length;
   const cls=n?(navigator.onLine?'syncing':'offline'):'ok';
-  const text=n?(navigator.onLine?'⟳ '+n+' wpisów czeka na synchronizację':'📴 '+n+' wpisów zapisanych w telefonie'):'✓ Wszystkie wpisy zsynchronizowane';
-  return '<div class="judgeOfflineState '+cls+'">'+text+'</div>';
+  const text=n?(navigator.onLine?'⟳ '+n+' wpisów oczekuje na wysłanie':'📴 '+n+' wpisów bezpiecznie zapisanych w telefonie'):'✓ Wszystkie wpisy zsynchronizowane';
+  return '<div class="judgeOfflineState '+cls+'" role="status" aria-live="polite"><strong>'+text+'</strong>'+
+    (failed?'<span class="judgeSyncError">⚠ '+failed+' wpisów wymaga sprawdzenia przed ponowną próbą.</span>':'')+
+    (n&&navigator.onLine?'<button type="button" class="judgeSyncRetry" '+(JUDGE_SYNC_BUSY?'disabled':'')+' onclick="flushJudgeQueue(false)">WYŚLIJ PONOWNIE</button>':'')+
+    '</div>';
 }
 function judgeAddPending(item){
   const all=judgeQueueAll();all.push(item);judgeSaveQueue(all);
@@ -2300,7 +2377,7 @@ function fotoFbWinnerCard165(x,y,w,h,d,metal){
     '<text x="'+(w-32)+'" y="'+(h-17)+'" text-anchor="end" font-family="Arial Black,Arial" font-size="23" fill="#fff">'+fotoFbEscXml(placeText(d.sum))+'</text></g>';
 }
 async function fotoFbSvgWinnersClean165(d,bg){
-  const w=1400,h=1167,c=d.competition,logo=await fotoFbAssetData('/icon-512.png'),list=fotoFbWinnerData(d);
+  const w=1400,h=1167,c=d.competition,logo=await fotoFbAssetData('/brand/icon-v217-512.png'),list=fotoFbWinnerData(d);
   if(list.length<3)throw new Error('Klasyfikacja końcowa musi zawierać co najmniej 3 zawodników.');
   const by={};list.forEach(function(r){by[r.rank]=r});
   let svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">'+fotoFbDefs()+
@@ -2317,7 +2394,7 @@ async function fotoFbSvgWinnersClean165(d,bg){
   return {svg:svg,w:w,h:h,name:'FotoFB_Zwyciezcy_'+fotoFbSafeFile(c.title)+'.jpg'};
 }
 async function fotoFbSvgBigFishClean165(d,bg){
-  const w=1400,h=1000,c=d.competition,logo=await fotoFbAssetData('/icon-512.png'),rows=fotoFbBigFishRows(d).slice(0,5),species=String(c.__fbSpecies||'');
+  const w=1400,h=1000,c=d.competition,logo=await fotoFbAssetData('/brand/icon-v217-512.png'),rows=fotoFbBigFishRows(d).slice(0,5),species=String(c.__fbSpecies||'');
   if(!rows.length)throw new Error('Brak wpisanych największych ryb BF.');
   let svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">'+fotoFbDefs()+
     '<image href="'+bg+'" x="0" y="0" width="'+w+'" height="'+h+'" preserveAspectRatio="xMidYMid slice"/>'+
@@ -2364,7 +2441,7 @@ function fotoFbMasterWinnerCard(x,y,w,h,d,metal){
     '<text x="'+(w/2)+'" y="'+(h-27)+'" text-anchor="middle" font-family="Arial Black,Arial" font-size="45" fill="'+fill+'">'+fotoFbEscXml(fotoFbGram(d.total))+'</text></g>';
 }
 async function fotoFbSvgWinnersMaster(d,master){
-  const w=1400,h=1340,c=d.competition,logo=await fotoFbAssetData('/icon-512.png'),list=fotoFbWinnerData(d);
+  const w=1400,h=1340,c=d.competition,logo=await fotoFbAssetData('/brand/icon-v217-512.png'),list=fotoFbWinnerData(d);
   if(list.length<3)throw new Error('Klasyfikacja końcowa musi zawierać co najmniej 3 zawodników.');
   const by={};list.forEach(function(r){by[r.rank]=r});
   let svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">'+fotoFbDefs()+
@@ -2380,7 +2457,7 @@ async function fotoFbSvgWinnersMaster(d,master){
   return {svg:svg,w:w,h:h,name:'FotoFB_Zwyciezcy_'+fotoFbSafeFile(c.title)+'.jpg'};
 }
 async function fotoFbSvgBigFishMaster(d,master){
-  const w=1400,h=990,c=d.competition,logo=await fotoFbAssetData('/icon-512.png'),rows=fotoFbBigFishRows(d).slice(0,5);
+  const w=1400,h=990,c=d.competition,logo=await fotoFbAssetData('/brand/icon-v217-512.png'),rows=fotoFbBigFishRows(d).slice(0,5);
   if(!rows.length)throw new Error('Brak wpisanych największych ryb BF.');
   let svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">'+fotoFbDefs()+
     '<rect width="'+w+'" height="'+h+'" fill="#06131d"/>'+
@@ -2413,7 +2490,7 @@ function fotoFbMasterSectorCard(group,x,y,w,h,color,bf){
 }
 async function fotoFbSvgSectorsMaster(d,round,master){
   round=Number(round)===2?2:1;
-  const w=1400,h=1800,c=d.competition,logo=await fotoFbAssetData('/icon-512.png'),rows=round===2?(d.classification&&d.classification.round2||[]):(d.classification&&d.classification.round1||[]),groups=groupRowsBySector(rows);
+  const w=1400,h=1800,c=d.competition,logo=await fotoFbAssetData('/brand/icon-v217-512.png'),rows=round===2?(d.classification&&d.classification.round2||[]):(d.classification&&d.classification.round1||[]),groups=groupRowsBySector(rows);
   if(!groups.length)throw new Error('Brak wyników sektorowych Tury '+round+'.');
   if(groups.length>4)return null;
   let svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">'+fotoFbDefs()+'<image href="'+master+'" x="0" y="0" width="'+w+'" height="'+h+'" preserveAspectRatio="xMidYMid slice"/>'+fotoFbMasterTop(c,w,'WYNIKI SEKTOROWE — TURA '+round,logo);
@@ -2555,7 +2632,7 @@ function fotoFbWinnerCard206(d,metal,x,y,w,h){
 async function fotoFbSvgWinners(d){
   const edited=fotoFbEditedDetail(d),c=edited.competition,list=fotoFbWinnerData(edited),w=1400,h=1460;
   if(list.length<3)throw new Error('Klasyfikacja końcowa musi zawierać co najmniej 3 zawodników.');
-  const [saved,logo]=await Promise.all([fotoFbGetMaster('winners_bg'),fotoFbAssetData('/icon-512.png')]);
+  const [saved,logo]=await Promise.all([fotoFbGetMaster('winners_bg'),fotoFbAssetData('/brand/icon-v217-512.png')]);
   const trophies=saved||await fotoFbAssetData('/podium-trophies-v206.jpg');
   if(!trophies)throw new Error('Nie udało się pobrać podkładu. Wgraj własny.');
   const backgroundMode=saved?await new Promise(resolve=>{
@@ -2611,7 +2688,7 @@ function fotoFbBigFishRows(d){
 }
 async function fotoFbSvgBigFish(d){
   const master=await fotoFbGetMaster('fish');if(master)return fotoFbSvgBigFishMaster(d,master);
-  const w=1400,h=1000,c=d.competition,assets=await Promise.all([fotoFbAssetData('/icon-512.png'),fotoFbAssetData('/carp-real-v116.png')]),logo=assets[0],carp=assets[1];
+  const w=1400,h=1000,c=d.competition,assets=await Promise.all([fotoFbAssetData('/brand/icon-v217-512.png'),fotoFbAssetData('/carp-real-v116.png')]),logo=assets[0],carp=assets[1];
   const rows=fotoFbBigFishRows(d).slice(0,5);
   if(!rows.length)throw new Error('Brak wpisanych największych ryb BF.');
   let svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">'+fotoFbDefs()+fotoFbScene(w,h,logo,carp)+fotoFbHeader(c,w,'NAJWIĘKSZE RYBY ZAWODÓW',logo);
@@ -2657,7 +2734,7 @@ function fotoFbSectorBox(group,x,y,w,h,color,bf){
 async function fotoFbSvgSectors(d,round){
   round=Number(round)===2?2:1;
   const master=await fotoFbGetMaster('sectors');if(master){const made=await fotoFbSvgSectorsMaster(d,round,master);if(made)return made;}
-  const w=1400,h=1800,c=d.competition,assets=await Promise.all([fotoFbAssetData('/icon-512.png'),fotoFbAssetData('/carp-real-v116.png')]),logo=assets[0],carp=assets[1];
+  const w=1400,h=1800,c=d.competition,assets=await Promise.all([fotoFbAssetData('/brand/icon-v217-512.png'),fotoFbAssetData('/carp-real-v116.png')]),logo=assets[0],carp=assets[1];
   const rows=round===2?(d.classification&&d.classification.round2||[]):(d.classification&&d.classification.round1||[]);
   const groups=groupRowsBySector(rows);
   if(!groups.length)throw new Error('Brak wyników sektorowych Tury '+round+'.');
@@ -2738,7 +2815,7 @@ function renderFotoFbPanel(d){
       '<button type="button" class="danger" onclick="fotoFbDeleteMaster(\''+kind+'\')">Usuń</button></div></div>';
   };
   return '<div class="card"><h2>FotoFB — grafiki wynikowe</h2>'+
-    '<div style="background:#fff4d6;border:1px solid #d8a127;border-radius:14px;padding:10px;margin-bottom:12px;color:#4a3510"><b>V209 — FotoFB.</b> Twój wgrany podkład i prawdziwe wyniki.</div>'+
+    '<div style="background:#fff4d6;border:1px solid #d8a127;border-radius:14px;padding:10px;margin-bottom:12px;color:#4a3510"><b>FotoFB — aktualna wersja.</b> Twój wgrany podkład i prawdziwe wyniki.</div>'+
     '<h3>Zwycięzcy — Twój podkład</h3>'+bgCard()+
     '<h3 style="margin-top:14px">Pozostałe grafiki</h3><div class="grid">'+masterCard('fish','🐟 TOP 5 największych ryb')+masterCard('sectors','📷 Wyniki sektorowe T1/T2')+'</div>'+
     '<h3>Generuj</h3><div class="grid"><button type="button" class="blue" onclick="generateFotoFb(\'winners\')">🏆 Zwycięzcy zawodów</button><button type="button" class="blue" onclick="generateFotoFb(\'fish\')">🐟 TOP 5 największych ryb</button></div>'+
