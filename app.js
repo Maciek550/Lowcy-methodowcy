@@ -1,4 +1,4 @@
-const CLIENT_VERSION='221';const CLIENT_VERSION_NAME='V221_OSTATNIE_LOGOWANIE_ZAWODNIKOW';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='222';const CLIENT_VERSION_NAME='V222_OSTATNIA_AKTYWNOSC_ZAWODNIKOW';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -262,6 +262,21 @@ function renderPhoneCall(phone,cls='',iconOnly=false){
 }
 function msg(t,type='ok'){const el=q('msg');if(!el)return;el.innerHTML='<div class="card '+(type==='bad'?'bad danger-line':'ok success-line')+'">'+esc(t)+'</div>';setTimeout(()=>{const x=q('msg');if(x)x.innerHTML=''},3500)}
 async function api(path, opts={}){const fetchOpts={...opts},timeoutMs=Math.max(800,Number(fetchOpts.timeoutMs||30000));delete fetchOpts.timeoutMs;const ctrl=typeof AbortController!=='undefined'?new AbortController():null;const to=ctrl?setTimeout(()=>ctrl.abort(),timeoutMs):null;try{const res=await fetch(path,Object.assign({cache:'no-store',signal:ctrl?ctrl.signal:undefined,headers:{'Content-Type':'application/json',...(TOKEN?{Authorization:'Bearer '+TOKEN}:{})}},fetchOpts));const data=await res.json().catch(()=>({ok:false,error:'Błąd odpowiedzi'}));if(!res.ok||data.ok===false){const error=new Error(data.error||'Błąd');error.status=res.status;throw error}return data}catch(e){if(e&&e.name==='AbortError'){const error=new Error('Serwer jeszcze nie odpowiada. Spróbuj ponownie.');error.timeout=true;throw error}throw e}finally{if(to)clearTimeout(to)}}
+let PLAYER_ACTIVITY_LAST_SENT=0, PLAYER_ACTIVITY_USER_ID=0;
+function recordPlayerActivity(){
+  if(ME?.role!=='PLAYER'||!TOKEN||document.hidden||navigator.onLine===false)return;
+  if(PLAYER_ACTIVITY_USER_ID!==ME.id){PLAYER_ACTIVITY_USER_ID=ME.id;PLAYER_ACTIVITY_LAST_SENT=0}
+  const now=Date.now();
+  if(now-PLAYER_ACTIVITY_LAST_SENT<60_000)return;
+  PLAYER_ACTIVITY_LAST_SENT=now;
+  api('/api/me/activity',{method:'POST',timeoutMs:8000}).catch(()=>{});
+}
+document.addEventListener('pointerdown',recordPlayerActivity,{passive:true});
+document.addEventListener('touchstart',recordPlayerActivity,{passive:true});
+document.addEventListener('keydown',recordPlayerActivity);
+window.addEventListener('scroll',recordPlayerActivity,{passive:true});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)recordPlayerActivity()});
+window.addEventListener('focus',recordPlayerActivity);
 function fmtDate(d){if(!d)return '—';const s=String(d);const m=s.match(/^\d{4}-\d{2}-\d{2}/);const dt=new Date(m?(m[0]+'T12:00:00'):s);return isNaN(dt.getTime())?'—':dt.toLocaleDateString('pl-PL')}
 function dateInputValue(d){if(!d)return '';const s=String(d);const m=s.match(/^\d{4}-\d{2}-\d{2}/);return m?m[0]:''}
 function fmtGram(v){v=Number(v||0);return v?String(v).replace(/\B(?=(\d{3})+(?!\d))/g,' '):'0'}
@@ -379,6 +394,7 @@ async function boot(){
   if(auth)auth.classList.add('hidden');
   if(app)app.classList.remove('hidden');
   if(logout)logout.classList.remove('hidden');
+  if(ME.role==='PLAYER')recordPlayerActivity();
   mountAccountSwitch();
   document.body.classList.toggle('judgeTheme',ME.role==='JUDGE');
   if(ME.role==='JUDGE'){mountJudgeShell();initAppBackNavigation();hideBootGuard();await judgeLoadCompetitions();if(navigator.onLine)flushJudgeQueue(true).catch(()=>{});return}
@@ -2987,12 +3003,12 @@ function editPlayerName(id,currentName,currentClub=''){
   dialog.showModal();
 }
 function playerInfoBadges(p){let out='';if(p.has_logged_in)out+='<span class="playerAccountBadge playerAccountVerified" title="Zawodnik zalogował się w aplikacji">V</span>';if(p.bulk_removable)out+='<span class="playerAccountBadge playerAccountAdmin" title="Import zewnętrzny bez konta — podlega zbiorczemu usunięciu">A</span>';return out||'<span class="muted">—</span>'}
-const PLAYER_LOGIN_DATE_FORMAT=new Intl.DateTimeFormat('pl-PL',{timeZone:'Europe/Warsaw',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
-function playerLastLoginHtml(value){
+const PLAYER_ACTIVITY_DATE_FORMAT=new Intl.DateTimeFormat('pl-PL',{timeZone:'Europe/Warsaw',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
+function playerLastActivityHtml(value){
   const date=value?new Date(value):null;
-  if(!date||!Number.isFinite(date.getTime()))return '<span class="playerLastLogin playerLastLoginNever">Ostatnie logowanie: nigdy</span>';
-  const label='Ostatnie logowanie: '+PLAYER_LOGIN_DATE_FORMAT.format(date);
-  return '<time class="playerLastLogin" datetime="'+esc(date.toISOString())+'">'+esc(label)+'</time>';
+  if(!date||!Number.isFinite(date.getTime()))return '<span class="playerLastActivity playerLastActivityUnknown" title="Pomiar aktywności od V222">Ostatnia aktywność: brak danych</span>';
+  const label='Ostatnia aktywność: '+PLAYER_ACTIVITY_DATE_FORMAT.format(date);
+  return '<time class="playerLastActivity" datetime="'+esc(date.toISOString())+'">'+esc(label)+'</time>';
 }
 async function deletePlayer(id,name){if(!ME||ME.role!=='ADMIN')return;const label=String(name||'zawodnika');if(!confirm('Usunąć zawodnika '+label+' z aktywnej bazy?\n\nJego dotychczasowe zapisy, losowania, wagi i wyniki zostaną zachowane. Konto zostanie zarchiwizowane i nie będzie mogło się logować.'))return;try{const d=await api('/api/admin/players/'+Number(id),{method:'DELETE',body:'{}'});msg('Zarchiwizowano zawodnika: '+(d.player?.name||label));await loadPlayers();await loadCompetitions();if(CURRENT_DETAIL?.competition?.id)await refreshCompetitionKeepScroll(CURRENT_DETAIL.competition.id)}catch(e){msg(e.message,'bad')}}
 async function deleteAllAdminPlayers(count){if(!ME||ME.role!=='ADMIN')return;const n=Number(count||0);if(n<1){msg('Brak zawodników oznaczonych A.');return}if(!confirm('Zarchiwizować TYLKO zaimportowanych zawodników bez konta (A)?\n\nLiczba zawodników: '+n+'\n\nKonta założone przez administratora i zalogowani zawodnicy pozostaną bez zmian.'))return;try{const d=await api('/api/admin/players/admin-added',{method:'DELETE',body:'{}'});msg('Zarchiwizowano zawodników A: '+Number(d.archived||d.deleted||0));await loadPlayers();await loadCompetitions();if(CURRENT_DETAIL?.competition?.id)await refreshCompetitionKeepScroll(CURRENT_DETAIL.competition.id)}catch(e){msg(e.message,'bad')}}
@@ -3000,10 +3016,10 @@ async function loadPlayers(){
   if(!ME||ME.role!=='ADMIN')return;
   const d=await api('/api/admin/players');
   const adminAdded=d.players.filter(p=>p.bulk_removable===true).length;
-  const legend='<div class="playerAccountTop"><div class="playerAccountLegend"><span><b class="playerAccountBadge playerAccountVerified">V</b> zalogował się w aplikacji</span><span><b class="playerAccountBadge playerAccountAdmin">A</b> import zewnętrzny bez konta</span></div><button type="button" class="warn playerDeleteAllAdminBtn" '+(adminAdded?'':'disabled')+' onclick="deleteAllAdminPlayers('+adminAdded+')">Usuń wszystkich A ('+adminAdded+')</button></div>';
+  const legend='<div class="playerAccountTop"><div class="playerAccountLegend"><span><b class="playerAccountBadge playerAccountVerified">V</b> zalogował się w aplikacji</span><span><b class="playerAccountBadge playerAccountAdmin">A</b> import zewnętrzny bez konta</span><span>Aktywność zapisywana od V222</span></div><button type="button" class="warn playerDeleteAllAdminBtn" '+(adminAdded?'':'disabled')+' onclick="deleteAllAdminPlayers('+adminAdded+')">Usuń wszystkich A ('+adminAdded+')</button></div>';
   const desktop='<div class="tablewrap adminDesktopOnly"><table class="adminPlayersTable"><thead><tr><th style="width:46px">Lp.</th><th>Imię i nazwisko</th><th style="width:82px">Info</th><th>Telefon</th><th>Koło PZW</th><th>Aktywne zapisy</th><th style="width:150px">Akcja</th></tr></thead><tbody>'+d.players.map((p,i)=>{
     const name=String((p.first_name||'')+' '+(p.last_name||'')).trim(),safeName=encodeURIComponent(name).replace(/'/g,'%27'),safeClub=encodeURIComponent(p.pzw_club||'').replace(/'/g,'%27');
-    return '<tr><td class="center"><b>'+(i+1)+'</b></td><td><b>'+esc(name)+'</b> '+playerLastLoginHtml(p.last_login_at)+'</td><td class="playerBadgeCell">'+playerInfoBadges(p)+'</td><td class="nowrap">'+renderPhoneCall(p.phone)+'</td><td>'+esc(p.pzw_club)+'</td><td class="center">'+esc(p.active_entries||0)+'</td><td><div class="inlineBtns playerManageBtns"><button type="button" class="secondary" onclick="editPlayerName('+Number(p.id)+',decodeURIComponent(\''+safeName+'\'),decodeURIComponent(\''+safeClub+'\'))">Edytuj</button><button type="button" class="warn playerDeleteBtn" onclick="deletePlayer('+Number(p.id)+',decodeURIComponent(\''+safeName+'\'))">Usuń</button></div></td></tr>'
+    return '<tr><td class="center"><b>'+(i+1)+'</b></td><td><b>'+esc(name)+'</b> '+playerLastActivityHtml(p.last_active_at)+'</td><td class="playerBadgeCell">'+playerInfoBadges(p)+'</td><td class="nowrap">'+renderPhoneCall(p.phone)+'</td><td>'+esc(p.pzw_club)+'</td><td class="center">'+esc(p.active_entries||0)+'</td><td><div class="inlineBtns playerManageBtns"><button type="button" class="secondary" onclick="editPlayerName('+Number(p.id)+',decodeURIComponent(\''+safeName+'\'),decodeURIComponent(\''+safeClub+'\'))">Edytuj</button><button type="button" class="warn playerDeleteBtn" onclick="deletePlayer('+Number(p.id)+',decodeURIComponent(\''+safeName+'\'))">Usuń</button></div></td></tr>'
   }).join('')+'</tbody></table></div>';
   const mobile='<div class="adminMobileOnly mobilePlayersList">'+d.players.map((p,i)=>{
     const name=String((p.first_name||'')+' '+(p.last_name||'')).trim();
@@ -3011,7 +3027,7 @@ async function loadPlayers(){
     const call=phoneTelHref(p.phone)?renderPhoneCall(p.phone,'mobilePhoneCallBtn playerDirectoryCall',true):'';
     return `<article class="mobileAdminCard mobilePlayerManageCard">
       <div class="mobileAdminCardHead ${call?'hasCall':''}">
-        <span class="mobileLp">${i+1}</span><b class="playerNameLogin">${esc(name)}${playerLastLoginHtml(p.last_login_at)}</b>${call}<span class="mobilePlayerBadges">${playerInfoBadges(p)}</span>
+        <span class="mobileLp">${i+1}</span><b class="playerNameLogin">${esc(name)}${playerLastActivityHtml(p.last_active_at)}</b>${call}<span class="mobilePlayerBadges">${playerInfoBadges(p)}</span>
       </div>
       <div class="mobilePlayerManageMeta"><span>Koło: <b>${esc(p.pzw_club||'—')}</b></span><span>Zapisy: <b>${esc(p.active_entries||0)}</b></span></div>
       <div class="mobilePlayerManageActions">

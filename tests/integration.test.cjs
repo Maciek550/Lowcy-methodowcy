@@ -15,6 +15,18 @@ test('staging PostgreSQL: preview, 29=>28 absence, draw, reset/restore, results 
   assert.equal(ready,true,'Server did not pass /health: '+output.join('\n').slice(-2500));
   const auth=await request('/api/setup-admin','POST',{setupCode:secret,phone:'501000000',password:'staging-only-test',firstName:'Test',lastName:'Administrator'});
   assert.equal(auth.status,200,JSON.stringify(auth));const token=auth.token;
+  const tracked=await request('/api/register','POST',{phone:'501000001',password:'staging-player',firstName:'Test',lastName:'Aktywny',pzwClub:'7'});
+  assert.equal(tracked.status,200,JSON.stringify(tracked));
+  const playerId=Number(tracked.user.id),originalLogin=String(tracked.user.last_login_at);
+  await db.query("update users set last_active_at=now()-interval '1 day' where id=$1",[playerId]);
+  const seen=await request('/api/me/activity','POST',null,tracked.token);
+  assert.equal(seen.status,200,JSON.stringify(seen));
+  const firstActivity=(await db.query('select last_login_at,last_active_at from users where id=$1',[playerId])).rows[0];
+  assert.ok(firstActivity.last_active_at.getTime()>Date.now()-60_000);
+  assert.equal(firstActivity.last_login_at.toISOString(),originalLogin);
+  await request('/api/me/activity','POST',null,tracked.token);
+  const secondActivity=(await db.query('select last_active_at from users where id=$1',[playerId])).rows[0].last_active_at;
+  assert.equal(secondActivity.toISOString(),firstActivity.last_active_at.toISOString(),'Activity ping must be throttled');
   const created=await request('/api/competitions','POST',{title:'TEST BEZPIECZEŃSTWA V216',fishery:'Łowisko testowe',status:'TEST',competitionDate:'2026-12-01',limitPlaces:29,mapMode:'TWO_OPPOSITE',bank1Count:15,bank2Count:14,sectorsCount:4},token);
   assert.equal(created.status,200,JSON.stringify(created));const id=Number(created.competition.id);
   let entryId;

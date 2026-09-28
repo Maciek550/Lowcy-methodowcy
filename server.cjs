@@ -21,8 +21,8 @@ const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const GOOGLE_VISION_API_KEY = process.env.GOOGLE_VISION_API_KEY || process.env.OCR_GOOGLE_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.PHOTO_OCR_OPENAI_API_KEY || '';
 const PHOTO_OCR_MODEL = process.env.PHOTO_OCR_OPENAI_MODEL || 'gpt-5.6-sol';
-const APP_VERSION = '221';
-const APP_VERSION_NAME = 'V221_OSTATNIE_LOGOWANIE_ZAWODNIKOW';
+const APP_VERSION = '222';
+const APP_VERSION_NAME = 'V222_OSTATNIA_AKTYWNOSC_ZAWODNIKOW';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 const PODIUM_TROPHIES = fs.existsSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) ? fs.readFileSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) : null;
 const CARP_REAL = fs.readFileSync(pathModule.join(__dirname, 'carp-real-v116.png'));
@@ -341,7 +341,7 @@ async function auth(req) {
   const p = verifyToken(token);
   if (!p) return null;
   try {
-    const { rows } = await pool.query('select id, phone, first_name, last_name, pzw_club, role, created_at, account_source, last_login_at, judge_enabled, archived_at from users where id=$1 and archived_at is null', [p.uid]);
+    const { rows } = await pool.query('select id, phone, first_name, last_name, pzw_club, role, created_at, account_source, last_login_at, last_active_at, judge_enabled, archived_at from users where id=$1 and archived_at is null', [p.uid]);
     return rows[0] || null;
   } catch { return null; }
 }
@@ -450,6 +450,7 @@ async function initDb() {
   await pool.query(`
     alter table users add column if not exists account_source text not null default 'SELF';
     alter table users add column if not exists last_login_at timestamptz;
+    alter table users add column if not exists last_active_at timestamptz;
     alter table users add column if not exists archived_at timestamptz;
     update users set account_source='EXTERNAL' where role='PLAYER' and last_login_at is null and upper(coalesce(account_source,''))='ADMIN' and (phone like 'ZPRO-%' or phone like 'IMPORT-%');
     update users set account_source='ADMIN' where role='PLAYER' and phone like 'MANUAL-%' and upper(coalesce(account_source,''))='SELF' and last_login_at is null;
@@ -2036,8 +2037,8 @@ self.addEventListener('notificationclick', event => {
     const hash = await bcrypt.hash(String(b.password), 12);
     try {
       const { rows } = await pool.query(
-        `insert into users(phone,password_hash,first_name,last_name,pzw_club,role,account_source,last_login_at,archived_at)
-         values($1,$2,$3,$4,$5,'PLAYER','SELF',now(),null)
+        `insert into users(phone,password_hash,first_name,last_name,pzw_club,role,account_source,last_login_at,last_active_at,archived_at)
+         values($1,$2,$3,$4,$5,'PLAYER','SELF',now(),now(),null)
          on conflict(phone) do update set
            password_hash=excluded.password_hash,
            first_name=excluded.first_name,
@@ -2046,9 +2047,10 @@ self.addEventListener('notificationclick', event => {
            role='PLAYER',
            account_source='SELF',
            last_login_at=now(),
+           last_active_at=now(),
            archived_at=null
          where users.role='PLAYER' and users.archived_at is not null
-         returning id, phone, first_name, last_name, pzw_club, role, created_at, account_source, last_login_at`,
+         returning id, phone, first_name, last_name, pzw_club, role, created_at, account_source, last_login_at, last_active_at`,
         [phone, hash, String(b.firstName).trim(), String(b.lastName).trim(), String(b.pzwClub).trim()]
       );
       if(!rows.length)return sendJson(res,409,{ok:false,error:'Ten numer telefonu jest już zarejestrowany'});
@@ -2067,11 +2069,18 @@ self.addEventListener('notificationclick', event => {
     if (!u || !(await bcrypt.compare(String(b.password||''), u.password_hash))) return sendJson(res, 401, { ok:false, error:'Błędny telefon lub hasło' });
     if(u.role==='JUDGE'&&u.judge_enabled===false)return sendJson(res,403,{ok:false,error:'Konto sędziego jest wyłączone przez administratora'});
     const loginStamp = new Date();
-    await pool.query('update users set last_login_at=$1 where id=$2', [loginStamp, u.id]);
-    return sendJson(res, 200, { ok:true, user:{id:u.id,phone:u.phone,first_name:u.first_name,last_name:u.last_name,pzw_club:u.pzw_club,role:u.role,created_at:u.created_at,account_source:u.account_source||'SELF',last_login_at:loginStamp.toISOString()}, token:signToken(u) });
+    await pool.query('update users set last_login_at=$1, last_active_at=$1 where id=$2', [loginStamp, u.id]);
+    return sendJson(res, 200, { ok:true, user:{id:u.id,phone:u.phone,first_name:u.first_name,last_name:u.last_name,pzw_club:u.pzw_club,role:u.role,created_at:u.created_at,account_source:u.account_source||'SELF',last_login_at:loginStamp.toISOString(),last_active_at:loginStamp.toISOString()}, token:signToken(u) });
   }
 
   const user = await auth(req);
+  if (path === '/api/me/activity' && method === 'POST') {
+    if (!requireUser(user, res)) return;
+    if (user.role !== 'PLAYER') return sendJson(res, 403, { ok:false, error:'Tylko konto zawodnika' });
+    await pool.query(`update users set last_active_at=now()
+      where id=$1 and (last_active_at is null or last_active_at < now() - interval '45 seconds')`, [user.id]);
+    return sendJson(res, 200, { ok:true });
+  }
   if (path === '/api/admin/photo-ocr' && method === 'POST') {
     if (!requireUser(user, res)) return;
     if (user.role!=='ADMIN') return sendJson(res,403,{ok:false,error:'Tylko administrator może użyć importu OCR.'});
@@ -2893,12 +2902,12 @@ self.addEventListener('notificationclick', event => {
     if (!requireAdmin(user, res)) return;
     const { rows } = await pool.query(`
       select u.id, u.phone, u.first_name, u.last_name, u.pzw_club, u.role, u.created_at,
-      coalesce(u.account_source,'SELF') account_source, u.last_login_at,
+      coalesce(u.account_source,'SELF') account_source, u.last_login_at, u.last_active_at,
       (u.last_login_at is not null) has_logged_in,
       (upper(coalesce(u.account_source,''))='EXTERNAL' and u.last_login_at is null) bulk_removable,
       (select count(*)::int from entries e where e.user_id=u.id and e.status='ACTIVE') active_entries
       from users u where u.role='PLAYER' and u.archived_at is null
-      order by u.last_login_at desc nulls last, u.created_at desc, u.id desc
+      order by u.last_active_at desc nulls last, u.created_at desc, u.id desc
     `);
     return sendJson(res, 200, { ok:true, players:rows });
   }
@@ -3155,7 +3164,7 @@ const HTML = `<!doctype html>
 <link rel="apple-touch-icon" sizes="180x180" href="/brand/icon-v217-180.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/brand/icon-v217-32.png">
 <script>try{if(localStorage.getItem('carp_token'))document.documentElement.classList.add('hasSavedSession')}catch(e){}</script>
-<title>Łowcy Methodowcy — V221</title>
+<title>Łowcy Methodowcy — V222</title>
 <style>
 :root{--green:#114b2f;--green2:#17643f;--bg:#f3f6ef;--card:#fff;--line:#cfd8cc;--txt:#18251d;--muted:#68746d;--red:#b32020;--gold:#ffc400;--blue:#1067c8;--soft:#eaf2eb}
 *{box-sizing:border-box}html,body{height:auto!important;min-height:100%!important;overflow-y:auto!important;overscroll-behavior:auto!important}body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}header{position:sticky;top:0;z-index:5;background:var(--green);color:white;padding:12px 14px;box-shadow:0 2px 8px #0002}header .row{display:flex;justify-content:space-between;gap:12px;align-items:center;max-width:1180px;margin:auto}h1{font-size:18px;margin:0}h2{font-size:18px;margin:0 0 8px}h3{font-size:16px;margin:12px 0 8px}main{max-width:1180px;margin:0 auto;padding:12px}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin:12px 0;box-shadow:0 2px 8px #0000000d}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}input,select,textarea,button{width:100%;font:inherit;border-radius:12px;border:1px solid var(--line);padding:10px 11px;background:white}textarea{min-height:70px}button{border:0;background:var(--green);color:white;font-weight:900;cursor:pointer}button.secondary{background:#e7eee7;color:var(--green);border:1px solid #bfd0c2}button.warn{background:var(--red)}button.blue{background:var(--blue)}button:disabled{opacity:.55;cursor:not-allowed}label{display:block;font-size:12px;font-weight:900;color:var(--muted);margin:8px 0 4px}.tabs{display:flex;gap:8px;overflow:auto;padding:8px 0}.tabs button{white-space:nowrap;width:auto;padding:9px 13px}.tabs button.active{background:#072e1c}.tablewrap{width:100%;overflow:auto;border-radius:12px;border:1px solid var(--line)}table{width:100%;border-collapse:collapse;background:white}th,td{border:1px solid var(--line);padding:8px 7px;text-align:left;vertical-align:middle}th{background:#e6f0e8;color:#106b28;font-size:12px;text-transform:uppercase}.nowrap{white-space:nowrap}.muted{color:var(--muted)}.ok{color:var(--green);font-weight:900}.bad{color:var(--red);font-weight:900}.pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#e6f0e8;font-weight:900}.hidden{display:none!important}.top-actions{display:flex;gap:8px;align-items:center}.top-actions button{width:auto;padding:8px 11px;background:#ffffff22;border:1px solid #ffffff55}.small{font-size:12px}.right{text-align:right}.mine{background:#fff4b8!important;outline:3px solid var(--gold);outline-offset:-3px;font-weight:900}.mine td{font-weight:900}.danger-line{border-left:6px solid var(--red)}.success-line{border-left:6px solid var(--green)}.mapbox{background:#f7faf4;border:1px solid var(--line);border-radius:14px;padding:10px;overflow:auto}.banktitle{font-size:12px;font-weight:900;color:var(--muted);margin:8px 0 5px}.bank{display:grid;grid-template-columns:repeat(auto-fit,minmax(42px,1fr));gap:5px;min-width:320px}.stand{min-height:42px;border:1px solid #a8b7aa;border-radius:9px;background:white;display:flex;align-items:center;justify-content:center;flex-direction:column;font-weight:900;font-size:12px}.stand small{font-size:9px;font-weight:800;color:#555}.stand.occ{box-shadow:inset 0 -4px 0 #cbd8cc}.stand.t1{background:#ffe1e1;border:3px solid #d00000;color:#8e0000}.stand.t2{background:#dfeaff;border:3px solid #005bd8;color:#003c91}.stand.both{background:#f0dcff;border:3px solid #7a1fc2;color:#461078}.ownbox{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.ownitem{border:2px solid var(--line);border-radius:14px;padding:12px;background:#fff}.ownitem strong{font-size:24px}.twoCols{display:grid;grid-template-columns:1fr 1fr;gap:12px}.inlineBtns{display:flex;gap:6px;flex-wrap:wrap}.inlineBtns button{width:auto}.competitionActions{gap:22px;align-items:center}.competitionActions button{min-width:96px}.adminbar{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.tag{font-size:11px;border-radius:999px;padding:3px 7px;background:#f0f4ee;font-weight:900}.t1tag{background:#ffe1e1;color:#8e0000}.t2tag{background:#dfeaff;color:#003c91}.sector-A{box-shadow:inset 0 0 0 2px #b32020}.sector-B{box-shadow:inset 0 0 0 2px #1067c8}.sector-C{box-shadow:inset 0 0 0 2px #14803a}.sector-D{box-shadow:inset 0 0 0 2px #7a1fc2}.sector-E{box-shadow:inset 0 0 0 2px #b36b00}.sector-F{box-shadow:inset 0 0 0 2px #006b7a}.checkline{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--txt);font-weight:800}.checkline input{width:auto}.sectorMap{background:#fbfdf9;border:1px solid var(--line);border-radius:14px;padding:12px;overflow:auto}.mapTitle,.bankLabel{font-weight:1000;color:#204b38;margin:5px 0}.standRow{display:grid;gap:0;min-width:640px}.standCell{min-height:45px;border:2px solid #446b56;display:flex;align-items:center;justify-content:center;flex-direction:column;font-weight:1000;color:#123827;margin:-1px 0 0 -1px}.standCell small{font-size:10px}.standCell.empty{border:0;background:transparent}.sectorBand{display:grid;min-width:640px;gap:0}.sectorBlock{min-height:78px;border:3px solid #38664d;display:flex;align-items:center;justify-content:center;flex-direction:column;margin:-1px 0 0 -1px;text-align:center}.sectorBlock span{font-size:22px;font-weight:1000}.sectorSummary{background:#ecf2ed;border-radius:10px;padding:10px;margin-top:10px;font-size:13px}.water{text-align:center;background:#f2f6f1;color:#6a756d;font-weight:1000;padding:12px;min-width:640px}.sectorFill-A{background:#d8f1dd}.sectorFill-B{background:#dbe8fb}.sectorFill-C{background:#ffe7bd}.sectorFill-D{background:#f6d9e3}.sectorFill-E{background:#eadffb}.sectorFill-F{background:#dff4f4}.sectorFill-G{background:#f7e8ce}.sectorFill-H{background:#e5f0d0}.standCell.t1{background:#ffb5b5!important;border:4px solid #d00000!important;color:#7c0000}.standCell.t2{background:#b9d2ff!important;border:4px solid #005bd8!important;color:#002c70}.standCell.both{background:#e1b8ff!important;border:4px solid #7a1fc2!important;color:#3c0060}.standCell.occ{box-shadow:inset 0 -5px 0 #244f36}.weightItems{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:5px}.weightTag{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:3px 6px;font-size:11px;font-weight:900;background:#edf4ec;border:1px solid #bfd0c2}.weightTag button{width:auto;padding:0 4px;border-radius:8px;background:#b91c1c;color:#fff;line-height:1.1}.bfTag{background:#fff0d6;border-color:#e5b965}.netTag{background:#e7f5e7}.bfLine{font-size:12px;font-weight:1000;color:#b91c1c}.flashSave{background:#bff7c8!important;transition:background .25s}.resultInputTable input{min-width:120px}.sectorBand.clean{margin:0}.sectorFlexRow{display:flex;gap:0;min-width:640px}.sectorGroup{display:grid;gap:0;margin:0}.sectorGroup .standCell{border-radius:0;margin:-1px 0 0 -1px}.sectorFlexRow .sectorBlock{border-radius:0;margin:-1px 0 0 -1px}.standFlex{align-items:stretch}.sectorBand.clean .sectorBlock{min-height:72px}.pushBox{margin-top:6px;line-height:1.35}.bankLabelBottom{margin-top:8px}.quickScroll{position:fixed;right:10px;bottom:14px;z-index:30;display:flex;flex-direction:column;gap:7px}.quickScroll button{width:52px;padding:9px 0;border-radius:999px;background:#123827cc;box-shadow:0 3px 10px #0003}.quickScroll button:last-child{background:#e7eee7;color:#123827;border:1px solid #bfd0c2}
@@ -8065,17 +8074,17 @@ body:not(.playerTheme):not(.authMode) #app .adminExportGroupBody :is(input:not([
     grid-column:auto
   }
 }
-/* V221: last login stays beside the name on desktop and below it on narrow phones. */
-body:not(.playerTheme):not(.authMode) #app #playersList .playerLastLogin{
+/* V222: last activity stays beside the name on desktop and below it on narrow phones. */
+body:not(.playerTheme):not(.authMode) #app #playersList .playerLastActivity{
   display:inline-block;margin:3px 0 3px 6px;padding:3px 7px;border:1px solid #adc9bd;
   border-radius:7px;background:#e7f3eb;color:#16432e!important;
   font-size:12px;font-weight:800;line-height:1.3;vertical-align:middle;
 }
-body:not(.playerTheme):not(.authMode) #app #playersList .playerLastLoginNever{
+body:not(.playerTheme):not(.authMode) #app #playersList .playerLastActivityUnknown{
   background:#edf0ef;color:#42554b!important;border-color:#c4d0c8;
 }
 @media(max-width:760px){
-  body:not(.playerTheme):not(.authMode) #app #playersList .playerNameLogin .playerLastLogin{
+  body:not(.playerTheme):not(.authMode) #app #playersList .playerNameLogin .playerLastActivity{
     display:block;width:max-content;max-width:100%;margin:3px 0 0;
     padding:2px 5px;font-size:11px;white-space:normal;overflow-wrap:break-word;
   }
@@ -8084,7 +8093,7 @@ body:not(.playerTheme):not(.authMode) #app #playersList .playerLastLoginNever{
 </head>
 <body class="authMode">
 <div id="bootGuard"><img src="/icon-192.png" alt=""><b>Łowcy Methodowcy</b><span>Uruchamiam aplikację…</span><button id="bootRetry" class="hidden" type="button" onclick="retryLowcyBoot()">Spróbuj ponownie</button></div>
-<header><div class="row"><h1><img class="brandIcon" src="/brand/icon-v217-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V221</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
+<header><div class="row"><h1><img class="brandIcon" src="/brand/icon-v217-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V222</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
 <main>
 <div id="msg"></div>
 <section id="auth" class="card">
@@ -8132,5 +8141,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V221_LAST_LOGIN_READY'); console.log('CARP_MOBILE_READY port=' + PORT); startPresenceReminderLoop(); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V222_ACTIVITY_READY'); console.log('CARP_MOBILE_READY port=' + PORT); startPresenceReminderLoop(); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });
