@@ -1,4 +1,4 @@
-const CLIENT_VERSION='223';const CLIENT_VERSION_NAME='V223_HISTORIA_MIEJSCA_NA_PODIUM';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='224';const CLIENT_VERSION_NAME='V224_DIAGNOSTYKA_ALERTOW';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -413,7 +413,7 @@ async function boot(){
   await Promise.allSettled([loadCompetitions(),loadNotifications(),admin?loadPlayers():Promise.resolve()]);
   startAchievements();
   if(!admin)await restorePersistentUiState();
-  if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'}).then(reg=>{try{reg.update()}catch(_){ }if('Notification' in window&&Notification.permission==='granted')ensurePushSubscription(true,false).catch(()=>{})}).catch(()=>{})}
+  if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'}).then(reg=>{try{reg.update()}catch(_){ }if('Notification' in window&&Notification.permission==='granted')restorePushSubscription().catch(()=>{})}).catch(()=>{})}
 }
 async function login(){try{const phone=q('loginPhone')?.value||'';const password=q('loginPassword')?.value||'';if(!phone.trim()||!password)throw new Error('Wpisz telefon i hasło');const d=await api('/api/login',{method:'POST',body:JSON.stringify({phone,password})});TOKEN=d.token;STORE.set('carp_token',TOKEN);msg('Zalogowano');await boot()}catch(e){msg(e.message,'bad')}}
 async function registerPlayer(ev){if(ev){ev.preventDefault&&ev.preventDefault();ev.stopPropagation&&ev.stopPropagation()}try{const d=await api('/api/register',{method:'POST',body:JSON.stringify({phone:q('regPhone').value,password:q('regPassword').value,firstName:q('regFirst').value,lastName:q('regLast').value,pzwClub:q('regClub').value})});TOKEN=d.token;STORE.set('carp_token',TOKEN);msg('Konto zawodnika utworzone');await boot()}catch(e){msg(e.message,'bad')}}
@@ -3039,7 +3039,18 @@ async function loadPlayers(){
   q('playersList').innerHTML=legend+desktop+mobile;
 }
 function urlBase64ToUint8Array(base64String){const padding='='.repeat((4-base64String.length%4)%4);const base64=(base64String+padding).replace(/-/g,'+').replace(/_/g,'/');const raw=atob(base64);const out=new Uint8Array(raw.length);for(let i=0;i<raw.length;++i)out[i]=raw.charCodeAt(i);return out}
-async function getPushConfig(force=false){if(PUSH_CONFIG&&!force)return PUSH_CONFIG;PUSH_CONFIG=await api('/api/config');return PUSH_CONFIG}
+async function getPushConfig(force=false){if(PUSH_CONFIG&&!force)return PUSH_CONFIG;PUSH_CONFIG=await api('/api/config',{timeoutMs:8000});return PUSH_CONFIG}
+let PUSH_FEEDBACK_KIND='',PUSH_PENDING=false;
+function setPushFeedback(message,kind='busy'){
+  const box=q('notifPushFeedback');
+  PUSH_FEEDBACK_KIND=message?kind:'';
+  if(box){box.textContent=message||'';box.className='pushFeedback'+(message?' pushFeedback-'+kind:' hidden')}
+  renderPushStatus();
+}
+function pushWait(promise,ms,message){
+  let timer;
+  return Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(message)),ms)})]).finally(()=>clearTimeout(timer));
+}
 function pushUiLabel(){if(!('Notification'in window))return 'Alerty niedostępne';if(Notification.permission==='denied')return 'Alerty zablokowane';if(Notification.permission==='granted'&&PUSH_SUBSCRIBED)return 'Test alertu';return 'Włącz alerty telefonu'}
 function renderPushStatus(){
   const legacy=q('pushStatus');if(legacy)legacy.innerHTML='';
@@ -3048,35 +3059,64 @@ function renderPushStatus(){
   const pbtn=q('playerPushBtn');
   let label='Alerty telefonu: wyłączone';
   if('Notification'in window){if(Notification.permission==='granted')label=PUSH_SUBSCRIBED?'Alerty telefonu: włączone':'Alerty telefonu: gotowe do włączenia';else if(Notification.permission==='denied')label='Alerty telefonu: zablokowane w przeglądarce'}
-  if(state)state.textContent=label;
-  if(btn)btn.textContent=pushUiLabel();
-  if(pbtn)pbtn.textContent=pushUiLabel();
+  if(state)state.textContent=PUSH_PENDING?'Alerty telefonu: trwa włączanie…':PUSH_FEEDBACK_KIND==='error'?'Alerty telefonu: sprawdź komunikat poniżej':label;
+  if(btn){btn.textContent=PUSH_PENDING?'Włączam…':pushUiLabel();btn.disabled=PUSH_PENDING}
+  if(pbtn){pbtn.textContent=PUSH_PENDING?'Włączam…':pushUiLabel();pbtn.disabled=PUSH_PENDING}
 }
 async function ensurePushSubscription(silent=false,sendTest=false){
   if(!('Notification'in window)||!('serviceWorker'in navigator)||!('PushManager'in window)){
-    if(!silent){const isiPhone=/iPhone|iPad|iPod/i.test(navigator.userAgent);msg(isiPhone?'Na iPhone alerty działają po dodaniu strony do ekranu początkowego.':'Ta przeglądarka nie obsługuje powiadomień telefonu.','bad')}
-    renderPushStatus();return false;
+    if(silent)return false;
+    const isiPhone=/iPhone|iPad|iPod/i.test(navigator.userAgent);
+    throw new Error(isiPhone?'Na iPhone alerty działają po dodaniu strony do ekranu początkowego.':'Ta przeglądarka nie obsługuje powiadomień telefonu.');
   }
-  const cfg=await getPushConfig(true);
-  if(!cfg.pushReady||!cfg.vapidPublicKey){if(!silent)msg('Serwer powiadomień nie jest jeszcze gotowy.','bad');renderPushStatus();return false}
+  // Prośba o zgodę musi zacząć się bezpośrednio po dotknięciu przycisku.
   let permission=Notification.permission;
-  if(permission==='default'&&!silent)permission=await Notification.requestPermission();
-  if(permission!=='granted'){if(!silent)msg(permission==='denied'?'Powiadomienia są zablokowane w ustawieniach tej strony.':'Nie włączono powiadomień telefonu.','bad');renderPushStatus();return false}
-  const reg=await navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'});
-  await navigator.serviceWorker.ready;
-  let sub=await reg.pushManager.getSubscription();
-  if(sub&&sendTest){await sub.unsubscribe().catch(()=>{});sub=null}
-  if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8Array(cfg.vapidPublicKey)});
-  await api('/api/push-subscription',{method:'POST',body:JSON.stringify({subscription:sub.toJSON?sub.toJSON():sub})});
+  if(permission==='default'&&!silent){setPushFeedback('Czekam na zgodę na powiadomienia w telefonie…');permission=await Notification.requestPermission()}
+  if(permission!=='granted'){
+    if(silent)return false;
+    throw new Error(permission==='denied'?'Powiadomienia są zablokowane w ustawieniach tej strony lub telefonu.':'Nie udzielono zgody na powiadomienia telefonu.');
+  }
+  if(!silent)setPushFeedback('Sprawdzam serwer powiadomień…');
+  const cfg=await getPushConfig(true);
+  if(!cfg.pushReady||!cfg.vapidPublicKey)throw new Error('Serwer powiadomień nie jest jeszcze gotowy.');
+  if(!silent)setPushFeedback('Łączę aplikację z telefonem…');
+  const reg=await pushWait(navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'}),12000,'Telefon nie uruchomił obsługi powiadomień w ciągu 12 sekund.');
+  await pushWait(navigator.serviceWorker.ready,12000,'Aplikacja w telefonie nie zakończyła uruchamiania powiadomień.');
+  let sub=await pushWait(reg.pushManager.getSubscription(),8000,'Telefon nie odpowiedział podczas sprawdzania alertów.');
+  if(!sub){
+    if(!silent)setPushFeedback('Rejestruję alerty w telefonie…');
+    sub=await pushWait(reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8Array(cfg.vapidPublicKey)}),25000,'Telefon nie utworzył subskrypcji w ciągu 25 sekund. Sprawdź powiadomienia aplikacji w ustawieniach Androida.');
+  }
+  if(!silent)setPushFeedback('Zapisuję alerty…');
+  await api('/api/push-subscription',{method:'POST',body:JSON.stringify({subscription:sub.toJSON?sub.toJSON():sub}),timeoutMs:8000});
   PUSH_SUBSCRIBED=true;renderPushStatus();
-  if(sendTest){const t=await api('/api/push-test',{method:'POST',body:'{}'});if(!silent)msg(t.sent?'Wysłano testowe powiadomienie na telefon.':'Subskrypcja zapisana, ale test nie został dostarczony.',t.sent?'ok':'bad')}
+  if(sendTest){
+    if(!silent)setPushFeedback('Wysyłam próbny alert…');
+    const t=await api('/api/push-test',{method:'POST',body:'{}',timeoutMs:12000});
+    if(!silent)setPushFeedback(t.sent?'Wysłano próbny alert. Sprawdź powiadomienia telefonu.':'Subskrypcja zapisana, ale serwer nie wysłał próbnego alertu. Spróbuj ponownie lub prześlij ten komunikat.',t.sent?'ok':'error');
+  }
   return true;
+}
+async function restorePushSubscription(){
+  if(!TOKEN||!('Notification'in window)||Notification.permission!=='granted'||!('serviceWorker'in navigator))return;
+  const reg=await pushWait(navigator.serviceWorker.ready,12000,'');
+  const sub=await pushWait(reg.pushManager.getSubscription(),8000,'');
+  if(!sub)return;
+  await api('/api/push-subscription',{method:'POST',body:JSON.stringify({subscription:sub.toJSON?sub.toJSON():sub}),timeoutMs:8000});
+  PUSH_SUBSCRIBED=true;renderPushStatus();
 }
 async function disablePushSubscription(unregister=false){
   try{if(TOKEN)await api('/api/push-subscription',{method:'DELETE',body:'{}'}).catch(()=>{});if('serviceWorker'in navigator){const reg=await navigator.serviceWorker.getRegistration('/');if(reg){const sub=await reg.pushManager.getSubscription();if(sub)await sub.unsubscribe().catch(()=>{});if(unregister)await reg.unregister().catch(()=>{})}}}finally{PUSH_SUBSCRIBED=false;renderPushStatus()}
 }
 async function resetPush(){try{await disablePushSubscription(false);msg('Alerty telefonu wyłączone.');}catch(e){msg(e.message,'bad')}}
-async function enablePush(ev){if(ev){ev.preventDefault();ev.stopPropagation()}try{await ensurePushSubscription(false,true)}catch(e){msg('Nie udało się włączyć alertów: '+(e.message||e),'bad');renderPushStatus()}}
+async function enablePush(ev){
+  if(ev){ev.preventDefault();ev.stopPropagation()}
+  if(PUSH_PENDING)return;
+  PUSH_PENDING=true;setPushFeedback('Uruchamiam alerty…');
+  try{await ensurePushSubscription(false,true)}
+  catch(e){setPushFeedback('Nie udało się włączyć alertów: '+(e.message||String(e))+(e.name&&e.name!=='Error'?' ('+e.name+')':''),'error')}
+  finally{PUSH_PENDING=false;renderPushStatus()}
+}
 async function sendPushTest(ev){return enablePush(ev)}
 function scrollAppTop(){window.scrollTo({top:0,behavior:'smooth'})}
 
