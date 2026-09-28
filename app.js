@@ -1,4 +1,4 @@
-const CLIENT_VERSION='231';const CLIENT_VERSION_NAME='V231_ALERTY_WIADOMOSCI_ADMINA';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='232';const CLIENT_VERSION_NAME='V232_NIEZALEZNE_KANALY_WIADOMOSCI';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -322,7 +322,7 @@ function applyPlayerAttention(data,rerender=false){
   PLAYER_ATTENTION={count:Math.max(0,Number(data.count||0)),items:Array.isArray(data.items)?data.items:[],byCompetition:{}};
   PLAYER_ATTENTION.byCompetition=playerAttentionMap(PLAYER_ATTENTION.items);
   if(ME?.role==='PLAYER'){
-    const extras=typeof NOTIFICATION_CACHE!=='undefined'&&Array.isArray(NOTIFICATION_CACHE)?NOTIFICATION_CACHE.filter(n=>!n.read_at&&n.type==='ADMIN_MESSAGE').length:0;
+    const extras=typeof NOTIFICATION_CACHE!=='undefined'&&Array.isArray(NOTIFICATION_CACHE)?NOTIFICATION_CACHE.filter(n=>!n.read_at&&n.type==='ADMIN_MESSAGE'&&n.data?.inboxEnabled!==false).length:0;
     const total=PLAYER_ATTENTION.count+extras;
     syncNotificationBadges(total);
     const counter=q('notifCounter');if(counter)counter.textContent=total?'🔴 '+total+' do sprawdzenia':'';
@@ -2970,7 +2970,7 @@ function renderNotificationContent(){
   if(admin&&ADMIN_NOTIFICATION_TAB==='requests'){
     q('notificationsList').innerHTML=tabs+'<p>Prośby pozostają tutaj do zatwierdzenia lub odrzucenia.</p>'+(ADMIN_PENDING_REQUESTS.length?ADMIN_PENDING_REQUESTS.map(r=>'<article class="pendingLeaveCard"><strong>'+esc(r.first_name+' '+r.last_name)+'</strong><div>'+esc(r.title)+' · '+fmtDate(r.competition_date)+'</div><small>'+new Date(r.created_at).toLocaleString('pl-PL')+'</small><div class="leaveRequestActions"><button type="button" onclick="decideLeaveRequest('+Number(r.id)+',\'approve\')">Zatwierdź wypisanie</button><button type="button" class="warn" onclick="decideLeaveRequest('+Number(r.id)+',\'reject\')">Odrzuć</button></div></article>').join(''):'<p>Brak oczekujących próśb o wypisanie.</p>');return;
   }
-  const visible=admin?arr.filter(n=>n.type!=='LEAVE_REQUEST'||String(notifData(n).status||'PENDING').toUpperCase()!=='PENDING'):arr;
+  const visible=(admin?arr.filter(n=>n.type!=='LEAVE_REQUEST'||String(notifData(n).status||'PENDING').toUpperCase()!=='PENDING'):arr).filter(n=>n.type!=='ADMIN_MESSAGE'||notifData(n).inboxEnabled!==false);
   q('notificationsList').innerHTML=tabs+actions+(visible.length?'<div class="tablewrap notificationWrap"><table class="notificationTable"><thead><tr><th>Zdarzenie</th><th>Czas</th><th>Status / decyzja</th></tr></thead><tbody>'+visible.map(n=>'<tr class="'+(!n.read_at?'mine':'')+'"><td><b>'+esc(n.title)+'</b><br>'+esc(n.body)+'</td><td class="nowrap small">'+new Date(n.created_at).toLocaleString('pl-PL')+'</td><td>'+notificationStatusHtml(n)+'</td></tr>').join('')+'</tbody></table></div>':'<p class="muted">Brak powiadomień.</p>');
 }
 async function loadNotifications(){
@@ -2978,10 +2978,10 @@ async function loadNotifications(){
   if(!ME)return;
   const d=await api('/api/notifications');
   NOTIFICATION_CACHE=d.notifications||[];ADMIN_PENDING_REQUESTS=d.pendingLeaveRequests||[];
-  const unread=NOTIFICATION_CACHE.filter(n=>!n.read_at).length;
+  const unread=NOTIFICATION_CACHE.filter(n=>!n.read_at&&(n.type!=='ADMIN_MESSAGE'||notifData(n).inboxEnabled!==false)).length;
   PLAYER_UNREAD_NOTIFICATIONS=unread;
   if(ME.role==='PLAYER')await refreshPlayerAttention(false);
-  const displayCount=ME.role==='PLAYER'?PLAYER_ATTENTION.count+NOTIFICATION_CACHE.filter(n=>!n.read_at&&n.type==='ADMIN_MESSAGE').length:unread;
+  const displayCount=ME.role==='PLAYER'?PLAYER_ATTENTION.count+NOTIFICATION_CACHE.filter(n=>!n.read_at&&n.type==='ADMIN_MESSAGE'&&notifData(n).inboxEnabled!==false).length:unread;
   const counter=q('notifCounter');if(counter)counter.textContent=ME.role==='ADMIN'&&ADMIN_PENDING_REQUESTS.length?'Prośby o wypisanie: '+ADMIN_PENDING_REQUESTS.length:(displayCount?(ME.role==='PLAYER'?'🔴 '+displayCount+' do sprawdzenia':'🔔 '+displayCount):'');
   syncNotificationBadges(displayCount);
   const top=q('btn-notifications');if(top){top.querySelector('.pendingLeaveTopBadge')?.remove();if(ME.role==='ADMIN'&&ADMIN_PENDING_REQUESTS.length){const badge=document.createElement('b');badge.className='pendingLeaveTopBadge';badge.textContent='Wypisanie: '+ADMIN_PENDING_REQUESTS.length;top.appendChild(badge)}}
