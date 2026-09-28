@@ -1,4 +1,4 @@
-const CLIENT_VERSION='224';const CLIENT_VERSION_NAME='V224_DIAGNOSTYKA_ALERTOW';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='225';const CLIENT_VERSION_NAME='V225_ALERTY_LEKKA_INSTALACJA';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -3080,8 +3080,14 @@ async function ensurePushSubscription(silent=false,sendTest=false){
   const cfg=await getPushConfig(true);
   if(!cfg.pushReady||!cfg.vapidPublicKey)throw new Error('Serwer powiadomień nie jest jeszcze gotowy.');
   if(!silent)setPushFeedback('Łączę aplikację z telefonem…');
-  const reg=await pushWait(navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'}),12000,'Telefon nie uruchomił obsługi powiadomień w ciągu 12 sekund.');
-  await pushWait(navigator.serviceWorker.ready,12000,'Aplikacja w telefonie nie zakończyła uruchamiania powiadomień.');
+  let reg=null;
+  if(typeof navigator.serviceWorker.getRegistration==='function'){
+    try{reg=await pushWait(navigator.serviceWorker.getRegistration('/'),5000,'')}catch(_){/* spróbuj świeżej rejestracji */}
+  }
+  if(!reg?.active){
+    reg=await pushWait(navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'}),15000,'Telefon nie uruchomił obsługi powiadomień w ciągu 15 sekund.');
+    if(!reg.active)reg=await pushWait(navigator.serviceWorker.ready,15000,'Aplikacja w telefonie nie zakończyła uruchamiania powiadomień.');
+  }
   let sub=await pushWait(reg.pushManager.getSubscription(),8000,'Telefon nie odpowiedział podczas sprawdzania alertów.');
   if(!sub){
     if(!silent)setPushFeedback('Rejestruję alerty w telefonie…');
