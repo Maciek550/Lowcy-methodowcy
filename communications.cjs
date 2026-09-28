@@ -53,14 +53,30 @@ async function route(ctx){
     const q=await pool.query("insert into admin_message_batches(sender_user_id,competition_id,recipient_label,recipient_count,body,display_mode) values($1,$2,$3,$4,$5,$6) returning id",[user.id,compId||null,label,recipients.length,text,mode]);
     const batchId=Number(q.rows[0].id),title=compTitle?'Wiadomość: '+compTitle:'Wiadomość od organizatora';
     const payload=compTitle?compTitle+': '+text:text;
-    const pushJobs=[];
+    // Count the newly inserted unread message in the app-icon badge.
     for(const r of recipients){
       await pool.query("insert into notifications(recipient_user_id,type,title,body,data) values($1,'ADMIN_MESSAGE',$2,$3,$4)",[r.id,title,payload,{batchId,competitionId:compId||null,displayMode:mode,url:'/'}]);
-      if(mode==='ALL')pushJobs.push(pushToUser(r.id,title,payload,'/',{type:'ADMIN_MESSAGE',competitionId:compId||null}));
     }
-    let pushSent=0,pushFailed=0;
-    for(const r of await Promise.allSettled(pushJobs)){if(r.status==='fulfilled'){pushSent+=Number(r.value.sent||0);pushFailed+=Number(r.value.failed||0)}else pushFailed++}
-    sendJson(res,200,{ok:true,batchId,delivered:recipients.length,pushSent,pushFailed});return true;
+    const pushJobs=mode==='ALL'?recipients.map(async r=>{
+      let badgeCount=1;
+      try{
+        const [attention,manual]=await Promise.all([
+          getPlayerAttention(r.id),
+          pool.query("select count(*)::int as n from notifications where recipient_user_id=$1 and read_at is null and type='ADMIN_MESSAGE'",[r.id])
+        ]);
+        badgeCount=Math.max(1,Number(attention?.count||0)+Number(manual.rows[0]?.n||0));
+      }catch(e){console.error('ADMIN_MESSAGE_BADGE_ERR',e.message)}
+      return pushToUser(r.id,title,payload,'/',{type:'ADMIN_MESSAGE',competitionId:compId||null,badgeCount});
+    }):[];
+    let pushSent=0,pushFailed=0,pushUnavailable=0;
+    for(const result of await Promise.allSettled(pushJobs)){
+      if(result.status==='fulfilled'){
+        pushSent+=Number(result.value.sent||0);
+        pushFailed+=Number(result.value.failed||0);
+        if(!Number(result.value.sent||0))pushUnavailable++;
+      }else{pushFailed++;pushUnavailable++}
+    }
+    sendJson(res,200,{ok:true,batchId,delivered:recipients.length,pushSent,pushFailed,pushUnavailable});return true;
   }
   return false;
 }
