@@ -1,4 +1,4 @@
-const CLIENT_VERSION='219';const CLIENT_VERSION_NAME='V219_AUTOMATYCZNE_PRZELICZANIE_STANOWISK';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='220';const CLIENT_VERSION_NAME='V220_FINALNA_ERGONOMIA_ADMIN_ZAWODNIK';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -447,18 +447,35 @@ async function saveGeneralRules(ev){
   const rules=String(q('generalRulesEditor')?.value||'');
   try{await api('/api/general-rules',{method:'PATCH',body:JSON.stringify({rules})});msg('Zapisano regulamin ogólny');await renderPlayerRules()}catch(e){msg(e.message,'bad')}
 }
+let PLAYER_HISTORY_YEAR='all';
+function setPlayerHistoryYear(year){
+  PLAYER_HISTORY_YEAR=String(year||'all');
+  document.querySelectorAll('#playerHistoryContent .historyStartCard').forEach(card=>{
+    card.classList.toggle('hidden',PLAYER_HISTORY_YEAR!=='all'&&card.dataset.year!==PLAYER_HISTORY_YEAR);
+  });
+  document.querySelectorAll('#playerHistoryContent .historySeasonBtn').forEach(btn=>{
+    const active=btn.dataset.year===PLAYER_HISTORY_YEAR;btn.classList.toggle('active',active);btn.setAttribute('aria-pressed',String(active));
+  });
+  const visible=[...document.querySelectorAll('#playerHistoryContent .historyStartCard:not(.hidden)')].length,
+    out=q('historySeasonCount');if(out)out.textContent='Widoczne starty: '+visible;
+}
 function renderPlayerHistory(rows){
   const box=q('playerHistoryContent');if(!box)return;
   rows=Array.isArray(rows)?rows:[];
   if(!rows.length){box.innerHTML='<div class="card playerHistoryCard"><h2>Historia startów</h2><p class="muted">Brak zakończonych startów z pełnymi wynikami T1 i T2.</p></div>';return}
+  const years=[...new Set(rows.map(r=>String(r.competition_date||'').slice(0,4)).filter(y=>/^\d{4}$/.test(y)))].sort((a,b)=>b.localeCompare(a));
+  if(PLAYER_HISTORY_YEAR!=='all'&&!years.includes(PLAYER_HISTORY_YEAR))PLAYER_HISTORY_YEAR='all';
   const starts=rows.length,podiums=rows.filter(r=>Number(r.general_rank)>0&&Number(r.general_rank)<=3).length;
   const best=Math.min(...rows.map(r=>Number(r.general_rank||9999)).filter(Number.isFinite));
   const total=rows.reduce((s,r)=>s+Number(r.total_weight||0),0);
   const biggest=Math.max(0,...rows.map(r=>Number(r.biggest_fish||0)));
   const stat=(label,value,cls='')=>'<div class="historyStat '+cls+'"><small>'+esc(label)+'</small><strong>'+value+'</strong></div>';
   const round=(r,n)=>{const place=placeText(r['t'+n+'_place']),size=Number(r['t'+n+'_sector_size']||0),stand=r['t'+n+'_stand'],sector=r['t'+n+'_sector']||'—',weight=Number(r['t'+n+'_weight']||0),bf=Number(r['t'+n+'_big_fish']||0);return '<div class="historyRound historyRound'+n+'"><div class="historyRoundTitle">TURA '+n+'</div><div class="historyRoundPlace"><b>'+place+'</b><span>/'+size+'</span></div><div class="historyRoundMeta"><span>Stan. <b>'+(stand??'—')+'</b></span><span>Sektor <b>'+esc(sector)+'</b></span></div><div class="historyRoundWeight">'+fmtGram(weight)+' g</div><div class="historyRoundBF">BF: <b>'+fmtGram(bf)+' g</b></div></div>'};
-  const card=r=>'<article class="historyStartCard"><div class="historyStartHead"><div><h3>'+esc(r.fishery||r.title||'Zawody')+'</h3><span>'+fmtDate(r.competition_date)+(r.title&&r.fishery?' · '+esc(r.title):'')+'</span></div><div class="historyGeneral"><small>GENERAL</small><strong>'+Number(r.general_rank||0)+'/'+Number(r.general_count||0)+'</strong></div></div><div class="historyRounds">'+round(r,1)+round(r,2)+'</div><div class="historyStartFoot"><div><small>SUMA WAGI</small><b>'+fmtGram(r.total_weight)+' g</b></div><div><small>NAJWIĘKSZA RYBA</small><b>'+fmtGram(r.biggest_fish||0)+' g</b></div><button type="button" onclick="openHistoryCompetition('+Number(r.competition_id)+')">PEŁNE WYNIKI</button></div></article>';
-  box.innerHTML='<section class="playerHistoryDashboard"><div class="historyHero"><div><h2>Historia startów</h2><p>Twoje wyniki i statystyki zawodów.</p></div><div class="historyStats">'+stat('STARTY',starts)+stat('PODIA',podiums,'podium')+stat('NAJLEPSZE MIEJSCE',best<9999?best:'—','best')+stat('NAJWIĘKSZA RYBA',fmtGram(biggest)+' g','fish')+stat('ŁĄCZNA WAGA',fmtGram(total)+' g','weight')+'</div></div><div class="historyStartList">'+rows.map(card).join('')+'</div></section>';
+  const card=r=>'<article class="historyStartCard '+(PLAYER_HISTORY_YEAR!=='all'&&String(r.competition_date||'').slice(0,4)!==PLAYER_HISTORY_YEAR?'hidden':'')+'" data-year="'+esc(String(r.competition_date||'').slice(0,4))+'"><div class="historyStartHead"><div><h3>'+esc(r.fishery||r.title||'Zawody')+'</h3><span>'+fmtDate(r.competition_date)+(r.title&&r.fishery?' · '+esc(r.title):'')+'</span></div><div class="historyGeneral"><small>GENERAL</small><strong>'+Number(r.general_rank||0)+'/'+Number(r.general_count||0)+'</strong></div></div><div class="historyRounds">'+round(r,1)+round(r,2)+'</div><div class="historyStartFoot"><div><small>SUMA WAGI</small><b>'+fmtGram(r.total_weight)+' g</b></div><div><small>NAJWIĘKSZA RYBA</small><b>'+fmtGram(r.biggest_fish||0)+' g</b></div><button type="button" onclick="openHistoryCompetition('+Number(r.competition_id)+')">PEŁNE WYNIKI</button></div></article>';
+  const seasonButtons='<div class="historySeasonFilter" role="group" aria-label="Sezon">'+
+    ['all',...years].map(y=>'<button type="button" class="historySeasonBtn '+(PLAYER_HISTORY_YEAR===y?'active':'')+'" data-year="'+y+'" aria-pressed="'+(PLAYER_HISTORY_YEAR===y)+'" onclick="setPlayerHistoryYear(\''+y+'\')">'+(y==='all'?'WSZYSTKIE':y)+'</button>').join('')+
+    '<span id="historySeasonCount">Widoczne starty: '+rows.filter(r=>PLAYER_HISTORY_YEAR==='all'||String(r.competition_date||'').slice(0,4)===PLAYER_HISTORY_YEAR).length+'</span></div>';
+  box.innerHTML='<section class="playerHistoryDashboard"><div class="historyHero"><div><h2>Historia startów</h2><p>Twoje wyniki i statystyki zawodów.</p></div><div class="historyStats">'+stat('STARTY',starts)+stat('PODIA',podiums,'podium')+stat('NAJLEPSZE MIEJSCE',best<9999?best:'—','best')+stat('NAJWIĘKSZA RYBA',fmtGram(biggest)+' g','fish')+stat('ŁĄCZNA WAGA',fmtGram(total)+' g','weight')+'</div></div>'+seasonButtons+'<div class="historyStartList">'+rows.map(card).join('')+'</div></section>';
 }
 async function openHistoryCompetition(id){
   showTab('competitions');
@@ -1205,10 +1222,10 @@ function rosterTable(title,rows,compId,kind){
   const editBtn=e=>{const nm=String((e.first_name||'')+' '+(e.last_name||'')).trim(),safe=encodeURIComponent(nm).replace(/'/g,'%27'),club=encodeURIComponent(e.pzw_club||'').replace(/'/g,'%27');return '<button type="button" class="secondary rosterEditNameBtn" onclick="editPlayerName('+Number(e.user_id)+',decodeURIComponent(\''+safe+'\'),decodeURIComponent(\''+club+'\'))">Edytuj</button>'};
   const callEnabled=kind==='ACTIVE'||kind==='RESERVE';
   const desktop='<div class="tablewrap adminDesktopOnly"><table><thead><tr><th style="width:46px">Lp.</th><th>Zawodnik</th><th>Telefon</th><th>Koło</th><th>Status</th><th>Potw.</th><th>Akcja</th></tr></thead><tbody>'
-    +rows.map((e,idx)=>'<tr><td class="center"><b>'+(idx+1)+'</b></td><td><div class="rosterNameEdit"><b>'+esc(e.first_name+' '+e.last_name)+'</b>'+editBtn(e)+'</div></td><td class="nowrap">'+(callEnabled?renderPhoneCall(e.phone):esc(e.phone||'—'))+'</td><td>'+esc(e.pzw_club||'')+'</td><td>'+statusLabel(e.status)+'</td><td class="center">'+(confirmBtn(e)||'—')+'</td><td>'+makeButtons(e)+'</td></tr>').join('')
+    +rows.map((e,idx)=>'<tr data-confirmed="'+Boolean(e.confirmed)+'"><td class="center"><b>'+(idx+1)+'</b></td><td><div class="rosterNameEdit"><b>'+esc(e.first_name+' '+e.last_name)+'</b>'+editBtn(e)+'</div></td><td class="nowrap">'+(callEnabled?renderPhoneCall(e.phone):esc(e.phone||'—'))+'</td><td>'+esc(e.pzw_club||'')+'</td><td>'+statusLabel(e.status)+'</td><td class="center">'+(confirmBtn(e)||'—')+'</td><td>'+makeButtons(e)+'</td></tr>').join('')
     +'</tbody></table></div>';
   const mobile='<div class="adminMobileOnly mobileRosterCompact">'
-    +rows.map((e,idx)=>{const club=e.pzw_club?('K'+esc(e.pzw_club)):'',hasCall=Boolean(phoneTelHref(e.phone));return '<div class="mobileRosterCompactRow">'
+    +rows.map((e,idx)=>{const club=e.pzw_club?('K'+esc(e.pzw_club)):'',hasCall=Boolean(phoneTelHref(e.phone));return '<div class="mobileRosterCompactRow" data-confirmed="'+Boolean(e.confirmed)+'">'
         +'<div class="mobileRosterCompactHead '+(hasCall?'hasCall':'')+'"><span class="mobileRosterCompactLp">'+(idx+1)+'</span><div class="mobileRosterCompactIdentity"><b>'+esc(e.first_name+' '+e.last_name)+'</b>'+(club?'<small>'+club+'</small>':'')+'</div>'+(hasCall?renderPhoneCall(e.phone,'mobileRosterCallIcon',true):'')+editBtn(e)+'</div>'
         +'<div class="mobileRosterCompactActions '+(kind==='ACTIVE'?'threeActions':'twoActions')+'">'+(confirmBtn(e,true)||'')+makeButtons(e)+'</div>'
         +'</div>';}).join('')
@@ -1219,7 +1236,7 @@ function rosterTable(title,rows,compId,kind){
 let ADMIN_ROSTER_SEARCH='', ADMIN_ROSTER_STATUS='ALL';
 function normalizeRosterSearch(value){return String(value||'').toLocaleLowerCase('pl').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ł/g,'l').trim()}
 function setAdminRosterStatus(status){
-  ADMIN_ROSTER_STATUS=['ALL','ACTIVE','RESERVE','CANCELLED'].includes(status)?status:'ALL';
+  ADMIN_ROSTER_STATUS=['ALL','ACTIVE','RESERVE','CANCELLED','PRESENT','UNCONFIRMED'].includes(status)?status:'ALL';
   document.querySelectorAll('#adminRosterEntries .adminRosterFilterBtn').forEach(el=>{
     const selected=el.dataset.status===ADMIN_ROSTER_STATUS;el.classList.toggle('selected',selected);el.setAttribute('aria-pressed',String(selected));
   });
@@ -1232,12 +1249,15 @@ function applyAdminRosterFilter(){
   const term=normalizeRosterSearch(ADMIN_ROSTER_SEARCH);
   let visible=0;
   root.querySelectorAll('.adminRosterGroup').forEach(group=>{
-    const allow=ADMIN_ROSTER_STATUS==='ALL'||group.dataset.kind===ADMIN_ROSTER_STATUS;
+    const presenceMode=ADMIN_ROSTER_STATUS==='PRESENT'||ADMIN_ROSTER_STATUS==='UNCONFIRMED';
+    const allow=ADMIN_ROSTER_STATUS==='ALL'||group.dataset.kind===ADMIN_ROSTER_STATUS||(presenceMode&&group.dataset.kind==='ACTIVE');
     const desktop=[...group.querySelectorAll('tbody tr')],mobile=[...group.querySelectorAll('.mobileRosterCompactRow')];
     const count=Math.max(desktop.length,mobile.length);
     let shown=0;
     for(let i=0;i<count;i++){
-      const row=desktop[i]||mobile[i],isMatch=allow&&normalizeRosterSearch(row?.textContent||'').includes(term);
+      const row=desktop[i]||mobile[i],confirmed=String(row?.dataset?.confirmed||'false')==='true',
+        presenceOk=!presenceMode||(ADMIN_ROSTER_STATUS==='PRESENT'?confirmed:!confirmed),
+        isMatch=allow&&presenceOk&&normalizeRosterSearch(row?.textContent||'').includes(term);
       if(desktop[i])desktop[i].classList.toggle('hidden',!isMatch);
       if(mobile[i])mobile[i].classList.toggle('hidden',!isMatch);
       if(isMatch)shown++;
@@ -1251,7 +1271,7 @@ function applyAdminRosterFilter(){
 }
 function renderEntries(d){
   const c=d.competition;
-  const choices=[['ALL','Wszyscy'],['ACTIVE','Lista główna'],['RESERVE','Rezerwa'],['CANCELLED','Wypisani']];
+  const choices=[['ALL','Wszyscy'],['ACTIVE','Lista główna'],['PRESENT','Obecni'],['UNCONFIRMED','Niepotwierdzeni'],['RESERVE','Rezerwa'],['CANCELLED','Wypisani']];
   const buttons=choices.map(([status,label])=>'<button type="button" data-status="'+status+'" aria-pressed="'+(status===ADMIN_ROSTER_STATUS)+'" class="adminRosterFilterBtn '+(status===ADMIN_ROSTER_STATUS?'selected':'')+'" onclick="setAdminRosterStatus(\''+status+'\')">'+label+'</button>').join('');
   const group=(kind,label,rows)=>'<section class="adminRosterGroup" data-kind="'+kind+'">'+rosterTable(label,rows||[],c.id,kind)+'</section>';
   return '<div class="card adminRosterEntries" id="adminRosterEntries"><h2>Panel zapisów — lista główna i rezerwa</h2>'+
