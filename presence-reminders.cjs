@@ -30,7 +30,7 @@ async function ensureTwoDayReminders({pool,pushToUser,getPlayerAttention}){
     if(!still.rows.length){await pool.query("update notifications set read_at=now() where id=$1",[inserted.rows[0].id]);continue}
     try{
       const attention=await getPlayerAttention(uid);
-      const manual=await pool.query("select count(*)::int as n from notifications where recipient_user_id=$1 and read_at is null and type='ADMIN_MESSAGE'",[uid]);
+      const manual=await pool.query("select count(*)::int as n from notifications where recipient_user_id=$1 and read_at is null and type='ADMIN_MESSAGE' and data->>'inboxEnabled' is distinct from 'false'",[uid]);
       const badgeCount=Number(attention.count||0)+Number(manual.rows[0]?.n||0);
       const result=await pushToUser(uid,title,body,'/',{type:'PRESENCE_REMINDER_2D',competitionId:cid,badgeCount});
       pushSent+=Number(result.sent||0);pushFailed+=Number(result.failed||0);
