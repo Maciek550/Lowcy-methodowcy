@@ -9,6 +9,7 @@ try { jwt = require('jsonwebtoken'); } catch (_) {}
 let webpush = null;
 try { webpush = require('web-push'); } catch (_) {}
 const crypto = require('crypto');
+const {standState,absencePreview,resultsPreflight} = require('./safety-core.cjs');
 
 const PORT = Number(process.env.PORT || 3000);
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
@@ -1230,10 +1231,10 @@ async function generateDraw(competitionId, round, actor) {
   const entries = await getActiveEntries(competitionId);
   if (!entries.length) throw new Error('Brak aktywnych zawodników do losowania');
   const disabledStands = disabledStandsForCompetition(comp);
+  const preflight=standState({bank1:comp.bank1_count,bank2:comp.bank2_count,disabledStands,participants:entries.length});
+  if(!preflight.ready)throw new Error('Nie można losować: '+preflight.issues.join(' '));
   const stands = makeStandList(comp, entries.length);
-  if (disabledStands.length && stands.length !== entries.length) {
-    throw new Error('Nie można losować: aktywne stanowiska '+stands.length+', zawodnicy '+entries.length+'. Popraw listę zawodników albo wyłączone stanowiska.');
-  }
+  if(stands.length!==entries.length)throw new Error('Liczba losowanych stanowisk nie zgadza się z listą główną.');
   let assignment = [];
 
   if (round === 2) {
@@ -2418,6 +2419,55 @@ self.addEventListener('notificationclick', event => {
       await notifyUser(info.user_id, 'LEAVE_REJECTED', 'Prośba o wypisanie odrzucona', `Administrator odrzucił prośbę o wypisanie z: ${info.title}`, { competitionId:Number(info.competition_id), requestId, status:'REJECTED' });
     }
     return sendJson(res, 200, { ok:true, status:info.status, competitionId:Number(info.competition_id), userId:Number(info.user_id) });
+  }
+
+  // V216: one-step, explicitly confirmed absence. A preview never mutates the database.
+  m = path.match(/^\/api\/admin\/competitions\/(\d+)\/absence$/);
+  if(m && method==='POST'){
+    if(!requireAdmin(user,res))return;
+    const compId=Number(m[1]),b=await readBody(req),
+      entryId=Number(b.entryId),stand=Number(b.stand),previewOnly=b.previewOnly===true;
+    if(!Number.isSafeInteger(entryId)||entryId<1||!Number.isSafeInteger(stand))
+      return sendJson(res,400,{ok:false,error:'Wybierz zawodnika i fizyczne stanowisko.'});
+    const client=await pool.connect();
+    let output,person,comp;
+    try {
+      await client.query('begin');
+      comp=(await client.query('select * from competitions where id=$1 for update',[compId])).rows[0];
+      if(!comp){await client.query('rollback');return sendJson(res,404,{ok:false,error:'Nie znaleziono zawodów.'});}
+      person=(await client.query("select e.id,e.user_id,e.status,u.first_name,u.last_name from entries e join users u on u.id=e.user_id where e.id=$1 and e.competition_id=$2 for update of e",[entryId,compId])).rows[0];
+      if(!person||person.status!=='ACTIVE'){await client.query('rollback');return sendJson(res,409,{ok:false,error:'Zawodnik nie jest już na liście głównej. Odśwież listę.'});}
+      const counts=(await client.query("select (select count(*)::int from entries where competition_id=$1 and status='ACTIVE') as active,(select count(*)::int from draws where competition_id=$1) as draws,(select count(*)::int from results where competition_id=$1) as results,(select count(*)::int from result_items where competition_id=$1) as items",[compId])).rows[0];
+      output=absencePreview({
+        bank1:comp.bank1_count,bank2:comp.bank2_count,
+        disabledStands:disabledStandsForCompetition(comp),
+        participants:Number(counts.active),stand
+      });
+      if(Number(counts.draws)>0||Number(counts.results)>0||Number(counts.items)>0){
+        output={...output,ready:false,issues:[...output.issues,'Istnieją już losowania lub wyniki. Najpierw rozstrzygnij ich reset; nic nie zostanie usunięte automatycznie.']};
+      }
+      if(previewOnly){
+        await client.query('rollback');
+        return sendJson(res,200,{ok:true,preview:true,player:person.first_name+' '+person.last_name,...output});
+      }
+      if(!output.ready){
+        await client.query('rollback');
+        return sendJson(res,409,{ok:false,error:output.issues.join(' '),...output});
+      }
+      const next=[...output.disabled,stand].sort((x,y)=>x-y);
+      await client.query("update entries set status='CANCELLED',cancelled_at=now(),confirmed=false,confirmed_at=null where id=$1 and competition_id=$2 and status='ACTIVE'",[entryId,compId]);
+      await client.query("update competitions set disabled_stands=$1::jsonb where id=$2",[JSON.stringify(next),compId]);
+      await client.query('commit');
+      const details={competitionId:compId,entryId,excludedStand:stand};
+      try{
+        await notifyUser(person.user_id,'ENTRY_STATUS','Zmiana statusu zapisu',comp.title+': wypisany z zawodów',details);
+        await notifyAdmins('ABSENCE_MARKED','Nieobecny zawodnik',person.first_name+' '+person.last_name+' — wyłączono stanowisko '+stand+' w '+comp.title,details);
+      }catch(noticeError){console.error('V216_ABSENCE_NOTIFICATION:',noticeError.message);}
+      return sendJson(res,200,{ok:true,player:person.first_name+' '+person.last_name,excludedStand:stand,disabledStands:next,
+        physical:output.physical,available:output.afterAvailable,participants:output.afterPlayers,
+        bank1:output.bank1,bank2:output.bank2});
+    }catch(error){try{await client.query('rollback')}catch(_){}throw error}
+    finally{client.release()}
   }
 
   m = path.match(/^\/api\/admin\/competitions\/(\d+)\/disabled-stands$/);
