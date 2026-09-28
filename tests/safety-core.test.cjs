@@ -1,7 +1,7 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path');
-const {standState,absencePreview,resultsPreflight}=require('../safety-core.cjs');
+const {standState,absencePreview,resultsPreflight,planStandRestoration}=require('../safety-core.cjs');
 const root=path.resolve(__dirname,'..');
 test('29 physical: 15 lower +14 upper, excluded 15 => 28 available',()=>{
  const x=standState({bank1:15,bank2:14,disabledStands:[15],participants:28});
@@ -39,4 +39,30 @@ test('server verifies exact physical stand count before drawing',()=>{
  const s=fs.readFileSync(path.join(root,'server.cjs'),'utf8');
  assert.match(s,/standState\(\{bank1:/);
  assert.match(s,/if\(!preflight\.ready\)/);
+});
+
+test('V219: 26 physical, two exclusions, 24 players: clearing restores 12+12 automatically',()=>{
+ const p=planStandRestoration({bank1:13,bank2:13,mapMode:'TWO_OPPOSITE',previousDisabled:[2,25],nextDisabled:[],activeCount:24,limitPlaces:26});
+ assert.deepEqual(p,{bank1:12,bank2:12,resetLayout:true,resynced:true});
+ assert.equal(standState({bank1:p.bank1,bank2:p.bank2,disabledStands:[],participants:24}).ready,true);
+});
+test('V219: partial exclusions and repeated empty saves do not resize the physical map',()=>{
+ const base={bank1:13,bank2:13,mapMode:'TWO_OPPOSITE',activeCount:24,limitPlaces:26};
+ const partial=planStandRestoration({...base,previousDisabled:[2,25],nextDisabled:[2]});
+ const unchanged=planStandRestoration({...base,previousDisabled:[],nextDisabled:[]});
+ for(const p of [partial,unchanged])assert.deepEqual(p,{bank1:13,bank2:13,resetLayout:false,resynced:false});
+});
+test('V219: one bank, odd banks and unchanged layouts remain correctly handled',()=>{
+ const one=planStandRestoration({bank1:26,bank2:0,mapMode:'ONE_BANK',previousDisabled:[3,17],nextDisabled:[],activeCount:24});
+ assert.deepEqual(one,{bank1:24,bank2:0,resetLayout:true,resynced:true});
+ const odd=planStandRestoration({bank1:15,bank2:14,previousDisabled:[15],nextDisabled:[],activeCount:28});
+ assert.deepEqual(odd,{bank1:14,bank2:14,resetLayout:true,resynced:true});
+ const same=planStandRestoration({bank1:13,bank2:13,previousDisabled:[2,25],nextDisabled:[],activeCount:26});
+ assert.deepEqual(same,{bank1:13,bank2:13,resetLayout:false,resynced:true});
+});
+test('V219: route synchronizes physical bank counts in the same PATCH as exclusion clearing',()=>{
+ const server=fs.readFileSync(path.join(root,'server.cjs'),'utf8');
+ assert.match(server,/planStandRestoration\(\{[\s\S]*?previousDisabled:disabledStandsForCompetition\(comp\)/);
+ assert.match(server,/set disabled_stands=\$1::jsonb, bank1_count=\$3, bank2_count=\$4/);
+ assert.match(server,/sector_layout=case when \$5::boolean then null else sector_layout end/);
 });
