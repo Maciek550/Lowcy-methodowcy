@@ -215,7 +215,6 @@ async function restorePersistentUiState(){
 
 function closePlayerCompetition(ev){
   if(ev){ev.preventDefault();ev.stopPropagation()}
-  closePlayerMobileMapFullscreen();
   const detail=q('competitionDetail');
   if(detail){detail.classList.add('hidden');detail.innerHTML=''}
   CURRENT_DETAIL=null;PLAYER_MOBILE_PANEL=null;PLAYER_RESULTS_TAB='t1';PLAYER_DRAW_ROUND=1;PLAYER_DRAW_VIEW='map';
@@ -470,7 +469,7 @@ async function loadPlayerHistory(){
   const box=q('playerHistoryContent');if(box)box.innerHTML='<div class="card"><p class="muted">Wczytuję historię startów…</p></div>';
   try{const d=await api('/api/me/history');renderPlayerHistory(d.history||[])}catch(e){if(box)box.innerHTML='<div class="card bad danger-line">Nie udało się wczytać historii startów.</div>';msg(e.message,'bad')}
 }
-function showTab(n){if(n!=='competitions')closePlayerMobileMapFullscreen();syncPlayerStickyBars();['competitions','rules','notifications','players','profile','history'].forEach(x=>{q('tab-'+x)?.classList.toggle('hidden',x!==n);q('btn-'+x)?.classList.toggle('active',x===n)});if(n==='rules')renderPlayerRules();if(n==='notifications')loadNotifications();if(n==='players')loadPlayers();if(n==='profile')renderMyProfile();if(n==='history')loadPlayerHistory();recordAppNavigation()}
+function showTab(n){syncPlayerStickyBars();['competitions','rules','notifications','players','profile','history'].forEach(x=>{q('tab-'+x)?.classList.toggle('hidden',x!==n);q('btn-'+x)?.classList.toggle('active',x===n)});if(n==='rules')renderPlayerRules();if(n==='notifications')loadNotifications();if(n==='players')loadPlayers();if(n==='profile')renderMyProfile();if(n==='history')loadPlayerHistory();recordAppNavigation()}
 function competitionActionHtml(c,admin,mine,closed,cardMode=false){
   if(admin)return '<div class="inlineBtns adminCompetitionActions '+(cardMode?'competitionCardActions adminCompetitionCardActions':'')+'"><button type="button" class="adminOpenCompetitionBtn" onclick="openCompetition('+c.id+')">Otwórz panel zawodów <span aria-hidden="true">→</span></button><button type="button" class="secondary adminEditCompetitionBtn" onclick="openCompetitionEdit('+c.id+')">Edytuj</button><button type="button" class="warn adminDeleteCompetitionBtn" onclick="deleteCompetition('+c.id+')">Usuń</button></div>';
   const leavePending=String(c.my_leave_request_status||'').toUpperCase()==='PENDING';
@@ -791,7 +790,7 @@ function renderPlayerMobilePanelContent(d,panel){
   if(panel==='map1'||panel==='map2'){
     const round=panel==='map2'?2:1;
     if(!(d.draws||[]).some(x=>Number(x.round)===round))return '<div class="card"><p>Losowanie Tury '+round+' nie zostało jeszcze opublikowane.</p></div>';
-    return '<div class="playerMobileSelectedPanel"><div class="playerMobileFullMapWrap"><div class="playerMobileFullMapTitle">MAPA ŁOWISKA — TURA '+round+'</div><div class="playerMobileMapControls"><button type="button" onclick="zoomPlayerMobileMap(this,-1)" aria-label="Pomniejsz mapę">−</button><button type="button" onclick="zoomPlayerMobileMap(this,1)" aria-label="Otwórz i powiększ mapę">+</button><button type="button" onclick="zoomPlayerMobileMap(this,0)">Dopasuj</button><button type="button" onclick="openPlayerMobileMapFullscreen(this)">Pełny ekran</button></div><div class="playerMobileFullMapViewport"><div class="playerMobileFullMapCanvas">'+renderRoundDrawMap(d,round)+'</div></div><div class="playerMobileMapHint">Dotknij „+” lub „Pełny ekran”, aby oglądać i przesuwać całą mapę.</div></div></div>';
+    return '<div class="playerMobileSelectedPanel"><div class="playerMobileFullMapWrap"><div class="playerMobileFullMapTitle">MAPA ŁOWISKA — TURA '+round+'</div><div class="playerMobileFullMapViewport"><div class="playerMobileFullMapCanvas">'+renderRoundDrawMap(d,round)+'</div></div><div class="playerMobileMapHint">Pełna mapa dopasowana do szerokości ekranu.</div></div></div>';
   }
   if(panel==='t1')return '<div class="playerMobileSelectedPanel"><div class="card playerDesktopPanelCard playerResultCard"><h2>Wyniki sektorowe — Tura 1</h2>'+renderSectorResultsColumn(d.classification.round1,'')+'<h2 class="playerWholeRoundTitle">Cała Tura 1</h2>'+renderPlayerRoundCompact(d.classification.round1,1)+'</div></div>';
   if(panel==='t2')return '<div class="playerMobileSelectedPanel"><div class="card playerDesktopPanelCard playerResultCard"><h2>Wyniki sektorowe — Tura 2</h2>'+renderSectorResultsColumn(d.classification.round2,'')+'<h2 class="playerWholeRoundTitle">Cała Tura 2</h2>'+renderPlayerRoundCompact(d.classification.round2,2)+'</div></div>';
@@ -898,8 +897,7 @@ function focusPlayerNavOnOpen(){
 }
 function showPlayerDesktopPanel(panel,ev){
   if(ev){ev.preventDefault();ev.stopPropagation()}
-  closePlayerMobileMapFullscreen();
-  const keepY=APP_NAV_RESTORING?Math.round(window.scrollY||0):null;
+  const keepY=Math.round(window.scrollY||0);
   const allowed=['draw1','draw2','map1','map2','t1','t2','general','stats'];
   if(!allowed.includes(panel))return;
   if(panel==='t1'||panel==='t2')markPlayerResultSeen(panel==='t1'?1:2);
@@ -913,7 +911,7 @@ function showPlayerDesktopPanel(panel,ev){
   const mobileBox=q('playerMobilePanelContent');
   if(mobileBox&&CURRENT_DETAIL)mobileBox.innerHTML=renderPlayerMobilePanelContent(CURRENT_DETAIL,panel);
   document.querySelectorAll('.playerDesktopUnifiedNav button,.playerUnifiedNav button').forEach(btn=>btn.classList.toggle('active',btn.getAttribute('onclick')?.includes("'"+panel+"'")));
-  if(keepY===null)focusPlayerNavOnOpen();else restorePlayerViewport(keepY);
+  restorePlayerViewport(keepY);
 }
 function setPlayerDrawView(view,ev){
   if(ev){ev.preventDefault();ev.stopPropagation()}
@@ -968,8 +966,7 @@ async function playerDockAction(action){
 
 function showPlayerMobilePanel(panel,ev){
   if(ev){ev.preventDefault();ev.stopPropagation()}
-  closePlayerMobileMapFullscreen();
-  const keepY=APP_NAV_RESTORING?Math.round(window.scrollY||0):null;
+  const keepY=Math.round(window.scrollY||0);
   const allowed=['draw1','draw2','map1','map2','t1','t2','general','stats'];
   if(!allowed.includes(panel))return;
   if(panel==='t1'||panel==='t2')markPlayerResultSeen(panel==='t1'?1:2);
@@ -983,119 +980,28 @@ function showPlayerMobilePanel(panel,ev){
   const desktopBox=q('playerDesktopPanelContent');
   if(desktopBox&&CURRENT_DETAIL)desktopBox.innerHTML=renderPlayerDesktopPanelContent(CURRENT_DETAIL,panel);
   document.querySelectorAll('.playerUnifiedNav button,.playerDesktopUnifiedNav button').forEach(btn=>btn.classList.toggle('active',btn.getAttribute('onclick')?.includes("'"+panel+"'")));
-  if(keepY===null)focusPlayerNavOnOpen();else restorePlayerViewport(keepY);
+  restorePlayerViewport(keepY);
   recordAppNavigation();
 }
-function setPlayerMobileMapZoom(viewport,zoom,pointX,pointY){
-  const canvas=viewport.querySelector('.playerMobileFullMapCanvas');
-  const map=canvas?.querySelector('.sectorMap');
-  if(!canvas||!map)return;
-  const naturalW=Number(viewport.dataset.mapWidth),naturalH=Number(viewport.dataset.mapHeight);
-  const fit=Number(viewport.dataset.mapFit),oldZoom=Number(viewport.dataset.mapZoom)||1;
-  if(!naturalW||!naturalH||!fit)return;
-  const next=Math.min(4,Math.max(1,zoom));
-  const anchorX=Number.isFinite(pointX)?pointX:viewport.clientWidth/2;
-  const anchorY=Number.isFinite(pointY)?pointY:viewport.clientHeight/2;
-  const contentX=(viewport.scrollLeft+anchorX-4)/(fit*oldZoom);
-  const contentY=(viewport.scrollTop+anchorY-4)/(fit*oldZoom);
-  const scale=fit*next;
-  canvas.style.width=Math.ceil(naturalW*scale+8)+'px';
-  canvas.style.height=Math.ceil(naturalH*scale+8)+'px';
-  map.style.transform='scale('+scale+')';
-  viewport.dataset.mapZoom=String(next);
-  viewport.scrollLeft=Math.max(0,contentX*scale+4-anchorX);
-  viewport.scrollTop=Math.max(0,contentY*scale+4-anchorY);
-}
-function openPlayerMobileMapFullscreen(button){
-  const existing=q('playerMapFullscreen');
-  if(existing)return existing;
-  const wrap=button.closest('.playerMobileFullMapWrap');
-  const source=wrap?.querySelector('.playerMobileFullMapCanvas .sectorMap');
-  if(!source)return null;
-  const title=wrap.querySelector('.playerMobileFullMapTitle')?.textContent||'Mapa łowiska';
-  const modal=document.createElement('div');
-  modal.id='playerMapFullscreen';modal.className='playerMobileMapFullscreen';
-  modal.setAttribute('role','dialog');modal.setAttribute('aria-modal','true');modal.setAttribute('aria-label',title);
-  modal.innerHTML='<div class="playerMobileMapFullscreenHead"><strong>'+esc(title)+'</strong><button type="button" onclick="closePlayerMobileMapFullscreen()" aria-label="Zamknij mapę">✕</button></div>'
-    +'<div class="playerMobileMapControls"><button type="button" onclick="zoomPlayerMobileMap(this,-1)" aria-label="Pomniejsz mapę">−</button><button type="button" onclick="zoomPlayerMobileMap(this,1)" aria-label="Powiększ mapę">+</button><button type="button" onclick="zoomPlayerMobileMap(this,0)">Dopasuj</button></div>'
-    +'<div class="playerMobileFullMapViewport"><div class="playerMobileFullMapCanvas">'+source.outerHTML+'</div></div>';
-  document.body.appendChild(modal);
-  document.body.classList.add('playerMapExpanded');
-  syncPlayerMapVisualViewport();
-  fitPlayerMobileFullMaps();
-  setPlayerMobileMapZoom(modal.querySelector('.playerMobileFullMapViewport'),3);
-  modal.querySelector('.playerMobileMapFullscreenHead button')?.focus({preventScroll:true});
-  return modal;
-}
-function syncPlayerMapVisualViewport(){
-  const modal=q('playerMapFullscreen'),v=window.visualViewport;
-  if(!modal||!v)return;
-  for(const [key,value] of [['left',v.offsetLeft],['top',v.offsetTop],['width',v.width],['height',v.height]])
-    modal.style.setProperty(key,value+'px','important');
-  modal.style.setProperty('right','auto','important');
-  modal.style.setProperty('bottom','auto','important');
-}
-function syncPlayerPageZoom(){
-  const visibleWidth=Math.max(1,Math.floor((window.visualViewport?.width||window.innerWidth)-2));
-  document.documentElement.style.setProperty('--player-visible-width',visibleWidth+'px');
-  const enlarged=Boolean(window.visualViewport&&window.visualViewport.scale>1.05);
-  document.documentElement.classList.toggle('playerPageZoomed',enlarged);
-  document.body.classList.toggle('playerPageZoomed',enlarged);
-  document.body.classList.toggle('playerVisibleNarrow',visibleWidth<340);
-}
-syncPlayerPageZoom();
-window.visualViewport?.addEventListener('scroll',syncPlayerMapVisualViewport,{passive:true});
-window.visualViewport?.addEventListener('resize',()=>{syncPlayerPageZoom();syncPlayerMapVisualViewport();syncPlayerStickyBars();if(q('playerMapFullscreen'))fitPlayerMobileFullMaps()},{passive:true});
-function closePlayerMobileMapFullscreen(){
-  q('playerMapFullscreen')?.remove();
-  document.body.classList.remove('playerMapExpanded');
-}
-function zoomPlayerMobileMap(button,direction){
-  const existing=button.closest('.playerMobileMapFullscreen');
-  const modal=existing||openPlayerMobileMapFullscreen(button);
-  const viewport=modal?.querySelector('.playerMobileFullMapViewport');
-  if(!viewport)return;
-  const current=Number(viewport.dataset.mapZoom)||1;
-  setPlayerMobileMapZoom(viewport,direction===0?1:(!existing&&direction>0?current:current*(direction>0?1.6:1/1.6)));
-}
-window.addEventListener('keydown',event=>{if(event.key==='Escape'&&q('playerMapFullscreen'))closePlayerMobileMapFullscreen()});
 function fitPlayerMobileFullMaps(){
   document.querySelectorAll('.playerMobileFullMapViewport').forEach(viewport=>{
     const canvas=viewport.querySelector('.playerMobileFullMapCanvas');
     const map=canvas?.querySelector('.sectorMap');
     if(!canvas||!map)return;
-    const zoom=Number(viewport.dataset.mapZoom)||1;
-    canvas.style.width='auto';canvas.style.height='auto';
-    map.style.transform='none';map.style.position='static';
+    canvas.style.transform='none';canvas.style.width='auto';canvas.style.height='auto';
+    map.style.transform='none';
     const available=Math.max(1,viewport.clientWidth-8);
     const naturalW=Math.max(map.scrollWidth,map.offsetWidth,640);
     const naturalH=Math.max(map.scrollHeight,map.offsetHeight,1);
-    const fit=Math.min(1,available/naturalW);
-    viewport.dataset.mapWidth=String(naturalW);
-    viewport.dataset.mapHeight=String(naturalH);
-    viewport.dataset.mapFit=String(fit);
-    viewport.dataset.mapZoom='1';
-    canvas.style.position='relative';canvas.style.left='0';canvas.style.top='0';
-    canvas.style.transform='none';canvas.style.overflow='hidden';
-    map.style.position='absolute';map.style.left='4px';map.style.top='4px';
-    map.style.transformOrigin='top left';
-    viewport.style.height=Math.ceil(naturalH*fit+8)+'px';
-    setPlayerMobileMapZoom(viewport,zoom);
-    if(viewport.dataset.mapTouchBound)return;
-    viewport.dataset.mapTouchBound='1';
-    let pinch=null;
-    viewport.addEventListener('touchstart',event=>{
-      if(event.touches.length!==2){pinch=null;return}
-      const a=event.touches[0],b=event.touches[1],rect=viewport.getBoundingClientRect();
-      pinch={distance:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY),zoom:Number(viewport.dataset.mapZoom)||1,x:(a.clientX+b.clientX)/2-rect.left,y:(a.clientY+b.clientY)/2-rect.top};
-    },{passive:true});
-    viewport.addEventListener('touchmove',event=>{
-      if(!pinch||event.touches.length!==2)return;
-      event.preventDefault();
-      const a=event.touches[0],b=event.touches[1];
-      setPlayerMobileMapZoom(viewport,pinch.zoom*Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY)/Math.max(1,pinch.distance),pinch.x,pinch.y);
-    },{passive:false});
-    viewport.addEventListener('touchend',event=>{if(event.touches.length<2)pinch=null},{passive:true});
+    const scale=Math.min(1,available/naturalW);
+    canvas.style.position='absolute';
+    canvas.style.left='4px';
+    canvas.style.top='4px';
+    canvas.style.width=naturalW+'px';
+    canvas.style.height=naturalH+'px';
+    canvas.style.transformOrigin='top left';
+    canvas.style.transform='scale('+scale+')';
+    viewport.style.height=Math.ceil(naturalH*scale+8)+'px';
   });
 }
 function openPlayerNotifications(ev){
