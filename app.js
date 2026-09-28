@@ -1237,12 +1237,13 @@ function rosterTable(title,rows,compId,kind){
     :'';
   const editBtn=e=>{const nm=String((e.first_name||'')+' '+(e.last_name||'')).trim(),safe=encodeURIComponent(nm).replace(/'/g,'%27'),club=encodeURIComponent(e.pzw_club||'').replace(/'/g,'%27');return '<button type="button" class="secondary rosterEditNameBtn" onclick="editPlayerName('+Number(e.user_id)+',decodeURIComponent(\''+safe+'\'),decodeURIComponent(\''+club+'\'))">Edytuj</button>'};
   const callEnabled=kind==='ACTIVE'||kind==='RESERVE';
+  const envelope=e=>callEnabled?window.lowcyCommEnvelope(Number(e.user_id),Number(compId),(e.first_name||'')+' '+(e.last_name||'')):'';
   const desktop='<div class="tablewrap adminDesktopOnly"><table><thead><tr><th style="width:46px">Lp.</th><th>Zawodnik</th><th>Telefon</th><th>Koło</th><th>Status</th><th>Potw.</th><th>Akcja</th></tr></thead><tbody>'
-    +rows.map((e,idx)=>'<tr data-confirmed="'+Boolean(e.confirmed)+'"><td class="center"><b>'+(idx+1)+'</b></td><td><div class="rosterNameEdit"><b>'+esc(e.first_name+' '+e.last_name)+'</b>'+editBtn(e)+'</div></td><td class="nowrap">'+(callEnabled?renderPhoneCall(e.phone):esc(e.phone||'—'))+'</td><td>'+esc(e.pzw_club||'')+'</td><td>'+statusLabel(e.status)+'</td><td class="center">'+(confirmBtn(e)||'—')+'</td><td>'+makeButtons(e)+'</td></tr>').join('')
+    +rows.map((e,idx)=>'<tr data-confirmed="'+Boolean(e.confirmed)+'"><td class="center"><b>'+(idx+1)+'</b></td><td><div class="rosterNameEdit"><b>'+esc(e.first_name+' '+e.last_name)+'</b>'+editBtn(e)+'</div></td><td class="nowrap">'+(callEnabled?'<span class="commPhonePair">'+renderPhoneCall(e.phone)+envelope(e)+'</span>':esc(e.phone||'—'))+'</td><td>'+esc(e.pzw_club||'')+'</td><td>'+statusLabel(e.status)+'</td><td class="center">'+(confirmBtn(e)||'—')+'</td><td>'+makeButtons(e)+'</td></tr>').join('')
     +'</tbody></table></div>';
   const mobile='<div class="adminMobileOnly mobileRosterCompact">'
     +rows.map((e,idx)=>{const club=e.pzw_club?('K'+esc(e.pzw_club)):'',hasCall=Boolean(phoneTelHref(e.phone));return '<div class="mobileRosterCompactRow" data-confirmed="'+Boolean(e.confirmed)+'">'
-        +'<div class="mobileRosterCompactHead '+(hasCall?'hasCall':'')+'"><span class="mobileRosterCompactLp">'+(idx+1)+'</span><div class="mobileRosterCompactIdentity"><b>'+esc(e.first_name+' '+e.last_name)+'</b>'+(club?'<small>'+club+'</small>':'')+'</div>'+(hasCall?renderPhoneCall(e.phone,'mobileRosterCallIcon',true):'')+editBtn(e)+'</div>'
+        +'<div class="mobileRosterCompactHead '+(hasCall?'hasCall':'')+'"><span class="mobileRosterCompactLp">'+(idx+1)+'</span><div class="mobileRosterCompactIdentity"><b>'+esc(e.first_name+' '+e.last_name)+'</b>'+(club?'<small>'+club+'</small>':'')+'</div>'+(hasCall?renderPhoneCall(e.phone,'mobileRosterCallIcon',true):'')+envelope(e)+editBtn(e)+'</div>'
         +'<div class="mobileRosterCompactActions '+(kind==='ACTIVE'?'threeActions':'twoActions')+'">'+(confirmBtn(e,true)||'')+makeButtons(e)+'</div>'
         +'</div>';}).join('')
     +'</div>';
@@ -1306,6 +1307,7 @@ function renderEntries(d){
     '<input id="adminRosterSearch" type="search" autocomplete="off" placeholder="Nazwisko, imię, koło…" value="'+esc(ADMIN_ROSTER_SEARCH)+'" oninput="applyAdminRosterFilter()" aria-label="Szukaj zawodnika na liście">'+
     '<div class="adminRosterFilters" role="group" aria-label="Filtr listy">'+buttons+'</div>'+
     '<div id="adminRosterFilterCount" aria-live="polite" class="adminRosterFilterCount"></div></div>'+
+    '<button type="button" class="commGroupBtn" onclick="openAdminMessage(0,'+c.id+',\'\')">✉ Wyślij wiadomość do grupy zawodników</button>'+
     group('ACTIVE','Lista główna — bierze udział w losowaniu',d.activeEntries)+
     group('RESERVE','Lista rezerwowa',d.reserveEntries)+group('CANCELLED','Wypisani',d.cancelledEntries)+
     '<p id="adminRosterFilterEmpty" class="muted hidden">Brak osób pasujących do filtra.</p></div>';
@@ -2976,11 +2978,12 @@ async function loadNotifications(){
   const unread=NOTIFICATION_CACHE.filter(n=>!n.read_at).length;
   PLAYER_UNREAD_NOTIFICATIONS=unread;
   if(ME.role==='PLAYER')await refreshPlayerAttention(false);
-  const displayCount=ME.role==='PLAYER'?PLAYER_ATTENTION.count:unread;
+  const displayCount=ME.role==='PLAYER'?PLAYER_ATTENTION.count+NOTIFICATION_CACHE.filter(n=>!n.read_at&&n.type==='ADMIN_MESSAGE').length:unread;
   const counter=q('notifCounter');if(counter)counter.textContent=ME.role==='ADMIN'&&ADMIN_PENDING_REQUESTS.length?'Prośby o wypisanie: '+ADMIN_PENDING_REQUESTS.length:(displayCount?(ME.role==='PLAYER'?'🔴 '+displayCount+' do sprawdzenia':'🔔 '+displayCount):'');
   syncNotificationBadges(displayCount);
   const top=q('btn-notifications');if(top){top.querySelector('.pendingLeaveTopBadge')?.remove();if(ME.role==='ADMIN'&&ADMIN_PENDING_REQUESTS.length){const badge=document.createElement('b');badge.className='pendingLeaveTopBadge';badge.textContent='Wypisanie: '+ADMIN_PENDING_REQUESTS.length;top.appendChild(badge)}}
   renderNotificationContent();
+  if(ME?.role==='PLAYER')window.lowcyCommPopup?.(NOTIFICATION_CACHE);
 }
 
 async function confirmAllNotifications(){try{const path=ME?.role==='ADMIN'?'/api/admin/notifications/read-all':'/api/notifications/read-all';const d=await api(path,{method:'POST',body:'{}'});msg('Potwierdzono powiadomienia: '+Number(d.updated||0));await loadNotifications()}catch(e){msg(e.message,'bad')}}
@@ -3032,7 +3035,7 @@ async function loadPlayers(){
   const legend='<div class="playerAccountTop"><div class="playerAccountLegend"><span><b class="playerAccountBadge playerAccountVerified">V</b> zalogował się w aplikacji</span><span><b class="playerAccountBadge playerAccountAdmin">A</b> import zewnętrzny bez konta</span><span>Aktywność zapisywana od V222</span></div><button type="button" class="warn playerDeleteAllAdminBtn" '+(adminAdded?'':'disabled')+' onclick="deleteAllAdminPlayers('+adminAdded+')">Usuń wszystkich A ('+adminAdded+')</button></div>';
   const desktop='<div class="tablewrap adminDesktopOnly"><table class="adminPlayersTable"><thead><tr><th style="width:46px">Lp.</th><th>Imię i nazwisko</th><th style="width:82px">Info</th><th>Telefon</th><th>Koło PZW</th><th>Aktywne zapisy</th><th style="width:150px">Akcja</th></tr></thead><tbody>'+d.players.map((p,i)=>{
     const name=String((p.first_name||'')+' '+(p.last_name||'')).trim(),safeName=encodeURIComponent(name).replace(/'/g,'%27'),safeClub=encodeURIComponent(p.pzw_club||'').replace(/'/g,'%27');
-    return '<tr><td class="center"><b>'+(i+1)+'</b></td><td><b>'+esc(name)+'</b> '+playerLastActivityHtml(p.last_active_at)+'</td><td class="playerBadgeCell">'+playerInfoBadges(p)+'</td><td class="nowrap">'+renderPhoneCall(p.phone)+'</td><td>'+esc(p.pzw_club)+'</td><td class="center">'+esc(p.active_entries||0)+'</td><td><div class="inlineBtns playerManageBtns"><button type="button" class="secondary" onclick="editPlayerName('+Number(p.id)+',decodeURIComponent(\''+safeName+'\'),decodeURIComponent(\''+safeClub+'\'))">Edytuj</button><button type="button" class="warn playerDeleteBtn" onclick="deletePlayer('+Number(p.id)+',decodeURIComponent(\''+safeName+'\'))">Usuń</button></div></td></tr>'
+    return '<tr><td class="center"><b>'+(i+1)+'</b></td><td><b>'+esc(name)+'</b> '+playerLastActivityHtml(p.last_active_at)+'</td><td class="playerBadgeCell">'+playerInfoBadges(p)+'</td><td class="nowrap">'+'<span class="commPhonePair">'+renderPhoneCall(p.phone)+window.lowcyCommEnvelope(Number(p.id),0,name)+'</span>'+'</td><td>'+esc(p.pzw_club)+'</td><td class="center">'+esc(p.active_entries||0)+'</td><td><div class="inlineBtns playerManageBtns"><button type="button" class="secondary" onclick="editPlayerName('+Number(p.id)+',decodeURIComponent(\''+safeName+'\'),decodeURIComponent(\''+safeClub+'\'))">Edytuj</button><button type="button" class="warn playerDeleteBtn" onclick="deletePlayer('+Number(p.id)+',decodeURIComponent(\''+safeName+'\'))">Usuń</button></div></td></tr>'
   }).join('')+'</tbody></table></div>';
   const mobile='<div class="adminMobileOnly mobilePlayersList">'+d.players.map((p,i)=>{
     const name=String((p.first_name||'')+' '+(p.last_name||'')).trim();
@@ -3040,7 +3043,7 @@ async function loadPlayers(){
     const call=phoneTelHref(p.phone)?renderPhoneCall(p.phone,'mobilePhoneCallBtn playerDirectoryCall',true):'';
     return `<article class="mobileAdminCard mobilePlayerManageCard">
       <div class="mobileAdminCardHead ${call?'hasCall':''}">
-        <span class="mobileLp">${i+1}</span><b class="playerNameLogin">${esc(name)}${playerLastActivityHtml(p.last_active_at)}</b>${call}<span class="mobilePlayerBadges">${playerInfoBadges(p)}</span>
+        <span class="mobileLp">${i+1}</span><b class="playerNameLogin">${esc(name)}${playerLastActivityHtml(p.last_active_at)}</b>${call}${window.lowcyCommEnvelope(Number(p.id),0,name)}<span class="mobilePlayerBadges">${playerInfoBadges(p)}</span>
       </div>
       <div class="mobilePlayerManageMeta"><span>Koło: <b>${esc(p.pzw_club||'—')}</b></span><span>Zapisy: <b>${esc(p.active_entries||0)}</b></span></div>
       <div class="mobilePlayerManageActions">

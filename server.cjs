@@ -11,6 +11,7 @@ try { webpush = require('web-push'); } catch (_) {}
 const crypto = require('crypto');
 const {standState,absencePreview,resultsPreflight,planStandRestoration} = require('./safety-core.cjs');
 const recovery = require('./recovery.cjs');
+const communications = require('./communications.cjs');
 
 const PORT = Number(process.env.PORT || 3000);
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
@@ -21,8 +22,8 @@ const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const GOOGLE_VISION_API_KEY = process.env.GOOGLE_VISION_API_KEY || process.env.OCR_GOOGLE_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.PHOTO_OCR_OPENAI_API_KEY || '';
 const PHOTO_OCR_MODEL = process.env.PHOTO_OCR_OPENAI_MODEL || 'gpt-5.6-sol';
-const APP_VERSION = '227';
-const APP_VERSION_NAME = 'V227_KONTROLA_LOSOWANIA';
+const APP_VERSION = '228';
+const APP_VERSION_NAME = 'V228_KOMUNIKACJA_Z_ZAWODNIKAMI';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 const PODIUM_TROPHIES = fs.existsSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) ? fs.readFileSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) : null;
 const CARP_REAL = fs.readFileSync(pathModule.join(__dirname, 'carp-real-v116.png'));
@@ -623,6 +624,7 @@ async function waitForDb() {
     try {
       await pool.query('select 1');
       await initDb();
+      await communications.init(pool);
       console.log('CARP_MOBILE_DB_READY');
       return;
     } catch (e) {
@@ -1791,6 +1793,7 @@ async function route(req, res) {
   if (path === '/api/version') return sendJson(res, 200, { ok:true, version:APP_VERSION_NAME, appVersion:APP_VERSION, time:nowIso() });
   if (path === '/pdf-vector.js') return sendBinary(res,200,fs.readFileSync(pathModule.join(__dirname,'pdf-vector.js')),'application/javascript; charset=utf-8','no-store');
   if (/^\/pdf-assets\/(pdf-lib\.js|fontkit\.js|regular\.ttf|bold\.ttf)$/.test(path)) return sendBinary(res,200,fs.readFileSync(pathModule.join(__dirname,path.slice(1))),path.endsWith('.ttf')?'font/ttf':'application/javascript; charset=utf-8','no-store');
+  if (path === '/communication-ui.js') return send(res,200,fs.readFileSync(pathModule.join(__dirname,'communication-ui.js'),'utf8'),{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-store'});
   if (path === '/app.js') return send(res, 200, APP_JS, {'Content-Type':'application/javascript; charset=utf-8', 'Cache-Control':'no-store, no-cache, must-revalidate'});
 
   if (path === '/health') return sendJson(res, 200, { ok:true, time:nowIso(), version:APP_VERSION_NAME });
@@ -2074,6 +2077,7 @@ self.addEventListener('notificationclick', event => {
   }
 
   const user = await auth(req);
+  if(await communications.route({req,res,user,path,method,url,pool,sendJson,readBody,requireAdmin,requireUser,pushToUser,getPlayerAttention}))return;
   if (path === '/api/me/activity' && method === 'POST') {
     if (!requireUser(user, res)) return;
     if (user.role !== 'PLAYER') return sendJson(res, 403, { ok:false, error:'Tylko konto zawodnika' });
@@ -3164,7 +3168,7 @@ const HTML = `<!doctype html>
 <link rel="apple-touch-icon" sizes="180x180" href="/brand/icon-v217-180.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/brand/icon-v217-32.png">
 <script>try{if(localStorage.getItem('carp_token'))document.documentElement.classList.add('hasSavedSession')}catch(e){}</script>
-<title>Łowcy Methodowcy — V227</title>
+<title>Łowcy Methodowcy — V228</title>
 <style>
 :root{--green:#114b2f;--green2:#17643f;--bg:#f3f6ef;--card:#fff;--line:#cfd8cc;--txt:#18251d;--muted:#68746d;--red:#b32020;--gold:#ffc400;--blue:#1067c8;--soft:#eaf2eb}
 *{box-sizing:border-box}html,body{height:auto!important;min-height:100%!important;overflow-y:auto!important;overscroll-behavior:auto!important}body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}header{position:sticky;top:0;z-index:5;background:var(--green);color:white;padding:12px 14px;box-shadow:0 2px 8px #0002}header .row{display:flex;justify-content:space-between;gap:12px;align-items:center;max-width:1180px;margin:auto}h1{font-size:18px;margin:0}h2{font-size:18px;margin:0 0 8px}h3{font-size:16px;margin:12px 0 8px}main{max-width:1180px;margin:0 auto;padding:12px}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin:12px 0;box-shadow:0 2px 8px #0000000d}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}input,select,textarea,button{width:100%;font:inherit;border-radius:12px;border:1px solid var(--line);padding:10px 11px;background:white}textarea{min-height:70px}button{border:0;background:var(--green);color:white;font-weight:900;cursor:pointer}button.secondary{background:#e7eee7;color:var(--green);border:1px solid #bfd0c2}button.warn{background:var(--red)}button.blue{background:var(--blue)}button:disabled{opacity:.55;cursor:not-allowed}label{display:block;font-size:12px;font-weight:900;color:var(--muted);margin:8px 0 4px}.tabs{display:flex;gap:8px;overflow:auto;padding:8px 0}.tabs button{white-space:nowrap;width:auto;padding:9px 13px}.tabs button.active{background:#072e1c}.tablewrap{width:100%;overflow:auto;border-radius:12px;border:1px solid var(--line)}table{width:100%;border-collapse:collapse;background:white}th,td{border:1px solid var(--line);padding:8px 7px;text-align:left;vertical-align:middle}th{background:#e6f0e8;color:#106b28;font-size:12px;text-transform:uppercase}.nowrap{white-space:nowrap}.muted{color:var(--muted)}.ok{color:var(--green);font-weight:900}.bad{color:var(--red);font-weight:900}.pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#e6f0e8;font-weight:900}.hidden{display:none!important}.top-actions{display:flex;gap:8px;align-items:center}.top-actions button{width:auto;padding:8px 11px;background:#ffffff22;border:1px solid #ffffff55}.small{font-size:12px}.right{text-align:right}.mine{background:#fff4b8!important;outline:3px solid var(--gold);outline-offset:-3px;font-weight:900}.mine td{font-weight:900}.danger-line{border-left:6px solid var(--red)}.success-line{border-left:6px solid var(--green)}.mapbox{background:#f7faf4;border:1px solid var(--line);border-radius:14px;padding:10px;overflow:auto}.banktitle{font-size:12px;font-weight:900;color:var(--muted);margin:8px 0 5px}.bank{display:grid;grid-template-columns:repeat(auto-fit,minmax(42px,1fr));gap:5px;min-width:320px}.stand{min-height:42px;border:1px solid #a8b7aa;border-radius:9px;background:white;display:flex;align-items:center;justify-content:center;flex-direction:column;font-weight:900;font-size:12px}.stand small{font-size:9px;font-weight:800;color:#555}.stand.occ{box-shadow:inset 0 -4px 0 #cbd8cc}.stand.t1{background:#ffe1e1;border:3px solid #d00000;color:#8e0000}.stand.t2{background:#dfeaff;border:3px solid #005bd8;color:#003c91}.stand.both{background:#f0dcff;border:3px solid #7a1fc2;color:#461078}.ownbox{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.ownitem{border:2px solid var(--line);border-radius:14px;padding:12px;background:#fff}.ownitem strong{font-size:24px}.twoCols{display:grid;grid-template-columns:1fr 1fr;gap:12px}.inlineBtns{display:flex;gap:6px;flex-wrap:wrap}.inlineBtns button{width:auto}.competitionActions{gap:22px;align-items:center}.competitionActions button{min-width:96px}.adminbar{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.tag{font-size:11px;border-radius:999px;padding:3px 7px;background:#f0f4ee;font-weight:900}.t1tag{background:#ffe1e1;color:#8e0000}.t2tag{background:#dfeaff;color:#003c91}.sector-A{box-shadow:inset 0 0 0 2px #b32020}.sector-B{box-shadow:inset 0 0 0 2px #1067c8}.sector-C{box-shadow:inset 0 0 0 2px #14803a}.sector-D{box-shadow:inset 0 0 0 2px #7a1fc2}.sector-E{box-shadow:inset 0 0 0 2px #b36b00}.sector-F{box-shadow:inset 0 0 0 2px #006b7a}.checkline{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--txt);font-weight:800}.checkline input{width:auto}.sectorMap{background:#fbfdf9;border:1px solid var(--line);border-radius:14px;padding:12px;overflow:auto}.mapTitle,.bankLabel{font-weight:1000;color:#204b38;margin:5px 0}.standRow{display:grid;gap:0;min-width:640px}.standCell{min-height:45px;border:2px solid #446b56;display:flex;align-items:center;justify-content:center;flex-direction:column;font-weight:1000;color:#123827;margin:-1px 0 0 -1px}.standCell small{font-size:10px}.standCell.empty{border:0;background:transparent}.sectorBand{display:grid;min-width:640px;gap:0}.sectorBlock{min-height:78px;border:3px solid #38664d;display:flex;align-items:center;justify-content:center;flex-direction:column;margin:-1px 0 0 -1px;text-align:center}.sectorBlock span{font-size:22px;font-weight:1000}.sectorSummary{background:#ecf2ed;border-radius:10px;padding:10px;margin-top:10px;font-size:13px}.water{text-align:center;background:#f2f6f1;color:#6a756d;font-weight:1000;padding:12px;min-width:640px}.sectorFill-A{background:#d8f1dd}.sectorFill-B{background:#dbe8fb}.sectorFill-C{background:#ffe7bd}.sectorFill-D{background:#f6d9e3}.sectorFill-E{background:#eadffb}.sectorFill-F{background:#dff4f4}.sectorFill-G{background:#f7e8ce}.sectorFill-H{background:#e5f0d0}.standCell.t1{background:#ffb5b5!important;border:4px solid #d00000!important;color:#7c0000}.standCell.t2{background:#b9d2ff!important;border:4px solid #005bd8!important;color:#002c70}.standCell.both{background:#e1b8ff!important;border:4px solid #7a1fc2!important;color:#3c0060}.standCell.occ{box-shadow:inset 0 -5px 0 #244f36}.weightItems{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:5px}.weightTag{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:3px 6px;font-size:11px;font-weight:900;background:#edf4ec;border:1px solid #bfd0c2}.weightTag button{width:auto;padding:0 4px;border-radius:8px;background:#b91c1c;color:#fff;line-height:1.1}.bfTag{background:#fff0d6;border-color:#e5b965}.netTag{background:#e7f5e7}.bfLine{font-size:12px;font-weight:1000;color:#b91c1c}.flashSave{background:#bff7c8!important;transition:background .25s}.resultInputTable input{min-width:120px}.sectorBand.clean{margin:0}.sectorFlexRow{display:flex;gap:0;min-width:640px}.sectorGroup{display:grid;gap:0;margin:0}.sectorGroup .standCell{border-radius:0;margin:-1px 0 0 -1px}.sectorFlexRow .sectorBlock{border-radius:0;margin:-1px 0 0 -1px}.standFlex{align-items:stretch}.sectorBand.clean .sectorBlock{min-height:72px}.pushBox{margin-top:6px;line-height:1.35}.bankLabelBottom{margin-top:8px}.quickScroll{position:fixed;right:10px;bottom:14px;z-index:30;display:flex;flex-direction:column;gap:7px}.quickScroll button{width:52px;padding:9px 0;border-radius:999px;background:#123827cc;box-shadow:0 3px 10px #0003}.quickScroll button:last-child{background:#e7eee7;color:#123827;border:1px solid #bfd0c2}
@@ -8183,6 +8187,7 @@ body:not(.playerTheme):not(.authMode) #app #playersList .playerLastActivityUnkno
 </script>
 <script src="/pdf-vector.js?v=${APP_VERSION}" defer></script>
 <script src="/app.js?v=${APP_VERSION}" defer onerror="window.__lowcyRecover207&&window.__lowcyRecover207()"></script>
+<script src="/communication-ui.js?v=${APP_VERSION}" defer></script>
 </body>
 </html>`;
 
