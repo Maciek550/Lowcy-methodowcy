@@ -1036,13 +1036,16 @@ function syncPlayerMapVisualViewport(){
   modal.style.setProperty('bottom','auto','important');
 }
 function syncPlayerPageZoom(){
+  const visibleWidth=Math.max(1,Math.floor((window.visualViewport?.width||window.innerWidth)-2));
+  document.documentElement.style.setProperty('--player-visible-width',visibleWidth+'px');
   const enlarged=Boolean(window.visualViewport&&window.visualViewport.scale>1.05);
   document.documentElement.classList.toggle('playerPageZoomed',enlarged);
   document.body.classList.toggle('playerPageZoomed',enlarged);
+  document.body.classList.toggle('playerVisibleNarrow',visibleWidth<340);
 }
 syncPlayerPageZoom();
 window.visualViewport?.addEventListener('scroll',syncPlayerMapVisualViewport,{passive:true});
-window.visualViewport?.addEventListener('resize',()=>{syncPlayerPageZoom();syncPlayerMapVisualViewport();if(q('playerMapFullscreen'))fitPlayerMobileFullMaps()},{passive:true});
+window.visualViewport?.addEventListener('resize',()=>{syncPlayerPageZoom();syncPlayerMapVisualViewport();syncPlayerStickyBars();if(q('playerMapFullscreen'))fitPlayerMobileFullMaps()},{passive:true});
 function closePlayerMobileMapFullscreen(){
   q('playerMapFullscreen')?.remove();
   document.body.classList.remove('playerMapExpanded');
