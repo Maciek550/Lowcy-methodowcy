@@ -1,4 +1,4 @@
-const CLIENT_VERSION='218';const CLIENT_VERSION_NAME='V218_KOMPAKTOWE_PDF_FOTO_FB';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='219';const CLIENT_VERSION_NAME='V219_AUTOMATYCZNE_PRZELICZANIE_STANOWISK';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -1347,7 +1347,7 @@ async function saveDisabledStands(id,ev){
     if(btn){btn.disabled=true;btn.textContent='Zapisuję...'}
     const value=String(q('disabledStandsInput')?.value||'').trim();
     const out=await api('/api/admin/competitions/'+id+'/disabled-stands',{method:'PATCH',body:JSON.stringify({disabledStands:value})});
-    msg(out.disabledStands?.length?'Wyłączono: '+out.disabledStands.join(', ')+' · mapa fizyczna '+out.bank1+'+'+out.bank2+' pozostaje bez zmian':'Brak wyłączonych stanowisk');
+    msg(out.resynced?'Usunięto wyłączenia. Automatycznie dopasowano mapę i sektory: '+out.bank1+' + '+out.bank2+' = '+out.physicalStands+' stanowisk.':out.disabledStands?.length?'Wyłączono: '+out.disabledStands.join(', ')+' · mapa fizyczna '+out.bank1+'+'+out.bank2+' pozostaje bez zmian':'Brak wyłączonych stanowisk');
     await refreshCompetitionKeepScroll(id);
   }catch(e){msg(e.message,'bad')}
   finally{if(btn){btn.disabled=false;btn.textContent='Zapisz wyłączenia'}}
