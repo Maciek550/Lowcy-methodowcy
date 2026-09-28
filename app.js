@@ -215,6 +215,7 @@ async function restorePersistentUiState(){
 
 function closePlayerCompetition(ev){
   if(ev){ev.preventDefault();ev.stopPropagation()}
+  closePlayerSituationalMap();
   const detail=q('competitionDetail');
   if(detail){detail.classList.add('hidden');detail.innerHTML=''}
   CURRENT_DETAIL=null;PLAYER_MOBILE_PANEL=null;PLAYER_RESULTS_TAB='t1';PLAYER_DRAW_ROUND=1;PLAYER_DRAW_VIEW='map';
@@ -469,7 +470,7 @@ async function loadPlayerHistory(){
   const box=q('playerHistoryContent');if(box)box.innerHTML='<div class="card"><p class="muted">Wczytuję historię startów…</p></div>';
   try{const d=await api('/api/me/history');renderPlayerHistory(d.history||[])}catch(e){if(box)box.innerHTML='<div class="card bad danger-line">Nie udało się wczytać historii startów.</div>';msg(e.message,'bad')}
 }
-function showTab(n){syncPlayerStickyBars();['competitions','rules','notifications','players','profile','history'].forEach(x=>{q('tab-'+x)?.classList.toggle('hidden',x!==n);q('btn-'+x)?.classList.toggle('active',x===n)});if(n==='rules')renderPlayerRules();if(n==='notifications')loadNotifications();if(n==='players')loadPlayers();if(n==='profile')renderMyProfile();if(n==='history')loadPlayerHistory();recordAppNavigation()}
+function showTab(n){if(n!=='competitions')closePlayerSituationalMap();syncPlayerStickyBars();['competitions','rules','notifications','players','profile','history'].forEach(x=>{q('tab-'+x)?.classList.toggle('hidden',x!==n);q('btn-'+x)?.classList.toggle('active',x===n)});if(n==='rules')renderPlayerRules();if(n==='notifications')loadNotifications();if(n==='players')loadPlayers();if(n==='profile')renderMyProfile();if(n==='history')loadPlayerHistory();recordAppNavigation()}
 function competitionActionHtml(c,admin,mine,closed,cardMode=false){
   if(admin)return '<div class="inlineBtns adminCompetitionActions '+(cardMode?'competitionCardActions adminCompetitionCardActions':'')+'"><button type="button" class="adminOpenCompetitionBtn" onclick="openCompetition('+c.id+')">Otwórz panel zawodów <span aria-hidden="true">→</span></button><button type="button" class="secondary adminEditCompetitionBtn" onclick="openCompetitionEdit('+c.id+')">Edytuj</button><button type="button" class="warn adminDeleteCompetitionBtn" onclick="deleteCompetition('+c.id+')">Usuń</button></div>';
   const leavePending=String(c.my_leave_request_status||'').toUpperCase()==='PENDING';
@@ -790,7 +791,7 @@ function renderPlayerMobilePanelContent(d,panel){
   if(panel==='map1'||panel==='map2'){
     const round=panel==='map2'?2:1;
     if(!(d.draws||[]).some(x=>Number(x.round)===round))return '<div class="card"><p>Losowanie Tury '+round+' nie zostało jeszcze opublikowane.</p></div>';
-    return '<div class="playerMobileSelectedPanel"><div class="playerMobileFullMapWrap"><div class="playerMobileFullMapTitle">MAPA ŁOWISKA — TURA '+round+'</div><div class="playerMobileFullMapViewport"><div class="playerMobileFullMapCanvas">'+renderRoundDrawMap(d,round)+'</div></div><div class="playerMobileMapHint">Pełna mapa dopasowana do szerokości ekranu.</div></div></div>';
+    return '<div class="playerMobileSelectedPanel"><div class="playerMobileFullMapWrap"><div class="playerMobileFullMapTitle">MAPA ŁOWISKA — TURA '+round+'</div><div class="playerSituationalLaunch"><button type="button" onclick="openPlayerSituationalMap(this,3)">＋ Powiększ</button><button type="button" onclick="openPlayerSituationalMap(this,1)">Pełny ekran</button></div><div class="playerMobileFullMapViewport"><div class="playerMobileFullMapCanvas">'+renderRoundDrawMap(d,round)+'</div></div><div class="playerMobileMapHint">Na pełnym ekranie mapę można powiększyć i przesuwać palcem.</div></div></div>';
   }
   if(panel==='t1')return '<div class="playerMobileSelectedPanel"><div class="card playerDesktopPanelCard playerResultCard"><h2>Wyniki sektorowe — Tura 1</h2>'+renderSectorResultsColumn(d.classification.round1,'')+'<h2 class="playerWholeRoundTitle">Cała Tura 1</h2>'+renderPlayerRoundCompact(d.classification.round1,1)+'</div></div>';
   if(panel==='t2')return '<div class="playerMobileSelectedPanel"><div class="card playerDesktopPanelCard playerResultCard"><h2>Wyniki sektorowe — Tura 2</h2>'+renderSectorResultsColumn(d.classification.round2,'')+'<h2 class="playerWholeRoundTitle">Cała Tura 2</h2>'+renderPlayerRoundCompact(d.classification.round2,2)+'</div></div>';
@@ -966,6 +967,7 @@ async function playerDockAction(action){
 
 function showPlayerMobilePanel(panel,ev){
   if(ev){ev.preventDefault();ev.stopPropagation()}
+  closePlayerSituationalMap();
   const keepY=APP_NAV_RESTORING?Math.round(window.scrollY||0):null;
   const allowed=['draw1','draw2','map1','map2','t1','t2','general','stats'];
   if(!allowed.includes(panel))return;
@@ -983,6 +985,83 @@ function showPlayerMobilePanel(panel,ev){
   if(keepY===null)focusPlayerNavOnOpen();else restorePlayerViewport(keepY);
   recordAppNavigation();
 }
+function closePlayerSituationalMap(){
+  const overlay=q('playerSituationalMapOverlay');
+  if(!overlay)return;
+  const trigger=overlay._mapTrigger;
+  overlay.remove();
+  if(trigger?.isConnected)trigger.focus({preventScroll:true});
+}
+function syncPlayerSituationalViewport(){
+  const overlay=q('playerSituationalMapOverlay'),v=window.visualViewport;
+  if(!overlay||!v)return;
+  overlay.style.setProperty('left',v.offsetLeft+'px','important');
+  overlay.style.setProperty('top',v.offsetTop+'px','important');
+  overlay.style.setProperty('width',v.width+'px','important');
+  overlay.style.setProperty('height',v.height+'px','important');
+  requestAnimationFrame(()=>{if(overlay.isConnected)fitPlayerSituationalMap(overlay)});
+}
+function setPlayerSituationalZoom(overlay,level){
+  const viewport=overlay.querySelector('.playerSituationalViewport');
+  const stage=overlay.querySelector('.playerSituationalStage');
+  const canvas=overlay.querySelector('.playerSituationalCanvas');
+  const fit=Number(overlay.dataset.fit)||1;
+  const naturalW=Number(overlay.dataset.mapWidth),naturalH=Number(overlay.dataset.mapHeight);
+  if(!viewport||!stage||!canvas||!naturalW||!naturalH)return;
+  const oldMaxX=Math.max(0,stage.offsetWidth-viewport.clientWidth),oldMaxY=Math.max(0,stage.offsetHeight-viewport.clientHeight);
+  const px=oldMaxX?viewport.scrollLeft/oldMaxX:.5,py=oldMaxY?viewport.scrollTop/oldMaxY:.5;
+  const zoom=Math.max(1,Math.min(6,level)),scale=fit*zoom;
+  overlay.dataset.mapZoom=String(zoom);
+  stage.style.width=Math.ceil(naturalW*scale)+'px';
+  stage.style.height=Math.ceil(naturalH*scale)+'px';
+  canvas.style.transform='scale('+scale+')';
+  viewport.scrollLeft=Math.max(0,stage.offsetWidth-viewport.clientWidth)*px;
+  viewport.scrollTop=Math.max(0,stage.offsetHeight-viewport.clientHeight)*py;
+}
+function fitPlayerSituationalMap(overlay){
+  const viewport=overlay.querySelector('.playerSituationalViewport');
+  if(!viewport)return;
+  const w=Number(overlay.dataset.mapWidth),h=Number(overlay.dataset.mapHeight);
+  if(!w||!h)return;
+  overlay.dataset.fit=String(Math.min(1,(viewport.clientWidth-12)/w,(viewport.clientHeight-12)/h));
+  setPlayerSituationalZoom(overlay,Number(overlay.dataset.mapZoom)||1);
+}
+function openPlayerSituationalMap(button,initialZoom=1){
+  const source=button.closest('.playerMobileFullMapWrap')?.querySelector('.playerMobileFullMapCanvas .sectorMap');
+  if(!source)return;
+  closePlayerSituationalMap();
+  const title=button.closest('.playerMobileFullMapWrap').querySelector('.playerMobileFullMapTitle')?.textContent||'Mapa łowiska';
+  const overlay=document.createElement('div');
+  overlay.id='playerSituationalMapOverlay';overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');overlay.setAttribute('aria-label',title);
+  overlay.innerHTML='<div class="playerSituationalHead"><strong>'+esc(title)+'</strong><button type="button" data-map-action="close" aria-label="Zamknij mapę">✕</button></div>'
+    +'<div class="playerSituationalControls"><button type="button" data-map-action="minus">−</button><button type="button" data-map-action="plus">＋</button><button type="button" data-map-action="fit">Dopasuj</button></div>'
+    +'<div class="playerSituationalViewport"><div class="playerSituationalStage"><div class="playerSituationalCanvas"></div></div></div>';
+  const canvas=overlay.querySelector('.playerSituationalCanvas'),map=source.cloneNode(true);
+  canvas.appendChild(map);overlay._mapTrigger=button;
+  document.body.appendChild(overlay);
+  syncPlayerSituationalViewport();
+  const naturalW=Math.max(640,map.scrollWidth,map.offsetWidth);
+  map.style.width=naturalW+'px';
+  const naturalH=Math.max(1,map.scrollHeight,map.offsetHeight);
+  overlay.dataset.mapWidth=String(naturalW);overlay.dataset.mapHeight=String(naturalH);
+  canvas.style.width=naturalW+'px';canvas.style.height=naturalH+'px';
+  fitPlayerSituationalMap(overlay);
+  setPlayerSituationalZoom(overlay,initialZoom);
+  overlay.querySelector('[data-map-action="close"]').onclick=closePlayerSituationalMap;
+  overlay.querySelector('[data-map-action="minus"]').onclick=()=>setPlayerSituationalZoom(overlay,(Number(overlay.dataset.mapZoom)||1)/1.5);
+  overlay.querySelector('[data-map-action="plus"]').onclick=()=>setPlayerSituationalZoom(overlay,(Number(overlay.dataset.mapZoom)||1)*1.5);
+  overlay.querySelector('[data-map-action="fit"]').onclick=()=>setPlayerSituationalZoom(overlay,1);
+  const viewport=overlay.querySelector('.playerSituationalViewport');
+  let pinch=null;
+  viewport.addEventListener('touchstart',event=>{if(event.touches.length!==2){pinch=null;return}const [a,b]=event.touches;pinch={distance:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY),zoom:Number(overlay.dataset.mapZoom)||1}},{passive:true});
+  viewport.addEventListener('touchmove',event=>{if(!pinch||event.touches.length!==2)return;event.preventDefault();const [a,b]=event.touches;setPlayerSituationalZoom(overlay,pinch.zoom*Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY)/Math.max(1,pinch.distance))},{passive:false});
+  viewport.addEventListener('touchend',event=>{if(event.touches.length<2)pinch=null},{passive:true});
+  overlay.querySelector('[data-map-action="close"]').focus({preventScroll:true});
+}
+window.visualViewport?.addEventListener('resize',syncPlayerSituationalViewport,{passive:true});
+window.visualViewport?.addEventListener('scroll',syncPlayerSituationalViewport,{passive:true});
+window.addEventListener('keydown',event=>{if(event.key==='Escape')closePlayerSituationalMap()});
+window.addEventListener('popstate',closePlayerSituationalMap);
 function fitPlayerMobileFullMaps(){
   document.querySelectorAll('.playerMobileFullMapViewport').forEach(viewport=>{
     const canvas=viewport.querySelector('.playerMobileFullMapCanvas');
