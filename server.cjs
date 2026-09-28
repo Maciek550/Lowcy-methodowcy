@@ -569,13 +569,6 @@ async function repairV176DisabledStandInflation(){
 // V211: restore only the precisely identifiable 29/28 scenario,
 // without touching draws or deliberately customized sector maps.
 async function repairLowerBankBoundaryForDisabled15(){
-  // Read-only diagnostic for the specifically reported competition.
-  const inspected=await pool.query(`select c.id,c.bank1_count,c.bank2_count,c.limit_places,c.map_mode,c.disabled_stands,
-    (c.sector_layout is null) as automatic_sectors,
-    (select count(*)::int from entries e where e.competition_id=c.id and e.status='ACTIVE') as active_count,
-    (select count(*)::int from draws d where d.competition_id=c.id) as draws_count
-    from competitions c where c.id=89`);
-  for(const x of inspected.rows)console.log('V211_INSPECT_PHYSICAL_'+JSON.stringify(x));
   const {rows}=await pool.query(`
     update competitions c set bank1_count=15, bank2_count=14
     where c.bank1_count=14 and c.bank2_count=14
