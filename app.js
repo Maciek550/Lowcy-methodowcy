@@ -1218,6 +1218,43 @@ function renderDisabledStandsTool(d){
   const c=d.competition,x=rosterCounts(d),disabled=disabledStandList(c),addon=disabled.length>0,total=Math.max(0,Number(c.bank1_count||0)+Number(c.bank2_count||0)),active=Math.max(0,total-disabled.length),hasDraw=(d.draws||[]).length>0,ok=active===x.draw;
   return '<div class="disabledStandsTool '+(ok?'disabledStandsOk':'disabledStandsBad')+'"><div class="disabledStandsHead"><b>WYŁĄCZONE STANOWISKA — opcjonalny dodatek</b><span>Numeracja brzegu zostaje bez zmian.</span></div><div class="disabledStandsRow"><input id="disabledStandsInput" '+(hasDraw?'disabled':'')+' value="'+esc(disabled.join(', '))+'" placeholder="np. 15, 16 albo 1, 30"><button type="button" '+(hasDraw?'disabled':'')+' onclick="saveDisabledStands('+c.id+',event)">Zapisz wyłączenia</button></div><div class="disabledStandsStatus"><b>'+(addon?(active+' aktywnych stanowisk / '+x.draw+' zawodników'):'Dodatek wyłączony — zwykłe losowanie działa bez zmian')+'</b><span>Fizyczne: '+total+' · wyłączone: '+(disabled.length?disabled.join(', '):'brak')+'</span></div>'+(hasDraw?'<div class="small disabledStandsLock">Po wykonanym losowaniu zmiana jest zablokowana. Najpierw użyj RESETU losowania.</div>':'')+'</div>';
 }
+/* V216: recovery is guarded by the server against overwriting newer work. */
+function renderRecoveryAction(d){
+ const snap=d.latestRecovery;if(!snap)return '';
+ const title=snap.operation==='DRAW_RESET'?'losowania i wyników':'wyników T1/T2';
+ return '<div class="recoveryAvailable"><strong>Kopia sprzed usunięcia '+title+'</strong>'+
+ '<small>Przywrócenie działa tylko, jeśli od tego czasu nie zmieniono listy, mapy ani wyników.</small>'+
+ '<button type="button" class="secondary" onclick="restoreLastRecovery('+Number(d.competition.id)+',event)">Przywróć ostatnią kopię</button></div>';
+}
+async function restoreLastRecovery(id,ev){
+ if(!confirm('Przywrócić ostatnią kopię? Nie nadpiszemy żadnych nowszych danych.'))return;
+ const btn=ev?.currentTarget||ev?.target;if(btn)btn.disabled=true;
+ try{
+  const d=await api('/api/admin/competitions/'+id+'/recovery/latest',{method:'POST',body:JSON.stringify({confirm:'PRZYWROC_OSTATNIA_KOPIE'})});
+  msg('Przywrócono: '+d.restored.draws+' losowań, '+d.restored.results+' wyników i '+d.restored.items+' wpisów wag.');
+  await refreshCompetitionKeepScroll(id);await loadNotifications();
+ }catch(e){msg(e.message||'Nie można bezpiecznie przywrócić kopii.','bad')}
+ finally{if(btn)btn.disabled=false}
+}
+/* S3: oddzielne sygnały: brak wyniku, wynik 0 g, brak losowania. */
+function renderResultsPreflight(d){
+ const people=(d.activeEntries||[]).map(e=>({id:Number(e.user_id),name:e.first_name+' '+e.last_name})),
+  draws=d.draws||[],results=d.results||[],items=d.resultItems||[];
+ const audit=round=>{
+  const dr=new Set(draws.filter(x=>Number(x.round)===round).map(x=>Number(x.user_id))),
+   res=new Map(results.filter(x=>Number(x.round)===round).map(x=>[Number(x.user_id),x])),
+   itm=new Set(items.filter(x=>Number(x.round)===round).map(x=>Number(x.user_id)));
+  return {round,missingDraw:people.filter(x=>!dr.has(x.id)),missingResult:people.filter(x=>!res.has(x.id)&&!itm.has(x.id)),
+   zero:people.filter(x=>res.has(x.id)&&Number(res.get(x.id).weight||0)===0)};
+ };
+ const label=arr=>arr.length?arr.map(x=>esc(x.name)).join(', '):'brak';
+ return '<details class="card resultPreflight"><summary><b>Kontrola przed publikacją</b> — braki, zera i losowania</summary>'+
+ '<div class="resultPreflightBody">'+[audit(1),audit(2)].map(r=>'<section class="resultPreflightRound"><h3>TURA '+r.round+'</h3>'+
+ '<div><b>Brak losowania ('+r.missingDraw.length+'):</b> '+label(r.missingDraw)+'</div>'+
+ '<div class="'+(r.missingResult.length?'missing':'')+'"><b>Brak zapisanego wyniku ('+r.missingResult.length+'):</b> '+label(r.missingResult)+'</div>'+
+ '<div><b>Wynik 0 g ('+r.zero.length+'):</b> '+label(r.zero)+'</div></section>').join('')+
+ '<p class="small">Niewysłane wpisy offline pozostają na urządzeniu sędziego. Przed publikacją poproś go o sprawdzenie synchronizacji.</p></div></details>';
+}
 function renderDrawPanel(d){
   const c=d.competition,x=rosterCounts(d),disabled=disabledStandList(c),addon=disabled.length>0,physical=Math.max(0,Number(c.bank1_count||0)+Number(c.bank2_count||0)),available=physical-disabled.length,hasDraw=(d.draws||[]).length>0;
   const hasResults=((d.results||[]).length>0)||((d.resultItems||[]).length>0)||((d.classification?.round1||[]).length>0)||((d.classification?.round2||[]).length>0);
