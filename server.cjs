@@ -8159,7 +8159,7 @@ body:not(.playerTheme):not(.authMode) #app #playersList .playerLastActivityUnkno
 </head>
 <body class="authMode">
 <div id="bootGuard"><img src="/icon-192.png" alt=""><b>Łowcy Methodowcy</b><span>Uruchamiam aplikację…</span><button id="bootRetry" class="hidden" type="button" onclick="retryLowcyBoot()">Spróbuj ponownie</button></div>
-<header><div class="row"><h1><img class="brandIcon" src="/brand/icon-v217-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V229</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
+<header><div class="row"><h1><img class="brandIcon" src="/brand/icon-v217-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V230</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
 <main>
 <div id="msg"></div>
 <section id="auth" class="card">
