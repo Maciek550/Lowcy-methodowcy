@@ -1935,7 +1935,7 @@ body #app button.rosterLeaveRequest:disabled{opacity:.65;cursor:wait}
 
 </head><body><div class="card"><h2>Reset pamięci aplikacji</h2><p>Usuwam cache i starego service workera. Przekierowanie jest natychmiastowe, bez czekania na zawieszone obietnice przeglądarki.</p><button onclick="go()">Wyczyść teraz</button></div><script>function go(){try{localStorage.removeItem('carp_token');localStorage.removeItem('lowcy_app_version_seen');sessionStorage.clear();if('serviceWorker'in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister()})}).catch(function(){})}if('caches'in window){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k)})}).catch(function(){})}}catch(e){}setTimeout(function(){location.replace('/?hard=36&t='+Date.now())},50)}go();</script></body></html>`, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate'});
 
-  if (path === '/podium-trophies-v207.jpg') return send(res,404,'Not found');
+  if (path === '/podium-trophies-v206.jpg') return send(res,404,'Not found');
   if (path === '/carp-real-v116.png') return sendBinary(res,200,CARP_REAL,'image/png','public, max-age=31536000, immutable');
   if (path === '/icon-192.png') return sendBinary(res,200,ICON_192,'image/png','public, max-age=604800');
   if (path === '/icon-512.png') return sendBinary(res,200,ICON_512,'image/png','public, max-age=604800');
