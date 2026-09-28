@@ -63,7 +63,17 @@ window.openAdminMessage=async function(userId,compId,name){
     const payload={body,mode,competitionId:Number(compId)||0};
     if(group)payload.group=form.elements.group.value;else payload.userId=Number(userId);
     const submit=form.querySelector('[type="submit"]');submit.disabled=true;submit.textContent='Wysyłam…';
-    try{const out=await api('/api/admin/messages',{method:'POST',body:JSON.stringify(payload),timeoutMs:45000});dialog.close();msg('Wysłano do '+out.delivered+' zawodników'+(mode==='ALL'?'. PUSH: '+out.pushSent:'')+'.')}
+    try{
+      const out=await api('/api/admin/messages',{method:'POST',body:JSON.stringify(payload),timeoutMs:45000});
+      dialog.close();
+      const notice='Wiadomość w aplikacji: '+out.delivered+' zawodników.';
+      if(mode==='ALL'){
+        const status=' PUSH wysłane: '+Number(out.pushSent||0)+
+          (Number(out.pushFailed||0)?', błędy: '+Number(out.pushFailed):'')+
+          (Number(out.pushUnavailable||0)?', bez aktywnego PUSH: '+Number(out.pushUnavailable):'')+'.';
+        msg(notice+status+(Number(out.pushSent||0)===0?' Sprawdź alerty u odbiorcy.':''),Number(out.pushSent||0)>0?'ok':'bad');
+      }else msg(notice);
+    }
     catch(e){msg(e.message,'bad');submit.disabled=false;submit.textContent='Wyślij wiadomość'}
   };
   dialog.showModal();
