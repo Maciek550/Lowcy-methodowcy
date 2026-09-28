@@ -1021,20 +1021,39 @@ function openPlayerMobileMapFullscreen(button){
     +'<div class="playerMobileFullMapViewport"><div class="playerMobileFullMapCanvas">'+source.outerHTML+'</div></div>';
   document.body.appendChild(modal);
   document.body.classList.add('playerMapExpanded');
+  syncPlayerMapVisualViewport();
   fitPlayerMobileFullMaps();
+  setPlayerMobileMapZoom(modal.querySelector('.playerMobileFullMapViewport'),3);
   modal.querySelector('.playerMobileMapFullscreenHead button')?.focus({preventScroll:true});
   return modal;
 }
+function syncPlayerMapVisualViewport(){
+  const modal=q('playerMapFullscreen'),v=window.visualViewport;
+  if(!modal||!v)return;
+  for(const [key,value] of [['left',v.offsetLeft],['top',v.offsetTop],['width',v.width],['height',v.height]])
+    modal.style.setProperty(key,value+'px','important');
+  modal.style.setProperty('right','auto','important');
+  modal.style.setProperty('bottom','auto','important');
+}
+function syncPlayerPageZoom(){
+  const enlarged=Boolean(window.visualViewport&&window.visualViewport.scale>1.05);
+  document.documentElement.classList.toggle('playerPageZoomed',enlarged);
+  document.body.classList.toggle('playerPageZoomed',enlarged);
+}
+syncPlayerPageZoom();
+window.visualViewport?.addEventListener('scroll',syncPlayerMapVisualViewport,{passive:true});
+window.visualViewport?.addEventListener('resize',()=>{syncPlayerPageZoom();syncPlayerMapVisualViewport();if(q('playerMapFullscreen'))fitPlayerMobileFullMaps()},{passive:true});
 function closePlayerMobileMapFullscreen(){
   q('playerMapFullscreen')?.remove();
   document.body.classList.remove('playerMapExpanded');
 }
 function zoomPlayerMobileMap(button,direction){
-  const modal=button.closest('.playerMobileMapFullscreen')||openPlayerMobileMapFullscreen(button);
+  const existing=button.closest('.playerMobileMapFullscreen');
+  const modal=existing||openPlayerMobileMapFullscreen(button);
   const viewport=modal?.querySelector('.playerMobileFullMapViewport');
   if(!viewport)return;
   const current=Number(viewport.dataset.mapZoom)||1;
-  setPlayerMobileMapZoom(viewport,direction===0?1:current*(direction>0?1.6:1/1.6));
+  setPlayerMobileMapZoom(viewport,direction===0?1:(!existing&&direction>0?current:current*(direction>0?1.6:1/1.6)));
 }
 window.addEventListener('keydown',event=>{if(event.key==='Escape'&&q('playerMapFullscreen'))closePlayerMobileMapFullscreen()});
 function fitPlayerMobileFullMaps(){
