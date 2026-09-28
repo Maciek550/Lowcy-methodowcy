@@ -1,0 +1,32 @@
+name: V217 - wierne ikony PWA i logo Facebook HD
+on:
+  push:
+    branches: [feature/v217-ux-brand-refresh]
+    paths:
+      - scripts/build-brand-assets.py
+      - .github/workflows/brand-v217.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pillow==11.3.0
+      - name: Generuj i zweryfikuj ikony z istniejącego logo
+        run: python scripts/build-brand-assets.py
+      - name: Zapisz wyeksportowane pliki na tej samej gałęzi
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add brand/
+          if ! git diff --cached --quiet; then
+            git commit -m "V217: export faithful 32-2048px PWA and Facebook logo assets"
+            git push origin HEAD:"${GITHUB_REF_NAME}"
+          fi
