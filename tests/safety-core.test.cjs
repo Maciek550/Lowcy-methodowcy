@@ -81,9 +81,13 @@ test('V220: player history has season filter and does not remove cards from data
  assert.match(a,/data-year=/);
  assert.match(a,/setPlayerHistoryYear/);
 });
-test('V220: client\/server version stays synchronized',()=>{
+test('client/server version and visible header stay synchronized',()=>{
  const a=fs.readFileSync(path.join(root,'app.js'),'utf8');
  const s=fs.readFileSync(path.join(root,'server.cjs'),'utf8');
- assert.match(a,/CLIENT_VERSION='220'/);
- assert.match(s,/APP_VERSION = '220'/);
+ const client=a.match(/const CLIENT_VERSION='(\d+)'/);
+ const server=s.match(/const APP_VERSION = '(\d+)'/);
+ assert.ok(client&&server);
+ assert.equal(client[1],server[1]);
+ assert.ok(s.includes('<title>Łowcy Methodowcy — V'+server[1]+'</title>'));
+ assert.ok(s.includes('class="headerVersion">V'+server[1]+'</span>'));
 });

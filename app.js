@@ -1,4 +1,4 @@
-const CLIENT_VERSION='220';const CLIENT_VERSION_NAME='V220_FINALNA_ERGONOMIA_ADMIN_ZAWODNIK';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='221';const CLIENT_VERSION_NAME='V221_OSTATNIE_LOGOWANIE_ZAWODNIKOW';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -2987,6 +2987,13 @@ function editPlayerName(id,currentName,currentClub=''){
   dialog.showModal();
 }
 function playerInfoBadges(p){let out='';if(p.has_logged_in)out+='<span class="playerAccountBadge playerAccountVerified" title="Zawodnik zalogował się w aplikacji">V</span>';if(p.bulk_removable)out+='<span class="playerAccountBadge playerAccountAdmin" title="Import zewnętrzny bez konta — podlega zbiorczemu usunięciu">A</span>';return out||'<span class="muted">—</span>'}
+const PLAYER_LOGIN_DATE_FORMAT=new Intl.DateTimeFormat('pl-PL',{timeZone:'Europe/Warsaw',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
+function playerLastLoginHtml(value){
+  const date=value?new Date(value):null;
+  if(!date||!Number.isFinite(date.getTime()))return '<span class="playerLastLogin playerLastLoginNever">Ostatnie logowanie: nigdy</span>';
+  const label='Ostatnie logowanie: '+PLAYER_LOGIN_DATE_FORMAT.format(date);
+  return '<time class="playerLastLogin" datetime="'+esc(date.toISOString())+'">'+esc(label)+'</time>';
+}
 async function deletePlayer(id,name){if(!ME||ME.role!=='ADMIN')return;const label=String(name||'zawodnika');if(!confirm('Usunąć zawodnika '+label+' z aktywnej bazy?\n\nJego dotychczasowe zapisy, losowania, wagi i wyniki zostaną zachowane. Konto zostanie zarchiwizowane i nie będzie mogło się logować.'))return;try{const d=await api('/api/admin/players/'+Number(id),{method:'DELETE',body:'{}'});msg('Zarchiwizowano zawodnika: '+(d.player?.name||label));await loadPlayers();await loadCompetitions();if(CURRENT_DETAIL?.competition?.id)await refreshCompetitionKeepScroll(CURRENT_DETAIL.competition.id)}catch(e){msg(e.message,'bad')}}
 async function deleteAllAdminPlayers(count){if(!ME||ME.role!=='ADMIN')return;const n=Number(count||0);if(n<1){msg('Brak zawodników oznaczonych A.');return}if(!confirm('Zarchiwizować TYLKO zaimportowanych zawodników bez konta (A)?\n\nLiczba zawodników: '+n+'\n\nKonta założone przez administratora i zalogowani zawodnicy pozostaną bez zmian.'))return;try{const d=await api('/api/admin/players/admin-added',{method:'DELETE',body:'{}'});msg('Zarchiwizowano zawodników A: '+Number(d.archived||d.deleted||0));await loadPlayers();await loadCompetitions();if(CURRENT_DETAIL?.competition?.id)await refreshCompetitionKeepScroll(CURRENT_DETAIL.competition.id)}catch(e){msg(e.message,'bad')}}
 async function loadPlayers(){
@@ -2996,7 +3003,7 @@ async function loadPlayers(){
   const legend='<div class="playerAccountTop"><div class="playerAccountLegend"><span><b class="playerAccountBadge playerAccountVerified">V</b> zalogował się w aplikacji</span><span><b class="playerAccountBadge playerAccountAdmin">A</b> import zewnętrzny bez konta</span></div><button type="button" class="warn playerDeleteAllAdminBtn" '+(adminAdded?'':'disabled')+' onclick="deleteAllAdminPlayers('+adminAdded+')">Usuń wszystkich A ('+adminAdded+')</button></div>';
   const desktop='<div class="tablewrap adminDesktopOnly"><table class="adminPlayersTable"><thead><tr><th style="width:46px">Lp.</th><th>Imię i nazwisko</th><th style="width:82px">Info</th><th>Telefon</th><th>Koło PZW</th><th>Aktywne zapisy</th><th style="width:150px">Akcja</th></tr></thead><tbody>'+d.players.map((p,i)=>{
     const name=String((p.first_name||'')+' '+(p.last_name||'')).trim(),safeName=encodeURIComponent(name).replace(/'/g,'%27'),safeClub=encodeURIComponent(p.pzw_club||'').replace(/'/g,'%27');
-    return '<tr><td class="center"><b>'+(i+1)+'</b></td><td><b>'+esc(name)+'</b></td><td class="playerBadgeCell">'+playerInfoBadges(p)+'</td><td class="nowrap">'+renderPhoneCall(p.phone)+'</td><td>'+esc(p.pzw_club)+'</td><td class="center">'+esc(p.active_entries||0)+'</td><td><div class="inlineBtns playerManageBtns"><button type="button" class="secondary" onclick="editPlayerName('+Number(p.id)+',decodeURIComponent(\''+safeName+'\'),decodeURIComponent(\''+safeClub+'\'))">Edytuj</button><button type="button" class="warn playerDeleteBtn" onclick="deletePlayer('+Number(p.id)+',decodeURIComponent(\''+safeName+'\'))">Usuń</button></div></td></tr>'
+    return '<tr><td class="center"><b>'+(i+1)+'</b></td><td><b>'+esc(name)+'</b> '+playerLastLoginHtml(p.last_login_at)+'</td><td class="playerBadgeCell">'+playerInfoBadges(p)+'</td><td class="nowrap">'+renderPhoneCall(p.phone)+'</td><td>'+esc(p.pzw_club)+'</td><td class="center">'+esc(p.active_entries||0)+'</td><td><div class="inlineBtns playerManageBtns"><button type="button" class="secondary" onclick="editPlayerName('+Number(p.id)+',decodeURIComponent(\''+safeName+'\'),decodeURIComponent(\''+safeClub+'\'))">Edytuj</button><button type="button" class="warn playerDeleteBtn" onclick="deletePlayer('+Number(p.id)+',decodeURIComponent(\''+safeName+'\'))">Usuń</button></div></td></tr>'
   }).join('')+'</tbody></table></div>';
   const mobile='<div class="adminMobileOnly mobilePlayersList">'+d.players.map((p,i)=>{
     const name=String((p.first_name||'')+' '+(p.last_name||'')).trim();
@@ -3004,7 +3011,7 @@ async function loadPlayers(){
     const call=phoneTelHref(p.phone)?renderPhoneCall(p.phone,'mobilePhoneCallBtn playerDirectoryCall',true):'';
     return `<article class="mobileAdminCard mobilePlayerManageCard">
       <div class="mobileAdminCardHead ${call?'hasCall':''}">
-        <span class="mobileLp">${i+1}</span><b>${esc(name)}</b>${call}<span class="mobilePlayerBadges">${playerInfoBadges(p)}</span>
+        <span class="mobileLp">${i+1}</span><b class="playerNameLogin">${esc(name)}${playerLastLoginHtml(p.last_login_at)}</b>${call}<span class="mobilePlayerBadges">${playerInfoBadges(p)}</span>
       </div>
       <div class="mobilePlayerManageMeta"><span>Koło: <b>${esc(p.pzw_club||'—')}</b></span><span>Zapisy: <b>${esc(p.active_entries||0)}</b></span></div>
       <div class="mobilePlayerManageActions">
