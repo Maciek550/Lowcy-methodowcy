@@ -1,4 +1,4 @@
-const CLIENT_VERSION='222';const CLIENT_VERSION_NAME='V222_OSTATNIA_AKTYWNOSC_ZAWODNIKOW';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='223';const CLIENT_VERSION_NAME='V223_HISTORIA_MIEJSCA_NA_PODIUM';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -491,7 +491,7 @@ function renderPlayerHistory(rows){
   const seasonButtons='<div class="historySeasonFilter" role="group" aria-label="Sezon">'+
     ['all',...years].map(y=>'<button type="button" class="historySeasonBtn '+(PLAYER_HISTORY_YEAR===y?'active':'')+'" data-year="'+y+'" aria-pressed="'+(PLAYER_HISTORY_YEAR===y)+'" onclick="setPlayerHistoryYear(\''+y+'\')">'+(y==='all'?'WSZYSTKIE':y)+'</button>').join('')+
     '<span id="historySeasonCount">Widoczne starty: '+rows.filter(r=>PLAYER_HISTORY_YEAR==='all'||String(r.competition_date||'').slice(0,4)===PLAYER_HISTORY_YEAR).length+'</span></div>';
-  box.innerHTML='<section class="playerHistoryDashboard"><div class="historyHero"><div><h2>Historia startów</h2><p>Twoje wyniki i statystyki zawodów.</p></div><div class="historyStats">'+stat('STARTY',starts)+stat('PODIA',podiums,'podium')+stat('NAJLEPSZE MIEJSCE',best<9999?best:'—','best')+stat('NAJWIĘKSZA RYBA',fmtGram(biggest)+' g','fish')+stat('ŁĄCZNA WAGA',fmtGram(total)+' g','weight')+'</div></div>'+seasonButtons+'<div class="historyStartList">'+rows.map(card).join('')+'</div></section>';
+  box.innerHTML='<section class="playerHistoryDashboard"><div class="historyHero"><div><h2>Historia startów</h2><p>Twoje wyniki i statystyki zawodów.</p></div><div class="historyStats">'+stat('STARTY',starts)+stat('MIEJSCA NA PODIUM',podiums,'podium')+stat('NAJLEPSZE MIEJSCE',best<9999?best:'—','best')+stat('NAJWIĘKSZA RYBA',fmtGram(biggest)+' g','fish')+stat('ŁĄCZNA WAGA',fmtGram(total)+' g','weight')+'</div></div>'+seasonButtons+'<div class="historyStartList">'+rows.map(card).join('')+'</div></section>';
 }
 async function openHistoryCompetition(id){
   showTab('competitions');
