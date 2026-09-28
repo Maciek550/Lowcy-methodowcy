@@ -240,6 +240,7 @@ let PLAYER_UNREAD_NOTIFICATIONS = 0;
 let PLAYER_COMP_FILTER = 'upcoming';
 let PLAYER_COMP_MONTH = 'all';
 let PLAYER_COMPETITIONS_CACHE = [];
+try{Object.defineProperty(window,'PLAYER_COMPETITIONS_CACHE',{get:()=>PLAYER_COMPETITIONS_CACHE})}catch(_){}
 let PLAYER_RESULT_POLL_TIMER = null;
 let PLAYER_RESULT_POLL_BUSY = false;
 let PLAYER_ATTENTION={count:0,items:[],byCompetition:{}};
@@ -321,9 +322,11 @@ function applyPlayerAttention(data,rerender=false){
   PLAYER_ATTENTION={count:Math.max(0,Number(data.count||0)),items:Array.isArray(data.items)?data.items:[],byCompetition:{}};
   PLAYER_ATTENTION.byCompetition=playerAttentionMap(PLAYER_ATTENTION.items);
   if(ME?.role==='PLAYER'){
-    syncNotificationBadges(PLAYER_ATTENTION.count);
-    const counter=q('notifCounter');if(counter)counter.textContent=PLAYER_ATTENTION.count?'🔴 '+PLAYER_ATTENTION.count+' do sprawdzenia':'';
-    applyPlayerAppBadge(PLAYER_ATTENTION.count);
+    const extras=typeof NOTIFICATION_CACHE!=='undefined'&&Array.isArray(NOTIFICATION_CACHE)?NOTIFICATION_CACHE.filter(n=>!n.read_at&&n.type==='ADMIN_MESSAGE').length:0;
+    const total=PLAYER_ATTENTION.count+extras;
+    syncNotificationBadges(total);
+    const counter=q('notifCounter');if(counter)counter.textContent=total?'🔴 '+total+' do sprawdzenia':'';
+    applyPlayerAppBadge(total);
     if(rerender&&PLAYER_COMPETITIONS_CACHE.length)renderPlayerCompetitionList();
   }
 }
@@ -550,7 +553,7 @@ function playerCompetitionMineLabel(c){if(c.my_status==='RESERVE')return '✓ RE
 function playerPresenceConfirmWindow(c){
   if(String(c?.my_status||'')!=='ACTIVE')return false;
   const x=playerCompetitionDateInfo(c),days=Number(x?.days);
-  return Number.isFinite(days)&&days>=0&&days<=4;
+  return Number.isFinite(days)&&days>=0&&days<=3;
 }
 function renderPlayerPresenceConfirm(c){
   if(!playerPresenceConfirmWindow(c))return '';
