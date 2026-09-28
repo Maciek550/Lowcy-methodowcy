@@ -1,4 +1,4 @@
-const CLIENT_VERSION='226';const CLIENT_VERSION_NAME='V226_LICZNIKI_ZAPISOW';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='227';const CLIENT_VERSION_NAME='V227_KONTROLA_LOSOWANIA';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -1365,13 +1365,15 @@ function renderDrawChecklist(d){
   const c=d.competition,x=rosterCounts(d),total=x.stands,disabled=disabledStandList(c),active=total-disabled.length;
   const layout=sectorLayoutClient(c),covered=new Set(layout.flatMap(sec=>[...(sec.bottom||[]),...(sec.top||[])]).map(Number).filter(n=>!disabled.includes(n)));
   const rounds=[1,2].map(r=>(d.draws||[]).filter(x=>Number(x.round)===r).length);
+  const ready=x.draw>0&&active===x.draw&&covered.size===active;
+  const reason=!x.draw?'Brak zawodników na liście głównej':active!==x.draw?'Stanowiska: '+active+' / zawodnicy: '+x.draw:'Sektory: '+covered.size+' / stanowiska: '+active;
   const rows=[
     ['Lista główna',x.draw+' osób',x.draw>0],
     ['Dostępne stanowiska',active+' / '+x.draw,active===x.draw&&x.draw>0],
     ['Stanowiska przypisane do sektorów',covered.size+' / '+active,covered.size===active&&active>0],
     ['Stan losowań','T1: '+rounds[0]+' · T2: '+rounds[1],true]
   ];
-  return '<details class="drawChecklist" '+((active!==x.draw||covered.size!==active)?'open':'')+'><summary>Kontrola przed losowaniem '+(active===x.draw&&covered.size===active?'✓':'⚠')+'</summary><div class="drawChecklistRows">'+
+  return '<details class="drawChecklist '+(ready?'drawChecklistReady':'drawChecklistInvalid')+'" '+(ready?'':'open')+'><summary><span class="drawChecklistTitle">Kontrola przed losowaniem</span><span class="drawChecklistStatus"><b>'+(ready?'✓ GOTOWE':'⚠ NIEZGODNOŚĆ')+'</b><small>'+(ready?'Zawodnicy: '+x.draw+' / stanowiska: '+active:reason)+'</small></span></summary><div class="drawChecklistRows">'+
     rows.map(([label,value,ok])=>'<div class="'+(ok?'ready':'warning')+'"><span>'+label+'</span><b>'+value+'</b></div>').join('')+
     '</div><p>Losowanie jest aktywne dopiero przy zgodnej liczbie zawodników i dostępnych stanowisk. Brzegi i numery fizyczne pozostają niezmienione.</p></details>';
 }
