@@ -38,4 +38,22 @@ function resultsPreflight({activeUserIds=[],draws=[],results=[],items=[],round=1
     offlineJudgeEntriesVerified:false
   };
 }
-module.exports={standState,absencePreview,resultsPreflight};
+
+/**
+ * When the final exclusion is cleared after resetting a draw, return to the
+ * current roster-sized physical map. While any exclusion remains, preserve
+ * every physical stand number and bank boundary (including T2 bank identity).
+ */
+function planStandRestoration({bank1,bank2,mapMode='TWO_OPPOSITE',previousDisabled=[],nextDisabled=[],activeCount=0,limitPlaces=0}) {
+  const old1=Math.max(0,Number(bank1||0)),old2=Math.max(0,Number(bank2||0));
+  const wasExcluded=Array.isArray(previousDisabled)&&previousDisabled.length>0;
+  const stillExcluded=Array.isArray(nextDisabled)&&nextDisabled.length>0;
+  if(!wasExcluded||stillExcluded)return {bank1:old1,bank2:old2,resetLayout:false,resynced:false};
+  const players=Math.max(0,Number(activeCount||0)),limit=Math.max(0,Number(limitPlaces||0));
+  const target=Math.max(1,players||limit||(old1+old2));
+  const new1=mapMode==='ONE_BANK'?target:Math.ceil(target/2);
+  const new2=mapMode==='ONE_BANK'?0:Math.floor(target/2);
+  return {bank1:new1,bank2:new2,resetLayout:new1!==old1||new2!==old2,resynced:true};
+}
+
+module.exports={standState,absencePreview,resultsPreflight,planStandRestoration};
