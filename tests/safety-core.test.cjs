@@ -32,7 +32,7 @@ test('results preflight distinguishes missing entries from zero-weight records',
 });
 test('front-end blocks mismatched draw counts even without exclusions',()=>{
  const a=fs.readFileSync(path.join(root,'app.js'),'utf8');
- assert.match(a,/const ready=available===x.draw&&available>0/);
+ assert.match(a,/const ready=available>0&&available===x.draw/);
  assert.doesNotMatch(a,/const ready=!addon\|\|available===x.draw/);
 });
 test('server verifies exact physical stand count before drawing',()=>{
