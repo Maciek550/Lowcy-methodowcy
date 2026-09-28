@@ -1,4 +1,4 @@
-const CLIENT_VERSION='170';const CLIENT_VERSION_NAME='V170_FOTO_FB_WINNERS_FINISH';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='206';const CLIENT_VERSION_NAME='V206_PODIUM_TROPHIES';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -2424,7 +2424,7 @@ function fotoFbWinnerData(d){
   const gen=(d.classification&&d.classification.general||[]).slice().sort(function(a,b){return Number(a.rank||999)-Number(b.rank||999)}).slice(0,3);
   const r1={};(d.classification&&d.classification.round1||[]).forEach(function(r){r1[Number(r.user_id)]=r});
   const r2={};(d.classification&&d.classification.round2||[]).forEach(function(r){r2[Number(r.user_id)]=r});
-  return gen.map(function(g){return {rank:Number(g.rank),name:g.name||'',sum:Number(g.sum_points||0),total:Number(g.total_weight||0),r1:r1[Number(g.user_id)]||{},r2:r2[Number(g.user_id)]||{}}});
+  return gen.map(function(g){return {rank:Number(g.rank),name:g.name||'',sum:Number(g.sum_points||0),total:Number(g.total_weight||0),bf:Number(g.biggest_fish||0),r1:r1[Number(g.user_id)]||{},r2:r2[Number(g.user_id)]||{}}});
 }
 function fotoFbWinnerPlaque(x,y,w,h,d,metal){
   const fill=metal==='silver'?'#dfe6ee':metal==='bronze'?'#c97842':'#dca80f';
@@ -2437,11 +2437,77 @@ function fotoFbWinnerPlaque(x,y,w,h,d,metal){
   };
   return '<g transform="translate('+x+' '+y+')" filter="url(#shadow)"><rect width="'+w+'" height="'+h+'" rx="22" fill="#06131d" stroke="'+border+'" stroke-width="6"/><rect x="0" y="0" width="'+w+'" height="62" rx="17" fill="'+fill+'"/><text x="'+(w/2)+'" y="43" text-anchor="middle" font-family="Arial Black,Arial" font-size="29" font-weight="1000" fill="'+headText+'">'+d.rank+'. MIEJSCE</text><text x="'+(w/2)+'" y="112" text-anchor="middle" font-family="Arial Black,Arial" font-size="'+nameFs+'" font-weight="1000" fill="#fff">'+fotoFbEscXml(d.name)+'</text><line x1="28" y1="128" x2="'+(w-28)+'" y2="128" stroke="'+border+'" stroke-width="2" opacity=".75"/>'+one(r1,'TURA 1',28)+one(r2,'TURA 2',28+colW+colGap)+'<rect x="16" y="'+(h-70)+'" width="'+(w-32)+'" height="52" rx="13" fill="'+fill+'" opacity=".98"/><text x="28" y="'+(h-35)+'" font-family="Arial Black,Arial" font-size="21" fill="'+headText+'">SUMA '+fotoFbEscXml(placeText(d.sum))+' pkt</text><text x="'+(w-25)+'" y="'+(h-34)+'" text-anchor="end" font-family="Arial Black,Arial" font-size="28" fill="'+headText+'">'+fotoFbEscXml(fotoFbGram(d.total))+'</text></g>';
 }
-async function fotoFbSvgWinners(d){
-  const bg=await fotoFbGetMaster('winners_bg');
-  if(!bg)throw new Error('Brak czystego tła dla Zwycięzców. Wgraj je w polu „Tło — Zwycięzcy”. Stary wzorzec nie jest już używany.');
-  return fotoFbSvgWinnersClean165(fotoFbEditedDetail(d),bg);
+
+/* V206 — WYŁĄCZNIE FotoFB podium. Stała fotografia trzech pucharów;
+   napisy z rzeczywistej klasyfikacji, bez tekstów wtopionych w obraz. */
+function fotoFbWinnerCard206(d,metal,x,y,w,h){
+  const color=metal==='gold'?'#ffdc62':metal==='silver'?'#f5f9ff':'#f4a66f',
+    grad=metal==='gold'?'url(#gold)':metal==='silver'?'url(#silver)':'url(#bronze)',
+    name=String(d.name||'—').trim(), nameSize=name.length>29?32:name.length>23?37:name.length>17?42:49,
+    weight=fotoFbEscXml(fotoFbGram(d.total||0)),
+    bf=Number(d.bf||0)>0?fotoFbEscXml(fotoFbGram(d.bf)):'',
+    n=fotoFbEscXml(placeText(d.sum));
+  let s='<g transform="translate('+x+' '+y+')" filter="url(#shadow)">'+
+    '<rect x="0" y="0" width="'+w+'" height="'+h+'" rx="20" fill="#070c13" stroke="'+color+'" stroke-width="'+(metal==='gold'?7:5)+'"/>'+
+    '<rect x="9" y="9" width="'+(w-18)+'" height="181" rx="14" fill="#0d1821"/>'+
+    '<text x="'+(w/2)+'" y="118" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="129" font-weight="1000" fill="'+grad+'" stroke="#03080d" stroke-width="3" paint-order="stroke">'+d.rank+'</text>'+
+    '<text x="'+(w/2)+'" y="166" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="32" font-weight="1000" fill="'+color+'">MIEJSCE</text>'+
+    '<path d="M26 183 H'+(w-26)+'" stroke="'+color+'" stroke-width="3"/>'+
+    '<text x="'+(w/2)+'" y="247" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="'+nameSize+'" font-weight="1000" fill="#ffffff"'+(name.length>17?' textLength="'+(w-43)+'" lengthAdjust="spacingAndGlyphs"':'')+'>'+fotoFbEscXml(name)+'</text>'+
+    '<path d="M27 270 H'+(w-27)+'" stroke="'+color+'" stroke-opacity=".6" stroke-width="2"/>'+
+    '<text x="29" y="329" font-family="Arial Black,Arial,sans-serif" font-size="28" fill="#f5f5f3">PUNKTY</text>'+
+    '<text x="'+(w-28)+'" y="335" text-anchor="end" font-family="Arial Black,Arial,sans-serif" font-size="48" fill="'+color+'">'+n+'</text>'+
+    '<path d="M27 357 H'+(w-27)+'" stroke="#60707b" stroke-opacity=".65" stroke-width="2"/>'+
+    '<text x="29" y="411" font-family="Arial Black,Arial,sans-serif" font-size="28" fill="#f5f5f3">WAGA</text>'+
+    '<text x="'+(w-28)+'" y="415" text-anchor="end" font-family="Arial Black,Arial,sans-serif" font-size="44" fill="'+color+'">'+weight+'</text>';
+  if(bf)s+='<path d="M27 439 H'+(w-27)+'" stroke="#60707b" stroke-opacity=".65" stroke-width="2"/>'+
+    '<text x="29" y="497" font-family="Arial Black,Arial,sans-serif" font-size="28" fill="#f5f5f3">BF</text>'+
+    '<text x="'+(w-28)+'" y="497" text-anchor="end" font-family="Arial Black,Arial,sans-serif" font-size="38" fill="#ffffff">'+bf+'</text>';
+  return s+'</g>';
 }
+async function fotoFbSvgWinners(d){
+  const edited=fotoFbEditedDetail(d),c=edited.competition,list=fotoFbWinnerData(edited),w=1400,h=1750;
+  if(list.length<3)throw new Error('Klasyfikacja końcowa musi zawierać co najmniej 3 zawodników.');
+  const asset=await Promise.all([fotoFbAssetData('/podium-trophies-v206.jpg'),fotoFbAssetData('/icon-512.png')]),
+    trophies=asset[0],logo=asset[1];
+  if(!trophies)throw new Error('Nie udało się pobrać zdjęcia pucharów. Spróbuj odświeżyć aplikację.');
+  const by={};list.forEach(function(r){by[r.rank]=r});
+  const title=String(c.title||'ZAWODY').trim(),words=title.split(/\s+/),date=fotoFbDate(c),venue=String(c.fishery||'—').trim(),
+    lines=[],footer=String(c.__fbFooter||'Carp & Caraś & Asiotr & Hamur').replace(/\s*🐳\s*$/,'');
+  if(title.length>27&&words.length>1){
+    let a='',b='',half=Math.ceil(title.length/2);
+    words.forEach(function(word){if(!b&&(!a||(a+' '+word).length<=half))a+=(a?' ':'')+word;else b+=(b?' ':'')+word});
+    lines.push(a,b);
+  }else lines.push(title);
+  const fs=title.length>64?51:title.length>43?58:lines.length>1?65:80;
+  let svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">'+fotoFbDefs()+
+    '<defs><linearGradient id="podiumDark206" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0a1b2a"/><stop offset="1" stop-color="#02080e"/></linearGradient>'+
+    '<linearGradient id="podiumFade206" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#02080e" stop-opacity="0"/><stop offset="1" stop-color="#02080e" stop-opacity="1"/></linearGradient></defs>'+
+    '<rect width="'+w+'" height="'+h+'" fill="url(#podiumDark206)"/>'+
+    '<rect width="'+w+'" height="350" fill="#051321"/>'+
+    '<path d="M40 25 H480 M920 25 H1360" stroke="#ddab36" stroke-width="5"/>'+
+    (logo?'<image href="'+logo+'" x="28" y="37" width="148" height="148" preserveAspectRatio="xMidYMid meet"/>':'')+
+    '<text x="774" y="'+(lines.length===1?126:104)+'" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="'+fs+'" font-weight="1000" fill="#ffda70" stroke="#08131d" stroke-width="8" paint-order="stroke"'+(lines[0].length>35?' textLength="1150" lengthAdjust="spacingAndGlyphs"':'')+'>'+fotoFbEscXml(lines[0])+'</text>';
+  if(lines.length>1)svg+='<text x="774" y="176" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="'+fs+'" font-weight="1000" fill="#ffda70" stroke="#08131d" stroke-width="7" paint-order="stroke"'+(lines[1].length>35?' textLength="1150" lengthAdjust="spacingAndGlyphs"':'')+'>'+fotoFbEscXml(lines[1])+'</text>';
+  svg+='<rect x="42" y="212" width="1316" height="119" rx="23" fill="#050d15" stroke="#e2a834" stroke-width="4"/>'+
+    '<path d="M699 227 V319" stroke="#d6a74c" stroke-width="3"/>'+
+    '<text x="71" y="253" font-family="Arial Black,Arial,sans-serif" font-size="24" fill="#efc56d">DATA ZAWODÓW</text>'+
+    '<text x="71" y="306" font-family="Arial Black,Arial,sans-serif" font-size="46" fill="#ffffff">'+fotoFbEscXml(date)+'</text>'+
+    '<text x="734" y="253" font-family="Arial Black,Arial,sans-serif" font-size="24" fill="#efc56d">ŁOWISKO</text>'+
+    '<text x="734" y="306" font-family="Arial Black,Arial,sans-serif" font-size="'+(venue.length>25?33:venue.length>18?39:46)+'" fill="#ffffff"'+(venue.length>27?' textLength="570" lengthAdjust="spacingAndGlyphs"':'')+'>'+fotoFbEscXml(venue)+'</text>'+
+    '<image href="'+trophies+'" x="0" y="346" width="1400" height="588" preserveAspectRatio="none"/>'+
+    '<rect x="0" y="781" width="1400" height="174" fill="url(#podiumFade206)"/>'+
+    '<text x="700" y="958" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="35" fill="#ffde87" stroke="#050b12" stroke-width="5" paint-order="stroke">PODIUM ZAWODÓW</text>';
+  svg+=fotoFbWinnerCard206(by[2]||list[1],'silver',32,1010,420,546);
+  svg+=fotoFbWinnerCard206(by[1]||list[0],'gold',490,978,420,578);
+  svg+=fotoFbWinnerCard206(by[3]||list[2],'bronze',948,1010,420,546);
+  svg+='<g transform="translate(0 1582)"><rect width="1400" height="168" fill="#03111d"/>'+
+    '<path d="M0 5 H1400" stroke="#dfa52d" stroke-width="5"/>'+
+    '<text x="700" y="69" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="37" font-weight="1000" fill="#ffd66a">ŁOWCY METHODOWCY</text>'+
+    '<text x="700" y="124" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="'+(footer.length>40?26:footer.length>29?30:37)+'" font-weight="900" fill="#ffffff">'+fotoFbEscXml(footer)+'</text></g></svg>';
+  return {svg:svg,w:w,h:h,name:'FotoFB_Podium_'+fotoFbSafeFile(c.title)+'.jpg'};
+}
+
 function fotoFbBigFishRows(d){
   const names={};
   const all=(d.classification&&d.classification.round1||[]).concat(d.classification&&d.classification.round2||[]);
@@ -2579,8 +2645,8 @@ function renderFotoFbPanel(d){
       '<button type="button" class="danger" onclick="fotoFbDeleteMaster(\''+kind+'\')">Usuń</button></div></div>';
   };
   return '<div class="card"><h2>FotoFB — grafiki wynikowe</h2>'+
-    '<div style="background:#fff4d6;border:1px solid #d8a127;border-radius:14px;padding:10px;margin-bottom:12px;color:#4a3510"><b>V168 — Zwycięzcy bez starego generatora.</b> Bez czystego tła grafika Zwycięzców nie zostanie wygenerowana.</div>'+
-    '<h3>Zwycięzcy</h3>'+bgCard()+
+    '<div style="background:#fff4d6;border:1px solid #d8a127;border-radius:14px;padding:10px;margin-bottom:12px;color:#4a3510"><b>V206 — Podium pucharów.</b> Złoto, srebro, brąz; prawdziwe nazwiska, punkty, waga oraz BF, gdy występuje. Gotowe do publikacji na telefonie.</div>'+
+    '<h3>Zwycięzcy — stała grafika pucharów</h3>'+
     '<h3 style="margin-top:14px">Pozostałe grafiki</h3><div class="grid">'+masterCard('fish','🐟 TOP 5 największych ryb')+masterCard('sectors','📷 Wyniki sektorowe T1/T2')+'</div>'+
     '<h3>Generuj</h3><div class="grid"><button type="button" class="blue" onclick="generateFotoFb(\'winners\')">🏆 Zwycięzcy zawodów</button><button type="button" class="blue" onclick="generateFotoFb(\'fish\')">🐟 TOP 5 największych ryb</button></div>'+
     '<div class="grid"><button type="button" onclick="generateFotoFb(\'t1\')">📷 Wyniki sektorowe — Tura 1</button><button type="button" onclick="generateFotoFb(\'t2\')">📷 Wyniki sektorowe — Tura 2</button></div>'+
