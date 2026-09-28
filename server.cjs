@@ -22,7 +22,7 @@ const PHOTO_OCR_MODEL = process.env.PHOTO_OCR_OPENAI_MODEL || 'gpt-5.6-sol';
 const APP_VERSION = '207';
 const APP_VERSION_NAME = 'V207_PODIUM_TROPHIES';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
-const PODIUM_TROPHIES = fs.readFileSync(pathModule.join(__dirname, 'podium-trophies-v207.jpg'));
+// V207 podium uses vector SVG; no optional photo is required at server startup.
 const CARP_REAL = fs.readFileSync(pathModule.join(__dirname, 'carp-real-v116.png'));
 const ICON_192 = fs.readFileSync(pathModule.join(__dirname, 'icon-192.png'));
 const ICON_512 = fs.readFileSync(pathModule.join(__dirname, 'icon-512.png'));
@@ -1935,7 +1935,7 @@ body #app button.rosterLeaveRequest:disabled{opacity:.65;cursor:wait}
 
 </head><body><div class="card"><h2>Reset pamięci aplikacji</h2><p>Usuwam cache i starego service workera. Przekierowanie jest natychmiastowe, bez czekania na zawieszone obietnice przeglądarki.</p><button onclick="go()">Wyczyść teraz</button></div><script>function go(){try{localStorage.removeItem('carp_token');localStorage.removeItem('lowcy_app_version_seen');sessionStorage.clear();if('serviceWorker'in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister()})}).catch(function(){})}if('caches'in window){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k)})}).catch(function(){})}}catch(e){}setTimeout(function(){location.replace('/?hard=36&t='+Date.now())},50)}go();</script></body></html>`, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate'});
 
-  if (path === '/podium-trophies-v207.jpg') return sendBinary(res,200,PODIUM_TROPHIES,'image/jpeg','public, max-age=31536000, immutable');
+  if (path === '/podium-trophies-v207.jpg') return send(res,404,'Not found');
   if (path === '/carp-real-v116.png') return sendBinary(res,200,CARP_REAL,'image/png','public, max-age=31536000, immutable');
   if (path === '/icon-192.png') return sendBinary(res,200,ICON_192,'image/png','public, max-age=604800');
   if (path === '/icon-512.png') return sendBinary(res,200,ICON_512,'image/png','public, max-age=604800');
