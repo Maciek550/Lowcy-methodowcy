@@ -1,4 +1,4 @@
-const CLIENT_VERSION='225';const CLIENT_VERSION_NAME='V225_ALERTY_LEKKA_INSTALACJA';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='226';const CLIENT_VERSION_NAME='V226_LICZNIKI_ZAPISOW';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -1263,17 +1263,21 @@ function applyAdminRosterFilter(){
   const input=q('adminRosterSearch');
   if(input)ADMIN_ROSTER_SEARCH=input.value;
   const term=normalizeRosterSearch(ADMIN_ROSTER_SEARCH);
+  const counts={ALL:0,ACTIVE:0,PRESENT:0,UNCONFIRMED:0,RESERVE:0,CANCELLED:0};
   let visible=0;
   root.querySelectorAll('.adminRosterGroup').forEach(group=>{
+    const kind=group.dataset.kind;
     const presenceMode=ADMIN_ROSTER_STATUS==='PRESENT'||ADMIN_ROSTER_STATUS==='UNCONFIRMED';
-    const allow=ADMIN_ROSTER_STATUS==='ALL'||group.dataset.kind===ADMIN_ROSTER_STATUS||(presenceMode&&group.dataset.kind==='ACTIVE');
+    const allow=ADMIN_ROSTER_STATUS==='ALL'||kind===ADMIN_ROSTER_STATUS||(presenceMode&&kind==='ACTIVE');
     const desktop=[...group.querySelectorAll('tbody tr')],mobile=[...group.querySelectorAll('.mobileRosterCompactRow')];
     const count=Math.max(desktop.length,mobile.length);
     let shown=0;
     for(let i=0;i<count;i++){
       const row=desktop[i]||mobile[i],confirmed=String(row?.dataset?.confirmed||'false')==='true',
+        matchesTerm=normalizeRosterSearch(row?.textContent||'').includes(term),
         presenceOk=!presenceMode||(ADMIN_ROSTER_STATUS==='PRESENT'?confirmed:!confirmed),
-        isMatch=allow&&presenceOk&&normalizeRosterSearch(row?.textContent||'').includes(term);
+        isMatch=allow&&presenceOk&&matchesTerm;
+      if(matchesTerm){counts.ALL++;counts[kind]++;if(kind==='ACTIVE')counts[confirmed?'PRESENT':'UNCONFIRMED']++}
       if(desktop[i])desktop[i].classList.toggle('hidden',!isMatch);
       if(mobile[i])mobile[i].classList.toggle('hidden',!isMatch);
       if(isMatch)shown++;
@@ -1282,13 +1286,20 @@ function applyAdminRosterFilter(){
     const badge=group.querySelector('.rosterSectionTitle .pill');if(badge)badge.textContent=shown;
     visible+=shown;
   });
+  root.querySelectorAll('.adminRosterFilterBtn').forEach(button=>{
+    const badge=button.querySelector('.adminRosterFilterBadge');
+    if(badge)badge.textContent=counts[button.dataset.status]||0;
+  });
   const summary=q('adminRosterFilterCount');if(summary)summary.textContent='Widocznych: '+visible;
   const empty=q('adminRosterFilterEmpty');if(empty)empty.classList.toggle('hidden',visible!==0);
 }
 function renderEntries(d){
   const c=d.competition;
+  const active=d.activeEntries||[],reserve=d.reserveEntries||[],cancelled=d.cancelledEntries||[];
+  const present=active.filter(e=>e.confirmed===true||String(e.confirmed).toLowerCase()==='true').length;
+  const counts={ALL:active.length+reserve.length+cancelled.length,ACTIVE:active.length,PRESENT:present,UNCONFIRMED:active.length-present,RESERVE:reserve.length,CANCELLED:cancelled.length};
   const choices=[['ALL','Wszyscy'],['ACTIVE','Lista główna'],['PRESENT','Obecni'],['UNCONFIRMED','Niepotwierdzeni'],['RESERVE','Rezerwa'],['CANCELLED','Wypisani']];
-  const buttons=choices.map(([status,label])=>'<button type="button" data-status="'+status+'" aria-pressed="'+(status===ADMIN_ROSTER_STATUS)+'" class="adminRosterFilterBtn '+(status===ADMIN_ROSTER_STATUS?'selected':'')+'" onclick="setAdminRosterStatus(\''+status+'\')">'+label+'</button>').join('');
+  const buttons=choices.map(([status,label])=>'<button type="button" data-status="'+status+'" aria-pressed="'+(status===ADMIN_ROSTER_STATUS)+'" class="adminRosterFilterBtn '+(status===ADMIN_ROSTER_STATUS?'selected':'')+'" onclick="setAdminRosterStatus(\''+status+'\')"><span class="adminRosterFilterLabel">'+label+'</span><span class="adminRosterFilterBadge">'+counts[status]+'</span></button>').join('');
   const group=(kind,label,rows)=>'<section class="adminRosterGroup" data-kind="'+kind+'">'+rosterTable(label,rows||[],c.id,kind)+'</section>';
   return '<div class="card adminRosterEntries" id="adminRosterEntries"><h2>Panel zapisów — lista główna i rezerwa</h2>'+
     '<div class="adminRosterSearchBar"><label for="adminRosterSearch">Szukaj zawodnika lub koła</label>'+
