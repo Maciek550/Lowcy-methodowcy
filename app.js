@@ -1,4 +1,4 @@
-const CLIENT_VERSION='217';const CLIENT_VERSION_NAME='V217_PANEL_I_LOGO_HD';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='218';const CLIENT_VERSION_NAME='V218_KOMPAKTOWE_PDF_FOTO_FB';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -2214,7 +2214,33 @@ async function notifyResults(id,round){try{if(!confirm('Wysłać zawodnikom powi
 function renderClassTable(rows){rows=sortRowsBySectorPlace(rows||[]);if(!rows.length)return '<p class="muted">Brak wyników.</p>';const desktop='<div class="tablewrap adminDesktopOnly"><table class="sharpTable roundClassTable"><thead><tr><th style="width:42px">Lp.</th><th>Zawodnik</th><th>Stan.</th><th>Sektor</th><th>Miejsce</th><th>Waga</th></tr></thead><tbody>'+rows.map((r,idx)=>'<tr class="'+placeRowClass(r.points)+' '+(Number(r.user_id)===Number(ME.id)?'mine':'')+'"><td class="center">'+(idx+1)+'</td><td><b>'+esc(r.name)+'</b></td><td class="nowrap">'+(r.stand||'—')+'</td><td>'+esc(r.sector||'—')+'</td><td><b>'+placeText(r.points)+'</b></td><td class="nowrap">'+resultCellSummary(r)+'</td></tr>').join('')+'</tbody></table></div>';const mobile='<div class="adminMobileOnly mobileClassList">'+rows.map((r,idx)=>'<article class="mobileAdminCard '+placeRowClass(r.points)+'"><div class="mobileAdminCardHead"><span class="mobileLp">'+(idx+1)+'</span><b>'+esc(r.name)+'</b><strong class="mobilePlace">Msc '+placeText(r.points)+'</strong></div><div class="mobileAdminMeta"><span><small>Stan.</small><b>'+(r.stand||'—')+'</b></span><span><small>Sektor</small><b>'+esc(r.sector||'—')+'</b></span></div><div class="mobileResultFooter"><span>Waga</span><b>'+resultCellSummary(r)+'</b></div></article>').join('')+'</div>';return desktop+mobile}
 function placeText(v){return (v===0||v)?esc(String(v).replace('.',',')):'—'}
 function renderGeneralTable(rows){rows=rows||[];if(!rows.length)return '<p class="muted">Brak klasyfikacji końcowej.</p>';const desktop='<div class="tablewrap finalWrap adminDesktopOnly"><table class="generalTable sharpTable"><thead><tr><th class="colRank center">MSC</th><th class="colName">Zawodnik</th><th class="colRound center">T1</th><th class="colRound center">T2</th><th class="colSum center">Suma miejsc</th><th class="colWeight right">Waga</th></tr></thead><tbody>'+rows.map(r=>{const club=String(r.pzw_club||'').trim();return '<tr class="'+placeRowClass(r.rank)+' '+(Number(r.user_id)===Number(ME.id)?'mine':'')+'"><td class="colRank center"><b>'+r.rank+'</b></td><td class="colName nameCell"><b>'+esc(r.name)+'</b>'+(club?'<span class="finalClub small muted '+(SHOW_FINAL_CLUB?'':'hidden')+'"> • '+esc(club)+'</span>':'')+'</td><td class="colRound center scoreCell"><b>'+placeText(r.t1_points)+'</b></td><td class="colRound center scoreCell"><b>'+placeText(r.t2_points)+'</b></td><td class="colSum center sumCell"><b>'+placeText(r.sum_points)+'</b></td><td class="colWeight right weightCell"><b>'+fmtGram(r.total_weight)+'g</b>'+(Number(r.biggest_fish||0)?'<br><span class="bfLine">BF: '+fmtGram(r.biggest_fish)+'g</span>':'')+'</td></tr>'}).join('')+'</tbody></table></div>';const mobile='<div class="adminMobileOnly mobileGeneralList">'+rows.map(r=>{const club=String(r.pzw_club||'').trim();return '<article class="mobileAdminCard '+placeRowClass(r.rank)+'"><div class="mobileAdminCardHead"><strong class="mobileRank">'+r.rank+'</strong><b>'+esc(r.name)+'</b>'+(club?'<span class="finalClub small muted '+(SHOW_FINAL_CLUB?'':'hidden')+'"> • '+esc(club)+'</span>':'')+'</div><div class="mobileScoreGrid"><span><small>T1</small><b>'+placeText(r.t1_points)+'</b></span><span><small>T2</small><b>'+placeText(r.t2_points)+'</b></span><span><small>Suma</small><b>'+placeText(r.sum_points)+'</b></span><span><small>Waga</small><b>'+fmtGram(r.total_weight)+'g</b>'+(Number(r.biggest_fish||0)?'<em>BF '+fmtGram(r.biggest_fish)+'g</em>':'')+'</span></div></article>'}).join('')+'</div>';return desktop+mobile}
-function renderPdfPanel(d){const c=d.competition;return '<div class="card"><h2>Generowanie plików PDF</h2><p class="small muted">Wszystkie PDF-y mają bezpieczne marginesy do druku. Nagłówki są bez tła: nazwa zawodów granatowa, łowisko bordowe.</p><h3>Losowanie</h3><div class="grid3"><button type="button" onclick="generateDrawPdf(1)">PDF Losowanie T1</button><button type="button" onclick="generateDrawPdf(2)">PDF Losowanie T2</button><button type="button" class="secondary" onclick="generateDrawPdf(0)">PDF Losowanie T1 + T2</button></div><h3>Wyniki</h3>'+renderFinalClubToggle()+'<div class="grid3"><button type="button" onclick="generateResultsPdfV33(1)">PDF Wyniki T1</button><button type="button" onclick="generateResultsPdfV33(2)">PDF Wyniki T2</button><button type="button" class="secondary" onclick="generateResultsPdfV33(0)">PDF Klasyfikacja końcowa</button></div><div class="grid3"><button type="button" class="secondary" onclick="generateSectorPdf(1)">PDF Sektory T1</button><button type="button" class="secondary" onclick="generateSectorPdf(2)">PDF Sektory T2</button><button type="button" class="secondary" onclick="generateStatsPdf()">PDF Statystyki</button></div><h3>Tabelka wynikowa</h3><button type="button" class="secondary" onclick="generateWeightSheetPdf()">PDF Tabelka wynikowa — 1 strona</button><div class="photoPdfBox"><b>FORMULARZ DO ODCZYTU ZE ZDJĘCIA</b><span>Ma znaczniki do prostowania zdjęcia i szerokie pola na całe wagi. * przed wagą oznacza BF, ostatnia kolumna to SUMA.</span><div class="grid"><button type="button" class="blue" onclick="generatePhotoResultSheetPdf(1)">PDF do zdjęcia — T1</button><button type="button" class="blue" onclick="generatePhotoResultSheetPdf(2)">PDF do zdjęcia — T2</button></div></div><h3>Lista startowa</h3><button type="button" class="blue" onclick="generateStartListPdf()">PDF Tabela startowa zawodników — 1 strona</button><p class="small muted">Tabela startowa: Lp., Zawodnik, Potwierdzenie ✓, Wpisowe, Koszyk +, Uwagi. Układ automatycznie wykorzystuje całą stronę.</p></div>'}
+function renderPdfPanel(d){
+  const c=d.competition;
+  return '<div class="card adminExportPanel"><h2>Generowanie plików PDF</h2>'+
+    '<p class="small muted">PDF-y mają marginesy do druku i nagłówki bez kolorowego tła. Wszystkie dotychczasowe formularze pozostają dostępne.</p>'+
+    '<details class="adminExportGroup"><summary>Losowanie T1 / T2</summary><div class="adminExportGroupBody">'+
+      '<div class="grid3"><button type="button" onclick="generateDrawPdf(1)">PDF Losowanie T1</button>'+
+      '<button type="button" onclick="generateDrawPdf(2)">PDF Losowanie T2</button>'+
+      '<button type="button" class="secondary" onclick="generateDrawPdf(0)">PDF Losowanie T1 + T2</button></div></div></details>'+
+    '<details class="adminExportGroup"><summary>Wyniki, sektory i statystyki</summary><div class="adminExportGroupBody">'+
+      renderFinalClubToggle()+
+      '<div class="grid3"><button type="button" onclick="generateResultsPdfV33(1)">PDF Wyniki T1</button>'+
+      '<button type="button" onclick="generateResultsPdfV33(2)">PDF Wyniki T2</button>'+
+      '<button type="button" class="secondary" onclick="generateResultsPdfV33(0)">PDF Klasyfikacja końcowa</button></div>'+
+      '<div class="grid3"><button type="button" class="secondary" onclick="generateSectorPdf(1)">PDF Sektory T1</button>'+
+      '<button type="button" class="secondary" onclick="generateSectorPdf(2)">PDF Sektory T2</button>'+
+      '<button type="button" class="secondary" onclick="generateStatsPdf()">PDF Statystyki</button></div></div></details>'+
+    '<details class="adminExportGroup"><summary>Arkusze wag i formularze do odczytu ze zdjęć</summary><div class="adminExportGroupBody">'+
+      '<button type="button" class="secondary" onclick="generateWeightSheetPdf()">PDF Tabelka wynikowa — 1 strona</button>'+
+      '<div class="photoPdfBox"><b>FORMULARZ DO ODCZYTU ZE ZDJĘCIA</b>'+
+      '<span>Znaczniki do prostowania zdjęć, szerokie pola wag. * oznacza BF, ostatnia kolumna to SUMA.</span>'+
+      '<div class="grid"><button type="button" class="blue" onclick="generatePhotoResultSheetPdf(1)">PDF do zdjęcia — T1</button>'+
+      '<button type="button" class="blue" onclick="generatePhotoResultSheetPdf(2)">PDF do zdjęcia — T2</button></div></div></div></details>'+
+    '<details class="adminExportGroup"><summary>Lista startowa do wydruku</summary><div class="adminExportGroupBody">'+
+      '<button type="button" class="blue" onclick="generateStartListPdf()">PDF Tabela startowa zawodników — 1 strona</button>'+
+      '<p class="small muted">Tabela startowa: Lp., Zawodnik, Potwierdzenie ✓, Wpisowe, Koszyk +, Uwagi. Automatycznie wykorzystuje całą stronę.</p>'+
+    '</div></details></div>';
+}
 
 /* V157 — FotoFB: bezpieczny, deterministyczny generator JPG z gotowych wyników.
    Nie zapisuje nic do bazy i nie zmienia klasyfikacji. */
@@ -2814,14 +2840,23 @@ function renderFotoFbPanel(d){
       '<div class="inlineBtns"><button type="button" class="secondary" onclick="fotoFbChooseMaster(\''+kind+'\')">Wgraj / zmień wzorzec</button>'+
       '<button type="button" class="danger" onclick="fotoFbDeleteMaster(\''+kind+'\')">Usuń</button></div></div>';
   };
-  return '<div class="card"><h2>FotoFB — grafiki wynikowe</h2>'+
-    '<div style="background:#fff4d6;border:1px solid #d8a127;border-radius:14px;padding:10px;margin-bottom:12px;color:#4a3510"><b>FotoFB — aktualna wersja.</b> Twój wgrany podkład i prawdziwe wyniki.</div>'+
-    '<h3>Zwycięzcy — Twój podkład</h3>'+bgCard()+
-    '<h3 style="margin-top:14px">Pozostałe grafiki</h3><div class="grid">'+masterCard('fish','🐟 TOP 5 największych ryb')+masterCard('sectors','📷 Wyniki sektorowe T1/T2')+'</div>'+
-    '<h3>Generuj</h3><div class="grid"><button type="button" class="blue" onclick="generateFotoFb(\'winners\')">🏆 Zwycięzcy zawodów</button><button type="button" class="blue" onclick="generateFotoFb(\'fish\')">🐟 TOP 5 największych ryb</button></div>'+
-    '<div class="grid"><button type="button" onclick="generateFotoFb(\'t1\')">📷 Wyniki sektorowe — Tura 1</button><button type="button" onclick="generateFotoFb(\'t2\')">📷 Wyniki sektorowe — Tura 2</button></div>'+
-    '<p id="fotoFbStatus" class="small muted"></p><div id="fotoFbPreview" style="max-width:900px;margin:12px auto"></div>'+
-    '<div id="fotoFbActions" class="inlineBtns hidden"><button type="button" class="blue" onclick="downloadFotoFb()">Pobierz JPG</button><button type="button" class="secondary" onclick="shareFotoFb()">Udostępnij</button></div></div>';
+  return '<div class="card adminExportPanel adminFotoPanel"><h2>FotoFB — grafiki wynikowe</h2>'+
+    '<div class="adminExportIntro">Twój wgrany podkład, dotychczasowy generator podium i prawdziwe wyniki pozostają bez zmian.</div>'+
+    '<details class="adminExportGroup" open><summary>Generuj gotowe grafiki</summary><div class="adminExportGroupBody">'+
+      '<div class="grid"><button type="button" class="blue" onclick="generateFotoFb(\'winners\')">🏆 Zwycięzcy zawodów</button>'+
+      '<button type="button" class="blue" onclick="generateFotoFb(\'fish\')">🐟 TOP 5 największych ryb</button></div>'+
+      '<div class="grid"><button type="button" onclick="generateFotoFb(\'t1\')">📷 Wyniki sektorowe — Tura 1</button>'+
+      '<button type="button" onclick="generateFotoFb(\'t2\')">📷 Wyniki sektorowe — Tura 2</button></div>'+
+    '</div></details>'+
+    '<details class="adminExportGroup"><summary>🏆 Własny podkład podium — wgraj lub zmień</summary><div class="adminExportGroupBody">'+bgCard()+'</div></details>'+
+    '<details class="adminExportGroup"><summary>Pozostałe wzorce grafik</summary><div class="adminExportGroupBody">'+
+      '<div class="grid">'+masterCard('fish','🐟 TOP 5 największych ryb')+
+        masterCard('sectors','📷 Wyniki sektorowe T1/T2')+'</div></div></details>'+
+    '<p id="fotoFbStatus" class="small muted"></p>'+
+    '<div id="fotoFbPreview" style="max-width:900px;margin:12px auto"></div>'+
+    '<div id="fotoFbActions" class="inlineBtns hidden">'+
+      '<button type="button" class="blue" onclick="downloadFotoFb()">Pobierz JPG</button>'+
+      '<button type="button" class="secondary" onclick="shareFotoFb()">Udostępnij</button></div></div>';
 }
 
 function pdfAsciiBytes(x){return new TextEncoder().encode(x)}
