@@ -21,8 +21,8 @@ const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const GOOGLE_VISION_API_KEY = process.env.GOOGLE_VISION_API_KEY || process.env.OCR_GOOGLE_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.PHOTO_OCR_OPENAI_API_KEY || '';
 const PHOTO_OCR_MODEL = process.env.PHOTO_OCR_OPENAI_MODEL || 'gpt-5.6-sol';
-const APP_VERSION = '216';
-const APP_VERSION_NAME = 'V216_BEZPIECZNA_OBSLUGA_ZAWODOW';
+const APP_VERSION = '217';
+const APP_VERSION_NAME = 'V217_PANEL_I_LOGO_HD';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 const PODIUM_TROPHIES = fs.existsSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) ? fs.readFileSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) : null;
 const CARP_REAL = fs.readFileSync(pathModule.join(__dirname, 'carp-real-v116.png'));
@@ -31,6 +31,21 @@ const ICON_512 = fs.readFileSync(pathModule.join(__dirname, 'icon-512.png'));
 const ICON_180 = fs.readFileSync(pathModule.join(__dirname, 'apple-touch-icon.png'));
 const ICON_64 = fs.readFileSync(pathModule.join(__dirname, 'icon-64.png'));
 const FAVICON_32 = fs.readFileSync(pathModule.join(__dirname, 'favicon-32.png'));
+/* V217: versioned icon URLs let Android/iOS discover a new manifest; old assets remain intact. */
+function brandAsset(name, fallback) {
+  const file=pathModule.join(__dirname,'brand',name);
+  return fs.existsSync(file)?fs.readFileSync(file):fallback;
+}
+const BRAND_PNG={
+  'icon-v217-32.png':brandAsset('icon-v217-32.png',FAVICON_32),
+  'icon-v217-64.png':brandAsset('icon-v217-64.png',ICON_64),
+  'icon-v217-180.png':brandAsset('icon-v217-180.png',ICON_180),
+  'icon-v217-192.png':brandAsset('icon-v217-192.png',ICON_192),
+  'icon-v217-512.png':brandAsset('icon-v217-512.png',ICON_512),
+  'icon-v217-1024.png':brandAsset('icon-v217-1024.png',ICON_512),
+  'maskable-v217-512.png':brandAsset('maskable-v217-512.png',ICON_512),
+  'logo-facebook-v217-2048.png':brandAsset('logo-facebook-v217-2048.png',ICON_512)
+};
 
 
 const pool = new Pool({
@@ -1957,6 +1972,7 @@ body #app button.rosterLeaveRequest:disabled{opacity:.65;cursor:wait}
 
   if (path === '/podium-trophies-v206.jpg') return PODIUM_TROPHIES ? sendBinary(res,200,PODIUM_TROPHIES,'image/jpeg','public, max-age=86400') : send(res,404,'Missing photo');
   if (path === '/carp-real-v116.png') return sendBinary(res,200,CARP_REAL,'image/png','public, max-age=31536000, immutable');
+  if (path.startsWith('/brand/')) { const logo=BRAND_PNG[path.slice(7)]; return logo?sendBinary(res,200,logo,'image/png','public, max-age=31536000, immutable'):send(res,404,'Unknown logo'); }
   if (path === '/icon-192.png') return sendBinary(res,200,ICON_192,'image/png','public, max-age=604800');
   if (path === '/icon-512.png') return sendBinary(res,200,ICON_512,'image/png','public, max-age=604800');
   if (path === '/apple-touch-icon.png') return sendBinary(res,200,ICON_180,'image/png','public, max-age=604800');
@@ -1967,15 +1983,16 @@ body #app button.rosterLeaveRequest:disabled{opacity:.65;cursor:wait}
     start_url:'/', scope:'/', id:'/', display:'standalone', orientation:'portrait-primary',
     background_color:'#061521', theme_color:'#0b3b35',
     icons:[
-      {src:'/icon-192.png',sizes:'192x192',type:'image/png',purpose:'any'},
-      {src:'/icon-512.png',sizes:'512x512',type:'image/png',purpose:'any'}
+      {src:'/brand/icon-v217-192.png',sizes:'192x192',type:'image/png',purpose:'any'},
+      {src:'/brand/icon-v217-512.png',sizes:'512x512',type:'image/png',purpose:'any'},
+      {src:'/brand/maskable-v217-512.png',sizes:'512x512',type:'image/png',purpose:'maskable'}
     ]
   }), {'Content-Type':'application/manifest+json; charset=utf-8','Cache-Control':'no-cache'});
   if (path === '/sw.js') return send(res, 200, `
 const SHELL_CACHE='lowcy-shell-v${APP_VERSION}';
 const APP_SHELL_JS='/app.js?v=${APP_VERSION}';
 const PDF_JS='/pdf-vector.js?v=${APP_VERSION}';
-const SHELL=['/',APP_SHELL_JS,PDF_JS,'/icon-192.png','/icon-512.png'];
+const SHELL=['/',APP_SHELL_JS,PDF_JS,'/brand/icon-v217-192.png','/brand/icon-v217-512.png','/brand/maskable-v217-512.png'];
 async function fetchWithTimeout(req,ms=30000){const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),ms);try{return await fetch(req,{cache:'no-store',signal:ctrl.signal})}finally{clearTimeout(timer)}}
 self.addEventListener('install',event=>event.waitUntil((async()=>{const replies=await Promise.all(SHELL.map(url=>fetchWithTimeout(url)));if(replies.some(r=>!r.ok))throw Error('Incomplete shell');const cache=await caches.open(SHELL_CACHE);await Promise.all(SHELL.map((url,i)=>cache.put(url,replies[i])));await self.skipWaiting()})()));
 self.addEventListener('activate',event=>event.waitUntil((async()=>{await self.clients.claim();const keys=await caches.keys();await Promise.all(keys.filter(k=>k.startsWith('lowcy-shell-')&&k!==SHELL_CACHE).map(k=>caches.delete(k)))})()));
@@ -1987,7 +2004,7 @@ async function setLowcyBadge(n){try{const count=Math.max(0,Number(n||0));if(self
 self.addEventListener('push', event => {
   let data={}; try{data=event.data?event.data.json():{}}catch(e){}
   const title=data.title||'Łowcy Methodowcy';
-  const options={body:data.body||'Nowe powiadomienie',icon:'/icon-192.png',badge:'/icon-64.png',data:{url:data.url||'/'},tag:data.type?(data.type+'-'+(data.competitionId||'')):undefined,renotify:true};
+  const options={body:data.body||'Nowe powiadomienie',icon:'/brand/icon-v217-192.png',badge:'/brand/icon-v217-64.png',data:{url:data.url||'/'},tag:data.type?(data.type+'-'+(data.competitionId||'')):undefined,renotify:true};
   event.waitUntil((async()=>{await Promise.all([self.registration.showNotification(title,options),setLowcyBadge(data.badgeCount)]);const list=await clients.matchAll({type:'window',includeUncontrolled:true});for(const c of list){try{c.postMessage({type:'LOWCY_ATTENTION_REFRESH'})}catch(e){}}})());
 });
 self.addEventListener('notificationclick', event => {
@@ -3116,11 +3133,11 @@ const HTML = `<!doctype html>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Łowcy Methodowcy">
-<link rel="manifest" href="/manifest.webmanifest">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="manifest" href="/manifest.webmanifest?v=${APP_VERSION}">
+<link rel="apple-touch-icon" sizes="180x180" href="/brand/icon-v217-180.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/brand/icon-v217-32.png">
 <script>try{if(localStorage.getItem('carp_token'))document.documentElement.classList.add('hasSavedSession')}catch(e){}</script>
-<title>Łowcy Methodowcy — V216</title>
+<title>Łowcy Methodowcy — V217</title>
 <style>
 :root{--green:#114b2f;--green2:#17643f;--bg:#f3f6ef;--card:#fff;--line:#cfd8cc;--txt:#18251d;--muted:#68746d;--red:#b32020;--gold:#ffc400;--blue:#1067c8;--soft:#eaf2eb}
 *{box-sizing:border-box}html,body{height:auto!important;min-height:100%!important;overflow-y:auto!important;overscroll-behavior:auto!important}body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}header{position:sticky;top:0;z-index:5;background:var(--green);color:white;padding:12px 14px;box-shadow:0 2px 8px #0002}header .row{display:flex;justify-content:space-between;gap:12px;align-items:center;max-width:1180px;margin:auto}h1{font-size:18px;margin:0}h2{font-size:18px;margin:0 0 8px}h3{font-size:16px;margin:12px 0 8px}main{max-width:1180px;margin:0 auto;padding:12px}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin:12px 0;box-shadow:0 2px 8px #0000000d}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}input,select,textarea,button{width:100%;font:inherit;border-radius:12px;border:1px solid var(--line);padding:10px 11px;background:white}textarea{min-height:70px}button{border:0;background:var(--green);color:white;font-weight:900;cursor:pointer}button.secondary{background:#e7eee7;color:var(--green);border:1px solid #bfd0c2}button.warn{background:var(--red)}button.blue{background:var(--blue)}button:disabled{opacity:.55;cursor:not-allowed}label{display:block;font-size:12px;font-weight:900;color:var(--muted);margin:8px 0 4px}.tabs{display:flex;gap:8px;overflow:auto;padding:8px 0}.tabs button{white-space:nowrap;width:auto;padding:9px 13px}.tabs button.active{background:#072e1c}.tablewrap{width:100%;overflow:auto;border-radius:12px;border:1px solid var(--line)}table{width:100%;border-collapse:collapse;background:white}th,td{border:1px solid var(--line);padding:8px 7px;text-align:left;vertical-align:middle}th{background:#e6f0e8;color:#106b28;font-size:12px;text-transform:uppercase}.nowrap{white-space:nowrap}.muted{color:var(--muted)}.ok{color:var(--green);font-weight:900}.bad{color:var(--red);font-weight:900}.pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#e6f0e8;font-weight:900}.hidden{display:none!important}.top-actions{display:flex;gap:8px;align-items:center}.top-actions button{width:auto;padding:8px 11px;background:#ffffff22;border:1px solid #ffffff55}.small{font-size:12px}.right{text-align:right}.mine{background:#fff4b8!important;outline:3px solid var(--gold);outline-offset:-3px;font-weight:900}.mine td{font-weight:900}.danger-line{border-left:6px solid var(--red)}.success-line{border-left:6px solid var(--green)}.mapbox{background:#f7faf4;border:1px solid var(--line);border-radius:14px;padding:10px;overflow:auto}.banktitle{font-size:12px;font-weight:900;color:var(--muted);margin:8px 0 5px}.bank{display:grid;grid-template-columns:repeat(auto-fit,minmax(42px,1fr));gap:5px;min-width:320px}.stand{min-height:42px;border:1px solid #a8b7aa;border-radius:9px;background:white;display:flex;align-items:center;justify-content:center;flex-direction:column;font-weight:900;font-size:12px}.stand small{font-size:9px;font-weight:800;color:#555}.stand.occ{box-shadow:inset 0 -4px 0 #cbd8cc}.stand.t1{background:#ffe1e1;border:3px solid #d00000;color:#8e0000}.stand.t2{background:#dfeaff;border:3px solid #005bd8;color:#003c91}.stand.both{background:#f0dcff;border:3px solid #7a1fc2;color:#461078}.ownbox{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.ownitem{border:2px solid var(--line);border-radius:14px;padding:12px;background:#fff}.ownitem strong{font-size:24px}.twoCols{display:grid;grid-template-columns:1fr 1fr;gap:12px}.inlineBtns{display:flex;gap:6px;flex-wrap:wrap}.inlineBtns button{width:auto}.competitionActions{gap:22px;align-items:center}.competitionActions button{min-width:96px}.adminbar{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.tag{font-size:11px;border-radius:999px;padding:3px 7px;background:#f0f4ee;font-weight:900}.t1tag{background:#ffe1e1;color:#8e0000}.t2tag{background:#dfeaff;color:#003c91}.sector-A{box-shadow:inset 0 0 0 2px #b32020}.sector-B{box-shadow:inset 0 0 0 2px #1067c8}.sector-C{box-shadow:inset 0 0 0 2px #14803a}.sector-D{box-shadow:inset 0 0 0 2px #7a1fc2}.sector-E{box-shadow:inset 0 0 0 2px #b36b00}.sector-F{box-shadow:inset 0 0 0 2px #006b7a}.checkline{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--txt);font-weight:800}.checkline input{width:auto}.sectorMap{background:#fbfdf9;border:1px solid var(--line);border-radius:14px;padding:12px;overflow:auto}.mapTitle,.bankLabel{font-weight:1000;color:#204b38;margin:5px 0}.standRow{display:grid;gap:0;min-width:640px}.standCell{min-height:45px;border:2px solid #446b56;display:flex;align-items:center;justify-content:center;flex-direction:column;font-weight:1000;color:#123827;margin:-1px 0 0 -1px}.standCell small{font-size:10px}.standCell.empty{border:0;background:transparent}.sectorBand{display:grid;min-width:640px;gap:0}.sectorBlock{min-height:78px;border:3px solid #38664d;display:flex;align-items:center;justify-content:center;flex-direction:column;margin:-1px 0 0 -1px;text-align:center}.sectorBlock span{font-size:22px;font-weight:1000}.sectorSummary{background:#ecf2ed;border-radius:10px;padding:10px;margin-top:10px;font-size:13px}.water{text-align:center;background:#f2f6f1;color:#6a756d;font-weight:1000;padding:12px;min-width:640px}.sectorFill-A{background:#d8f1dd}.sectorFill-B{background:#dbe8fb}.sectorFill-C{background:#ffe7bd}.sectorFill-D{background:#f6d9e3}.sectorFill-E{background:#eadffb}.sectorFill-F{background:#dff4f4}.sectorFill-G{background:#f7e8ce}.sectorFill-H{background:#e5f0d0}.standCell.t1{background:#ffb5b5!important;border:4px solid #d00000!important;color:#7c0000}.standCell.t2{background:#b9d2ff!important;border:4px solid #005bd8!important;color:#002c70}.standCell.both{background:#e1b8ff!important;border:4px solid #7a1fc2!important;color:#3c0060}.standCell.occ{box-shadow:inset 0 -5px 0 #244f36}.weightItems{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:5px}.weightTag{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:3px 6px;font-size:11px;font-weight:900;background:#edf4ec;border:1px solid #bfd0c2}.weightTag button{width:auto;padding:0 4px;border-radius:8px;background:#b91c1c;color:#fff;line-height:1.1}.bfTag{background:#fff0d6;border-color:#e5b965}.netTag{background:#e7f5e7}.bfLine{font-size:12px;font-weight:1000;color:#b91c1c}.flashSave{background:#bff7c8!important;transition:background .25s}.resultInputTable input{min-width:120px}.sectorBand.clean{margin:0}.sectorFlexRow{display:flex;gap:0;min-width:640px}.sectorGroup{display:grid;gap:0;margin:0}.sectorGroup .standCell{border-radius:0;margin:-1px 0 0 -1px}.sectorFlexRow .sectorBlock{border-radius:0;margin:-1px 0 0 -1px}.standFlex{align-items:stretch}.sectorBand.clean .sectorBlock{min-height:72px}.pushBox{margin-top:6px;line-height:1.35}.bankLabelBottom{margin-top:8px}.quickScroll{position:fixed;right:10px;bottom:14px;z-index:30;display:flex;flex-direction:column;gap:7px}.quickScroll button{width:52px;padding:9px 0;border-radius:999px;background:#123827cc;box-shadow:0 3px 10px #0003}.quickScroll button:last-child{background:#e7eee7;color:#123827;border:1px solid #bfd0c2}
@@ -7850,11 +7867,80 @@ body:not(.playerTheme):not(.authMode) #app #competitionsList .adminCompState.end
   body.playerTheme #playerSituationalMapOverlay .roundDrawName{font-size:15px!important}
   body.playerTheme #playerSituationalMapOverlay .sectorBlock{min-height:82px!important}
 }
+
+/* V217: typography and contrast for the searchable desktop/mobile admin roster. */
+body:not(.playerTheme):not(.authMode) #app .adminRosterEntries{background:#102c3c!important;border:2px solid #6e95a8!important;color:#f7fbff!important}
+body:not(.playerTheme):not(.authMode) #app .adminRosterEntries>h2{font-size:20px;color:#fff!important;margin-bottom:9px}
+body:not(.playerTheme):not(.authMode) #app .adminRosterSearchBar{background:#183f53;color:#f5fbff;padding:10px;border-radius:11px;border:1px solid #7fa7ba}
+body:not(.playerTheme):not(.authMode) #app .adminRosterSearchBar label{font-size:15px;color:#f5fbff!important;margin:0 0 6px}
+body:not(.playerTheme):not(.authMode) #app .adminRosterSearchBar input{
+  background:#fff!important;color:#102b39!important;-webkit-text-fill-color:#102b39;
+  border:2px solid #8cb5c9!important;min-height:48px;font-size:16px;font-weight:700
+}
+body:not(.playerTheme):not(.authMode) #app .adminRosterSearchBar input::placeholder{color:#506779!important;opacity:1}
+body:not(.playerTheme):not(.authMode) #app .adminRosterFilters{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0 5px}
+body:not(.playerTheme):not(.authMode) #app .adminRosterFilterBtn{
+  flex:1 1 110px;min-height:44px;width:auto;padding:8px 10px;
+  color:#f6fbff!important;background:#24526c!important;border:2px solid #87afc1!important;
+  font-size:14px;font-weight:900
+}
+body:not(.playerTheme):not(.authMode) #app .adminRosterFilterBtn.selected{
+  color:#0e2735!important;background:#ffe8a6!important;border:2px solid #ffcf55!important
+}
+body:not(.playerTheme):not(.authMode) #app .adminRosterFilterCount{font-size:14px;font-weight:800;color:#e2eff5}
+body:not(.playerTheme):not(.authMode) #app .adminRosterGroup{margin:14px 0 6px}
+body:not(.playerTheme):not(.authMode) #app .adminRosterGroup .rosterSectionTitle{font-size:17px;color:#f6fbff!important}
+body:not(.playerTheme):not(.authMode) #app .adminRosterGroup .rosterSectionTitle .pill{color:#102b39!important;background:#ffe6a2!important}
+body:not(.playerTheme):not(.authMode) #app .adminRosterEntries>p{color:#fff!important}
+body:not(.playerTheme):not(.authMode) #app .adminDrawPreview,
+body:not(.playerTheme):not(.authMode) #app .drawChecklist{
+  background:#13374c!important;color:#f5fbff!important;border:2px solid #7399ae!important;
+  border-radius:12px;padding:0;margin:9px 0;overflow:visible
+}
+body:not(.playerTheme):not(.authMode) #app .adminDrawPreview>summary,
+body:not(.playerTheme):not(.authMode) #app .drawChecklist>summary{
+  background:#1a4760!important;color:#fff!important;
+  list-style:none;cursor:pointer;min-height:48px;padding:11px 14px;font-weight:900;font-size:16px;
+  border-radius:10px
+}
+body:not(.playerTheme):not(.authMode) #app .adminDrawPreview>summary::after,
+body:not(.playerTheme):not(.authMode) #app .drawChecklist>summary::after{content:" ▾";float:right;color:#ffda86}
+body:not(.playerTheme):not(.authMode) #app .adminDrawPreview>.roundDrawSection{margin:10px}
+body:not(.playerTheme):not(.authMode) #app .adminDrawPreview>.tablewrap{margin:10px}
+body:not(.playerTheme):not(.authMode) #app .drawChecklistRows{padding:10px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+body:not(.playerTheme):not(.authMode) #app .drawChecklistRows>div{
+ display:flex;gap:6px;align-items:center;justify-content:space-between;border:1px solid #80a9ba;
+ background:#204559;border-radius:9px;padding:11px;color:#fff;font-size:14px
+}
+body:not(.playerTheme):not(.authMode) #app .drawChecklistRows>div.ready{border-left:4px solid #77e3a0}
+body:not(.playerTheme):not(.authMode) #app .drawChecklistRows>div.warning{border-left:4px solid #ffd174}
+body:not(.playerTheme):not(.authMode) #app .drawChecklist>p{margin:0;padding:0 12px 12px;color:#e1ecf4!important;font-size:13px}
+#app .judgeOfflineState strong{display:block;font-size:15px;line-height:1.45}
+#app .judgeOfflineState .judgeSyncError{display:block;margin:8px 0;color:#ffe0ae!important;font-size:14px;font-weight:800}
+#app .judgeOfflineState .judgeSyncRetry{min-height:48px;background:#154f9b!important;border:2px solid #afdcff!important;color:#fff!important;font-size:15px;margin-top:9px}
+#competitionsList .playerMyUpcoming,#competitionsList .playerMoreUpcoming{
+ border:2px solid #5c91ab;border-radius:13px;padding:0;margin:10px 0;background:#122f41;color:#f7fbff
+}
+#competitionsList .playerMyUpcoming>summary,#competitionsList .playerMoreUpcoming>summary{
+ display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:48px;
+ list-style:none;cursor:pointer;padding:11px 14px;font-size:15px;font-weight:900;color:#fff!important
+}
+#competitionsList .playerMyUpcoming>summary b,#competitionsList .playerMoreUpcoming>summary b{
+ display:inline-block;flex:0 0 auto;border-radius:50px;padding:3px 9px;background:#ffe0a0;color:#1e2830
+}
+#competitionsList .playerMyUpcomingBody,#competitionsList .playerMoreUpcoming>.playerCompGroups{padding:9px}
+#competitionsList .playerCompetitionOrganizer{margin-top:11px}
+@media(max-width:760px){
+ body:not(.playerTheme):not(.authMode) #app .adminRosterFilterBtn{min-height:48px;font-size:14px;flex-basis:calc(50% - 4px)}
+ body:not(.playerTheme):not(.authMode) #app .drawChecklistRows{grid-template-columns:1fr}
+ body:not(.playerTheme):not(.authMode) #app .drawChecklistRows>div{font-size:15px}
+ body:not(.playerTheme):not(.authMode) #app .adminDrawPreview>summary{font-size:16px}
+}
 </style>
 </head>
 <body class="authMode">
 <div id="bootGuard"><img src="/icon-192.png" alt=""><b>Łowcy Methodowcy</b><span>Uruchamiam aplikację…</span><button id="bootRetry" class="hidden" type="button" onclick="retryLowcyBoot()">Spróbuj ponownie</button></div>
-<header><div class="row"><h1><img class="brandIcon" src="/icon-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V216</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
+<header><div class="row"><h1><img class="brandIcon" src="/brand/icon-v217-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V217</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
 <main>
 <div id="msg"></div>
 <section id="auth" class="card">
@@ -7902,5 +7988,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V216_SAFETY_READY'); console.log('CARP_MOBILE_READY port=' + PORT); startPresenceReminderLoop(); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V217_UX_BRAND_READY'); console.log('CARP_MOBILE_READY port=' + PORT); startPresenceReminderLoop(); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });
