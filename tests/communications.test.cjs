@@ -1,6 +1,6 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict');
-const {normalizeMessage,route}=require('../communications.cjs');
+const {normalizeMessage,normalizeChannels,route}=require('../communications.cjs');
 const reminders=require('../presence-reminders.cjs');
 test('V228: messaging validates content and delivery mode',()=>{
   assert.deepEqual(normalizeMessage({body:'  Kontakt proszę  ',mode:'POPUP'}),{body:'Kontakt proszę',mode:'POPUP'});
@@ -87,4 +87,43 @@ test('V231: ALL accurately reports missing push subscriptions',async()=>{
   assert.equal(result.delivered,1);
   assert.equal(result.pushSent,0);
   assert.equal(result.pushUnavailable,1);
+});
+
+test('V232: independent delivery channels and default inbox',()=>{
+  assert.deepEqual(normalizeChannels({},'NOTIFICATION'),['INBOX']);
+  assert.deepEqual(normalizeChannels({},'POPUP'),['INBOX','POPUP']);
+  assert.deepEqual(normalizeChannels({},'ALL'),['INBOX','POPUP','PUSH']);
+  for(const channel of ['INBOX','POPUP','PUSH']) assert.deepEqual(normalizeChannels({channels:[channel]}),[channel]);
+  assert.deepEqual(normalizeChannels({channels:['POPUP','INBOX']}),['INBOX','POPUP']);
+  assert.deepEqual(normalizeChannels({channels:['PUSH','POPUP','INBOX']}),['INBOX','POPUP','PUSH']);
+  for(const channels of [[],['UNKNOWN'],['INBOX','INBOX'],['INBOX','POPUP','PUSH','UNKNOWN']])
+    assert.throws(()=>normalizeChannels({channels}));
+});
+test('V232: one, two or three channels deliver only to selected destinations',async()=>{
+  for(const channels of [['INBOX'],['POPUP'],['PUSH'],['INBOX','POPUP'],['POPUP','PUSH'],['INBOX','PUSH'],['INBOX','POPUP','PUSH']]){
+    const stored=[],pushed=[];
+    const pool={query:async(sql,params)=>{
+      if(sql.includes('from users u where u.id=$1'))return {rows:[{id:7,first_name:'Ala',last_name:'Nowak'}]};
+      if(sql.startsWith('insert into admin_message_batches'))return {rows:[{id:42}]};
+      if(sql.startsWith('insert into notifications')){stored.push(params);return {rows:[]}};
+      if(sql.startsWith('select count(*)::int as n from notifications'))return {rows:[{n:channels.includes('INBOX')?1:0}]};
+      throw Error('Unexpected query: '+sql);
+    }};
+    let response;
+    await route({
+      req:{},res:{},user:{id:1,role:'ADMIN'},path:'/api/admin/messages',method:'POST',
+      url:new URL('https://example.com/api/admin/messages'),pool,
+      sendJson:(_res,status,data)=>{response={status,...data}},
+      readBody:async()=>({body:'Sprawdzenie',channels,userId:7}),requireAdmin:()=>true,requireUser:()=>true,
+      getPlayerAttention:async()=>({count:0}),
+      pushToUser:async(_id,_title,_body,_url,meta)=>{pushed.push(meta);return {sent:1,failed:0}}
+    });
+    assert.equal(response.status,200);
+    assert.equal(stored.length,1);
+    assert.equal(stored[0][3].inboxEnabled,channels.includes('INBOX'));
+    assert.equal(stored[0][3].popupEnabled,channels.includes('POPUP'));
+    assert.equal(stored[0][3].pushEnabled,channels.includes('PUSH'));
+    assert.equal(pushed.length,Number(channels.includes('PUSH')));
+    if(channels.includes('PUSH'))assert.equal(pushed[0].badgeCount,channels.includes('INBOX')?1:0);
+  }
 });
