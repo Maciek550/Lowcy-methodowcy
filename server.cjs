@@ -10,6 +10,7 @@ let webpush = null;
 try { webpush = require('web-push'); } catch (_) {}
 const crypto = require('crypto');
 const {standState,absencePreview,resultsPreflight} = require('./safety-core.cjs');
+const recovery = require('./recovery.cjs');
 
 const PORT = Number(process.env.PORT || 3000);
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
@@ -511,6 +512,7 @@ async function initDb() {
         where i.competition_id=r.competition_id and i.user_id=r.user_id and i.round=r.round and i.kind='BF'
       );
   `);
+  await recovery.initRecovery(pool);
   await repairLowerBankBoundaryForDisabled15();
   await ensureVapidConfig();
 }
@@ -1712,7 +1714,8 @@ async function buildDetail(competitionId, user) {
   const resultItems = (await pool.query('select * from result_items where competition_id=$1 order by round, user_id, created_at, id', [competitionId])).rows;
   const classification = computeClassification(comp, active, draws, results);
   const myEntry = entriesAll.rows.find(e => Number(e.user_id) === Number(user.id)) || null;
-  return { ok:true, competition:comp, entries:entriesAll.rows, activeEntries:active, reserveEntries:reserve, cancelledEntries:cancelled, rosterCounts, draws, results, resultItems, classification, myEntry };
+  const latestRecovery=user.role==='ADMIN'?await recovery.lastRecovery(pool,competitionId):null;
+  return { ok:true, competition:comp, entries:entriesAll.rows, activeEntries:active, reserveEntries:reserve, cancelledEntries:cancelled, rosterCounts, draws, results, resultItems, classification, myEntry, latestRecovery };
 }
 
 async function buildPlayerStartHistory(userId) {
@@ -2539,6 +2542,24 @@ self.addEventListener('notificationclick', event => {
       return sendJson(res, 200, { ok:true, notified:out.notified });
     } catch (e) { return sendJson(res, 400, { ok:false, error:e.message }); }
   }
+  // V216: recover the latest un-restored snapshot only when no new work can be overwritten.
+  m = path.match(/^\/api\/admin\/competitions\/(\d+)\/recovery\/latest$/);
+  if(m && method==='POST'){
+    if(!requireAdmin(user,res))return;
+    const compId=Number(m[1]),b=await readBody(req);
+    if(b.confirm!=='PRZYWROC_OSTATNIA_KOPIE')return sendJson(res,400,{ok:false,error:'Brak potwierdzenia przywrócenia.'});
+    const client=await pool.connect();
+    try{
+      await client.query('begin');
+      const restored=await recovery.restore(client,compId,disabledStandsForCompetition);
+      await client.query('commit');
+      return sendJson(res,200,{ok:true,restored});
+    }catch(error){
+      try{await client.query('rollback')}catch(_){}
+      return sendJson(res,409,{ok:false,error:error.message});
+    }finally{client.release()}
+  }
+
   m = path.match(/^\/api\/admin\/competitions\/(\d+)\/draw$/);
   if (m && method === 'DELETE') {
     if (!requireAdmin(user, res)) return;
@@ -2550,11 +2571,12 @@ self.addEventListener('notificationclick', event => {
     const client = await pool.connect();
     try {
       await client.query('begin');
+      const recoveryId=await recovery.capture(client,compId,user.id,'DRAW_RESET',disabledStandsForCompetition);
       const items = await client.query('delete from result_items where competition_id=$1 returning id', [compId]);
       const aggregates = await client.query('delete from results where competition_id=$1 returning id', [compId]);
       const removed = await client.query('delete from draws where competition_id=$1 returning id', [compId]);
       await client.query('commit');
-      await notifyAdmins('DRAW_RESET', 'Usunięto losowanie i wyniki', `${user.first_name} ${user.last_name} usunął całe losowanie T1/T2 oraz wyniki: ${comp.title}`, { competitionId:compId, deletedDraws:removed.rowCount, deletedItems:items.rowCount, deletedResults:aggregates.rowCount });
+      await notifyAdmins('DRAW_RESET', 'Usunięto losowanie i wyniki', `${user.first_name} ${user.last_name} usunął całe losowanie T1/T2 oraz wyniki: ${comp.title}`, { competitionId:compId, deletedDraws:removed.rowCount, deletedItems:items.rowCount, deletedResults:aggregates.rowCount,recoveryId });
       return sendJson(res, 200, { ok:true, deletedDraws:removed.rowCount, deletedItems:items.rowCount, deletedResults:aggregates.rowCount });
     } catch (e) {
       await client.query('rollback');
@@ -2582,11 +2604,12 @@ self.addEventListener('notificationclick', event => {
     const client = await pool.connect();
     try {
       await client.query('begin');
+      const recoveryId=await recovery.capture(client,compId,user.id,'RESULTS_CLEAR',disabledStandsForCompetition);
       const items = await client.query('delete from result_items where competition_id=$1 returning id', [compId]);
       const aggregates = await client.query('delete from results where competition_id=$1 returning id', [compId]);
       await client.query('commit');
       await notifyAdmins('RESULTS_CLEAR', 'Wyczyszczono wyniki', `${user.first_name} ${user.last_name} wyczyścił wyniki T1 i T2: ${comp.title}`, { competitionId:compId, items:items.rowCount, results:aggregates.rowCount });
-      return sendJson(res, 200, { ok:true, deletedItems:items.rowCount, deletedResults:aggregates.rowCount });
+      return sendJson(res, 200, { ok:true, deletedItems:items.rowCount, deletedResults:aggregates.rowCount,recoveryId });
     } catch (e) { await client.query('rollback'); throw e; }
     finally { client.release(); }
   }
