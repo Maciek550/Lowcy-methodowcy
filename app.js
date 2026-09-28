@@ -1149,7 +1149,7 @@ function rosterTable(title,rows,compId,kind){
   const confirmBtn=(e,compact=false)=>kind==='ACTIVE'
     ?'<button type="button" class="confirmEntryBtn '+(e.confirmed?'confirmed':'')+'" aria-label="'+(e.confirmed?'Cofnij potwierdzenie obecności':'Potwierdź obecność')+'" onclick="toggleEntryConfirm('+compId+','+e.id+',this)">'+(e.confirmed?(compact?'✓ Obecny':'✓'):'Potwierdź')+'</button>'
     :'';
-  const editBtn=e=>{const nm=String((e.first_name||'')+' '+(e.last_name||'')).trim(),safe=encodeURIComponent(nm);return '<button type="button" class="secondary rosterEditNameBtn" onclick="editPlayerName('+Number(e.user_id)+',decodeURIComponent(\''+safe+'\'))">Edytuj</button>'};
+  const editBtn=e=>{const nm=String((e.first_name||'')+' '+(e.last_name||'')).trim(),safe=encodeURIComponent(nm).replace(/'/g,'%27'),club=encodeURIComponent(e.pzw_club||'').replace(/'/g,'%27');return '<button type="button" class="secondary rosterEditNameBtn" onclick="editPlayerName('+Number(e.user_id)+',decodeURIComponent(\''+safe+'\'),decodeURIComponent(\''+club+'\'))">Edytuj</button>'};
   const callEnabled=kind==='ACTIVE'||kind==='RESERVE';
   const desktop='<div class="tablewrap adminDesktopOnly"><table><thead><tr><th style="width:46px">Lp.</th><th>Zawodnik</th><th>Telefon</th><th>Koło</th><th>Status</th><th>Potw.</th><th>Akcja</th></tr></thead><tbody>'
     +rows.map((e,idx)=>'<tr><td class="center"><b>'+(idx+1)+'</b></td><td><div class="rosterNameEdit"><b>'+esc(e.first_name+' '+e.last_name)+'</b>'+editBtn(e)+'</div></td><td class="nowrap">'+(callEnabled?renderPhoneCall(e.phone):esc(e.phone||'—'))+'</td><td>'+esc(e.pzw_club||'')+'</td><td>'+statusLabel(e.status)+'</td><td class="center">'+(confirmBtn(e)||'—')+'</td><td>'+makeButtons(e)+'</td></tr>').join('')
@@ -2667,7 +2667,34 @@ async function confirmAllNotifications(){try{const path=ME?.role==='ADMIN'?'/api
 async function deleteAllNotifications(){try{const admin=ME?.role==='ADMIN';const question=admin?'Usunąć wszystkie zwykłe i zakończone powiadomienia? Oczekujące prośby o wypisanie pozostaną.':'Usunąć wszystkie swoje powiadomienia?';if(!confirm(question))return;const path=admin?'/api/admin/notifications':'/api/notifications';const d=await api(path,{method:'DELETE',body:'{}'});msg('Usunięto powiadomienia: '+Number(d.deleted||0)+(Number(d.keptPending||0)?'. Oczekujące prośby: '+Number(d.keptPending):''));await loadNotifications()}catch(e){msg(e.message,'bad')}}
 async function decideLeaveRequest(requestId,decision,notifId){try{if(!requestId)throw new Error('Brak identyfikatora prośby');const approve=decision==='approve';if(!confirm(approve?'Zaakceptować prośbę i wypisać zawodnika z zawodów?':'Odrzucić prośbę o wypisanie?'))return;const out=await api('/api/admin/leave-requests/'+requestId+'/'+(approve?'approve':'reject'),{method:'POST',body:'{}'});msg(approve?'Zawodnik został wypisany':'Prośba została odrzucona');await loadNotifications();await loadCompetitions();if(CURRENT_DETAIL?.competition?.id==out.competitionId)await refreshCompetitionKeepScroll(out.competitionId)}catch(e){msg(e.message,'bad')}}
 async function readNotif(id){await api('/api/notifications/'+id+'/read',{method:'POST',body:'{}'});await loadNotifications();if(ME?.role==='PLAYER'){await refreshPlayerAttention(false);renderPlayerCompetitionList()}}
-async function editPlayerName(id,currentName){if(!ME||ME.role!=='ADMIN')return;const before=String(currentName||'').replace(/\s+/g,' ').trim();const entered=prompt('Popraw imię i nazwisko zawodnika:',before);if(entered===null)return;const fullName=String(entered||'').replace(/\s+/g,' ').trim();if(!fullName){msg('Imię i nazwisko nie może być puste','bad');return}if(fullName===before)return;try{const d=await api('/api/admin/players/'+Number(id),{method:'PATCH',body:JSON.stringify({fullName})});msg('Poprawiono nazwę zawodnika: '+(d.player?.name||fullName));await loadPlayers();if(CURRENT_DETAIL?.competition?.id)await refreshCompetitionKeepScroll(CURRENT_DETAIL.competition.id)}catch(e){msg(e.message,'bad')}}
+function editPlayerName(id,currentName,currentClub=''){
+  if(!ME||ME.role!=='ADMIN')return;
+  q('playerEditDialog')?.remove();
+  const dialog=document.createElement('dialog');
+  dialog.id='playerEditDialog';
+  dialog.innerHTML='<form><h3>Edytuj zawodnika</h3><label for="editPlayerFullName">Imię i nazwisko</label><input id="editPlayerFullName" name="fullName" required maxlength="80" value="'+esc(currentName||'')+'"><label for="editPlayerClub">Koło PZW</label><input id="editPlayerClub" name="pzwClub" maxlength="100" value="'+esc(currentClub||'')+'"><div class="playerEditActions"><button type="submit">Zapisz</button><button type="button" class="secondary" data-cancel>Anuluj</button></div></form>';
+  document.body.appendChild(dialog);
+  dialog.addEventListener('close',()=>dialog.remove());
+  dialog.querySelector('[data-cancel]').onclick=()=>dialog.close();
+  dialog.querySelector('form').onsubmit=async ev=>{
+    ev.preventDefault();
+    const fullName=dialog.querySelector('[name="fullName"]').value.replace(/\s+/g,' ').trim();
+    const pzwClub=dialog.querySelector('[name="pzwClub"]').value.replace(/\s+/g,' ').trim();
+    if(!fullName){msg('Imię i nazwisko nie może być puste','bad');return}
+    const changes={};
+    if(fullName!==String(currentName||'').replace(/\s+/g,' ').trim())changes.fullName=fullName;
+    if(pzwClub!==String(currentClub||'').replace(/\s+/g,' ').trim())changes.pzwClub=pzwClub;
+    if(!Object.keys(changes).length){dialog.close();return}
+    const save=dialog.querySelector('[type="submit"]');save.disabled=true;
+    try{
+      await api('/api/admin/players/'+Number(id),{method:'PATCH',body:JSON.stringify(changes)});
+      dialog.close();msg('Zapisano dane zawodnika');
+      await loadPlayers();
+      if(CURRENT_DETAIL?.competition?.id)await refreshCompetitionKeepScroll(CURRENT_DETAIL.competition.id);
+    }catch(e){msg(e.message,'bad');save.disabled=false}
+  };
+  dialog.showModal();
+}
 function playerInfoBadges(p){let out='';if(p.has_logged_in)out+='<span class="playerAccountBadge playerAccountVerified" title="Zawodnik zalogował się w aplikacji">V</span>';if(String(p.account_source||'SELF').toUpperCase()==='ADMIN')out+='<span class="playerAccountBadge playerAccountAdmin" title="Zawodnik dodany przez administratora">A</span>';return out||'<span class="muted">—</span>'}
 async function deletePlayer(id,name){if(!ME||ME.role!=='ADMIN')return;const label=String(name||'zawodnika');if(!confirm('Usunąć zawodnika '+label+' z aktywnej bazy?\n\nJego dotychczasowe zapisy, losowania, wagi i wyniki zostaną zachowane. Konto zostanie zarchiwizowane i nie będzie mogło się logować.'))return;try{const d=await api('/api/admin/players/'+Number(id),{method:'DELETE',body:'{}'});msg('Zarchiwizowano zawodnika: '+(d.player?.name||label));await loadPlayers();await loadCompetitions();if(CURRENT_DETAIL?.competition?.id)await refreshCompetitionKeepScroll(CURRENT_DETAIL.competition.id)}catch(e){msg(e.message,'bad')}}
 async function deleteAllAdminPlayers(count){if(!ME||ME.role!=='ADMIN')return;const n=Number(count||0);if(n<1){msg('Brak zawodników oznaczonych A.');return}if(!confirm('Zarchiwizować WSZYSTKICH zawodników oznaczonych A?\n\nLiczba zawodników: '+n+'\n\nZnikną z aktywnej bazy, ale ich dotychczasowe zapisy, losowania, wagi i wyniki zostaną zachowane.'))return;try{const d=await api('/api/admin/players/admin-added',{method:'DELETE',body:'{}'});msg('Zarchiwizowano zawodników A: '+Number(d.archived||d.deleted||0));await loadPlayers();await loadCompetitions();if(CURRENT_DETAIL?.competition?.id)await refreshCompetitionKeepScroll(CURRENT_DETAIL.competition.id)}catch(e){msg(e.message,'bad')}}
@@ -2677,12 +2704,12 @@ async function loadPlayers(){
   const adminAdded=d.players.filter(p=>String(p.account_source||'SELF').toUpperCase()==='ADMIN').length;
   const legend='<div class="playerAccountTop"><div class="playerAccountLegend"><span><b class="playerAccountBadge playerAccountVerified">V</b> zalogował się w aplikacji</span><span><b class="playerAccountBadge playerAccountAdmin">A</b> dodany przez admina</span></div><button type="button" class="warn playerDeleteAllAdminBtn" '+(adminAdded?'':'disabled')+' onclick="deleteAllAdminPlayers('+adminAdded+')">Usuń wszystkich A ('+adminAdded+')</button></div>';
   const desktop='<div class="tablewrap adminDesktopOnly"><table class="adminPlayersTable"><thead><tr><th style="width:46px">Lp.</th><th>Imię i nazwisko</th><th style="width:82px">Info</th><th>Telefon</th><th>Koło PZW</th><th>Aktywne zapisy</th><th style="width:150px">Akcja</th></tr></thead><tbody>'+d.players.map((p,i)=>{
-    const name=String((p.first_name||'')+' '+(p.last_name||'')).trim(),safeName=encodeURIComponent(name).replace(/'/g,'%27');
-    return '<tr><td class="center"><b>'+(i+1)+'</b></td><td><b>'+esc(name)+'</b></td><td class="playerBadgeCell">'+playerInfoBadges(p)+'</td><td class="nowrap">'+renderPhoneCall(p.phone)+'</td><td>'+esc(p.pzw_club)+'</td><td class="center">'+esc(p.active_entries||0)+'</td><td><div class="inlineBtns playerManageBtns"><button type="button" class="secondary" onclick="editPlayerName('+Number(p.id)+',decodeURIComponent(\''+safeName+'\'))">Edytuj</button><button type="button" class="warn playerDeleteBtn" onclick="deletePlayer('+Number(p.id)+',decodeURIComponent(\''+safeName+'\'))">Usuń</button></div></td></tr>'
+    const name=String((p.first_name||'')+' '+(p.last_name||'')).trim(),safeName=encodeURIComponent(name).replace(/'/g,'%27'),safeClub=encodeURIComponent(p.pzw_club||'').replace(/'/g,'%27');
+    return '<tr><td class="center"><b>'+(i+1)+'</b></td><td><b>'+esc(name)+'</b></td><td class="playerBadgeCell">'+playerInfoBadges(p)+'</td><td class="nowrap">'+renderPhoneCall(p.phone)+'</td><td>'+esc(p.pzw_club)+'</td><td class="center">'+esc(p.active_entries||0)+'</td><td><div class="inlineBtns playerManageBtns"><button type="button" class="secondary" onclick="editPlayerName('+Number(p.id)+',decodeURIComponent(\''+safeName+'\'),decodeURIComponent(\''+safeClub+'\'))">Edytuj</button><button type="button" class="warn playerDeleteBtn" onclick="deletePlayer('+Number(p.id)+',decodeURIComponent(\''+safeName+'\'))">Usuń</button></div></td></tr>'
   }).join('')+'</tbody></table></div>';
   const mobile='<div class="adminMobileOnly mobilePlayersList">'+d.players.map((p,i)=>{
     const name=String((p.first_name||'')+' '+(p.last_name||'')).trim();
-    const safeName=encodeURIComponent(name).replace(/'/g,'%27');
+    const safeName=encodeURIComponent(name).replace(/'/g,'%27'),safeClub=encodeURIComponent(p.pzw_club||'').replace(/'/g,'%27');
     const call=phoneTelHref(p.phone)?renderPhoneCall(p.phone,'mobilePhoneCallBtn playerDirectoryCall',true):'';
     return `<article class="mobileAdminCard mobilePlayerManageCard">
       <div class="mobileAdminCardHead ${call?'hasCall':''}">
@@ -2690,7 +2717,7 @@ async function loadPlayers(){
       </div>
       <div class="mobilePlayerManageMeta"><span>Koło: <b>${esc(p.pzw_club||'—')}</b></span><span>Zapisy: <b>${esc(p.active_entries||0)}</b></span></div>
       <div class="mobilePlayerManageActions">
-        <button type="button" class="secondary" onclick="editPlayerName(${Number(p.id)},decodeURIComponent('${safeName}'))">Edytuj</button>
+        <button type="button" class="secondary" onclick="editPlayerName(${Number(p.id)},decodeURIComponent('${safeName}'),decodeURIComponent('${safeClub}'))">Edytuj</button>
         <button type="button" class="warn playerDeleteBtn mobilePlayerDeleteBtn" onclick="deletePlayer(${Number(p.id)},decodeURIComponent('${safeName}'))">Usuń</button>
       </div>
     </article>`
