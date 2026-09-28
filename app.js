@@ -1,4 +1,4 @@
-const CLIENT_VERSION='208';const CLIENT_VERSION_NAME='V208_FOTO_PODIUM_PHOTO';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='209';const CLIENT_VERSION_NAME='V209_FOTO_PODIUM_UPLOAD';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -2084,11 +2084,18 @@ async function fotoFbLoadMasterStatus(){
     ['winners_bg','fish','sectors'].forEach(function(kind){
       const el=q('fotoFbMasterStatus-'+kind),t=FOTO_FB_MASTER_STATUS[kind];
       if(el){
-        el.textContent=t?(kind==='winners_bg'?'Czyste tło zapisane ✓':'Wzorzec zapisany ✓'):(kind==='winners_bg'?'Brak czystego tła':'Brak wzorca');
+        el.textContent=t?(kind==='winners_bg'?'Twój podkład zapisany ✓':'Wzorzec zapisany ✓'):(kind==='winners_bg'?'Aktywne zdjęcie domyślne — możesz wgrać własny podkład':'Brak wzorca');
         el.className='small '+(t?'ok':'bad');
       }
     });
+    await fotoFbRefreshBackgroundPreview();
   }catch(_){}
+}
+async function fotoFbRefreshBackgroundPreview(){
+  const img=q('fotoFbCurrentBackground');if(!img)return;
+  const saved=await fotoFbGetMaster('winners_bg');
+  img.src=saved||'/podium-trophies-v206.jpg';img.alt=saved?'Wgrany podkład':'Domyślne puchary';
+  img.style.objectFit=saved?'contain':'cover';
 }
 function fotoFbChooseMaster(kind){const el=q('fotoFbMasterInput-'+kind);if(el)el.click()}
 function fotoFbResizeMasterFile(file){
@@ -2469,9 +2476,13 @@ function fotoFbWinnerCard206(d,metal,x,y,w,h){
 async function fotoFbSvgWinners(d){
   const edited=fotoFbEditedDetail(d),c=edited.competition,list=fotoFbWinnerData(edited),w=1400,h=1460;
   if(list.length<3)throw new Error('Klasyfikacja końcowa musi zawierać co najmniej 3 zawodników.');
-  const asset=await Promise.all([fotoFbAssetData('/podium-trophies-v206.jpg'),fotoFbAssetData('/icon-512.png')]),
-    trophies=asset[0],logo=asset[1];
-  if(!trophies)throw new Error('Nie udało się pobrać zdjęcia pucharów. Spróbuj odświeżyć aplikację.');
+  const [saved,logo]=await Promise.all([fotoFbGetMaster('winners_bg'),fotoFbAssetData('/icon-512.png')]);
+  const trophies=saved||await fotoFbAssetData('/podium-trophies-v206.jpg');
+  if(!trophies)throw new Error('Nie udało się pobrać podkładu. Wgraj własny.');
+  const backgroundMode=saved?await new Promise(resolve=>{
+    const im=new Image();im.onload=()=>resolve(im.naturalWidth/Math.max(1,im.naturalHeight)>1.7?'wide':'poster');
+    im.onerror=()=>resolve('poster');im.src=saved;
+  }):'wide';
   const by={};list.forEach(function(r){by[r.rank]=r});
   const title=String(c.title||'ZAWODY').trim(),words=title.split(/\s+/),date=fotoFbDate(c),venue=String(c.fishery||'—').trim(),
     lines=[],footer=String(c.__fbFooter||'Carp & Caraś & Asiotr & Hamur').replace(/\s*🐳\s*$/,'');
@@ -2485,7 +2496,8 @@ async function fotoFbSvgWinners(d){
     '<defs><linearGradient id="podiumDark206" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0a1b2a"/><stop offset="1" stop-color="#02080e"/></linearGradient>'+
     '<linearGradient id="podiumFade206" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#02080e" stop-opacity="0"/><stop offset="1" stop-color="#02080e" stop-opacity="1"/></linearGradient></defs>'+
     '<rect width="'+w+'" height="'+h+'" fill="url(#podiumDark206)"/>'+
-    '<rect width="'+w+'" height="296" fill="#051321"/>'+
+    (backgroundMode==='poster'?'<image href="'+trophies+'" x="0" y="0" width="1400" height="1460" preserveAspectRatio="xMidYMid slice"/>':'')+
+    '<rect width="'+w+'" height="296" fill="#051321" opacity="'+(backgroundMode==='poster'?'.91':'1')+'"/>'+
     '<path d="M40 25 H480 M920 25 H1360" stroke="#ddab36" stroke-width="5"/>'+
     (logo?'<image href="'+logo+'" x="28" y="37" width="148" height="148" preserveAspectRatio="xMidYMid meet"/>':'')+
     '<text x="774" y="'+(lines.length===1?130:92)+'" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="'+fs+'" font-weight="1000" fill="#ffda70" stroke="#08131d" stroke-width="8" paint-order="stroke"'+(lines[0].length>35?' textLength="1150" lengthAdjust="spacingAndGlyphs"':'')+'>'+fotoFbEscXml(lines[0])+'</text>';
@@ -2494,9 +2506,9 @@ async function fotoFbSvgWinners(d){
     '<path d="M699 197 V274" stroke="#d6a74c" stroke-width="3"/>'+
     '<text x="71" y="216" font-family="Arial Black,Arial,sans-serif" font-size="24" fill="#efc56d">DATA ZAWODÓW</text>'+
     '<text x="71" y="264" font-family="Arial Black,Arial,sans-serif" font-size="46" fill="#ffffff">'+fotoFbEscXml(date)+'</text>'+
-    '<text x="734" y="253" font-family="Arial Black,Arial,sans-serif" font-size="24" fill="#efc56d">ŁOWISKO</text>'+
-    '<text x="734" y="306" font-family="Arial Black,Arial,sans-serif" font-size="'+(venue.length>25?33:venue.length>18?39:46)+'" fill="#ffffff"'+(venue.length>27?' textLength="570" lengthAdjust="spacingAndGlyphs"':'')+'>'+fotoFbEscXml(venue)+'</text>'+
-    '<image href="'+trophies+'" x="0" y="291" width="1400" height="576" preserveAspectRatio="none"/>'+
+    '<text x="734" y="216" font-family="Arial Black,Arial,sans-serif" font-size="24" fill="#efc56d">ŁOWISKO</text>'+
+    '<text x="734" y="264" font-family="Arial Black,Arial,sans-serif" font-size="'+(venue.length>25?33:venue.length>18?39:46)+'" fill="#ffffff"'+(venue.length>27?' textLength="570" lengthAdjust="spacingAndGlyphs"':'')+'>'+fotoFbEscXml(venue)+'</text>'+
+    (backgroundMode==='wide'?'<image href="'+trophies+'" x="0" y="291" width="1400" height="576" preserveAspectRatio="xMidYMid slice"/>':'')+
     '<rect x="0" y="666" width="1400" height="214" fill="url(#podiumFade206)"/>'+
     '<text x="700" y="856" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="35" fill="#ffde87" stroke="#050b12" stroke-width="5" paint-order="stroke">PODIUM ZAWODÓW</text>';
   svg+=fotoFbWinnerCard206(by[2]||list[1],'silver',32,881,420,488);
@@ -2631,11 +2643,12 @@ function renderFotoFbPanel(d){
   setTimeout(function(){fotoFbLoadMasterStatus()},0);
   const bgCard=function(){
     return '<div style="border:2px solid #d8a127;border-radius:14px;padding:12px;background:#071b2a;color:#fff">'+
-      '<b>🏆 Tło — Zwycięzcy</b>'+
+      '<b>🏆 WŁASNY PODKŁAD — PODIUM</b>'+
       '<div id="fotoFbMasterStatus-winners_bg" class="small muted" style="margin:5px 0 9px">Sprawdzam…</div>'+
-      '<div class="small muted" style="margin-bottom:9px">Wgraj samo zdjęcie/tło. Bez napisów, tabel, ramek i pucharów. V168 nakłada całą treść od zera.</div>'+
+      '<div style="font-size:14px;margin:7px 0 10px;color:#f5f4dc">Wgraj zdjęcie pucharów i łowiska bez napisów (poziome lub pionowe). Zapisany podkład ma pierwszeństwo.</div>'+ 
+      '<img id="fotoFbCurrentBackground" alt="Podgląd podkładu" src="/podium-trophies-v206.jpg" style="width:100%;max-height:240px;object-fit:contain;background:#071321;border:2px solid #e2b95b;border-radius:12px;margin:6px 0 12px">'+
       '<input id="fotoFbMasterInput-winners_bg" type="file" accept="image/png,image/jpeg,image/webp" class="hidden" onchange="fotoFbUploadMaster(\'winners_bg\',this)">'+
-      '<div class="inlineBtns"><button type="button" class="secondary" onclick="fotoFbChooseMaster(\'winners_bg\')">Wgraj / zmień czyste tło</button>'+
+      '<div class="inlineBtns"><button type="button" class="blue" onclick="fotoFbChooseMaster(\'winners_bg\')">📷 Wgraj / zmień podkład</button>'+
       '<button type="button" class="danger" onclick="fotoFbDeleteMaster(\'winners_bg\')">Usuń tło</button></div></div>';
   };
   const masterCard=function(kind,label){
@@ -2646,8 +2659,8 @@ function renderFotoFbPanel(d){
       '<button type="button" class="danger" onclick="fotoFbDeleteMaster(\''+kind+'\')">Usuń</button></div></div>';
   };
   return '<div class="card"><h2>FotoFB — grafiki wynikowe</h2>'+
-    '<div style="background:#fff4d6;border:1px solid #d8a127;border-radius:14px;padding:10px;margin-bottom:12px;color:#4a3510"><b>V208 — Fotograficzne podium.</b> Prawdziwe puchary i jezioro o zachodzie słońca; czytelne nazwiska, punkty, waga i BF.</div>'+
-    '<h3>Zwycięzcy — stała grafika pucharów</h3>'+
+    '<div style="background:#fff4d6;border:1px solid #d8a127;border-radius:14px;padding:10px;margin-bottom:12px;color:#4a3510"><b>V209 — FotoFB.</b> Twój wgrany podkład i prawdziwe wyniki.</div>'+
+    '<h3>Zwycięzcy — Twój podkład</h3>'+bgCard()+
     '<h3 style="margin-top:14px">Pozostałe grafiki</h3><div class="grid">'+masterCard('fish','🐟 TOP 5 największych ryb')+masterCard('sectors','📷 Wyniki sektorowe T1/T2')+'</div>'+
     '<h3>Generuj</h3><div class="grid"><button type="button" class="blue" onclick="generateFotoFb(\'winners\')">🏆 Zwycięzcy zawodów</button><button type="button" class="blue" onclick="generateFotoFb(\'fish\')">🐟 TOP 5 największych ryb</button></div>'+
     '<div class="grid"><button type="button" onclick="generateFotoFb(\'t1\')">📷 Wyniki sektorowe — Tura 1</button><button type="button" onclick="generateFotoFb(\'t2\')">📷 Wyniki sektorowe — Tura 2</button></div>'+
