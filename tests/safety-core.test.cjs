@@ -66,3 +66,24 @@ test('V219: route synchronizes physical bank counts in the same PATCH as exclusi
  assert.match(server,/set disabled_stands=\$1::jsonb, bank1_count=\$3, bank2_count=\$4/);
  assert.match(server,/sector_layout=case when \$5::boolean then null else sector_layout end/);
 });
+
+test('V220: admin roster includes presence filters on both desktop/mobile rows',()=>{
+ const a=fs.readFileSync(path.join(root,'app.js'),'utf8');
+ assert.match(a,/\['PRESENT','Obecni'\]/);
+ assert.match(a,/\['UNCONFIRMED','Niepotwierdzeni'\]/);
+ assert.ok((a.match(/data-confirmed=/g)||[]).length>=2);
+ assert.match(a,/presenceMode=ADMIN_ROSTER_STATUS==='PRESENT'\|\|ADMIN_ROSTER_STATUS==='UNCONFIRMED'/);
+});
+test('V220: player history has season filter and does not remove cards from data',()=>{
+ const a=fs.readFileSync(path.join(root,'app.js'),'utf8');
+ assert.match(a,/let PLAYER_HISTORY_YEAR='all'/);
+ assert.match(a,/historySeasonBtn/);
+ assert.match(a,/data-year=/);
+ assert.match(a,/setPlayerHistoryYear/);
+});
+test('V220: client\/server version stays synchronized',()=>{
+ const a=fs.readFileSync(path.join(root,'app.js'),'utf8');
+ const s=fs.readFileSync(path.join(root,'server.cjs'),'utf8');
+ assert.match(a,/CLIENT_VERSION='220'/);
+ assert.match(s,/APP_VERSION = '220'/);
+});
