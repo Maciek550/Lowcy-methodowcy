@@ -897,7 +897,7 @@ function focusPlayerNavOnOpen(){
 }
 function showPlayerDesktopPanel(panel,ev){
   if(ev){ev.preventDefault();ev.stopPropagation()}
-  const keepY=Math.round(window.scrollY||0);
+  const keepY=APP_NAV_RESTORING?Math.round(window.scrollY||0):null;
   const allowed=['draw1','draw2','map1','map2','t1','t2','general','stats'];
   if(!allowed.includes(panel))return;
   if(panel==='t1'||panel==='t2')markPlayerResultSeen(panel==='t1'?1:2);
@@ -911,7 +911,7 @@ function showPlayerDesktopPanel(panel,ev){
   const mobileBox=q('playerMobilePanelContent');
   if(mobileBox&&CURRENT_DETAIL)mobileBox.innerHTML=renderPlayerMobilePanelContent(CURRENT_DETAIL,panel);
   document.querySelectorAll('.playerDesktopUnifiedNav button,.playerUnifiedNav button').forEach(btn=>btn.classList.toggle('active',btn.getAttribute('onclick')?.includes("'"+panel+"'")));
-  restorePlayerViewport(keepY);
+  if(keepY===null)focusPlayerNavOnOpen();else restorePlayerViewport(keepY);
 }
 function setPlayerDrawView(view,ev){
   if(ev){ev.preventDefault();ev.stopPropagation()}
@@ -966,7 +966,7 @@ async function playerDockAction(action){
 
 function showPlayerMobilePanel(panel,ev){
   if(ev){ev.preventDefault();ev.stopPropagation()}
-  const keepY=Math.round(window.scrollY||0);
+  const keepY=APP_NAV_RESTORING?Math.round(window.scrollY||0):null;
   const allowed=['draw1','draw2','map1','map2','t1','t2','general','stats'];
   if(!allowed.includes(panel))return;
   if(panel==='t1'||panel==='t2')markPlayerResultSeen(panel==='t1'?1:2);
@@ -980,7 +980,7 @@ function showPlayerMobilePanel(panel,ev){
   const desktopBox=q('playerDesktopPanelContent');
   if(desktopBox&&CURRENT_DETAIL)desktopBox.innerHTML=renderPlayerDesktopPanelContent(CURRENT_DETAIL,panel);
   document.querySelectorAll('.playerUnifiedNav button,.playerDesktopUnifiedNav button').forEach(btn=>btn.classList.toggle('active',btn.getAttribute('onclick')?.includes("'"+panel+"'")));
-  restorePlayerViewport(keepY);
+  if(keepY===null)focusPlayerNavOnOpen();else restorePlayerViewport(keepY);
   recordAppNavigation();
 }
 function fitPlayerMobileFullMaps(){
