@@ -1,0 +1,21 @@
+name: Bezpieczne losowanie i kontrola wersji
+on:
+  push:
+    branches: [main, 'feature/**']
+  pull_request:
+    branches: [main]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Testy regresji
+        run: npm test
+      - name: Sprawdzenie składni
+        run: |
+          node --check server.cjs
+          node --check app.js
+          node --check safety-core.cjs
