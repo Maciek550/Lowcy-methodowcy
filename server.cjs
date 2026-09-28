@@ -2577,7 +2577,7 @@ self.addEventListener('notificationclick', event => {
       const removed = await client.query('delete from draws where competition_id=$1 returning id', [compId]);
       await client.query('commit');
       await notifyAdmins('DRAW_RESET', 'Usunięto losowanie i wyniki', `${user.first_name} ${user.last_name} usunął całe losowanie T1/T2 oraz wyniki: ${comp.title}`, { competitionId:compId, deletedDraws:removed.rowCount, deletedItems:items.rowCount, deletedResults:aggregates.rowCount,recoveryId });
-      return sendJson(res, 200, { ok:true, deletedDraws:removed.rowCount, deletedItems:items.rowCount, deletedResults:aggregates.rowCount });
+      return sendJson(res, 200, { ok:true, deletedDraws:removed.rowCount, deletedItems:items.rowCount, deletedResults:aggregates.rowCount,recoveryId });
     } catch (e) {
       await client.query('rollback');
       throw e;
