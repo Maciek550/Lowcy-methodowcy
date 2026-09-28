@@ -790,7 +790,7 @@ function renderPlayerMobilePanelContent(d,panel){
   if(panel==='map1'||panel==='map2'){
     const round=panel==='map2'?2:1;
     if(!(d.draws||[]).some(x=>Number(x.round)===round))return '<div class="card"><p>Losowanie Tury '+round+' nie zostało jeszcze opublikowane.</p></div>';
-    return '<div class="playerMobileSelectedPanel"><div class="playerMobileFullMapWrap"><div class="playerMobileFullMapTitle">MAPA ŁOWISKA — TURA '+round+'</div><div class="playerMobileFullMapViewport"><div class="playerMobileFullMapCanvas">'+renderRoundDrawMap(d,round)+'</div></div><div class="playerMobileMapHint">Pełna mapa dopasowana do szerokości ekranu.</div></div></div>';
+    return '<div class="playerMobileSelectedPanel"><div class="playerMobileFullMapWrap"><div class="playerMobileFullMapTitle">MAPA ŁOWISKA — TURA '+round+'</div><div class="playerMobileMapControls"><button type="button" onclick="zoomPlayerMobileMap(this,-1)" aria-label="Pomniejsz mapę">−</button><button type="button" onclick="zoomPlayerMobileMap(this,1)" aria-label="Powiększ mapę">+</button><button type="button" onclick="zoomPlayerMobileMap(this,0)">Dopasuj</button></div><div class="playerMobileFullMapViewport"><div class="playerMobileFullMapCanvas">'+renderRoundDrawMap(d,round)+'</div></div><div class="playerMobileMapHint">Po powiększeniu przesuwaj mapę palcem w lewo i w prawo.</div></div></div>';
   }
   if(panel==='t1')return '<div class="playerMobileSelectedPanel"><div class="card playerDesktopPanelCard playerResultCard"><h2>Wyniki sektorowe — Tura 1</h2>'+renderSectorResultsColumn(d.classification.round1,'')+'<h2 class="playerWholeRoundTitle">Cała Tura 1</h2>'+renderPlayerRoundCompact(d.classification.round1,1)+'</div></div>';
   if(panel==='t2')return '<div class="playerMobileSelectedPanel"><div class="card playerDesktopPanelCard playerResultCard"><h2>Wyniki sektorowe — Tura 2</h2>'+renderSectorResultsColumn(d.classification.round2,'')+'<h2 class="playerWholeRoundTitle">Cała Tura 2</h2>'+renderPlayerRoundCompact(d.classification.round2,2)+'</div></div>';
@@ -983,25 +983,69 @@ function showPlayerMobilePanel(panel,ev){
   if(keepY===null)focusPlayerNavOnOpen();else restorePlayerViewport(keepY);
   recordAppNavigation();
 }
+function setPlayerMobileMapZoom(viewport,zoom,pointX,pointY){
+  const canvas=viewport.querySelector('.playerMobileFullMapCanvas');
+  const map=canvas?.querySelector('.sectorMap');
+  if(!canvas||!map)return;
+  const naturalW=Number(viewport.dataset.mapWidth),naturalH=Number(viewport.dataset.mapHeight);
+  const fit=Number(viewport.dataset.mapFit),oldZoom=Number(viewport.dataset.mapZoom)||1;
+  if(!naturalW||!naturalH||!fit)return;
+  const next=Math.min(4,Math.max(1,zoom));
+  const anchorX=Number.isFinite(pointX)?pointX:viewport.clientWidth/2;
+  const anchorY=Number.isFinite(pointY)?pointY:viewport.clientHeight/2;
+  const contentX=(viewport.scrollLeft+anchorX-4)/(fit*oldZoom);
+  const contentY=(viewport.scrollTop+anchorY-4)/(fit*oldZoom);
+  const scale=fit*next;
+  canvas.style.width=Math.ceil(naturalW*scale+8)+'px';
+  canvas.style.height=Math.ceil(naturalH*scale+8)+'px';
+  map.style.transform='scale('+scale+')';
+  viewport.dataset.mapZoom=String(next);
+  viewport.scrollLeft=Math.max(0,contentX*scale+4-anchorX);
+  viewport.scrollTop=Math.max(0,contentY*scale+4-anchorY);
+}
+function zoomPlayerMobileMap(button,direction){
+  const viewport=button.closest('.playerMobileFullMapWrap')?.querySelector('.playerMobileFullMapViewport');
+  if(!viewport)return;
+  const current=Number(viewport.dataset.mapZoom)||1;
+  setPlayerMobileMapZoom(viewport,direction===0?1:current*(direction>0?1.6:1/1.6));
+}
 function fitPlayerMobileFullMaps(){
   document.querySelectorAll('.playerMobileFullMapViewport').forEach(viewport=>{
     const canvas=viewport.querySelector('.playerMobileFullMapCanvas');
     const map=canvas?.querySelector('.sectorMap');
     if(!canvas||!map)return;
-    canvas.style.transform='none';canvas.style.width='auto';canvas.style.height='auto';
-    map.style.transform='none';
+    const zoom=Number(viewport.dataset.mapZoom)||1;
+    canvas.style.width='auto';canvas.style.height='auto';
+    map.style.transform='none';map.style.position='static';
     const available=Math.max(1,viewport.clientWidth-8);
     const naturalW=Math.max(map.scrollWidth,map.offsetWidth,640);
     const naturalH=Math.max(map.scrollHeight,map.offsetHeight,1);
-    const scale=Math.min(1,available/naturalW);
-    canvas.style.position='absolute';
-    canvas.style.left='4px';
-    canvas.style.top='4px';
-    canvas.style.width=naturalW+'px';
-    canvas.style.height=naturalH+'px';
-    canvas.style.transformOrigin='top left';
-    canvas.style.transform='scale('+scale+')';
-    viewport.style.height=Math.ceil(naturalH*scale+8)+'px';
+    const fit=Math.min(1,available/naturalW);
+    viewport.dataset.mapWidth=String(naturalW);
+    viewport.dataset.mapHeight=String(naturalH);
+    viewport.dataset.mapFit=String(fit);
+    viewport.dataset.mapZoom='1';
+    canvas.style.position='relative';canvas.style.left='0';canvas.style.top='0';
+    canvas.style.transform='none';canvas.style.overflow='hidden';
+    map.style.position='absolute';map.style.left='4px';map.style.top='4px';
+    map.style.transformOrigin='top left';
+    viewport.style.height=Math.ceil(naturalH*fit+8)+'px';
+    setPlayerMobileMapZoom(viewport,zoom);
+    if(viewport.dataset.mapTouchBound)return;
+    viewport.dataset.mapTouchBound='1';
+    let pinch=null;
+    viewport.addEventListener('touchstart',event=>{
+      if(event.touches.length!==2){pinch=null;return}
+      const a=event.touches[0],b=event.touches[1],rect=viewport.getBoundingClientRect();
+      pinch={distance:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY),zoom:Number(viewport.dataset.mapZoom)||1,x:(a.clientX+b.clientX)/2-rect.left,y:(a.clientY+b.clientY)/2-rect.top};
+    },{passive:true});
+    viewport.addEventListener('touchmove',event=>{
+      if(!pinch||event.touches.length!==2)return;
+      event.preventDefault();
+      const a=event.touches[0],b=event.touches[1];
+      setPlayerMobileMapZoom(viewport,pinch.zoom*Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY)/Math.max(1,pinch.distance),pinch.x,pinch.y);
+    },{passive:false});
+    viewport.addEventListener('touchend',event=>{if(event.touches.length<2)pinch=null},{passive:true});
   });
 }
 function openPlayerNotifications(ev){
