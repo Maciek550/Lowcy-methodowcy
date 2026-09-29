@@ -1,0 +1,122 @@
+/* V238: polished desktop player-only top navigation.
+   Mobile <=760px and all admin/judge views deliberately remain untouched. */
+@media (min-width:761px) {
+  body.playerTheme:not(.authMode) #app > .tabs {
+    display:flex!important;
+    align-items:stretch!important;
+    justify-content:flex-start!important;
+    flex-wrap:nowrap!important;
+    box-sizing:border-box!important;
+    width:min(100%,980px)!important;
+    max-width:100%!important;
+    gap:9px!important;
+    margin:11px 0 14px!important;
+    padding:0!important;
+    background:transparent!important;
+    overflow:visible!important;
+  }
+
+  body.playerTheme:not(.authMode) #app > .tabs :is(#btn-competitions,#btn-rules,#btn-notifications,#btn-profile,#btn-history):not(.hidden) {
+    position:relative!important;
+    display:inline-flex!important;
+    flex:1 1 auto!important;
+    align-items:center!important;
+    justify-content:center!important;
+    box-sizing:border-box!important;
+    min-width:max-content!important;
+    min-height:50px!important;
+    height:50px!important;
+    margin:0!important;
+    padding:9px 16px!important;
+    border:1px solid #557e98!important;
+    border-radius:9px!important;
+    background:linear-gradient(180deg,#21465e,#102d40)!important;
+    color:#f5faff!important;
+    -webkit-text-fill-color:#f5faff!important;
+    font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif!important;
+    font-size:clamp(15px,1.22vw,17px)!important;
+    line-height:1.08!important;
+    font-weight:850!important;
+    letter-spacing:0!important;
+    white-space:nowrap!important;
+    overflow:visible!important;
+    text-overflow:clip!important;
+    text-align:center!important;
+    box-shadow:inset 0 1px 0 #ffffff18,0 2px 6px #0003!important;
+    transition:background .15s ease,border-color .15s ease!important;
+  }
+  body.playerTheme:not(.authMode) #app > .tabs .hidden {
+    display:none!important;
+  }
+  body.playerTheme:not(.authMode) #app > .tabs :is(#btn-competitions,#btn-rules,#btn-notifications,#btn-profile,#btn-history):not(.hidden):hover:not(.active) {
+    background:linear-gradient(180deg,#2a5675,#153951)!important;
+    border-color:#8ab9d1!important;
+  }
+  body.playerTheme:not(.authMode) #app > .tabs :is(#btn-competitions,#btn-rules,#btn-notifications,#btn-profile,#btn-history):not(.hidden).active,
+  body.playerTheme:not(.authMode) #app > .tabs :is(#btn-competitions,#btn-rules,#btn-notifications,#btn-profile,#btn-history):not(.hidden)[aria-selected="true"] {
+    background:linear-gradient(180deg,#227bc0,#145084)!important;
+    border:1px solid #70b7eb!important;
+    color:#fff!important;
+    -webkit-text-fill-color:#fff!important;
+    box-shadow:inset 0 1px 0 #ffffff40,0 2px 9px #0c335b77!important;
+  }
+  body.playerTheme:not(.authMode) #app > .tabs :is(#btn-competitions,#btn-rules,#btn-notifications,#btn-profile,#btn-history):not(.hidden).active::after,
+  body.playerTheme:not(.authMode) #app > .tabs :is(#btn-competitions,#btn-rules,#btn-notifications,#btn-profile,#btn-history):not(.hidden)[aria-selected="true"]::after {
+    content:"";
+    position:absolute;
+    bottom:5px;
+    left:20%;
+    right:20%;
+    height:3px;
+    border-radius:8px;
+    background:#ffdb71;
+    box-shadow:0 0 5px #ffdb7166;
+    pointer-events:none;
+  }
+  body.playerTheme:not(.authMode) #app > .tabs :is(#btn-competitions,#btn-rules,#btn-notifications,#btn-profile,#btn-history):not(.hidden):focus-visible {
+    outline:3px solid #ffdb71!important;
+    outline-offset:3px!important;
+  }
+  /* A number is enough to highlight new notifications; the entire tab stays navy. */
+  body.playerTheme:not(.authMode) #app > .tabs #btn-notifications .topNotifBadge {
+    position:absolute!important;
+    right:6px!important;
+    top:4px!important;
+    display:inline-flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    box-sizing:border-box!important;
+    min-width:20px!important;
+    height:20px!important;
+    padding:0 5px!important;
+    border:1px solid #ffe5c7!important;
+    border-radius:20px!important;
+    background:#c43c46!important;
+    color:#fff!important;
+    -webkit-text-fill-color:#fff!important;
+    font-size:11px!important;
+    line-height:1!important;
+    font-weight:950!important;
+    pointer-events:none!important;
+  }
+  body.playerTheme:not(.authMode) #app > .tabs #btn-notifications:has(.topNotifBadge) {
+    padding-right:28px!important;
+  }
+}
+@media (min-width:761px) and (max-width:900px) {
+  body.playerTheme:not(.authMode) #app > .tabs {
+    gap:5px!important;
+    margin:8px 0 10px!important;
+  }
+  body.playerTheme:not(.authMode) #app > .tabs :is(#btn-competitions,#btn-rules,#btn-notifications,#btn-profile,#btn-history):not(.hidden) {
+    min-height:48px!important;
+    height:48px!important;
+    padding:8px 10px!important;
+    font-size:13.5px!important;
+  }
+}
+@media (prefers-reduced-motion:reduce) {
+  body.playerTheme:not(.authMode) #app > .tabs button {
+    transition:none!important;
+  }
+}

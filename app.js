@@ -1,4 +1,4 @@
-const CLIENT_VERSION='237';const CLIENT_VERSION_NAME='V237_COMPACT_EVENTS_UNIFORM_DOCK';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='238';const CLIENT_VERSION_NAME='V238_DESKTOP_PLAYER_TOP_NAV';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -396,6 +396,23 @@ function setLoggedOut(showMsg){APP_NAV_READY=false;q('accountSwitch')?.remove();
   if(who)who.textContent=''; if(role)role.textContent=''; if(notif)notif.textContent='';
   if(showMsg)msg('Sesja wyczyszczona. Zaloguj się ponownie.','ok');
 }
+let PLAYER_TOP_NAV_MEDIA=null;
+function syncPlayerDesktopNavLabels(){
+  if(ME?.role!=='PLAYER')return;
+  const wide=!!PLAYER_TOP_NAV_MEDIA?.matches;
+  const rules=q('btn-rules'),history=q('btn-history');
+  if(rules)rules.innerHTML=wide?'Regulamin ogólny':'Regulamin<br>ogólny';
+  if(history)history.innerHTML=wide?'Historia startów':'Historia<br>startów';
+}
+function initPlayerDesktopNavLabels(){
+  if(ME?.role!=='PLAYER'||typeof window.matchMedia!=='function')return;
+  if(!PLAYER_TOP_NAV_MEDIA){
+    PLAYER_TOP_NAV_MEDIA=window.matchMedia('(min-width:761px)');
+    if(typeof PLAYER_TOP_NAV_MEDIA.addEventListener==='function')PLAYER_TOP_NAV_MEDIA.addEventListener('change',syncPlayerDesktopNavLabels);
+    else if(typeof PLAYER_TOP_NAV_MEDIA.addListener==='function')PLAYER_TOP_NAV_MEDIA.addListener(syncPlayerDesktopNavLabels);
+  }
+  syncPlayerDesktopNavLabels();
+}
 async function boot(){
   APP_NAV_READY=false;
   const logout=q('logoutBtn'), auth=q('auth'), app=q('app');
@@ -416,7 +433,7 @@ async function boot(){
   CURRENT_DETAIL=null;PLAYER_MOBILE_PANEL=null;ACTIVE_ADMIN_ZONE='roster';
   if(ME.role==='ADMIN')await loadJudgeManagement();else {q('judgeManagement')?.remove();q('adminQuickActions')?.remove()}
   q('who').textContent=ME.first_name+' '+ME.last_name+' — Koło PZW '+(ME.pzw_club||'');q('role').textContent=ME.role==='ADMIN'?'Administrator':'Zawodnik';
-  const admin=ME.role==='ADMIN';document.body.classList.remove('authMode');document.body.classList.toggle('playerTheme',!admin);q('btn-players').classList.toggle('hidden',!admin);q('btn-profile')?.classList.toggle('hidden',admin);q('btn-history')?.classList.toggle('hidden',admin);q('btn-rules')?.classList.remove('hidden');q('adminCreate').classList.toggle('hidden',!admin);if(q('adminCreate'))q('adminCreate').open=false;const notifTop=q('btn-notifications');if(notifTop)notifTop.textContent=admin?'Powiadomienia':'NOWOŚCI';const rulesTop=q('btn-rules');if(rulesTop)rulesTop.innerHTML=admin?'Regulamin ogólny':'Regulamin<br>ogólny';const historyTop=q('btn-history');if(historyTop&&!admin)historyTop.innerHTML='Historia<br>startów';
+  const admin=ME.role==='ADMIN';document.body.classList.remove('authMode');document.body.classList.toggle('playerTheme',!admin);q('btn-players').classList.toggle('hidden',!admin);q('btn-profile')?.classList.toggle('hidden',admin);q('btn-history')?.classList.toggle('hidden',admin);q('btn-rules')?.classList.remove('hidden');q('adminCreate').classList.toggle('hidden',!admin);if(q('adminCreate'))q('adminCreate').open=false;const notifTop=q('btn-notifications');if(notifTop)notifTop.textContent=admin?'Powiadomienia':'NOWOŚCI';const rulesTop=q('btn-rules');if(rulesTop)rulesTop.innerHTML=admin?'Regulamin ogólny':'Regulamin<br>ogólny';const historyTop=q('btn-history');if(historyTop&&!admin)historyTop.innerHTML='Historia<br>startów';if(!admin)initPlayerDesktopNavLabels();
   mountPlayerBottomNav();
   renderPushStatus();
   showTab('competitions');
