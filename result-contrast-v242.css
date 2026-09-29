@@ -1,0 +1,40 @@
+/* V242: light final-results cards require an explicit dark checkbox label.
+   Scoped to the player desktop general result and admin final result only. */
+@media(min-width:761px){
+  body.playerTheme #app #playerDesktopPanelContent .playerResultCard .finalClubToggle{
+    display:flex!important;align-items:center!important;gap:10px!important;
+    box-sizing:border-box!important;width:fit-content!important;max-width:100%!important;
+    margin:7px 0 10px!important;padding:8px 12px!important;
+    border:1px solid #a7c3d2!important;border-radius:9px!important;
+    background:#eaf3f8!important;color:#14344a!important;
+    -webkit-text-fill-color:#14344a!important;opacity:1!important;text-shadow:none!important;
+    font-size:14px!important;font-weight:850!important;line-height:1.35!important;
+    overflow-wrap:break-word!important
+  }
+  body.playerTheme #app #playerDesktopPanelContent .playerResultCard .finalClubToggle input[type="checkbox"]{
+    display:block!important;appearance:auto!important;
+    box-sizing:border-box!important;width:20px!important;height:20px!important;min-width:20px!important;
+    flex:0 0 20px!important;margin:0!important;padding:0!important;
+    accent-color:#125e92!important;opacity:1!important
+  }
+}
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .finalClubToggle{
+  display:flex!important;align-items:center!important;gap:10px!important;
+  box-sizing:border-box!important;width:fit-content!important;max-width:100%!important;
+  margin:8px 0 10px!important;padding:8px 12px!important;
+  border:1px solid #a7c3d2!important;border-radius:9px!important;
+  background:#eaf3f8!important;color:#14344a!important;
+  -webkit-text-fill-color:#14344a!important;opacity:1!important;text-shadow:none!important;
+  font-size:14px!important;font-weight:850!important;line-height:1.35!important;
+  overflow-wrap:break-word!important
+}
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .finalClubToggle input[type="checkbox"]{
+  display:block!important;appearance:auto!important;
+  box-sizing:border-box!important;width:20px!important;height:20px!important;min-width:20px!important;
+  flex:0 0 20px!important;margin:0!important;padding:0!important;
+  accent-color:#125e92!important;opacity:1!important
+}
+body.playerTheme #app #playerDesktopPanelContent .finalClubToggle input[type="checkbox"]:focus-visible,
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .finalClubToggle input[type="checkbox"]:focus-visible{
+  outline:3px solid #cf7400!important;outline-offset:3px!important
+}

@@ -76,7 +76,7 @@ test('V234: login form accessibility, separate recovery tile, and version badge 
   assert.match(style,/min-height:44px/);
   assert.match(ui,/adminPasswordResetTile/);
   assert.match(server,/<span class="appVersionBadge">V\$\{APP_VERSION\}<\/span>/);
-  assert.match(server,/const APP_VERSION = '241'/);
-  assert.match(app,/const CLIENT_VERSION='241'/);
+  assert.match(server,/const APP_VERSION = '242'/);
+  assert.match(app,/const CLIENT_VERSION='242'/);
   assert.match(server,/token:signToken\(user\)/);
 });

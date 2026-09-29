@@ -65,7 +65,7 @@ test('V235: admin contact phone remains separate from login, with dedicated CSS 
   assert.match(server,/\/roster-preview-v235\.css/);
   assert.match(css,/\.phoneCallBtn\.rosterPhoneCall/);
   assert.match(css,/\.playerMapNav\.withEarlyList/);
-  assert.match(app,/const CLIENT_VERSION='241'/);
-  assert.match(server,/const APP_VERSION = '241'/);
-  assert.match(server,/class="headerVersion">V241</);
+  assert.match(app,/const CLIENT_VERSION='242'/);
+  assert.match(server,/const APP_VERSION = '242'/);
+  assert.match(server,/class="headerVersion">V242</);
 });
