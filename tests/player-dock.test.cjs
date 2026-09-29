@@ -81,7 +81,7 @@ test('V236: primary switches between pre-06 LISTA and post-06 T1, other actions 
   await ctx.dock.action('primary');
   assert.ok(clicks.includes('draw1'));
   await ctx.dock.action('map');
-  assert.ok(clicks.includes('map2'));
+  assert.ok(clicks.includes('map1'));
   await ctx.dock.action('results');
   assert.ok(clicks.includes('general'));
   await ctx.dock.action('notifications');
