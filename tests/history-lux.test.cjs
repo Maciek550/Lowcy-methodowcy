@@ -14,7 +14,7 @@ function fixture(rows){
   document:{querySelectorAll:()=>[]},
   esc:s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'),
   placeText:v=>(v===0||v)?String(v).replace('.',','):'—',
-  fmtGram:v=>Number(v||0).toLocaleString('pl-PL').replace(/\u00a0|\u202f/g,' '),
+  fmtGram:v=>{const n=Number(v||0);return n?String(n).replace(/\B(?=(\d{3})+(?!\d))/g,' '):'0'},
   fmtDate:s=>String(s).slice(0,10)
  };
  vm.runInNewContext(app.slice(start,stop)+';this.render=renderPlayerHistory;',ctx);
