@@ -47,10 +47,10 @@ test('V236: nearest registered start takes priority, an opened competition stays
   ctx.CURRENT_DETAIL={competition:{id:4,competition_date:'2026-09-29'}};
   assert.equal(ctx.dock.preview().id,4);
 });
-test('V236: latest map and results select existing rounds without inventing published data',()=>{
+test('V236: dock always opens map T1 while results select existing rounds',()=>{
   const d=context().dock;
   assert.equal(d.map({draws:[{round:1}]}),'map1');
-  assert.equal(d.map({draws:[{round:1},{round:2}]}),'map2');
+  assert.equal(d.map({draws:[{round:1},{round:2}]}),'map1');
   assert.equal(d.results({results:[],classification:{general:[]}}),'t1');
   assert.equal(d.results({results:[{round:1}],classification:{general:[]}}),'t1');
   assert.equal(d.results({results:[{round:2}],classification:{general:[]}}),'t2');
@@ -97,6 +97,6 @@ test('V236: CSS has 5 proportional columns, 48+ px targets, clear label contrast
   assert.match(css,/playerDockBadge\[hidden\]/);
   assert.match(css,/#playerDockTopArrow:not\(\[hidden\]\)/);
   assert.match(server,/\/player-dock-v236\.css\?v=\$\{APP_VERSION\}/);
-  assert.match(server,/const APP_VERSION = '239'/);
-  assert.match(app,/const CLIENT_VERSION='239'/);
+  assert.match(server,/const APP_VERSION = '240'/);
+  assert.match(app,/const CLIENT_VERSION='240'/);
 });

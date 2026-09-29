@@ -77,7 +77,7 @@ test('V239: style is limited to player history and included in offline app shell
  assert.match(css,/body\.playerTheme #playerHistoryContent/);
  assert.match(server,/const HISTORY_CSS='\/history-lux-v239\.css\?v=\$\{APP_VERSION\}'/);
  assert.match(server,/<link rel="stylesheet" href="\/history-lux-v239\.css\?v=\$\{APP_VERSION\}">/);
- assert.match(server,/const APP_VERSION = '239'/);
- assert.match(app,/const CLIENT_VERSION='239'/);
- assert.match(server,/class="headerVersion">V239/);
+ assert.match(server,/const APP_VERSION = '240'/);
+ assert.match(app,/const CLIENT_VERSION='240'/);
+ assert.match(server,/class="headerVersion">V240/);
 });

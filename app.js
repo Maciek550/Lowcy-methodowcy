@@ -1,4 +1,4 @@
-const CLIENT_VERSION='239';const CLIENT_VERSION_NAME='V239_HISTORY_LUX_COMPACT';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='240';const CLIENT_VERSION_NAME='V240_PREMIUM_DRAW_NOTICE';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -441,14 +441,14 @@ async function boot(){
   initAppBackNavigation();
   hideBootGuard();
   if(ME.password_must_change){showTab('profile');setTimeout(()=>q('profilePassword')?.focus(),0)}
-  else {await Promise.allSettled([loadCompetitions(),loadNotifications(),admin?loadPlayers():Promise.resolve()]);startAchievements();if(!admin)await restorePersistentUiState();}
+  else {await Promise.allSettled([loadCompetitions(),loadNotifications(),admin?loadPlayers():Promise.resolve()]);startAchievements();if(!admin){window.lowcyDrawNoticeStartPolling?.(ME.id);await restorePersistentUiState()}}
   if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'}).then(reg=>{try{reg.update()}catch(_){ }if('Notification' in window&&Notification.permission==='granted')restorePushSubscription().catch(()=>{})}).catch(()=>{})}
 }
 async function login(){try{const phone=q('loginPhone')?.value||'';const password=q('loginPassword')?.value||'';if(!phone.trim()||!password)throw new Error('Wpisz telefon i hasło');const d=await api('/api/login',{method:'POST',body:JSON.stringify({phone,password})});TOKEN=d.token;STORE.set('carp_token',TOKEN);msg('Zalogowano');await boot()}catch(e){msg(e.message,'bad')}}
 async function registerPlayer(ev){if(ev){ev.preventDefault&&ev.preventDefault();ev.stopPropagation&&ev.stopPropagation()}try{const d=await api('/api/register',{method:'POST',body:JSON.stringify({phone:q('regPhone').value,password:q('regPassword').value,firstName:q('regFirst').value,lastName:q('regLast').value,pzwClub:q('regClub').value})});TOKEN=d.token;STORE.set('carp_token',TOKEN);msg('Konto zawodnika utworzone');await boot()}catch(e){msg(e.message,'bad')}}
 async function setupAdmin(ev){if(ev){ev.preventDefault&&ev.preventDefault();ev.stopPropagation&&ev.stopPropagation()}try{const d=await api('/api/setup-admin',{method:'POST',body:JSON.stringify({setupCode:q('setupCode').value,phone:q('setupPhone').value,password:q('setupPassword').value,firstName:q('setupFirst').value,lastName:q('setupLast').value,pzwClub:q('setupClub').value})});TOKEN=d.token;STORE.set('carp_token',TOKEN);msg('Admin utworzony');await boot()}catch(e){msg(e.message,'bad')}}
-async function logout(){STORE.del('lowcy_account_sessions');stopAchievements();try{await disablePushSubscription(false)}catch(_){}STORE.del('carp_token');TOKEN='';ME=null;setLoggedOut(true)}
-async function clearSession(){STORE.del('lowcy_account_sessions');try{await disablePushSubscription(true);if('caches'in window){const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k).catch(()=>{})));}}catch(_){}setLoggedOut(true)}
+async function logout(){STORE.del('lowcy_account_sessions');window.lowcyDrawNoticeStop?.();stopAchievements();try{await disablePushSubscription(false)}catch(_){}STORE.del('carp_token');TOKEN='';ME=null;setLoggedOut(true)}
+async function clearSession(){window.lowcyDrawNoticeStop?.();STORE.del('lowcy_account_sessions');try{await disablePushSubscription(true);if('caches'in window){const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k).catch(()=>{})));}}catch(_){}setLoggedOut(true)}
 function renderMyProfile(){
   const box=q('myProfileContent');if(!box||!ME)return;
   box.innerHTML=(ME.password_must_change?'<div class="card bad danger-line" role="alert"><h2>Ustaw własne hasło</h2><p>Logujesz się hasłem tymczasowym. Wpisz nowe hasło (minimum 8 znaków) i zapisz dane, aby korzystać z aplikacji.</p></div>':'')+'<div class="card myProfileCard"><div class="myProfileHead"><div><h2>Mój profil</h2><p class="small muted">Tutaj możesz poprawić swoje dane logowania i dane zawodnika.</p></div><span class="myProfileRole">ZAWODNIK</span></div>'
@@ -924,7 +924,7 @@ function renderPlayerMobilePanelContent(d,panel){
     return '<div class="playerMobileSelectedPanel playerMobileDrawSelected">'
       +renderPlayerOwnSummary(d)
       +'<div class="playerMobileSectionTitle">ROZMIESZCZENIE W SEKTORACH — TURA '+round+'</div>'
-      +'<div class="playerDrawViewSwitch" role="tablist"><button type="button" class="'+(mapView?'active':'')+'" onclick="setPlayerDrawView(\'map\',event)">MAPA</button><button type="button" class="'+(!mapView?'active':'')+'" onclick="setPlayerDrawView(\'table\',event)">TABELA</button></div>'
+      +'<div class="playerDrawViewSwitch" role="tablist" aria-label="Sposób wyświetlania losowania"><button type="button" role="tab" aria-selected="'+mapView+'" class="'+(mapView?'active':'')+'" onclick="setPlayerDrawView(\'map\',event)"><svg class="playerSwitchIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5 9 3 15 5 21 3v16l-6 2-6-2-6 2zM9 3v16M15 5v16"/></svg>MAPA</button><button type="button" role="tab" aria-selected="'+(!mapView)+'" class="'+(!mapView?'active':'')+'" onclick="setPlayerDrawView(\'table\',event)"><svg class="playerSwitchIcon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="1"/><path d="M3 10h18M3 15h18M9 4v16M15 4v16"/></svg>TABELA</button></div>'
       +(mapView?renderPlayerSectorAccordion(d,round):'<div class="playerMobileSectorTables">'+renderDrawSectorTables(d,round)+'</div>')
       +'</div>';
   }
@@ -965,7 +965,7 @@ function renderPlayerDesktopPanelContent(d,panel){
       +renderPlayerOwnSummary(d)
       +'<div class="card playerDesktopPanelCard">'
       +'<div class="playerDesktopSectionTitle">ROZMIESZCZENIE W SEKTORACH — TURA '+round+'</div>'
-      +'<div class="playerDrawViewSwitch" role="tablist"><button type="button" class="'+(mapView?'active':'')+'" onclick="setPlayerDrawView(\'map\',event)">MAPA</button><button type="button" class="'+(!mapView?'active':'')+'" onclick="setPlayerDrawView(\'table\',event)">TABELA</button></div>'
+      +'<div class="playerDrawViewSwitch" role="tablist" aria-label="Sposób wyświetlania losowania"><button type="button" role="tab" aria-selected="'+mapView+'" class="'+(mapView?'active':'')+'" onclick="setPlayerDrawView(\'map\',event)"><svg class="playerSwitchIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5 9 3 15 5 21 3v16l-6 2-6-2-6 2zM9 3v16M15 5v16"/></svg>MAPA</button><button type="button" role="tab" aria-selected="'+(!mapView)+'" class="'+(!mapView?'active':'')+'" onclick="setPlayerDrawView(\'table\',event)"><svg class="playerSwitchIcon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="1"/><path d="M3 10h18M3 15h18M9 4v16M15 4v16"/></svg>TABELA</button></div>'
       +(mapView?renderPlayerSectorAccordion(d,round):'<div class="playerDesktopSectorTables">'+renderDrawSectorTables(d,round)+'</div>')
       +'</div></div>';
   }
@@ -1064,6 +1064,7 @@ function setPlayerDrawView(view,ev){
   const desktop=q('playerDesktopPanelContent'),mobile=q('playerMobilePanelContent');
   if(desktop&&(PLAYER_MOBILE_PANEL==='draw1'||PLAYER_MOBILE_PANEL==='draw2'))desktop.innerHTML=renderPlayerDesktopPanelContent(CURRENT_DETAIL,PLAYER_MOBILE_PANEL);
   if(mobile&&(PLAYER_MOBILE_PANEL==='draw1'||PLAYER_MOBILE_PANEL==='draw2'))mobile.innerHTML=renderPlayerMobilePanelContent(CURRENT_DETAIL,PLAYER_MOBILE_PANEL);
+  // The selected map/table mode is shared by the mobile and desktop dashboards.
 }
 function renderPlayerDetail(d){
   if(!PLAYER_MOBILE_PANEL||(PLAYER_MOBILE_PANEL==='list'&&!playerEarlyListAvailable(d.competition)))PLAYER_MOBILE_PANEL='draw1';
@@ -1090,7 +1091,8 @@ function playerDockDetailedView(){
     &&!q('tab-competitions')?.classList.contains('hidden');
 }
 function playerDockLatestMap(d){
-  return (d?.draws||[]).some(r=>Number(r.round)===2)?'map2':'map1';
+  // The dock's MAPA shortcut always means MAPA ŁOWISKA T1; T2 is in the upper navigation.
+  return 'map1';
 }
 function playerDockLatestResults(d){
   const t1=playerRoundHasResults(d,1),t2=playerRoundHasResults(d,2);
@@ -3250,7 +3252,7 @@ function renderNotificationContent(){
     q('notificationsList').innerHTML=tabs+'<p>Prośby pozostają tutaj do zatwierdzenia lub odrzucenia.</p>'+(ADMIN_PENDING_REQUESTS.length?ADMIN_PENDING_REQUESTS.map(r=>'<article class="pendingLeaveCard"><strong>'+esc(r.first_name+' '+r.last_name)+'</strong><div>'+esc(r.title)+' · '+fmtDate(r.competition_date)+'</div><small>'+new Date(r.created_at).toLocaleString('pl-PL')+'</small><div class="leaveRequestActions"><button type="button" onclick="decideLeaveRequest('+Number(r.id)+',\'approve\')">Zatwierdź wypisanie</button><button type="button" class="warn" onclick="decideLeaveRequest('+Number(r.id)+',\'reject\')">Odrzuć</button></div></article>').join(''):'<p>Brak oczekujących próśb o wypisanie.</p>');return;
   }
   const visible=(admin?arr.filter(n=>n.type!=='LEAVE_REQUEST'||String(notifData(n).status||'PENDING').toUpperCase()!=='PENDING'):arr).filter(n=>n.type!=='ADMIN_MESSAGE'||notifData(n).inboxEnabled!==false);
-  q('notificationsList').innerHTML=tabs+actions+(visible.length?'<div class="tablewrap notificationWrap"><table class="notificationTable"><thead><tr><th>Zdarzenie</th><th>Czas</th><th>Status / decyzja</th></tr></thead><tbody>'+visible.map(n=>'<tr class="'+(!n.read_at?'mine':'')+'"><td><b>'+esc(n.title)+'</b><br>'+esc(n.body)+'</td><td class="nowrap small">'+new Date(n.created_at).toLocaleString('pl-PL')+'</td><td>'+notificationStatusHtml(n)+'</td></tr>').join('')+'</tbody></table></div>':'<p class="muted">Brak powiadomień.</p>');
+  q('notificationsList').innerHTML=tabs+actions+(visible.length?'<div class="tablewrap notificationWrap"><table class="notificationTable"><thead><tr><th>Zdarzenie</th><th>Czas</th><th>Status / decyzja</th></tr></thead><tbody>'+visible.map(n=>'<tr class="'+(!n.read_at?'mine':'')+'"><td>'+(n.type==='DRAW_PUBLISH'&&!admin&&window.lowcyDrawNoticeInbox?window.lowcyDrawNoticeInbox(n):'<b>'+esc(n.title)+'</b><br>'+esc(n.body))+'</td><td class="nowrap small">'+new Date(n.created_at).toLocaleString('pl-PL')+'</td><td>'+notificationStatusHtml(n)+'</td></tr>').join('')+'</tbody></table></div>':'<p class="muted">Brak powiadomień.</p>');
 }
 async function loadNotifications(){
   if(ME?.role==='JUDGE')return;
@@ -3265,6 +3267,7 @@ async function loadNotifications(){
   syncNotificationBadges(displayCount);
   const top=q('btn-notifications');if(top){top.querySelector('.pendingLeaveTopBadge')?.remove();if(ME.role==='ADMIN'&&ADMIN_PENDING_REQUESTS.length){const badge=document.createElement('b');badge.className='pendingLeaveTopBadge';badge.textContent='Wypisanie: '+ADMIN_PENDING_REQUESTS.length;top.appendChild(badge)}}
   renderNotificationContent();
+  if(ME?.role==='PLAYER')window.lowcyDrawNoticeOnNotifications?.(NOTIFICATION_CACHE,ME.id);
   if(ME?.role==='ADMIN')window.lowcyPasswordResetRefresh?.();
   if(ME?.role==='PLAYER')window.lowcyCommPopup?.(NOTIFICATION_CACHE);
 }
