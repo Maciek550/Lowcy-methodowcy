@@ -34,7 +34,7 @@ function context(overrides={}){
     ...overrides
   };
   vm.runInNewContext(extractDock()+';this.dock={preview:playerDockPreviewCompetition,detail:playerDockDetailedView,map:playerDockLatestMap,results:playerDockLatestResults,mount:mountPlayerBottomNav,action:playerDockAction,refresh:refreshPlayerDock};',ctx);
-  return {...ctx,mounted:()=>mounted,arrow:()=>arrow};
+  ctx.mounted=()=>mounted;ctx.arrow=()=>arrow;return ctx;
 }
 test('V236: nearest registered start takes priority, an opened competition stays selected',()=>{
   const ctx=context();
@@ -72,6 +72,7 @@ test('V236: primary switches between pre-06 LISTA and post-06 T1, other actions 
   ctx.q=id=>id==='competitionDetail'?{classList:{contains:()=>false}}:
     id==='tab-competitions'?{classList:{contains:()=>false}}:null;
   ctx.showTab=name=>clicks.push('tab:'+name);
+  ctx.openPlayerNotifications=()=>clicks.push('notifications');
   ctx.showPlayerMobilePanel=panel=>clicks.push(panel);
   ctx.playerEarlyListAvailable=()=>true;
   await ctx.dock.action('primary');
@@ -84,6 +85,7 @@ test('V236: primary switches between pre-06 LISTA and post-06 T1, other actions 
   await ctx.dock.action('results');
   assert.ok(clicks.includes('general'));
   await ctx.dock.action('notifications');
+  assert.ok(clicks.includes('notifications'));
   assert.ok(clicks.includes('tab:competitions'));
 });
 test('V236: CSS has 5 proportional columns, 48+ px targets, clear label contrast and safe-area padding',()=>{
