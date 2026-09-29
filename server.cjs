@@ -2007,13 +2007,16 @@ body #app button.rosterLeaveRequest:disabled{opacity:.65;cursor:wait}
 const SHELL_CACHE='lowcy-shell-v${APP_VERSION}';
 const APP_SHELL_JS='/app.js?v=${APP_VERSION}';
 const PDF_JS='/pdf-vector.js?v=${APP_VERSION}';
-const SHELL=['/',APP_SHELL_JS,PDF_JS];
+const COMM_JS='/communication-ui.js?v=${APP_VERSION}';
+const RECOVERY_JS='/password-recovery-ui.js?v=${APP_VERSION}';
+const ACCESS_CSS='/accessibility-v234.css?v=${APP_VERSION}';
+const SHELL=['/',APP_SHELL_JS,PDF_JS,COMM_JS,RECOVERY_JS,ACCESS_CSS];
 async function fetchWithTimeout(req,ms=30000){const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),ms);try{return await fetch(req,{cache:'no-store',signal:ctrl.signal})}finally{clearTimeout(timer)}}
 self.addEventListener('install',event=>event.waitUntil((async()=>{const replies=await Promise.all(SHELL.map(url=>fetchWithTimeout(url)));if(replies.some(r=>!r.ok))throw Error('Incomplete shell');const cache=await caches.open(SHELL_CACHE);await Promise.all(SHELL.map((url,i)=>cache.put(url,replies[i])));await self.skipWaiting()})()));
 self.addEventListener('activate',event=>event.waitUntil((async()=>{await self.clients.claim();const keys=await caches.keys();await Promise.all(keys.filter(k=>k.startsWith('lowcy-shell-')&&k!==SHELL_CACHE).map(k=>caches.delete(k)))})()));
 self.addEventListener('fetch',event=>{const req=event.request,u=new URL(req.url);if(req.method!=='GET'||u.origin!==self.location.origin)return;
  if(req.mode==='navigate'){event.respondWith((async()=>{try{const r=await fetchWithTimeout(req);if(r.ok)return r}catch(e){}return(await(await caches.open(SHELL_CACHE)).match('/'))||new Response('Brak połączenia. Otwórz aplikację ponownie po połączeniu z internetem.',{headers:{'Content-Type':'text/plain; charset=utf-8'}})})());return}
- if(u.pathname==='/app.js'||u.pathname==='/pdf-vector.js'){event.respondWith((async()=>{const key=u.pathname+u.search,c=await caches.open(SHELL_CACHE);try{const fresh=await fetchWithTimeout(req,9000);if(fresh.ok){await c.put(key,fresh.clone());return fresh}}catch(e){}return(await c.match(key))||Response.error()})());return}
+ if(['/app.js','/pdf-vector.js','/communication-ui.js','/password-recovery-ui.js','/accessibility-v234.css'].includes(u.pathname)){event.respondWith((async()=>{const key=u.pathname+u.search,c=await caches.open(SHELL_CACHE);try{const fresh=await fetchWithTimeout(req,9000);if(fresh.ok){await c.put(key,fresh.clone());return fresh}}catch(e){}return(await c.match(key))||Response.error()})());return}
 });
 async function setLowcyBadge(n){try{const count=Math.max(0,Number(n||0));if(self.navigator&&typeof self.navigator.setAppBadge==='function'){if(count)await self.navigator.setAppBadge(count);else if(typeof self.navigator.clearAppBadge==='function')await self.navigator.clearAppBadge()}}catch(e){}}
 self.addEventListener('push', event => {

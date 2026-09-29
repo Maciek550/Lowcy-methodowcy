@@ -95,6 +95,7 @@ function draftDialog(request,body){
   d.showModal();
 }
 async function prepareSms(id,button){
+  if(button.textContent.includes('STWÓRZ')&&!confirm('Przygotować SMS? Dotychczasowe hasło zawodnika przestanie działać. Nowe hasło 12345678 będzie ważne przez 24 godziny.'))return;
   adminBusy=true;button.disabled=true;
   try{
     const r=await post('/api/admin/password-resets/'+id+'/prepare',{});
@@ -121,7 +122,7 @@ async function refreshAdmin(){
   const count=rows.length,top=el('btn-notifications');
   top?.querySelector('.passwordResetTopBadge')?.remove();
   if(top&&count){const badge=document.createElement('b');badge.className='passwordResetTopBadge';badge.textContent='Hasło: '+count;top.appendChild(badge)}
-  tile.innerHTML='<header class="passwordResetAdminHead"><div><h2>🔐 Prośby o nowe hasło</h2><p>Oddzielna kolejka. Przygotuj SMS i wyślij go ze swojego telefonu.</p></div><span class="passwordResetCount">'+count+'</span></header><div id="passwordResetAdminFeedback" role="status" aria-live="polite"></div>'+
+  tile.innerHTML='<div class="passwordResetAdminHead"><div><h2>🔐 Prośby o nowe hasło</h2><p>Oddzielna kolejka. Przygotuj SMS i wyślij go ze swojego telefonu.</p></div><span class="passwordResetCount">'+count+'</span></div><div id="passwordResetAdminFeedback" role="status" aria-live="polite"></div>'+
     (count?'<div class="passwordResetRequestList">'+rows.map(r=>'<article class="passwordResetRequest"><div class="resetRequestIdentity"><strong>'+safe(r.first_name+' '+r.last_name)+'</strong><a href="tel:'+safe(r.phone)+'">'+safe(r.phone)+'</a></div><small>'+new Date(r.created_at).toLocaleString('pl-PL')+' · '+(r.status==='PREPARED'?'SMS przygotowany':'Nowa prośba')+'</small><div class="passwordResetRequestActions"><button type="button" data-reset-action="prepare" data-id="'+Number(r.id)+'" class="resetMainButton">'+(r.status==='PREPARED'?'PONOWNIE OTWÓRZ SMS':'STWÓRZ SMS')+'</button>'+(r.status==='PENDING'?'<button type="button" data-reset-action="reject" data-id="'+Number(r.id)+'" class="resetSecondaryButton">Odrzuć</button>':'')+'</div></article>').join('')+'</div>':'<p class="passwordResetEmpty">Brak oczekujących próśb.</p>');
 }
 window.lowcyPasswordResetRefresh=refreshAdmin;
