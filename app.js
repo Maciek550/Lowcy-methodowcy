@@ -1,4 +1,4 @@
-const CLIENT_VERSION='240';const CLIENT_VERSION_NAME='V240_PREMIUM_DRAW_NOTICE';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='241';const CLIENT_VERSION_NAME='V240_PREMIUM_DRAW_NOTICE';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -519,22 +519,24 @@ function renderPlayerHistory(rows){
     const place=placeText(r['t'+n+'_place']),size=Number(r['t'+n+'_sector_size']||0),
       stand=r['t'+n+'_stand'],sector=r['t'+n+'_sector']||'—',
       weight=Number(r['t'+n+'_weight']||0),bf=Number(r['t'+n+'_big_fish']||0);
-    return '<div class="historyRound historyRound'+n+'"><div class="historyRoundTitle">TURA '+n+'</div>'
-      +'<div class="historyRoundPlace"><b>'+place+'</b><span class="historyRoundSlash" aria-hidden="true">/</span><span aria-label="na '+size+' zawodników w sektorze">'+size+'</span></div>'
-      +'<div class="historyRoundMeta"><span>Stan. <b>'+(stand??'—')+'</b></span><span>Sektor <b>'+esc(sector)+'</b></span></div>'
-      +'<div class="historyRoundWeight">'+fmtGram(weight)+' g</div>'
-      +(bf>0?'<div class="historyRoundBF">BF: <b>'+fmtGram(bf)+' g</b></div>':'')
-      +'</div>';
+    return '<div class="historyRound historyRound'+n+' historyCompactRound">'
+      +'<div class="historyRoundTitle historyRoundTag">T'+n+'</div>'
+      +'<div class="historyRoundMain"><div class="historyRoundPlace" aria-label="Miejsce '+esc(place)+' na '+size+' zawodników w sektorze"><b>'+esc(place)+'</b><span class="historyRoundSlash" aria-hidden="true">/</span><span>'+size+'</span></div>'
+      +'<div class="historyRoundMeta">Sektor <b>'+esc(sector)+'</b> · stan. <b>'+esc(stand??'—')+'</b></div></div>'
+      +'<div class="historyRoundMass"><div class="historyRoundWeight">'+fmtGram(weight)+' g</div>'
+      +(bf>0?'<div class="historyRoundBF">BF <b>'+fmtGram(bf)+' g</b></div>':'')+'</div></div>';
   };
   const card=r=>{
     const year=String(r.competition_date||'').slice(0,4),
-      sum=Number(r.t1_place||0)+Number(r.t2_place||0);
-    return '<article class="historyStartCard '+(PLAYER_HISTORY_YEAR!=='all'&&year!==PLAYER_HISTORY_YEAR?'hidden':'')+'" data-year="'+esc(year)+'">'
-      +'<div class="historyStartHead"><div><h3>'+esc(r.fishery||r.title||'Zawody')+'</h3><span>'+fmtDate(r.competition_date)+(r.title&&r.fishery?' · '+esc(r.title):'')+'</span></div>'
-      +'<div class="historyGeneral"><small>GENERAL</small><strong>'+Number(r.general_rank||0)+'/'+Number(r.general_count||0)+'</strong></div></div>'
+      sum=Number(r.t1_place||0)+Number(r.t2_place||0),
+      rank=Number(r.general_rank||0),podium=rank>=1&&rank<=3?' historyPodium'+rank:'';
+    return '<article class="historyStartCard historyCompactCard '+(PLAYER_HISTORY_YEAR!=='all'&&year!==PLAYER_HISTORY_YEAR?'hidden':'')+'" data-year="'+esc(year)+'">'
+      +'<div class="historyStartHead"><div class="historyStartInfo"><h3>'+esc(r.fishery||r.title||'Zawody')+'</h3><span class="historyStartSubtitle">'+fmtDate(r.competition_date)+(r.title&&r.fishery?' · '+esc(r.title):'')+'</span></div>'
+      +'<div class="historyGeneral'+podium+'"><small>GENERAL</small><strong>'+rank+'/'+Number(r.general_count||0)+'</strong></div></div>'
       +'<div class="historyRounds">'+round(r,1)+round(r,2)+'</div>'
       +'<div class="historyStartFoot"><div class="historySumPlaces"><small>SUMA MIEJSC</small><b>'+placeText(sum)+' pkt</b></div>'
-      +'<button type="button" onclick="openHistoryCompetition('+Number(r.competition_id)+')">PEŁNE WYNIKI</button></div></article>';
+      +'<div class="historySumWeight"><small>SUMA WAGI</small><b>'+fmtGram(r.total_weight)+' g</b></div>'
+      +'<button type="button" class="historyResultsBtn" onclick="openHistoryCompetition('+Number(r.competition_id)+')">PEŁNE WYNIKI <span aria-hidden="true">›</span></button></div></article>';
   };
   const seasonButtons='<div class="historySeasonFilter" role="group" aria-label="Sezon">'
     +'<button type="button" class="historySeasonBtn '+(PLAYER_HISTORY_YEAR==='all'?'active':'')+'" data-year="all" aria-pressed="'+(PLAYER_HISTORY_YEAR==='all')+'" onclick="setPlayerHistoryYear(\'all\')">WSZYSTKIE</button>'
@@ -543,7 +545,7 @@ function renderPlayerHistory(rows){
     +'<span id="historySeasonCount">Widoczne starty: '+rows.filter(r=>PLAYER_HISTORY_YEAR==='all'||String(r.competition_date||'').slice(0,4)===PLAYER_HISTORY_YEAR).length+'</span></div>';
   box.innerHTML='<section class="playerHistoryDashboard">'
     +'<div class="historyHero"><div class="historyHeroHead"><div><h2>Historia startów</h2><p>Twoje wyniki i statystyki zawodów.</p></div></div>'
-    +'<div class="historyStats">'+stat('STARTY',starts)+stat('MIEJSCA NA PODIUM',podiums,'podium')+stat('NAJLEPSZE MIEJSCE',best<9999?best:'—','best')
+    +'<div class="historyStats">'+stat('STARTY',starts)+stat('PODIUM',podiums,'podium')+stat('NAJLEPSZE',best<9999?best:'—','best')
     +stat('NAJWIĘKSZA RYBA',fmtGram(biggest)+' g','fish')+stat('ŁĄCZNA WAGA',fmtGram(total)+' g','weight')+'</div></div>'
     +seasonButtons+'<div class="historyStartList">'+rows.map(card).join('')+'</div></section>';
 }

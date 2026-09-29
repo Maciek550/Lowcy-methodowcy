@@ -3,7 +3,7 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 const root=path.join(__dirname,'..');
 const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
 const server=fs.readFileSync(path.join(root,'server.cjs'),'utf8');
-const css=fs.readFileSync(path.join(root,'history-lux-v239.css'),'utf8');
+const css=fs.readFileSync(path.join(root,'history-compact-v241.css'),'utf8');
 function fixture(rows){
  const start=app.indexOf("let PLAYER_HISTORY_YEAR='all';"),
        stop=app.indexOf('async function openHistoryCompetition(',start);
@@ -27,28 +27,37 @@ const sample={
  t2_place:1,t2_sector_size:7,t2_stand:27,t2_sector:'A',t2_weight:17750,t2_big_fish:7330,
  general_rank:2,general_count:29,total_weight:26040,biggest_fish:7330
 };
-test('V239: one event keeps LUX compact headline, five metrics, T1/T2 and GENERAL',()=>{
+test('V241: complete compact mobile row with two tours and summary on a single card',()=>{
  const html=fixture([sample]);
  assert.match(html,/historyHeroHead/);
  assert.equal((html.match(/class="historyStat /g)||[]).length,5);
- assert.match(html,/historyGeneral/);
+ assert.match(html,/historyCompactCard/);
+ assert.match(html,/historyPodium2/);
  assert.match(html,/2\/29/);
- assert.match(html,/TURA 1/);
- assert.match(html,/TURA 2/);
- assert.match(html,/historyRoundSlash/);
- assert.match(html,/historyRoundWeight/);
- assert.match(html,/PEŁNE WYNIKI/);
-});
-test('V239: BF 0 hidden; only actual big fish shown; sum of sector places not duplicated totals',()=>{
- const html=fixture([sample]);
- assert.equal((html.match(/BF:/g)||[]).length,1);
- assert.match(html,/BF: <b>7 330 g<\/b>/);
- assert.doesNotMatch(html,/BF: <b>0 g<\/b>/);
+ assert.match(html,/historyRoundTag">T1/);
+ assert.match(html,/historyRoundTag">T2/);
+ assert.match(html,/Miejsce 1 na 8 zawodników/);
+ assert.match(html,/historyRoundMeta">Sektor <b>D<\/b> · stan\. <b>16<\/b>/);
+ assert.match(html,/historyRoundMeta">Sektor <b>A<\/b> · stan\. <b>27<\/b>/);
+ assert.match(html,/8 290 g/);
+ assert.match(html,/17 750 g/);
  assert.match(html,/SUMA MIEJSC<\/small><b>2 pkt<\/b>/);
- assert.doesNotMatch(html,/class="historyStartFoot"[^]*?SUMA WAGI/);
- assert.doesNotMatch(html,/class="historyStartFoot"[^]*?NAJWIĘKSZA RYBA/);
+ assert.match(html,/SUMA WAGI<\/small><b>26 040 g<\/b>/);
+ assert.match(html,/PEŁNE WYNIKI/);
+ assert.match(html,/openHistoryCompetition\(78\)/);
 });
-test('V239: a single season is a compact label; multiple seasons retain working filters',()=>{
+test('V241: BF only where actually present, no zero BF; fractional and zero sector points retained',()=>{
+ const html=fixture([{...sample,t1_place:2.5,t2_place:4,t1_big_fish:0,t2_big_fish:0}]);
+ assert.match(html,/<b>2,5<\/b><span class="historyRoundSlash"/);
+ assert.match(html,/SUMA MIEJSC<\/small><b>6,5 pkt<\/b>/);
+ assert.doesNotMatch(html,/historyRoundBF/);
+ const zero=fixture([{...sample,t1_place:0,t2_place:1}]);
+ assert.match(zero,/<b>0<\/b><span class="historyRoundSlash"/);
+ const bf=fixture([sample]);
+ assert.equal((bf.match(/class="historyRoundBF"/g)||[]).length,1);
+ assert.match(bf,/BF <b>7 330 g<\/b>/);
+});
+test('V241: single and multiple-season selectors still work, empty input has clear message',()=>{
  const single=fixture([sample]);
  assert.match(single,/class="historySingleYear" aria-label="Sezon 2026">2026<\/span>/);
  assert.equal((single.match(/class="historySeasonBtn/g)||[]).length,1);
@@ -56,28 +65,29 @@ test('V239: a single season is a compact label; multiple seasons retain working 
  assert.ok(multi.includes('data-year="2026"'));
  assert.ok(multi.includes('data-year="2025"'));
  assert.doesNotMatch(multi,/historySingleYear/);
+ assert.match(fixture([]),/Brak zakończonych startów/);
 });
-test('V239: round points retain fractional place notation and realistic 0 catch points',()=>{
- const html=fixture([{...sample,t1_place:2.5,t2_place:4,t1_big_fish:0,t2_big_fish:0}]);
- assert.match(html,/<b>2,5<\/b><span class="historyRoundSlash"/);
- assert.match(html,/SUMA MIEJSC<\/small><b>6,5 pkt<\/b>/);
- assert.doesNotMatch(html,/BF:/);
+test('V241: long event names and station labels escaped without breaking the layout',()=>{
+ const html=fixture([{...sample,title:'Open <Special> "CUP"',fishery:'Nad Długą Rzeką & Stawem',t1_stand:'<9>'}]);
+ assert.match(html,/Nad Długą Rzeką &amp; Stawem/);
+ assert.match(html,/Open &lt;Special> &quot;CUP&quot;/);
+ assert.match(html,/stan\. <b>&lt;9>/);
 });
-test('V239: compact CSS prioritizes round placement and maintains touch controls on mobile',()=>{
- assert.match(css,/\.historyRoundPlace\{\s*display:flex!important/);
- assert.match(css,/gap:9px!important;[^\n]*Large legible digits/);
- assert.match(css,/\.historyRoundPlace b\{\s*font-size:30px!important/);
- assert.match(css,/\.historyRoundPlace span\{\s*font-size:22px!important/);
- assert.match(css,/\.historyStartCard\.hidden\{display:none!important\}/);
- assert.match(css,/\.historyStartFoot button\{[\s\S]*?min-height:44px!important/);
- assert.match(css,/@media\(max-width:760px\)/);
- assert.match(css,/grid-template-columns:repeat\(6,minmax\(0,1fr\)\)!important/);
-});
-test('V239: style is limited to player history and included in offline app shell',()=>{
+test('V241: scoped compact CSS makes both rounds horizontal and preserves phone touch targets',()=>{
  assert.match(css,/body\.playerTheme #playerHistoryContent/);
+ assert.match(css,/\.historyCompactCard \.historyRound\.historyCompactRound\{[\s\S]*?display:grid!important/);
+ assert.match(css,/grid-template-columns:45px minmax\(0,1fr\) minmax\(98px,auto\)/);
+ assert.match(css,/\.historyCompactCard\.hidden\{display:none!important\}/);
+ assert.match(css,/\.historyResultsBtn\{[\s\S]*?min-height:44px!important/);
+ assert.match(css,/@media\(max-width:380px\)/);
+ assert.match(css,/\.historyCompactCard \.historyRound2 \.historyRoundTag\{background:#9b531d!important\}/);
+});
+test('V241: only history gets a new stylesheet; old V239 and draw V240 remain, offline too',()=>{
  assert.match(server,/const HISTORY_CSS='\/history-lux-v239\.css\?v=\$\{APP_VERSION\}'/);
- assert.match(server,/<link rel="stylesheet" href="\/history-lux-v239\.css\?v=\$\{APP_VERSION\}">/);
- assert.match(server,/const APP_VERSION = '240'/);
- assert.match(app,/const CLIENT_VERSION='240'/);
- assert.match(server,/class="headerVersion">V240/);
+ assert.match(server,/const HISTORY_COMPACT_CSS='\/history-compact-v241\.css\?v=\$\{APP_VERSION\}'/);
+ assert.match(server,/<link rel="stylesheet" href="\/history-compact-v241\.css\?v=\$\{APP_VERSION\}">/);
+ assert.match(server,/DESKTOP_NAV_CSS,HISTORY_CSS,HISTORY_COMPACT_CSS,DRAW_CSS/);
+ assert.match(server,/const APP_VERSION = '241'/);
+ assert.match(app,/const CLIENT_VERSION='241'/);
+ assert.match(server,/class="headerVersion">V241/);
 });

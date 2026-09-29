@@ -1,0 +1,165 @@
+/* V241 – compact rows for PLAYER HISTORY ONLY. V239 styles remain as rollback baseline. */
+body.playerTheme #playerHistoryContent .playerHistoryDashboard{gap:7px!important}
+body.playerTheme #playerHistoryContent .historyHero{gap:8px!important;padding:11px 12px!important}
+body.playerTheme #playerHistoryContent .historyHero h2{font-size:20px!important}
+body.playerTheme #playerHistoryContent .historyHero p{display:none!important}
+body.playerTheme #playerHistoryContent .historyStats{gap:6px!important}
+body.playerTheme #playerHistoryContent .historyStat{gap:4px!important;min-height:57px!important;padding:7px 4px!important}
+body.playerTheme #playerHistoryContent .historyStat small{font-size:11px!important;line-height:1.1!important;letter-spacing:0!important}
+body.playerTheme #playerHistoryContent .historyStat strong{font-size:clamp(18px,2vw,22px)!important;line-height:1.14!important}
+body.playerTheme #playerHistoryContent .historySeasonFilter{padding:5px 7px!important;min-height:40px!important}
+body.playerTheme #playerHistoryContent .historyStartList{gap:7px!important}
+body.playerTheme #playerHistoryContent .historyStartCard.historyCompactCard{
+  display:grid!important;gap:7px!important;min-width:0!important;margin:0!important;
+  padding:10px 11px!important;border:1px solid #507187!important;border-radius:12px!important;
+  background:linear-gradient(155deg,#1c374b,#10283a)!important;box-sizing:border-box!important
+}
+body.playerTheme #playerHistoryContent .historyStartCard.historyCompactCard.hidden{display:none!important}
+body.playerTheme #playerHistoryContent .historyCompactCard .historyStartHead{
+  display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;
+  gap:9px!important;align-items:center!important;min-width:0!important
+}
+body.playerTheme #playerHistoryContent .historyCompactCard .historyStartInfo{min-width:0!important}
+body.playerTheme #playerHistoryContent .historyCompactCard .historyStartHead h3{
+  font-size:clamp(16px,1.7vw,19px)!important;line-height:1.17!important;font-weight:950!important;
+  margin:0!important;color:#fff!important;overflow-wrap:break-word!important
+}
+body.playerTheme #playerHistoryContent .historyCompactCard .historyStartSubtitle{
+  display:block!important;margin-top:3px!important;font-size:12.5px!important;
+  line-height:1.25!important;color:#d1e4ef!important;overflow-wrap:anywhere!important
+}
+body.playerTheme #playerHistoryContent .historyCompactCard .historyGeneral{
+  display:flex!important;flex-direction:column!important;justify-content:center!important;
+  align-items:center!important;gap:2px!important;min-width:78px!important;
+  padding:5px 8px!important;border:1px solid #3eac7b!important;
+  border-radius:9px!important;background:#0d6245!important;box-sizing:border-box!important
+}
+body.playerTheme #playerHistoryContent .historyCompactCard .historyGeneral small{
+  font-size:10px!important;font-weight:950!important;color:#edfff3!important
+}
+body.playerTheme #playerHistoryContent .historyCompactCard .historyGeneral strong{
+  font-size:clamp(21px,2.25vw,24px)!important;line-height:1.05!important;color:#fff!important
+}
+body.playerTheme #playerHistoryContent .historyCompactCard .historyGeneral.historyPodium1{
+  border-color:#ffda78!important;box-shadow:inset 0 0 0 1px #ffd879!important
+}
+body.playerTheme #playerHistoryContent .historyCompactCard .historyGeneral.historyPodium2{border-color:#c7d6f5!important}
+body.playerTheme #playerHistoryContent .historyCompactCard .historyGeneral.historyPodium3{border-color:#e3ad83!important}
+body.playerTheme #playerHistoryContent .historyCompactCard .historyRounds{
+  display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:5px!important
+}
+body.playerTheme #playerHistoryContent .historyCompactCard .historyRound.historyCompactRound{
+  display:grid!important;grid-template-columns:45px minmax(0,1fr) minmax(98px,auto)!important;
+  gap:9px!important;align-items:center!important;min-width:0!important;
+  min-height:58px!important;margin:0!important;padding:6px 8px!important;
+  border:1px solid #506b7f!important;border-radius:8px!important;background:#132d40!important;
+  box-shadow:none!important;text-align:left!important;box-sizing:border-box!important
+}
+body.playerTheme #playerHistoryContent .historyCompactCard .historyRound.historyRound1{border-left:3px solid #429bee!important}
+body.playerTheme #playerHistoryContent .historyCompactCard .historyRound.historyRound2{border-left:3px solid #e99b3e!important}
+body.playerTheme #playerHistoryContent .historyCompactCard .historyRoundTag{
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  box-sizing:border-box!important;width:43px!important;min-height:42px!important;padding:4px!important;
+  border-radius:6px!important;background:#125f9e!important;color:#fff!important;
+  font-size:14px!important;font-weight:950!important;letter-spacing:.1px!important
+}
+body.playerTheme #playerHistoryContent .historyCompactCard .historyRound2 .historyRoundTag{background:#9b531d!important}
+body.playerTheme #playerHistoryContent .historyCompactCard .historyRoundMain{min-width:0!important}
+body.playerTheme #playerHistoryContent .historyCompactCard .historyRoundPlace{
+  display:flex!important;align-items:baseline!important;justify-content:flex-start!important;
+  gap:0!important;margin:0!important;line-height:1!important;white-space:nowrap!important
+}
+body.playerTheme #playerHistoryContent .historyCompactCard .historyRoundPlace b,
+body.playerTheme #playerHistoryContent .historyCompactCard .historyRoundPlace span{
+  font-size:clamp(21px,2.25vw,24px)!important;line-height:1!important;font-weight:900!important;color:#fff!important
+}
+body.playerTheme #playerHistoryContent .historyCompactCard .historyRoundPlace .historyRoundSlash{
+  font-size:21px!important;font-weight:650!important;color:#a8c4d5!important
+}
+body.playerTheme #playerHistoryContent .historyCompactCard .historyRoundMeta{
+  display:block!important;margin-top:4px!important;
+  font-size:12.5px!important;line-height:1.2!important;font-weight:600!important;
+  color:#d0e0ed!important;text-align:left!important;white-space:normal!important
+}
+body.playerTheme #playerHistoryContent .historyCompactCard .historyRoundMeta b{font-weight:950!important;color:#fff!important}
+body.playerTheme #playerHistoryContent .historyCompactCard .historyRoundMass{text-align:right!important;min-width:0!important}
+body.playerTheme #playerHistoryContent .historyCompactCard .historyRoundWeight{
+  margin:0!important;font-size:clamp(17px,2vw,20px)!important;
+  line-height:1.1!important;color:#fff!important;font-weight:950!important;white-space:nowrap!important
+}
+body.playerTheme #playerHistoryContent .historyCompactCard .historyRoundBF{
+  margin-top:4px!important;font-size:12px!important;line-height:1.15!important;
+  font-weight:850!important;color:#ffe09a!important;white-space:nowrap!important
+}
+body.playerTheme #playerHistoryContent .historyCompactCard .historyStartFoot{
+  display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto!important;
+  gap:8px!important;align-items:center!important;min-width:0!important;
+  padding:7px 1px 0!important;margin:0!important;border-top:1px solid #49677a!important
+}
+body.playerTheme #playerHistoryContent .historyCompactCard .historySumPlaces,
+body.playerTheme #playerHistoryContent .historyCompactCard .historySumWeight{
+  display:flex!important;flex-direction:column!important;align-items:flex-start!important;
+  justify-content:center!important;gap:3px!important;min-width:0!important
+}
+body.playerTheme #playerHistoryContent .historyCompactCard .historyStartFoot small{
+  font-size:10.5px!important;line-height:1.1!important;color:#c9dce9!important;font-weight:900!important;
+  white-space:nowrap!important
+}
+body.playerTheme #playerHistoryContent .historyCompactCard .historyStartFoot b{
+  font-size:clamp(16px,2vw,19px)!important;font-weight:950!important;line-height:1.12!important;
+  color:#fff!important;white-space:nowrap!important;letter-spacing:0!important
+}
+body.playerTheme #playerHistoryContent .historyCompactCard .historyStartFoot .historyResultsBtn{
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  width:auto!important;min-width:105px!important;min-height:44px!important;
+  margin:0!important;padding:8px 10px!important;border:1px solid #74cbaa!important;
+  border-radius:8px!important;background:#09694c!important;color:#fff!important;
+  font-size:11.5px!important;line-height:1.15!important;font-weight:900!important;white-space:nowrap!important
+}
+body.playerTheme #playerHistoryContent .historyCompactCard .historyResultsBtn span{font-size:22px!important;margin-left:5px!important}
+body.playerTheme #playerHistoryContent .historyCompactCard .historyResultsBtn:focus-visible{
+  outline:3px solid #ffda80!important;outline-offset:2px!important
+}
+@media(max-width:760px){
+ body.playerTheme #playerHistoryContent .historyHero{padding:9px 10px!important}
+ body.playerTheme #playerHistoryContent .historyHero h2{font-size:19px!important}
+ body.playerTheme #playerHistoryContent .historyStats{gap:5px!important}
+ body.playerTheme #playerHistoryContent .historyStat{min-height:56px!important;padding:7px 3px!important}
+ body.playerTheme #playerHistoryContent .historyStat small{font-size:10.5px!important}
+ body.playerTheme #playerHistoryContent .historyStat strong{font-size:clamp(17px,4.5vw,20px)!important}
+ body.playerTheme #playerHistoryContent .historyCompactCard .historyStartHead h3{font-size:17px!important}
+ body.playerTheme #playerHistoryContent .historyCompactCard .historyStartSubtitle{font-size:12px!important}
+ body.playerTheme #playerHistoryContent .historyStartCard.historyCompactCard{padding:9px!important;gap:6px!important}
+ body.playerTheme #playerHistoryContent .historyCompactCard .historyRound.historyCompactRound{
+   grid-template-columns:43px minmax(0,1fr) minmax(88px,auto)!important;
+   gap:7px!important;padding:5px 6px!important;min-height:58px!important
+ }
+ body.playerTheme #playerHistoryContent .historyCompactCard .historyRoundTag{width:41px!important;min-height:42px!important}
+ body.playerTheme #playerHistoryContent .historyCompactCard .historyRoundPlace b,
+ body.playerTheme #playerHistoryContent .historyCompactCard .historyRoundPlace span{font-size:22px!important}
+ body.playerTheme #playerHistoryContent .historyCompactCard .historyRoundMeta{font-size:12px!important}
+ body.playerTheme #playerHistoryContent .historyCompactCard .historyRoundWeight{font-size:clamp(16px,4.45vw,19px)!important}
+ body.playerTheme #playerHistoryContent .historyCompactCard .historyRoundBF{font-size:11.5px!important}
+ body.playerTheme #playerHistoryContent .historyCompactCard .historyStartFoot .historyResultsBtn{font-size:11px!important}
+}
+@media(max-width:380px){
+ body.playerTheme #playerHistoryContent .historyCompactCard .historyStartFoot{
+   grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:6px!important
+ }
+ body.playerTheme #playerHistoryContent .historyCompactCard .historyStartFoot .historyResultsBtn{
+   grid-column:1/-1!important;min-height:40px!important;width:100%!important
+ }
+ body.playerTheme #playerHistoryContent .historyCompactCard .historyRound.historyCompactRound{
+   grid-template-columns:38px minmax(0,1fr) minmax(80px,auto)!important;
+   gap:5px!important;padding:5px!important
+ }
+ body.playerTheme #playerHistoryContent .historyCompactCard .historyRoundTag{width:36px!important;font-size:12px!important}
+ body.playerTheme #playerHistoryContent .historyCompactCard .historyRoundMeta{font-size:11.5px!important}
+ body.playerTheme #playerHistoryContent .historyCompactCard .historyRoundWeight{font-size:16px!important}
+ body.playerTheme #playerHistoryContent .historyCompactCard .historyRoundBF{font-size:11px!important}
+ body.playerTheme #playerHistoryContent .historyCompactCard .historyGeneral{min-width:70px!important;padding:5px 6px!important}
+ body.playerTheme #playerHistoryContent .historyCompactCard .historyGeneral strong{font-size:21px!important}
+}
+@media(prefers-reduced-motion:reduce){
+ body.playerTheme #playerHistoryContent .historyCompactCard *{transition:none!important}
+}
