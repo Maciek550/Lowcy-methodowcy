@@ -1,4 +1,4 @@
-const CLIENT_VERSION='235';const CLIENT_VERSION_NAME='V235_PLAYER_EARLY_LIST_PHONE_BUTTON';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='236';const CLIENT_VERSION_NAME='V236_ADAPTIVE_FIVE_BUTTON_PLAYER_DOCK';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -220,7 +220,7 @@ function closePlayerCompetition(ev){
   if(detail){detail.classList.add('hidden');detail.innerHTML=''}
   CURRENT_DETAIL=null;PLAYER_MOBILE_PANEL=null;PLAYER_RESULTS_TAB='t1';PLAYER_DRAW_ROUND=1;PLAYER_DRAW_VIEW='map';
   try{STORE.del(UI_STATE_KEY)}catch(_){ }
-  requestAnimationFrame(()=>{syncPlayerStickyBars();window.scrollTo({top:0,behavior:'smooth'})});
+  refreshPlayerDock();requestAnimationFrame(()=>{syncPlayerStickyBars();window.scrollTo({top:0,behavior:'smooth'})});
   recordAppNavigation(0);
 }
 function closeCompetitionDetail(){
@@ -310,8 +310,8 @@ function playerContentSignature(d){const roster=playerEarlyListAvailable(d?.comp
 function syncPlayerContentStars(d=CURRENT_DETAIL){[1,2].forEach(round=>{const freshResult=playerHasNewResults(d,round);document.querySelectorAll('.playerNewResultStar[data-result-round="'+round+'"]').forEach(x=>{if(!freshResult)x.remove()});if(freshResult&&!document.querySelector('.playerNewResultStar[data-result-round="'+round+'"]'))document.querySelectorAll('.playerUnifiedNav button,.playerDesktopUnifiedNav button').forEach(btn=>{const click=btn.getAttribute('onclick')||'';if(click.includes("'t"+round+"'"))btn.insertAdjacentHTML('beforeend',playerResultStar(d,round))});const freshDraw=playerHasNewDraw(d,round);document.querySelectorAll('.playerNewResultStar[data-draw-round="'+round+'"]').forEach(x=>{if(!freshDraw)x.remove()});if(freshDraw&&!document.querySelector('.playerNewResultStar[data-draw-round="'+round+'"]'))document.querySelectorAll('.playerUnifiedNav button,.playerDesktopUnifiedNav button').forEach(btn=>{const click=btn.getAttribute('onclick')||'';if(click.includes("'draw"+round+"'"))btn.insertAdjacentHTML('beforeend',playerDrawStar(d,round))})})}
 function stopPlayerResultPolling(){if(PLAYER_RESULT_POLL_TIMER){clearInterval(PLAYER_RESULT_POLL_TIMER);PLAYER_RESULT_POLL_TIMER=null}}
 function startPlayerResultPolling(){if(PLAYER_RESULT_POLL_TIMER)return;PLAYER_RESULT_POLL_TIMER=setInterval(()=>{syncPlayerEarlyListCutoff();pollPlayerCompetitionResults()},12000)}
-async function pollPlayerCompetitionResults(){if(PLAYER_RESULT_POLL_BUSY||!ME||ME.role==='ADMIN'||!CURRENT_DETAIL?.competition?.id||q('competitionDetail')?.classList.contains('hidden'))return;PLAYER_RESULT_POLL_BUSY=true;try{const id=CURRENT_DETAIL.competition.id,d=await api('/api/competitions/'+id);if(playerContentSignature(d)===playerContentSignature(CURRENT_DETAIL))return;CURRENT_DETAIL=d;const active=PLAYER_MOBILE_PANEL;if(active==='t1'||active==='t2')markPlayerResultSeen(active==='t1'?1:2);if(active==='draw1'||active==='draw2')markPlayerDrawSeen(active==='draw1'?1:2);const mobile=q('playerMobilePanelContent'),desktop=q('playerDesktopPanelContent');if(mobile)mobile.innerHTML=renderPlayerMobilePanelContent(d,active);if(desktop)desktop.innerHTML=renderPlayerDesktopPanelContent(d,active);document.querySelectorAll('.playerEarlyListCount').forEach(x=>x.textContent=String((d.activeEntries||[]).length));syncPlayerContentStars(d);requestAnimationFrame(()=>{syncPlayerStickyBars();fitPlayerMobileFullMaps()})}catch(_){ }finally{PLAYER_RESULT_POLL_BUSY=false}}
-function syncNotificationBadges(unread=PLAYER_UNREAD_NOTIFICATIONS){const n=Math.max(0,Number(unread||0));document.querySelectorAll('#playerNotifBtn,.notificationTile').forEach(btn=>{btn.innerHTML=playerNotifLabel(n)});const top=q('btn-notifications');if(top){let b=top.querySelector('.topNotifBadge');if(n){if(!b){b=document.createElement('span');b.className='topNotifBadge';top.appendChild(b)}b.textContent=n>99?'99+':String(n)}else if(b)b.remove()}}
+async function pollPlayerCompetitionResults(){if(PLAYER_RESULT_POLL_BUSY||!ME||ME.role==='ADMIN'||!CURRENT_DETAIL?.competition?.id||q('competitionDetail')?.classList.contains('hidden'))return;PLAYER_RESULT_POLL_BUSY=true;try{const id=CURRENT_DETAIL.competition.id,d=await api('/api/competitions/'+id);if(playerContentSignature(d)===playerContentSignature(CURRENT_DETAIL))return;CURRENT_DETAIL=d;const active=PLAYER_MOBILE_PANEL;if(active==='t1'||active==='t2')markPlayerResultSeen(active==='t1'?1:2);if(active==='draw1'||active==='draw2')markPlayerDrawSeen(active==='draw1'?1:2);const mobile=q('playerMobilePanelContent'),desktop=q('playerDesktopPanelContent');if(mobile)mobile.innerHTML=renderPlayerMobilePanelContent(d,active);if(desktop)desktop.innerHTML=renderPlayerDesktopPanelContent(d,active);document.querySelectorAll('.playerEarlyListCount').forEach(x=>x.textContent=String((d.activeEntries||[]).length));refreshPlayerDock();syncPlayerContentStars(d);requestAnimationFrame(()=>{syncPlayerStickyBars();fitPlayerMobileFullMaps()})}catch(_){ }finally{PLAYER_RESULT_POLL_BUSY=false}}
+function syncNotificationBadges(unread=PLAYER_UNREAD_NOTIFICATIONS){const n=Math.max(0,Number(unread||0));document.querySelectorAll('#playerNotifBtn,.notificationTile').forEach(btn=>{btn.innerHTML=playerNotifLabel(n)});const top=q('btn-notifications');if(top){let b=top.querySelector('.topNotifBadge');if(n){if(!b){b=document.createElement('span');b.className='topNotifBadge';top.appendChild(b)}b.textContent=n>99?'99+':String(n)}else if(b)b.remove()}PLAYER_DOCK_NOTICES=n;refreshPlayerDock()}
 
 function applyPlayerAppBadge(n){
   n=Math.max(0,Number(n||0));
@@ -385,7 +385,8 @@ async function openCompetitionAttention(id,panel,kind,ev){
 function setLoggedOut(showMsg){APP_NAV_READY=false;q('accountSwitch')?.remove();q('accountLinkDialog')?.remove();document.body.classList.remove('judgeTheme');q('judgeShell')?.remove();stopAchievements();
   try{document.documentElement.classList.remove('hasSavedSession');document.body.classList.add('authMode')}catch(_){}
   stopPlayerResultPolling();
-  q('playerGlobalBottomNav')?.remove();
+  q('playerGlobalBottomNav')?.remove();q('playerDockTopArrow')?.remove();
+  if(PLAYER_DOCK_TIMER){clearInterval(PLAYER_DOCK_TIMER);PLAYER_DOCK_TIMER=null}PLAYER_DOCK_NOTICES=0;
   TOKEN=''; ME=null; document.body.classList.remove('playerTheme'); STORE.del('carp_token');applyPlayerAppBadge(0);
   const logout=q('logoutBtn'), auth=q('auth'), app=q('app');
   if(logout)logout.classList.add('hidden');
@@ -514,7 +515,7 @@ async function loadPlayerHistory(){
   const box=q('playerHistoryContent');if(box)box.innerHTML='<div class="card"><p class="muted">Wczytuję historię startów…</p></div>';
   try{const d=await api('/api/me/history');renderPlayerHistory(d.history||[])}catch(e){if(box)box.innerHTML='<div class="card bad danger-line">Nie udało się wczytać historii startów.</div>';msg(e.message,'bad')}
 }
-function showTab(n){if(ME?.password_must_change&&n!=='profile'){msg('Ustaw nowe hasło w profilu, aby kontynuować.','bad');n='profile'}if(n!=='competitions')closePlayerSituationalMap();syncPlayerStickyBars();['competitions','rules','notifications','players','profile','history'].forEach(x=>{q('tab-'+x)?.classList.toggle('hidden',x!==n);q('btn-'+x)?.classList.toggle('active',x===n);q('btn-'+x)?.setAttribute('aria-selected',String(x===n))});if(n==='rules')renderPlayerRules();if(n==='notifications')loadNotifications();if(n==='players')loadPlayers();if(n==='profile')renderMyProfile();if(n==='history')loadPlayerHistory();recordAppNavigation()}
+function showTab(n){if(ME?.password_must_change&&n!=='profile'){msg('Ustaw nowe hasło w profilu, aby kontynuować.','bad');n='profile'}if(n!=='competitions')closePlayerSituationalMap();syncPlayerStickyBars();['competitions','rules','notifications','players','profile','history'].forEach(x=>{q('tab-'+x)?.classList.toggle('hidden',x!==n);q('btn-'+x)?.classList.toggle('active',x===n);q('btn-'+x)?.setAttribute('aria-selected',String(x===n))});if(n==='rules')renderPlayerRules();if(n==='notifications')loadNotifications();if(n==='players')loadPlayers();if(n==='profile')renderMyProfile();if(n==='history')loadPlayerHistory();recordAppNavigation();refreshPlayerDock()}
 function competitionActionHtml(c,admin,mine,closed,cardMode=false){
   if(admin)return '<div class="inlineBtns adminCompetitionActions '+(cardMode?'competitionCardActions adminCompetitionCardActions':'')+'"><button type="button" class="adminOpenCompetitionBtn" onclick="openCompetition('+c.id+')">Otwórz panel zawodów <span aria-hidden="true">→</span></button><button type="button" class="secondary adminEditCompetitionBtn" onclick="openCompetitionEdit('+c.id+')">Edytuj</button><button type="button" class="warn adminDeleteCompetitionBtn" onclick="deleteCompetition('+c.id+')">Usuń</button></div>';
   const leavePending=String(c.my_leave_request_status||'').toUpperCase()==='PENDING';
@@ -671,7 +672,7 @@ async function loadCompetitions(){
   }
   PLAYER_COMPETITIONS_CACHE=arr;
   await refreshPlayerAttention(false);
-  renderPlayerCompetitionList();
+  renderPlayerCompetitionList();refreshPlayerDock();
   if(q('tab-rules')&&!q('tab-rules').classList.contains('hidden'))renderPlayerRules();
 }
 async function createCompetition(ev){if(CREATING_COMPETITION)return;CREATING_COMPETITION=true;const btn=ev?.target;if(btn){btn.disabled=true;btn.textContent='Tworzę...'}try{const limit=q('cLimit').value.trim();if(!limit)throw new Error('Podaj liczbę osób');await api('/api/competitions',{method:'POST',body:JSON.stringify({title:q('cTitle')?.value||'Method Feeder',fishery:q('cFishery').value,competitionDate:q('cDate').value,meetingTime:q('cMeetingTime')?.value||'06:00',limitPlaces:limit,notes:q('cNotes').value,regulations:q('cRegulations')?.value||'',presenceReminderNote:q('cPresenceReminderNote')?.value||'',status:q('cStatus')?.value||'OPEN'})});['cFishery','cDate','cLimit','cNotes','cRegulations','cPresenceReminderNote'].forEach(id=>{const el=q(id);if(el)el.value=''});if(q('cMeetingTime'))q('cMeetingTime').value='06:00';if(q('cTitle'))q('cTitle').value='Method Feeder';await loadCompetitions();await loadNotifications();q('adminCreate').open=false;msg('Utworzono zawody')}catch(e){msg(e.message,'bad')}finally{CREATING_COMPETITION=false;if(btn){btn.disabled=false;btn.textContent='Utwórz zawody'}}}
@@ -687,7 +688,7 @@ async function openCompetition(id,preserve=false){
     renderDetail();
     const detail=q('competitionDetail');
     detail.classList.remove('hidden');
-    recordAppNavigation();
+    refreshPlayerDock();recordAppNavigation();
     if(!preserve){
       if(ME?.role==='ADMIN')detail.scrollIntoView({behavior:'smooth',block:'start'});
       else focusPlayerNavOnOpen();
@@ -711,6 +712,7 @@ function renderDetail(){
   SECTOR_MANUAL_DRAFT=undefined;
   if(admin) html+=renderAdminDetail(d); else html+=renderPlayerDetail(d);
   q('competitionDetail').innerHTML=html;
+  refreshPlayerDock();
   if(admin)setTimeout(applyAdminRosterFilter,0);
   syncStickyNavOffset();
   setTimeout(syncFixedAdminNav,0);
@@ -856,7 +858,7 @@ function renderPlayerEarlyListPanel(d){
 function syncPlayerEarlyListCutoff(){
   if(ME?.role!=='PLAYER'||!CURRENT_DETAIL||playerEarlyListAvailable(CURRENT_DETAIL.competition))return;
   const buttons=document.querySelectorAll('.earlyListTile');
-  if(!buttons.length)return;
+  if(!buttons.length){refreshPlayerDock();return}
   buttons.forEach(b=>b.remove());
   document.querySelectorAll('.withEarlyList').forEach(n=>n.classList.remove('withEarlyList'));
   if(PLAYER_MOBILE_PANEL==='list'){
@@ -867,7 +869,7 @@ function syncPlayerEarlyListCutoff(){
     document.querySelectorAll('.playerUnifiedNav button,.playerDesktopUnifiedNav button').forEach(b=>b.classList.toggle('active',(b.getAttribute('onclick')||'').includes("'draw1'")));
     recordAppNavigation();
   }
-  requestAnimationFrame(syncPlayerStickyBars);
+  refreshPlayerDock();requestAnimationFrame(syncPlayerStickyBars);
 }
 function renderPlayerMobilePanelContent(d,panel){
   if(panel==='list')return '<div class="playerMobileSelectedPanel">'+renderPlayerEarlyListPanel(d)+'</div>';
@@ -1007,6 +1009,7 @@ function showPlayerDesktopPanel(panel,ev){
   const mobileBox=q('playerMobilePanelContent');
   if(mobileBox&&CURRENT_DETAIL)mobileBox.innerHTML=renderPlayerMobilePanelContent(CURRENT_DETAIL,panel);
   document.querySelectorAll('.playerDesktopUnifiedNav button,.playerUnifiedNav button').forEach(btn=>btn.classList.toggle('active',btn.getAttribute('onclick')?.includes("'"+panel+"'")));
+  refreshPlayerDock();
   if(keepY===null)focusPlayerNavOnOpen();else restorePlayerViewport(keepY);
 }
 function setPlayerDrawView(view,ev){
@@ -1026,36 +1029,127 @@ function renderPlayerDetail(d){
   return html;
 }
 
-function mountPlayerBottomNav(){
-  q('playerGlobalBottomNav')?.remove();
-  if(!ME||ME.role==='ADMIN')return;
-  const icons={top:'<path d="m3 11 9-8 9 8M5 10v11h14V10M9 21v-7h6v7"/>',map1:'<path d="m3 5 6-2 6 2 6-2v16l-6 2-6-2-6 2ZM9 3v16M15 5v16"/>',t1:'<path d="M7 3h10v6a5 5 0 0 1-10 0ZM7 5H3v3a4 4 0 0 0 5 4M17 5h4v3a4 4 0 0 1-5 4M12 14v6M7 21h10"/>',stats:'<path d="M4 20V10h4v10ZM10 20V4h4v16ZM16 20v-7h4v7Z"/>',notifications:'<path d="M6 8a6 6 0 0 1 12 0c0 8 3 8 3 10H3c0-2 3-2 3-10M10 21h4"/>',bottom:'<path d="M12 3v16m-7-7 7 7 7-7M4 22h16"/>'};
-  const labels={top:'Góra',map1:'Mapa T1',t1:'Wyniki T1',stats:'Statystyki',notifications:'Nowości',bottom:'Dół'};
-  const nav=document.createElement('nav');nav.id='playerGlobalBottomNav';nav.className='playerBottomNav';nav.setAttribute('aria-label','Szybka nawigacja');
-  nav.innerHTML=Object.keys(icons).map(key=>'<button type="button" data-action="'+key+'" aria-label="'+labels[key]+'"><svg viewBox="0 0 24 24" aria-hidden="true">'+icons[key]+'</svg></button>').join('');
-  nav.addEventListener('click',ev=>{const btn=ev.target.closest('button[data-action]');if(btn)playerDockAction(btn.dataset.action)});
-  document.body.appendChild(nav);
+/* V236: five compact dock actions + independent scroll-to-top control. */
+let PLAYER_DOCK_BUSY=false,PLAYER_DOCK_TIMER=null,PLAYER_DOCK_EVENTS_READY=false,PLAYER_DOCK_NOTICES=0;
+function playerDockPreviewCompetition(){
+  const detail=q('competitionDetail');
+  const shown=!!CURRENT_DETAIL?.competition&&detail&&!detail.classList.contains('hidden')
+    &&!q('tab-competitions')?.classList.contains('hidden');
+  if(shown)return CURRENT_DETAIL.competition;
+  const upcoming=(PLAYER_COMPETITIONS_CACHE||[]).filter(playerCompetitionRegisteredUpcoming)
+    .sort((a,b)=>(playerCompetitionDateKey(a)||'9999-99-99').localeCompare(playerCompetitionDateKey(b)||'9999-99-99')||Number(a.id)-Number(b.id));
+  return upcoming[0]||getPlayerNearestThree(PLAYER_COMPETITIONS_CACHE)[0]||null;
 }
-let PLAYER_DOCK_BUSY=false;
+function playerDockDetailedView(){
+  const detail=q('competitionDetail');return !!CURRENT_DETAIL?.competition&&!!detail&&!detail.classList.contains('hidden')
+    &&!q('tab-competitions')?.classList.contains('hidden');
+}
+function playerDockLatestMap(d){
+  return (d?.draws||[]).some(r=>Number(r.round)===2)?'map2':'map1';
+}
+function playerDockLatestResults(d){
+  const t1=playerRoundHasResults(d,1),t2=playerRoundHasResults(d,2);
+  return t1&&t2&&d?.classification?.general?.length?'general':t2?'t2':'t1';
+}
+function refreshPlayerDock(){
+  if(ME?.role!=='PLAYER')return;
+  const nav=q('playerGlobalBottomNav');if(!nav)return;
+  const competition=playerDockPreviewCompetition(),early=!!competition&&playerEarlyListAvailable(competition);
+  const primary=nav.querySelector('[data-action="primary"]');
+  if(primary){
+    const label=primary.querySelector('.playerDockLabel'),badge=primary.querySelector('.playerDockBadge');
+    const text=early?'LISTA':'LOS T1';
+    if(label&&label.textContent!==text)label.textContent=text;
+    primary.title=early?'Lista zapisanych zawodników':'Losowanie Tura 1';
+    primary.setAttribute('aria-label',primary.title);
+    primary.dataset.mode=early?'list':'draw1';
+    if(badge){
+      const n=playerDockDetailedView()?CURRENT_DETAIL.activeEntries?.length:Number(competition?.active_count||0);
+      const count=Math.max(0,Number(n||0));badge.textContent=count>99?'99+':String(count);
+      badge.hidden=!early;
+    }
+  }
+  const notices=nav.querySelector('[data-action="notifications"] .playerDockBadge');
+  if(notices){const count=Math.max(0,Number(PLAYER_DOCK_NOTICES||0));notices.textContent=count>99?'99+':String(count);notices.hidden=!count}
+  const activeTab=['competitions','rules','notifications','profile','history'].find(name=>q('tab-'+name)&&!q('tab-'+name).classList.contains('hidden'))||'competitions';
+  const panel=playerDockDetailedView()?PLAYER_MOBILE_PANEL:null;
+  nav.querySelectorAll('button[data-action]').forEach(btn=>{
+    const action=btn.dataset.action;
+    const active=action==='notifications'?activeTab==='notifications':
+      action==='start'?activeTab==='competitions'&&!playerDockDetailedView():
+      activeTab==='competitions'&&(
+        action==='primary'&&(panel==='list'||panel==='draw1'&&!early)||
+        action==='map'&&(panel==='map1'||panel==='map2')||
+        action==='results'&&['t1','t2','general'].includes(panel));
+    btn.classList.toggle('active',!!active);
+    if(active)btn.setAttribute('aria-current','page');else btn.removeAttribute('aria-current');
+  });
+  updatePlayerDockTopArrow();
+}
+function updatePlayerDockTopArrow(){
+  const btn=q('playerDockTopArrow');if(!btn)return;
+  const overlay=!!q('playerSituationalMapOverlay')||!!document.querySelector('.passwordResetDialog[open]');
+  const typing=/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName||'');
+  btn.hidden=ME?.role!=='PLAYER'||document.body.classList.contains('authMode')||window.scrollY<360||overlay||typing;
+}
+function mountPlayerBottomNav(){
+  if(PLAYER_DOCK_TIMER){clearInterval(PLAYER_DOCK_TIMER);PLAYER_DOCK_TIMER=null}
+  q('playerGlobalBottomNav')?.remove();q('playerDockTopArrow')?.remove();
+  if(ME?.role!=='PLAYER'||ME.password_must_change)return;
+  const icons={
+    start:'<path d="m3 11 9-8 9 8M5 10v11h14V10M9 21v-7h6v7"/>',
+    primary:'<rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/><circle cx="9" cy="15" r="1"/><circle cx="15" cy="15" r="1"/>',
+    map:'<path d="m3 5 6-2 6 2 6-2v16l-6 2-6-2-6 2ZM9 3v16M15 5v16"/>',
+    results:'<path d="M7 3h10v6a5 5 0 0 1-10 0ZM7 5H3v3a4 4 0 0 0 5 4M17 5h4v3a4 4 0 0 1-5 4M12 14v6M7 21h10"/>',
+    notifications:'<path d="M6 8a6 6 0 0 1 12 0c0 8 3 8 3 10H3c0-2 3-2 3-10M10 21h4"/>'
+  };
+  const labels={start:'START',primary:'LOS T1',map:'MAPA',results:'WYNIKI',notifications:'NOWOŚCI'};
+  const nav=document.createElement('nav');nav.id='playerGlobalBottomNav';nav.className='playerBottomNav';nav.setAttribute('aria-label','Szybka nawigacja zawodnika');
+  nav.innerHTML=Object.keys(icons).map(key=>
+    '<button type="button" class="playerDockItem" data-action="'+key+'" aria-label="'+labels[key]+'">'+
+      '<svg viewBox="0 0 24 24" aria-hidden="true">'+icons[key]+'</svg>'+
+      '<span class="playerDockLabel">'+labels[key]+'</span>'+
+      (key==='primary'||key==='notifications'?'<span class="playerDockBadge '+(key==='notifications'?'notif':'')+'" hidden aria-hidden="true"></span>':'')+
+    '</button>').join('');
+  nav.addEventListener('click',ev=>{const button=ev.target.closest('button[data-action]');if(button)playerDockAction(button.dataset.action)});
+  document.body.appendChild(nav);
+  const arrow=document.createElement('button');arrow.id='playerDockTopArrow';arrow.type='button';
+  arrow.textContent='↑';arrow.hidden=true;arrow.setAttribute('aria-label','Przewiń na górę strony');
+  arrow.title='Na górę';arrow.addEventListener('click',()=>scrollAppTop());
+  document.body.appendChild(arrow);
+  if(!PLAYER_DOCK_EVENTS_READY){
+    PLAYER_DOCK_EVENTS_READY=true;
+    window.addEventListener('scroll',updatePlayerDockTopArrow,{passive:true});
+    window.addEventListener('resize',updatePlayerDockTopArrow,{passive:true});
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshPlayerDock()});
+    document.addEventListener('focusin',updatePlayerDockTopArrow);
+    document.addEventListener('focusout',updatePlayerDockTopArrow);
+  }
+  PLAYER_DOCK_TIMER=setInterval(()=>{if(ME?.role==='PLAYER'){syncPlayerEarlyListCutoff();refreshPlayerDock()}},15000);
+  refreshPlayerDock();
+}
 async function playerDockAction(action){
-  if(action==='top'){showTab('competitions');closePlayerCompetition();scrollAppTop();return}
-  if(action==='bottom'){scrollAppBottom();return}
-  if(action==='notifications'){openPlayerNotifications();return}
-  if(!['map1','t1','stats'].includes(action)||PLAYER_DOCK_BUSY)return;
+  if(action==='start'){showTab('competitions');closePlayerCompetition();scrollAppTop();refreshPlayerDock();return}
+  if(action==='notifications'){openPlayerNotifications();refreshPlayerDock();return}
+  if(!['primary','map','results'].includes(action)||PLAYER_DOCK_BUSY)return;
   PLAYER_DOCK_BUSY=true;
   try{
-    const detail=q('competitionDetail');
-    const inCompetition=!!CURRENT_DETAIL&&detail&&!detail.classList.contains('hidden')&&!q('tab-competitions')?.classList.contains('hidden');
-    if(!inCompetition){
-      await loadCompetitions();
-      const nearest=getPlayerNearestThree(PLAYER_COMPETITIONS_CACHE)[0];
-      if(!nearest){showTab('competitions');msg('Brak nadchodzących zawodów.');return}
+    let detail=q('competitionDetail');
+    if(!playerDockDetailedView()){
+      if(!(PLAYER_COMPETITIONS_CACHE||[]).length)await loadCompetitions();
+      const selected=playerDockPreviewCompetition();
+      if(!selected){showTab('competitions');msg('Brak nadchodzących zawodów.');return}
       showTab('competitions');
-      if(!await openCompetition(nearest.id,true))return;
-      if(Number(CURRENT_DETAIL?.competition?.id)!==Number(nearest.id)||q('competitionDetail')?.classList.contains('hidden'))return;
+      if(!await openCompetition(selected.id,true))return;
+      detail=q('competitionDetail');
+      if(Number(CURRENT_DETAIL?.competition?.id)!==Number(selected.id)||!detail||detail.classList.contains('hidden'))return;
     }
-    showTab('competitions');showPlayerMobilePanel(action);
-    requestAnimationFrame(()=>focusPlayerNavOnOpen());
+    let panel='draw1';
+    if(action==='primary')panel=playerEarlyListAvailable(CURRENT_DETAIL.competition)?'list':'draw1';
+    if(action==='map')panel=playerDockLatestMap(CURRENT_DETAIL);
+    if(action==='results')panel=playerDockLatestResults(CURRENT_DETAIL);
+    showTab('competitions');showPlayerMobilePanel(panel);
+    refreshPlayerDock();
   }catch(e){msg(e.message||'Nie udało się otworzyć zawodów.','bad')}
   finally{PLAYER_DOCK_BUSY=false}
 }
@@ -1078,6 +1172,7 @@ function showPlayerMobilePanel(panel,ev){
   const desktopBox=q('playerDesktopPanelContent');
   if(desktopBox&&CURRENT_DETAIL)desktopBox.innerHTML=renderPlayerDesktopPanelContent(CURRENT_DETAIL,panel);
   document.querySelectorAll('.playerUnifiedNav button,.playerDesktopUnifiedNav button').forEach(btn=>btn.classList.toggle('active',btn.getAttribute('onclick')?.includes("'"+panel+"'")));
+  refreshPlayerDock();
   if(keepY===null)focusPlayerNavOnOpen();else restorePlayerViewport(keepY);
   recordAppNavigation();
 }

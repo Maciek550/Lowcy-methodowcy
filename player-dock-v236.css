@@ -1,0 +1,110 @@
+/* V236 – compact, adaptive, five-action competitor dock. Safe targets on 320px screens. */
+body.playerTheme:not(.authMode) #playerGlobalBottomNav{
+  display:grid!important;
+  grid-template-columns:repeat(5,minmax(0,1fr))!important;
+  align-items:stretch!important;gap:3px!important;
+  box-sizing:border-box!important;
+  width:100%!important;max-width:100vw!important;
+  padding:4px max(4px,env(safe-area-inset-right,0px)) calc(4px + env(safe-area-inset-bottom,0px)) max(4px,env(safe-area-inset-left,0px))!important;
+  border:0!important;border-top:1px solid #527e94!important;
+  background:#082737fa!important;
+  box-shadow:0 -3px 12px #0014217d!important;
+  overflow:visible!important;
+}
+body.playerTheme:not(.authMode) #playerGlobalBottomNav .playerDockItem{
+  box-sizing:border-box!important;
+  position:relative!important;display:flex!important;
+  flex-direction:column!important;align-items:center!important;justify-content:center!important;
+  min-height:50px!important;height:50px!important;width:100%!important;min-width:0!important;
+  gap:2px!important;margin:0!important;padding:3px 1px!important;
+  border:1px solid #47738a!important;border-radius:8px!important;
+  background:#1a4055!important;color:#fff!important;-webkit-text-fill-color:#fff!important;
+  box-shadow:none!important;
+  touch-action:manipulation;
+}
+body.playerTheme:not(.authMode) #playerGlobalBottomNav .playerDockItem[data-action="primary"]{
+  background:#155b49!important;border-color:#8bbf94!important
+}
+body.playerTheme:not(.authMode) #playerGlobalBottomNav .playerDockItem[data-action="notifications"]{
+  background:#224860!important
+}
+body.playerTheme:not(.authMode) #playerGlobalBottomNav .playerDockItem.active,
+body.playerTheme:not(.authMode) #playerGlobalBottomNav .playerDockItem[aria-current="page"]{
+  background:#247c4d!important;
+  border:2px solid #f9d46d!important;
+  box-shadow:inset 0 0 0 1px #142e31!important
+}
+body.playerTheme:not(.authMode) #playerGlobalBottomNav .playerDockItem:focus-visible{
+  outline:3px solid #ffda67!important;outline-offset:-2px!important
+}
+body.playerTheme:not(.authMode) #playerGlobalBottomNav .playerDockItem svg{
+  flex:none!important;display:block!important;
+  width:20px!important;height:20px!important;
+  stroke:#fff!important;fill:none!important;
+  stroke-width:2!important;stroke-linecap:round!important;stroke-linejoin:round!important
+}
+body.playerTheme:not(.authMode) #playerGlobalBottomNav .playerDockItem[data-action="primary"].active svg{
+  stroke:#ffebae!important
+}
+body.playerTheme:not(.authMode) #playerGlobalBottomNav .playerDockLabel{
+  display:block!important;flex:none!important;max-width:100%!important;
+  margin:0!important;padding:0!important;
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif!important;
+  font-size:clamp(9px,2.7vw,10.7px)!important;
+  font-weight:900!important;letter-spacing:-.12px!important;
+  line-height:1.08!important;text-align:center!important;
+  color:#fff!important;-webkit-text-fill-color:#fff!important;
+  text-overflow:clip!important;white-space:nowrap!important
+}
+body.playerTheme:not(.authMode) #playerGlobalBottomNav .playerDockBadge{
+  box-sizing:border-box!important;position:absolute!important;
+  top:1px!important;right:3px!important;
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  min-width:17px!important;height:17px!important;
+  border-radius:20px!important;padding:0 3px!important;
+  background:#ffe3a0!important;color:#152f3b!important;-webkit-text-fill-color:#152f3b!important;
+  border:1px solid #0b2e3f!important;font-size:10px!important;font-weight:1000!important;line-height:1!important;
+  pointer-events:none!important
+}
+body.playerTheme:not(.authMode) #playerGlobalBottomNav .playerDockBadge.notif{
+  background:#df3e49!important;color:#fff!important;-webkit-text-fill-color:#fff!important;
+  border-color:#ffe7c6!important
+}
+body.playerTheme:not(.authMode) #playerGlobalBottomNav .playerDockBadge[hidden]{display:none!important}
+body.playerTheme:not(.authMode) main{
+  padding-bottom:calc(68px + env(safe-area-inset-bottom,0px))!important
+}
+#playerDockTopArrow{display:none!important}
+body.playerTheme:not(.authMode) #playerDockTopArrow:not([hidden]){
+  position:fixed!important;display:flex!important;align-items:center!important;justify-content:center!important;
+  right:max(9px,env(safe-area-inset-right,0px))!important;
+  bottom:calc(65px + env(safe-area-inset-bottom,0px))!important;
+  width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;
+  box-sizing:border-box!important;z-index:9050!important;
+  border:2px solid #f7d675!important;border-radius:13px!important;
+  background:#153a4eea!important;color:#fff!important;-webkit-text-fill-color:#fff!important;
+  font-size:23px!important;font-weight:900!important;line-height:1!important;
+  box-shadow:0 3px 12px #001824aa!important;touch-action:manipulation
+}
+body.playerTheme:not(.authMode) #playerDockTopArrow:focus-visible{
+  outline:3px solid #ffd56b!important;outline-offset:2px!important
+}
+@media(max-width:340px){
+  body.playerTheme:not(.authMode) #playerGlobalBottomNav{gap:2px!important;padding-left:2px!important;padding-right:2px!important}
+  body.playerTheme:not(.authMode) #playerGlobalBottomNav .playerDockItem{min-height:48px!important;height:48px!important;border-radius:7px!important}
+  body.playerTheme:not(.authMode) #playerGlobalBottomNav .playerDockItem svg{width:19px!important;height:19px!important}
+  body.playerTheme:not(.authMode) #playerGlobalBottomNav .playerDockLabel{font-size:9px!important;letter-spacing:-.25px!important}
+}
+@media(min-width:761px){
+  body.playerTheme:not(.authMode) #playerGlobalBottomNav{
+    max-width:660px!important;width:min(660px,100%)!important;
+    left:50%!important;right:auto!important;transform:translateX(-50%)!important;
+    border:1px solid #527e94!important;border-bottom:0!important;border-radius:14px 14px 0 0!important;
+    padding:5px 6px!important
+  }
+  body.playerTheme:not(.authMode) #playerGlobalBottomNav .playerDockLabel{font-size:11px!important}
+  body.playerTheme:not(.authMode) #playerDockTopArrow:not([hidden]){bottom:76px!important;right:18px!important}
+}
+@media(prefers-reduced-motion:reduce){
+  body.playerTheme:not(.authMode) #playerGlobalBottomNav .playerDockItem{transition:none!important}
+}
