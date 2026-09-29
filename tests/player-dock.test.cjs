@@ -97,6 +97,6 @@ test('V236: CSS has 5 proportional columns, 48+ px targets, clear label contrast
   assert.match(css,/playerDockBadge\[hidden\]/);
   assert.match(css,/#playerDockTopArrow:not\(\[hidden\]\)/);
   assert.match(server,/\/player-dock-v236\.css\?v=\$\{APP_VERSION\}/);
-  assert.match(server,/const APP_VERSION = '243'/);
-  assert.match(app,/const CLIENT_VERSION='243'/);
+  assert.match(server,/const APP_VERSION = '244'/);
+  assert.match(app,/const CLIENT_VERSION='244'/);
 });

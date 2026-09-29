@@ -10,14 +10,16 @@ function luminance(hex){
  return .2126*linear[0]+.7152*linear[1]+.0722*linear[2];
 }
 test('V242: player desktop and admin checkbox labels have sufficient explicit contrast',()=>{
- const bg=luminance('eaf3f8'),fg=luminance('14344a'),ratio=(bg+.05)/(fg+.05);
- assert.ok(ratio>=7,'contrast ratio '+ratio.toFixed(2)+' must be >=7');
- assert.match(css,/body\.playerTheme #app #playerDesktopPanelContent \.playerResultCard \.finalClubToggle\{[\s\S]*?background:#eaf3f8!important;color:#14344a!important/);
- assert.match(css,/body:not\(\.playerTheme\):not\(\.authMode\) #app #adminZone-results \.finalClubToggle\{[\s\S]*?background:#eaf3f8!important;color:#14344a!important/);
- assert.match(css,/-webkit-text-fill-color:#14344a!important/);
+ for(const [bg,fg] of [['eaf3f8','14344a'],['e8f3ed','123827']]){
+  const ratio=(luminance(bg)+.05)/(luminance(fg)+.05);
+  assert.ok(ratio>=7,'contrast ratio '+ratio.toFixed(2)+' must be >=7');
+  assert.match(css,new RegExp('--club-bg:#'+bg+';--club-ink:#'+fg));
+ }
+ assert.match(css,/background:var\(--club-bg\)!important;color:var\(--club-ink\)!important/);
+ assert.match(css,/-webkit-text-fill-color:var\(--club-ink\)!important/);
 });
 test('V242: visible, tappable checkbox and keyboard focus, no change to table rendering',()=>{
- assert.match(css,/\.finalClubToggle input\[type="checkbox"\]\{[\s\S]*?width:20px!important;height:20px!important/);
+ assert.match(css,/\.finalClubToggle input\[type="checkbox"\]\s*\{[\s\S]*?width:20px!important;height:20px!important/);
  assert.match(css,/accent-color:#125e92!important/);
  assert.match(css,/\.finalClubToggle input\[type="checkbox"\]:focus-visible/);
  assert.match(app,/function renderFinalClubToggle\(\)\{return '<label class="checkline finalClubToggle"/);
@@ -30,7 +32,7 @@ test('V242: contrast stylesheet is in online and offline shell, version synchron
  assert.match(server,/const RESULT_CONTRAST_CSS='\/result-contrast-v242\.css\?v=\$\{APP_VERSION\}'/);
  assert.match(server,/<link rel="stylesheet" href="\/result-contrast-v242\.css\?v=\$\{APP_VERSION\}">/);
  assert.match(server,/HISTORY_COMPACT_CSS,DRAW_CSS,RESULT_CONTRAST_CSS,DESKTOP_DRAW_CSS,DRAW_JS/);
- assert.match(server,/const APP_VERSION = '243'/);
- assert.match(app,/const CLIENT_VERSION='243'/);
- assert.match(server,/class="headerVersion">V243</);
+ assert.match(server,/const APP_VERSION = '244'/);
+ assert.match(app,/const CLIENT_VERSION='244'/);
+ assert.match(server,/class="headerVersion">V244</);
 });

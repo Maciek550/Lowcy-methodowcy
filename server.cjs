@@ -25,8 +25,8 @@ const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const GOOGLE_VISION_API_KEY = process.env.GOOGLE_VISION_API_KEY || process.env.OCR_GOOGLE_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.PHOTO_OCR_OPENAI_API_KEY || '';
 const PHOTO_OCR_MODEL = process.env.PHOTO_OCR_OPENAI_MODEL || 'gpt-5.6-sol';
-const APP_VERSION = '243';
-const APP_VERSION_NAME = 'V243_DARK_DESKTOP_DRAW';
+const APP_VERSION = '244';
+const APP_VERSION_NAME = 'V244_VISUAL_POLISH';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 const PODIUM_TROPHIES = fs.existsSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) ? fs.readFileSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) : null;
 const CARP_REAL = fs.readFileSync(pathModule.join(__dirname, 'carp-real-v116.png'));
@@ -3234,7 +3234,7 @@ const HTML = `<!doctype html>
 <link rel="apple-touch-icon" sizes="180x180" href="/brand/icon-v217-180.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/brand/icon-v217-32.png">
 <script>try{if(localStorage.getItem('carp_token'))document.documentElement.classList.add('hasSavedSession')}catch(e){}</script>
-<title>Łowcy Methodowcy — V243</title>
+<title>Łowcy Methodowcy — V244</title>
 <style>
 .adminReminderNote{margin:12px 0;padding:12px;border:1px solid #b5c7bd;background:#f3f8f4;border-radius:12px}.adminReminderNote label{display:block;font-weight:750;color:#173d2a}.adminReminderNote textarea{width:100%;min-height:66px;font-size:16px;line-height:1.35;background:#fff;color:#19322a;border:1px solid #819e8c;border-radius:8px;margin-top:6px;padding:9px}.adminReminderNote p{margin:5px 0 0;color:#38584b}
 :root{--green:#114b2f;--green2:#17643f;--bg:#f3f6ef;--card:#fff;--line:#cfd8cc;--txt:#18251d;--muted:#68746d;--red:#b32020;--gold:#ffc400;--blue:#1067c8;--soft:#eaf2eb}
@@ -6683,7 +6683,7 @@ body.judgeTheme .playerBottomNav,body.judgeTheme #playerGlobalBottomNav,body.jud
 .judgeEventHeading{padding:10px 0 16px}.judgeEventHeading h2{margin-bottom:6px}
 .judgeRoundTabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
 #judgeShell .judgeRoundTabs button{min-height:46px}
-#judgeShell .card{background:#102e3e;color:#edf6fa}
+#judgeShell .card{background:#102e3e;color:#edf6fa;border:1px solid #547b91;box-shadow:0 3px 12px #0002}
 #judgeShell .mobileAdminCard{background:#102e3e!important;color:#edf6fa!important}
 #judgeShell .mobileAdminCard :is(b,strong,label,small){color:#edf6fa!important}
 #judgeShell .mobileAdminMeta span,#judgeShell .mobileScoreGrid>span{background:#193f50!important}
@@ -7229,17 +7229,18 @@ body:not(.playerTheme):not(.authMode) #app .recoveryAvailable button{
   min-height:46px;background:#e5ffeb!important;color:#102a1a!important;font-weight:900;
 }
 body:not(.playerTheme):not(.authMode) #app #adminZone-results details.resultPreflight{
-  background:#102c3c!important;color:#f7fbff!important;border:2px solid #a8bfce!important;padding:0!important;
+  background:#102c3c!important;color:#f7fbff!important;border:2px solid #547b91!important;
+  border-radius:12px!important;padding:0!important;margin:11px 0!important;
 }
 body:not(.playerTheme):not(.authMode) #app #adminZone-results .resultPreflight>summary{
-  background:#183c51;color:#ffffff!important;
+  background:#16394c;color:#ffffff!important;line-height:1.3!important;
 }
 body:not(.playerTheme):not(.authMode) #app #adminZone-results .resultPreflight>summary b{color:#ffffff!important}
 body:not(.playerTheme):not(.authMode) #app #adminZone-results .resultPreflightBody{
   display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:12px;
 }
 body:not(.playerTheme):not(.authMode) #app #adminZone-results .resultPreflightRound{
-  border:1px solid #82a2b1;border-radius:10px;padding:12px;background:#19374a;color:#f4faff;
+  border:1px solid #6f98ad;border-radius:10px;padding:12px;background:#193d50;color:#f4faff;
   overflow-wrap:anywhere;font-size:14px;
 }
 body:not(.playerTheme):not(.authMode) #app #adminZone-results .resultPreflightRound h3{
@@ -7259,7 +7260,8 @@ body:not(.playerTheme):not(.authMode) #app #adminZone-results .resultPreflightBo
 
 /* V215 — kontrast obu kafelków importu i ręcznego dopisywania (desktop + telefon). */
 body:not(.playerTheme):not(.authMode) #app #adminZone-roster details.rosterToolTile{
-  background:#102c3c!important;color:#f7fbff!important;border:2px solid #547b91!important;box-shadow:none!important;
+  background:#102c3c!important;color:#f7fbff!important;border:2px solid #547b91!important;
+  border-radius:12px!important;box-shadow:none!important;margin:11px 0!important;
 }
 body:not(.playerTheme):not(.authMode) #app #adminZone-roster details.rosterToolTile>.rosterToolSummary{
   background:#16394c!important;color:#ffffff!important;border-radius:10px;
@@ -7277,7 +7279,7 @@ body:not(.playerTheme):not(.authMode) #app #adminZone-roster details.rosterToolT
   color:#ffdc83!important;
 }
 body:not(.playerTheme):not(.authMode) #app #adminZone-roster details.rosterToolTile .rosterToolBody{
-  background:#102c3c!important;color:#f7fbff!important;
+  background:#102c3c!important;color:#f7fbff!important;line-height:1.4!important;
 }
 body:not(.playerTheme):not(.authMode) #app #adminZone-roster details.rosterToolTile .rosterToolBody :is(label,p,.small,.muted){
   color:#dbeaf2!important;
@@ -8226,7 +8228,7 @@ body:not(.playerTheme):not(.authMode) #app #playersList .playerLastActivityUnkno
 </head>
 <body class="authMode">
 <div id="bootGuard"><img src="/icon-192.png" alt=""><b>Łowcy Methodowcy</b><span>Uruchamiam aplikację…</span><button id="bootRetry" class="hidden" type="button" onclick="retryLowcyBoot()">Spróbuj ponownie</button></div>
-<header><div class="row"><h1><img class="brandIcon" src="/brand/icon-v217-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V243</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
+<header><div class="row"><h1><img class="brandIcon" src="/brand/icon-v217-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V244</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
 <main>
 <div id="msg"></div>
 <section id="auth" class="card">
