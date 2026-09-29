@@ -1,0 +1,86 @@
+/* V234: limited, additive accessibility and account-recovery layout */
+body.authMode #auth{max-width:780px;margin:10px auto 20px}
+body.authMode #auth .authLoginArea{max-width:560px;margin:0 auto;padding:4px 0 18px}
+body.authMode #auth .authLoginArea>h2{text-align:center;font-size:clamp(24px,5vw,32px);margin:7px 0 18px;color:#fff}
+body.authMode #auth .authLoginArea label,
+body.authMode #auth .playerRegisterGate label,
+body.authMode #auth .adminSetupCard label{display:block;margin:7px 0 5px;font-size:16px;font-weight:750;color:#f4faff!important}
+body.authMode #auth .authLoginArea input,
+body.authMode #auth .playerRegisterGate input,
+body.authMode #auth .adminSetupCard input{min-height:50px;font-size:17px;background:#f9fcff!important;color:#102b3c!important;border:2px solid #91afbf!important;border-radius:11px}
+body.authMode #auth .authLoginArea input::placeholder{color:#476478}
+body.authMode #auth .authLoginArea .authPasswordWrap{display:flex;align-items:stretch;gap:7px}
+body.authMode #auth .authLoginArea .authPasswordWrap input{min-width:0;flex:1}
+body.authMode #auth .authLoginArea .authPasswordWrap #loginPasswordToggle{flex:none;width:86px!important;min-width:86px!important;min-height:50px!important;background:#244d64!important;color:#fff!important;border:2px solid #92c8de!important;font-size:13px!important;border-radius:11px!important;font-weight:850}
+body.authMode #auth .authLoginArea .authLoginActions{display:grid;grid-template-columns:1fr;gap:9px;margin-top:12px}
+body.authMode #auth .authLoginArea #loginBtn{min-height:56px;background:#208047!important;border:2px solid #8ee2af!important;color:#fff!important;font-size:19px;font-weight:900}
+body.authMode #auth .authLoginArea #forgotPasswordBtn{min-height:45px;background:transparent!important;color:#a7e7ff!important;text-decoration:underline;text-underline-offset:4px;border:1px solid #476a81!important;font-weight:800;font-size:16px}
+body.authMode #auth .authTechnicalOptions{margin:13px 0 0;padding:3px 7px}
+body.authMode #auth .authTechnicalOptions>summary{color:#c2d8e4;font-size:13px;padding:8px;cursor:pointer}
+body.authMode #auth .authTechnicalOptions button{min-height:44px}
+body.authMode #auth>.twoCols{display:block!important;max-width:560px;margin:0 auto}
+body.authMode #auth .playerRegisterGate{background:#102f41!important;border:1px solid #5d9aba!important;border-radius:14px;padding:0 12px 12px;margin-bottom:12px}
+body.authMode #auth .playerRegisterGate>summary{display:flex;justify-content:center;align-items:center;min-height:52px;text-align:center;padding:9px;color:#f5fdff;font-size:16px;font-weight:900;cursor:pointer;list-style:none}
+body.authMode #auth .playerRegisterGate>summary::-webkit-details-marker{display:none}
+body.authMode #auth .playerRegisterGate[open]>summary{border-bottom:1px solid #52788d;margin-bottom:7px}
+body.authMode #auth .playerRegisterGate .playerRegisterCard{margin:0;padding:11px!important}
+body.authMode #auth .playerRegisterGate #regBtn{min-height:50px;font-size:17px;font-weight:900}
+body.authMode #auth .adminSetupGate{padding:6px 12px}
+body.authMode #auth :is(input,select,textarea,button,summary):focus-visible,
+#app>.tabs button:focus-visible,
+#app button:focus-visible,
+#app input:focus-visible,
+#app select:focus-visible,
+#app textarea:focus-visible,
+#app summary:focus-visible,
+.passwordResetDialog :is(input,textarea,button):focus-visible,
+.passwordResetAdminTile button:focus-visible{
+  outline:3px solid #ffe076!important;outline-offset:3px!important;box-shadow:0 0 0 5px #152632!important
+}
+body.authMode #auth :is(input,select,textarea):focus-visible{border-color:#ffe076!important}
+#app>.tabs button{min-height:46px;min-width:44px}
+#app>.tabs button.active,#app>.tabs button[aria-selected="true"]{border:2px solid #ffda76!important;box-shadow:0 0 0 1px #ffd77770!important}
+#app>.tabs button[aria-selected="true"]::after{content:"";display:block;width:24px;height:3px;margin:4px auto 0;border-radius:6px;background:#ffe28b}
+body #app .playerBottomNav button,body #app .workZoneTabs button,body .quickScroll button{min-width:44px;min-height:44px}
+.passwordResetDialog{width:min(94vw,480px);max-height:90dvh;overflow:auto;border:2px solid #80c3d9;border-radius:17px;padding:0;background:#0c2738;color:#f5faff;box-shadow:0 14px 55px #000a}
+.passwordResetDialog::backdrop{background:#07131ddc}
+.passwordResetForm{display:grid;gap:13px;position:relative;padding:23px 18px}
+.passwordResetForm h2{margin:0;padding:0 32px 0 0;font-size:25px;color:#fff}
+.passwordResetForm p{margin:0;line-height:1.45;color:#d9e7ef}
+.passwordResetForm label{font-size:16px;font-weight:800;color:#fff}
+.passwordResetForm input,.passwordResetForm textarea{width:100%;box-sizing:border-box;min-height:52px;background:#fff;color:#142b3a;font-size:18px;padding:12px;border:2px solid #9ac7d6;border-radius:10px}
+.passwordResetForm textarea{font-size:16px;line-height:1.4;resize:vertical}
+.passwordResetForm button{min-height:48px!important;white-space:normal}
+.passwordResetForm .resetClose{position:absolute;right:11px;top:10px;min-height:44px!important;min-width:44px!important;font-size:27px;background:#264d60;color:#fff;border:1px solid #90c8de;border-radius:10px}
+.resetMainButton{background:#197a49!important;color:#fff!important;border:2px solid #8cd9ae!important;border-radius:10px!important;padding:10px 13px;font-size:16px;font-weight:900}
+.resetSecondaryButton{background:#244d64!important;color:#fff!important;border:1px solid #9acde1!important;border-radius:10px!important;padding:10px 13px;font-weight:800}
+.resetSentButton{background:#b87f25!important;color:#132430!important;border:2px solid #ffe0a3!important;border-radius:10px!important;padding:10px 13px;font-weight:900}
+.passwordResetForm button:disabled,.passwordResetAdminTile button:disabled{opacity:.65;cursor:wait}
+.resetFeedback{font-size:14px;line-height:1.4}
+.resetFeedbackSuccess{border:1px solid #8bd7aa;background:#174f39;color:#e9fff2!important;padding:11px;border-radius:9px}
+.resetFeedbackError{border:1px solid #ffb2b2;background:#512c34;color:#fff!important;padding:11px;border-radius:9px}
+.resetSmsActions{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+body:not(.playerTheme) #app #adminPasswordResetTile{background:#0b2839!important;color:#f3fbff!important;border:2px solid #6fbbcc!important;padding:15px!important}
+body:not(.playerTheme) #app #adminPasswordResetTile h2{color:#fff!important;font-size:21px;margin:0 0 5px}
+body:not(.playerTheme) #app #adminPasswordResetTile p{color:#d4e7f0!important;line-height:1.35;margin:5px 0}
+.passwordResetAdminHead{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.passwordResetCount,.passwordResetTopBadge{display:inline-flex;align-items:center;justify-content:center;min-width:32px;min-height:32px;border-radius:20px;background:#f5c95d;color:#142838;padding:5px 9px;font-size:18px;font-weight:950}
+.passwordResetTopBadge{font-size:11px;min-width:0;min-height:24px;margin-left:5px}
+.passwordResetRequestList{display:grid;gap:10px;margin-top:14px}
+.passwordResetRequest{border:2px solid #6b97a9;border-radius:11px;padding:13px;background:#174257;color:#fff}
+.passwordResetRequest strong{font-size:19px}
+.passwordResetRequest a{color:#aee8ff;font-size:17px;text-decoration:underline}
+.passwordResetRequest small{display:block;color:#d4e6ec;margin:6px 0}
+.resetRequestIdentity{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.passwordResetRequestActions{display:flex;gap:8px;flex-wrap:wrap}
+.passwordResetRequestActions button{min-height:48px!important}
+.passwordResetEmpty{font-size:15px}
+@media(max-width:760px){
+ body.authMode #auth .authLoginArea .grid{grid-template-columns:1fr}
+ body.authMode #auth .authLoginArea{padding:0 2px 12px}
+ body.authMode #auth{padding:12px!important}
+ body.authMode #auth .authLoginArea input{font-size:18px}
+ .passwordResetRequestActions button{flex:1 1 135px}
+ .passwordResetDialog .resetSmsActions{grid-template-columns:1fr}
+}
+@media(prefers-reduced-motion:reduce){.passwordResetDialog *,#app>.tabs button{transition:none!important;animation:none!important}}

@@ -1,4 +1,4 @@
-const CLIENT_VERSION='233';const CLIENT_VERSION_NAME='V233_FOTOF_B_GENERALNA_WIELOSTRONICOWA';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='234';const CLIENT_VERSION_NAME='V234_ACCESSIBILITY_PASSWORD_REQUEST';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -393,7 +393,7 @@ async function boot(){
   if(!TOKEN){if(auth)auth.classList.remove('hidden');if(app)app.classList.add('hidden');setLoggedOut(false);return}
   if(auth)auth.classList.add('hidden');
   if(app)app.classList.add('hidden');
-  try{const d=await api('/api/me');ME=d.user;if(ME?.role==='JUDGE')STORE.set(JUDGE_ME_CACHE,JSON.stringify(ME))}catch(e){if(e.status===401||e.status===403){setLoggedOut(false);return}try{const cached=JSON.parse(STORE.get(JUDGE_ME_CACHE)||'null');if(cached?.role==='JUDGE'){ME=cached}else throw e}catch(_){throw e}}
+  try{const d=await api('/api/me');ME=d.user;if(d.token){TOKEN=d.token;STORE.set('carp_token',TOKEN)}if(ME?.role==='JUDGE')STORE.set(JUDGE_ME_CACHE,JSON.stringify(ME))}catch(e){if(e.status===401||e.status===403){setLoggedOut(false);return}try{const cached=JSON.parse(STORE.get(JUDGE_ME_CACHE)||'null');if(cached?.role==='JUDGE'){ME=cached}else throw e}catch(_){throw e}}
   if(auth)auth.classList.add('hidden');
   if(app)app.classList.remove('hidden');
   if(logout)logout.classList.remove('hidden');
@@ -413,9 +413,8 @@ async function boot(){
   if(!admin){const detail=q('competitionDetail');if(detail)detail.classList.add('hidden')}
   initAppBackNavigation();
   hideBootGuard();
-  await Promise.allSettled([loadCompetitions(),loadNotifications(),admin?loadPlayers():Promise.resolve()]);
-  startAchievements();
-  if(!admin)await restorePersistentUiState();
+  if(ME.password_must_change){showTab('profile');setTimeout(()=>q('profilePassword')?.focus(),0)}
+  else {await Promise.allSettled([loadCompetitions(),loadNotifications(),admin?loadPlayers():Promise.resolve()]);startAchievements();if(!admin)await restorePersistentUiState();}
   if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'}).then(reg=>{try{reg.update()}catch(_){ }if('Notification' in window&&Notification.permission==='granted')restorePushSubscription().catch(()=>{})}).catch(()=>{})}
 }
 async function login(){try{const phone=q('loginPhone')?.value||'';const password=q('loginPassword')?.value||'';if(!phone.trim()||!password)throw new Error('Wpisz telefon i hasło');const d=await api('/api/login',{method:'POST',body:JSON.stringify({phone,password})});TOKEN=d.token;STORE.set('carp_token',TOKEN);msg('Zalogowano');await boot()}catch(e){msg(e.message,'bad')}}
@@ -425,7 +424,7 @@ async function logout(){STORE.del('lowcy_account_sessions');stopAchievements();t
 async function clearSession(){STORE.del('lowcy_account_sessions');try{await disablePushSubscription(true);if('caches'in window){const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k).catch(()=>{})));}}catch(_){}setLoggedOut(true)}
 function renderMyProfile(){
   const box=q('myProfileContent');if(!box||!ME)return;
-  box.innerHTML='<div class="card myProfileCard"><div class="myProfileHead"><div><h2>Mój profil</h2><p class="small muted">Tutaj możesz poprawić swoje dane logowania i dane zawodnika.</p></div><span class="myProfileRole">ZAWODNIK</span></div>'
+  box.innerHTML=(ME.password_must_change?'<div class="card bad danger-line" role="alert"><h2>Ustaw własne hasło</h2><p>Logujesz się hasłem tymczasowym. Wpisz nowe hasło (minimum 8 znaków) i zapisz dane, aby korzystać z aplikacji.</p></div>':'')+'<div class="card myProfileCard"><div class="myProfileHead"><div><h2>Mój profil</h2><p class="small muted">Tutaj możesz poprawić swoje dane logowania i dane zawodnika.</p></div><span class="myProfileRole">ZAWODNIK</span></div>'
     +'<div class="myProfileGrid"><div><label>Imię</label><input id="profileFirstName" autocomplete="given-name" value="'+esc(ME.first_name||'')+'"></div><div><label>Nazwisko</label><input id="profileLastName" autocomplete="family-name" value="'+esc(ME.last_name||'')+'"></div><div><label>Koło PZW</label><input id="profileClub" value="'+esc(ME.pzw_club||'')+'"></div><div><label>Telefon</label><input id="profilePhone" type="tel" inputmode="tel" autocomplete="tel" value="'+esc(ME.phone||'')+'"></div></div>'
     +'<div class="myProfilePassword"><h3>Zmiana hasła</h3><p class="small muted">Jeżeli nie chcesz zmieniać hasła, zostaw oba pola puste.</p><div class="myProfileGrid"><div><label>Nowe hasło</label><input id="profilePassword" type="password" autocomplete="new-password" placeholder="Nowe hasło"></div><div><label>Powtórz nowe hasło</label><input id="profilePassword2" type="password" autocomplete="new-password" placeholder="Powtórz hasło"></div></div></div>'
     +'<div class="myProfileActions"><button type="button" onclick="saveMyProfile(event)">Zapisz moje dane</button></div></div>';
@@ -439,7 +438,7 @@ async function saveMyProfile(ev){
     const d=await api('/api/me',{method:'PATCH',body:JSON.stringify({firstName,lastName,pzwClub,phone,password})});
     ME=d.user||ME;if(d.token){TOKEN=d.token;STORE.set('carp_token',TOKEN)}
     const who=q('who');if(who)who.textContent=ME.first_name+' '+ME.last_name+' — Koło PZW '+(ME.pzw_club||'');
-    renderMyProfile();msg('Dane profilu zapisane');
+    renderMyProfile();msg(password?'Hasło zmienione. Możesz korzystać z aplikacji.':'Dane profilu zapisane');
   }catch(e){msg(e.message,'bad')}
 }
 function meetingTimeText(c){
@@ -506,7 +505,7 @@ async function loadPlayerHistory(){
   const box=q('playerHistoryContent');if(box)box.innerHTML='<div class="card"><p class="muted">Wczytuję historię startów…</p></div>';
   try{const d=await api('/api/me/history');renderPlayerHistory(d.history||[])}catch(e){if(box)box.innerHTML='<div class="card bad danger-line">Nie udało się wczytać historii startów.</div>';msg(e.message,'bad')}
 }
-function showTab(n){if(n!=='competitions')closePlayerSituationalMap();syncPlayerStickyBars();['competitions','rules','notifications','players','profile','history'].forEach(x=>{q('tab-'+x)?.classList.toggle('hidden',x!==n);q('btn-'+x)?.classList.toggle('active',x===n)});if(n==='rules')renderPlayerRules();if(n==='notifications')loadNotifications();if(n==='players')loadPlayers();if(n==='profile')renderMyProfile();if(n==='history')loadPlayerHistory();recordAppNavigation()}
+function showTab(n){if(ME?.password_must_change&&n!=='profile'){msg('Ustaw nowe hasło w profilu, aby kontynuować.','bad');n='profile'}if(n!=='competitions')closePlayerSituationalMap();syncPlayerStickyBars();['competitions','rules','notifications','players','profile','history'].forEach(x=>{q('tab-'+x)?.classList.toggle('hidden',x!==n);q('btn-'+x)?.classList.toggle('active',x===n);q('btn-'+x)?.setAttribute('aria-selected',String(x===n))});if(n==='rules')renderPlayerRules();if(n==='notifications')loadNotifications();if(n==='players')loadPlayers();if(n==='profile')renderMyProfile();if(n==='history')loadPlayerHistory();recordAppNavigation()}
 function competitionActionHtml(c,admin,mine,closed,cardMode=false){
   if(admin)return '<div class="inlineBtns adminCompetitionActions '+(cardMode?'competitionCardActions adminCompetitionCardActions':'')+'"><button type="button" class="adminOpenCompetitionBtn" onclick="openCompetition('+c.id+')">Otwórz panel zawodów <span aria-hidden="true">→</span></button><button type="button" class="secondary adminEditCompetitionBtn" onclick="openCompetitionEdit('+c.id+')">Edytuj</button><button type="button" class="warn adminDeleteCompetitionBtn" onclick="deleteCompetition('+c.id+')">Usuń</button></div>';
   const leavePending=String(c.my_leave_request_status||'').toUpperCase()==='PENDING';
@@ -3076,6 +3075,7 @@ async function loadNotifications(){
   syncNotificationBadges(displayCount);
   const top=q('btn-notifications');if(top){top.querySelector('.pendingLeaveTopBadge')?.remove();if(ME.role==='ADMIN'&&ADMIN_PENDING_REQUESTS.length){const badge=document.createElement('b');badge.className='pendingLeaveTopBadge';badge.textContent='Wypisanie: '+ADMIN_PENDING_REQUESTS.length;top.appendChild(badge)}}
   renderNotificationContent();
+  if(ME?.role==='ADMIN')window.lowcyPasswordResetRefresh?.();
   if(ME?.role==='PLAYER')window.lowcyCommPopup?.(NOTIFICATION_CACHE);
 }
 
@@ -3368,7 +3368,7 @@ window.addEventListener('resize',()=>{clearTimeout(window.__playerStickyResize);
 function bindAuthButtons(){
   const pairs=[['clearSessionBtn',clearSession],['regBtn',registerPlayer],['setupAdminBtn',setupAdmin],['pushBtn',enablePush],['logoutBtn',logout]];
   for(const [id,fn] of pairs){const el=q(id);if(el&&!el.dataset.bound){el.dataset.bound='1';el.onclick=null;el.addEventListener('click',ev=>{ev.preventDefault();ev.stopPropagation();fn(ev);});}}
-  ['loginPhone','loginPassword'].forEach(id=>{const el=q(id);if(el&&!el.dataset.enterLogin){el.dataset.enterLogin='1';el.addEventListener('keydown',ev=>{if(ev.key==='Enter')login(ev);});}});
+  const form=q('loginForm');if(form&&!form.dataset.bound){form.dataset.bound='1';form.addEventListener('submit',ev=>{ev.preventDefault();login()})}
 }
 
 function scrollAppBottom(){window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})}

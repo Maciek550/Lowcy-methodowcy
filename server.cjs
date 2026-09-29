@@ -13,6 +13,7 @@ const {standState,absencePreview,resultsPreflight,planStandRestoration} = requir
 const recovery = require('./recovery.cjs');
 const communications = require('./communications.cjs');
 const presenceReminders = require('./presence-reminders.cjs');
+const passwordRecovery=require('./password-recovery.cjs');
 
 const PORT = Number(process.env.PORT || 3000);
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
@@ -23,8 +24,8 @@ const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const GOOGLE_VISION_API_KEY = process.env.GOOGLE_VISION_API_KEY || process.env.OCR_GOOGLE_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.PHOTO_OCR_OPENAI_API_KEY || '';
 const PHOTO_OCR_MODEL = process.env.PHOTO_OCR_OPENAI_MODEL || 'gpt-5.6-sol';
-const APP_VERSION = '233';
-const APP_VERSION_NAME = 'V233_FOTOF_B_GENERALNA_WIELOSTRONICOWA';
+const APP_VERSION = '234';
+const APP_VERSION_NAME = 'V234_ACCESSIBILITY_PASSWORD_REQUEST';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 const PODIUM_TROPHIES = fs.existsSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) ? fs.readFileSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) : null;
 const CARP_REAL = fs.readFileSync(pathModule.join(__dirname, 'carp-real-v116.png'));
@@ -316,8 +317,8 @@ async function readBody(req) {
 }
 
 function signToken(user) {
-  if (jwt) return jwt.sign({ uid:user.id, role:user.role }, JWT_SECRET, { expiresIn:'90d' });
-  const payload = Buffer.from(JSON.stringify({ uid:user.id, role:user.role, exp: Date.now() + 90*24*3600*1000 })).toString('base64url');
+  if (jwt) return jwt.sign({ uid:user.id, role:user.role, v:Number(user.auth_version||0) }, JWT_SECRET, { expiresIn:'90d' });
+  const payload = Buffer.from(JSON.stringify({ uid:user.id, role:user.role, v:Number(user.auth_version||0), exp: Date.now() + 90*24*3600*1000 })).toString('base64url');
   const sig = crypto.createHmac('sha256', JWT_SECRET).update(payload).digest('base64url');
   return payload + '.' + sig;
 }
@@ -337,14 +338,18 @@ function verifyToken(token) {
   } catch { return null; }
 }
 const handleJudgeRoutes=require('./judge.cjs')({pool,bcrypt,readBody,sendJson,requireAdmin,normalizePhone,buildDetail,addResultItem,deleteResultItem,refreshResultAggregate});
+const handlePasswordRecovery=passwordRecovery.makeRoute({pool,bcrypt,readBody,sendJson,requireAdmin,notifyAdmins});
 async function auth(req) {
   const h = req.headers.authorization || '';
   const token = h.startsWith('Bearer ') ? h.slice(7) : '';
   const p = verifyToken(token);
   if (!p) return null;
   try {
-    const { rows } = await pool.query('select id, phone, first_name, last_name, pzw_club, role, created_at, account_source, last_login_at, last_active_at, judge_enabled, archived_at from users where id=$1 and archived_at is null', [p.uid]);
-    return rows[0] || null;
+    const { rows } = await pool.query('select id, phone, first_name, last_name, pzw_club, role, created_at, account_source, last_login_at, last_active_at, judge_enabled, archived_at, auth_version, password_must_change, password_temp_expires_at from users where id=$1 and archived_at is null', [p.uid]);
+    const u=rows[0];
+    if(!u||Number(p.v||0)!==Number(u.auth_version||0))return null;
+    if(u.password_must_change&&u.password_temp_expires_at&&Date.now()>new Date(u.password_temp_expires_at).getTime())return null;
+    return u;
   } catch { return null; }
 }
 function requireUser(user, res) {
@@ -626,6 +631,7 @@ async function waitForDb() {
     try {
       await pool.query('select 1');
       await initDb();
+      await passwordRecovery.init(pool);
       await communications.init(pool);
       await presenceReminders.init(pool);
       console.log('CARP_MOBILE_DB_READY');
@@ -1797,6 +1803,8 @@ async function route(req, res) {
   if (path === '/pdf-vector.js') return sendBinary(res,200,fs.readFileSync(pathModule.join(__dirname,'pdf-vector.js')),'application/javascript; charset=utf-8','no-store');
   if (/^\/pdf-assets\/(pdf-lib\.js|fontkit\.js|regular\.ttf|bold\.ttf)$/.test(path)) return sendBinary(res,200,fs.readFileSync(pathModule.join(__dirname,path.slice(1))),path.endsWith('.ttf')?'font/ttf':'application/javascript; charset=utf-8','no-store');
   if (path === '/communication-ui.js') return send(res,200,fs.readFileSync(pathModule.join(__dirname,'communication-ui.js'),'utf8'),{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-store'});
+  if(path==='/password-recovery-ui.js')return send(res,200,fs.readFileSync(pathModule.join(__dirname,'password-recovery-ui.js'),'utf8'),{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-store'});
+  if(path==='/accessibility-v234.css')return send(res,200,fs.readFileSync(pathModule.join(__dirname,'accessibility-v234.css'),'utf8'),{'Content-Type':'text/css; charset=utf-8','Cache-Control':'no-store'});
   if (path === '/app.js') return send(res, 200, APP_JS, {'Content-Type':'application/javascript; charset=utf-8', 'Cache-Control':'no-store, no-cache, must-revalidate'});
 
   if (path === '/health') return sendJson(res, 200, { ok:true, time:nowIso(), version:APP_VERSION_NAME });
@@ -2020,6 +2028,7 @@ self.addEventListener('notificationclick', event => {
   event.waitUntil((async()=>{const list=await clients.matchAll({type:'window',includeUncontrolled:true});for(const c of list){try{if('focus'in c){await c.focus();if('navigate'in c)await c.navigate(target);return}}catch(e){}}return clients.openWindow(target)})());
 });
 `, {'Content-Type':'application/javascript; charset=utf-8', 'Cache-Control':'no-store, no-cache, must-revalidate'});
+  if(await handlePasswordRecovery(req,res,path,method,null))return;
   if (path === '/api/config') return sendJson(res, 200, { ok:true, vapidPublicKey: VAPID_PUBLIC_KEY, pushReady: Boolean(webpush && VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY), photoOcrReady:Boolean(OPENAI_API_KEY), photoOcrProvider:'OpenAI Vision', appVersion:APP_VERSION, version:APP_VERSION_NAME });
 
   if (path === '/api/setup-admin' && method === 'POST') {
@@ -2073,13 +2082,16 @@ self.addEventListener('notificationclick', event => {
     const { rows } = await pool.query('select * from users where phone=$1 and archived_at is null', [phone]);
     const u = rows[0];
     if (!u || !(await bcrypt.compare(String(b.password||''), u.password_hash))) return sendJson(res, 401, { ok:false, error:'Błędny telefon lub hasło' });
+    if(u.password_must_change&&(!u.password_temp_expires_at||Date.now()>new Date(u.password_temp_expires_at).getTime()))return sendJson(res,403,{ok:false,error:'Hasło tymczasowe wygasło. Poproś o nowe hasło.'});
     if(u.role==='JUDGE'&&u.judge_enabled===false)return sendJson(res,403,{ok:false,error:'Konto sędziego jest wyłączone przez administratora'});
     const loginStamp = new Date();
     await pool.query('update users set last_login_at=$1, last_active_at=$1 where id=$2', [loginStamp, u.id]);
-    return sendJson(res, 200, { ok:true, user:{id:u.id,phone:u.phone,first_name:u.first_name,last_name:u.last_name,pzw_club:u.pzw_club,role:u.role,created_at:u.created_at,account_source:u.account_source||'SELF',last_login_at:loginStamp.toISOString(),last_active_at:loginStamp.toISOString()}, token:signToken(u) });
+    return sendJson(res, 200, { ok:true, user:{id:u.id,phone:u.phone,first_name:u.first_name,last_name:u.last_name,pzw_club:u.pzw_club,role:u.role,created_at:u.created_at,account_source:u.account_source||'SELF',last_login_at:loginStamp.toISOString(),last_active_at:loginStamp.toISOString(),auth_version:Number(u.auth_version||0),password_must_change:!!u.password_must_change}, token:signToken(u) });
   }
 
   const user = await auth(req);
+  if(await handlePasswordRecovery(req,res,path,method,user))return;
+  if(user?.password_must_change && !(path==='/api/me'&&(method==='GET'||method==='PATCH')))return sendJson(res,403,{ok:false,error:'Zmień hasło tymczasowe w swoim profilu, zanim przejdziesz dalej.'});
   if(await communications.route({req,res,user,path,method,url,pool,sendJson,readBody,requireAdmin,requireUser,pushToUser,getPlayerAttention}))return;
   if (path === '/api/me/activity' && method === 'POST') {
     if (!requireUser(user, res)) return;
@@ -2116,7 +2128,7 @@ self.addEventListener('notificationclick', event => {
   const privateCompetition = path.match(/^\/api\/(?:admin\/)?competitions\/(\d+)(?:\/|$)/);
   if(user && user.role!=='ADMIN' && privateCompetition){const c=await getCompetition(Number(privateCompetition[1]));if(c?.status==='TEST')return sendJson(res,404,{ok:false,error:'Nie znaleziono zawodów'});}
   if(await handleJudgeRoutes(req,res,path,method,user))return;
-  if (path === '/api/me' && method === 'GET') { if (!requireUser(user, res)) return; return sendJson(res, 200, { ok:true, user }); }
+  if (path === '/api/me' && method === 'GET') { if (!requireUser(user, res)) return; return sendJson(res, 200, { ok:true, user, token:signToken(user) }); }
   if (path === '/api/me/attention' && method === 'GET') {
     if (!requireUser(user, res)) return;
     if (user.role!=='PLAYER') return sendJson(res, 200, {ok:true,count:0,items:[]});
@@ -2145,13 +2157,15 @@ self.addEventListener('notificationclick', event => {
     const firstName = String(b.firstName||'').trim(), lastName = String(b.lastName||'').trim(), pzwClub = String(b.pzwClub||'').trim(), phone = normalizePhone(b.phone);
     const newPassword = String(b.password||'');
     if (!firstName || !lastName || !pzwClub || !phone) return sendJson(res, 400, { ok:false, error:'Uzupełnij imię, nazwisko, Koło PZW i telefon' });
+    if(user.password_must_change&&!newPassword)return sendJson(res,400,{ok:false,error:'Przed dalszym korzystaniem ustaw nowe hasło.'});
+    if(newPassword&&(newPassword.length<8||newPassword.length>128||newPassword==='12345678'))return sendJson(res,400,{ok:false,error:'Nowe hasło musi mieć 8–128 znaków i różnić się od hasła tymczasowego.'});
     try {
       let rows;
       if (newPassword) {
         const hash = await bcrypt.hash(newPassword, 12);
-        ({rows} = await pool.query(`update users set first_name=$1,last_name=$2,pzw_club=$3,phone=$4,password_hash=$5 where id=$6 returning id,phone,first_name,last_name,pzw_club,role,created_at,account_source,last_login_at`, [firstName,lastName,pzwClub,phone,hash,user.id]));
+        ({rows} = await pool.query(`update users set first_name=$1,last_name=$2,pzw_club=$3,phone=$4,password_hash=$5,password_must_change=false,password_temp_expires_at=null,auth_version=auth_version+1 where id=$6 returning id,phone,first_name,last_name,pzw_club,role,created_at,account_source,last_login_at,auth_version,password_must_change`, [firstName,lastName,pzwClub,phone,hash,user.id]));
       } else {
-        ({rows} = await pool.query(`update users set first_name=$1,last_name=$2,pzw_club=$3,phone=$4 where id=$5 returning id,phone,first_name,last_name,pzw_club,role,created_at,account_source,last_login_at`, [firstName,lastName,pzwClub,phone,user.id]));
+        ({rows} = await pool.query(`update users set first_name=$1,last_name=$2,pzw_club=$3,phone=$4 where id=$5 returning id,phone,first_name,last_name,pzw_club,role,created_at,account_source,last_login_at,auth_version,password_must_change`, [firstName,lastName,pzwClub,phone,user.id]));
       }
       const updated=rows[0];
       return sendJson(res, 200, {ok:true,user:updated,token:signToken(updated)});
@@ -3177,7 +3191,7 @@ const HTML = `<!doctype html>
 <link rel="apple-touch-icon" sizes="180x180" href="/brand/icon-v217-180.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/brand/icon-v217-32.png">
 <script>try{if(localStorage.getItem('carp_token'))document.documentElement.classList.add('hasSavedSession')}catch(e){}</script>
-<title>Łowcy Methodowcy — V233</title>
+<title>Łowcy Methodowcy — V234</title>
 <style>
 .adminReminderNote{margin:12px 0;padding:12px;border:1px solid #b5c7bd;background:#f3f8f4;border-radius:12px}.adminReminderNote label{display:block;font-weight:750;color:#173d2a}.adminReminderNote textarea{width:100%;min-height:66px;font-size:16px;line-height:1.35;background:#fff;color:#19322a;border:1px solid #819e8c;border-radius:8px;margin-top:6px;padding:9px}.adminReminderNote p{margin:5px 0 0;color:#38584b}
 :root{--green:#114b2f;--green2:#17643f;--bg:#f3f6ef;--card:#fff;--line:#cfd8cc;--txt:#18251d;--muted:#68746d;--red:#b32020;--gold:#ffc400;--blue:#1067c8;--soft:#eaf2eb}
@@ -8156,34 +8170,39 @@ body:not(.playerTheme):not(.authMode) #app #playersList .playerLastActivityUnkno
   }
 }
 </style>
+<link rel="stylesheet" href="/accessibility-v234.css?v=${APP_VERSION}">
 </head>
 <body class="authMode">
 <div id="bootGuard"><img src="/icon-192.png" alt=""><b>Łowcy Methodowcy</b><span>Uruchamiam aplikację…</span><button id="bootRetry" class="hidden" type="button" onclick="retryLowcyBoot()">Spróbuj ponownie</button></div>
-<header><div class="row"><h1><img class="brandIcon" src="/brand/icon-v217-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V233</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
+<header><div class="row"><h1><img class="brandIcon" src="/brand/icon-v217-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V234</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
 <main>
 <div id="msg"></div>
 <section id="auth" class="card">
-  <h2>Logowanie</h2>
-  <div class="grid"><div><label>Telefon</label><input id="loginPhone" autocomplete="username"></div><div><label>Hasło</label><input id="loginPassword" type="password" autocomplete="current-password"></div></div>
-  <div class="grid" style="margin-top:10px"><button type="button" id="loginBtn" onclick="login(event)">Zaloguj</button><button type="button" id="clearSessionBtn" class="secondary">Wyczyść sesję</button></div>
+  <form id="loginForm" class="authLoginArea">
+    <h2>Zaloguj się</h2>
+    <div class="grid"><div><label for="loginPhone">Numer telefonu</label><input id="loginPhone" type="tel" inputmode="tel" autocomplete="username" required placeholder="Numer telefonu"></div><div><label for="loginPassword">Hasło</label><div class="authPasswordWrap"><input id="loginPassword" type="password" autocomplete="current-password" required placeholder="Twoje hasło"><button type="button" id="loginPasswordToggle" aria-label="Pokaż hasło" aria-pressed="false">POKAŻ</button></div></div></div>
+    <div class="authLoginActions"><button type="submit" id="loginBtn">ZALOGUJ SIĘ</button><button type="button" id="forgotPasswordBtn">Poproś o nowe hasło</button></div>
+    <details class="authTechnicalOptions"><summary>Opcje techniczne</summary><button type="button" id="clearSessionBtn" class="secondary">Wyczyść sesję</button></details>
+  </form>
   <div class="twoCols">
-    <div class="card playerRegisterCard"><h3>Rejestracja zawodnika</h3><p class="small muted">Załóż konto zawodnika, aby zapisywać się na zawody i sprawdzać losowania oraz wyniki.</p><label>Telefon</label><input id="regPhone" autocomplete="tel"><label>Hasło</label><input id="regPassword" type="password" autocomplete="new-password"><label>Imię</label><input id="regFirst" autocomplete="given-name"><label>Nazwisko</label><input id="regLast" autocomplete="family-name"><label>Nr Koła PZW</label><input id="regClub"><button type="button" id="regBtn">Utwórz konto zawodnika</button></div>
-    <details class="adminSetupGate"><summary>Konfiguracja pierwszego administratora</summary><div class="card adminSetupCard"><h3>Konto administratora</h3><p class="small muted">Ta ścieżka jest tylko dla właściciela systemu. Wymaga kodu setupu i działa wyłącznie, jeśli administrator nie został jeszcze utworzony.</p><label>Kod setupu</label><input id="setupCode" autocomplete="off"><label>Telefon administratora</label><input id="setupPhone" autocomplete="tel"><label>Hasło</label><input id="setupPassword" type="password" autocomplete="new-password"><label>Imię</label><input id="setupFirst" autocomplete="given-name"><label>Nazwisko</label><input id="setupLast" autocomplete="family-name"><label>Koło PZW</label><input id="setupClub"><button type="button" id="setupAdminBtn">Utwórz konto administratora</button></div></details>
+    <details class="playerRegisterGate"><summary>UTWÓRZ KONTO ZAWODNIKA</summary>
+    <div class="card playerRegisterCard"><h3>Rejestracja zawodnika</h3><p class="small muted">Załóż konto zawodnika, aby zapisywać się na zawody i sprawdzać losowania oraz wyniki.</p><label for="regPhone">Telefon</label><input id="regPhone" type="tel" inputmode="tel" autocomplete="tel"><label for="regPassword">Hasło</label><input id="regPassword" type="password" autocomplete="new-password"><label for="regFirst">Imię</label><input id="regFirst" autocomplete="given-name"><label for="regLast">Nazwisko</label><input id="regLast" autocomplete="family-name"><label for="regClub">Nr Koła PZW</label><input id="regClub"><button type="button" id="regBtn">Utwórz konto zawodnika</button></div></details>
+    <details class="adminSetupGate"><summary>Konfiguracja pierwszego administratora</summary><div class="card adminSetupCard"><h3>Konto administratora</h3><p class="small muted">Ta ścieżka jest tylko dla właściciela systemu. Wymaga kodu setupu i działa wyłącznie, jeśli administrator nie został jeszcze utworzony.</p><label for="setupCode">Kod setupu</label><input id="setupCode" autocomplete="off"><label for="setupPhone">Telefon administratora</label><input id="setupPhone" autocomplete="tel"><label for="setupPassword">Hasło</label><input id="setupPassword" type="password" autocomplete="new-password"><label for="setupFirst">Imię</label><input id="setupFirst" autocomplete="given-name"><label for="setupLast">Nazwisko</label><input id="setupLast" autocomplete="family-name"><label for="setupClub">Koło PZW</label><input id="setupClub"><button type="button" id="setupAdminBtn">Utwórz konto administratora</button></div></details>
   </div>
 </section>
 <section id="app" class="hidden">
-  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="appVersionBadge">V229</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
-  <div class="tabs"><button id="btn-competitions" onclick="showTab('competitions')">Zawody</button><button id="btn-rules" class="hidden" onclick="showTab('rules')">Regulamin ogólny</button><button id="btn-notifications" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-profile" class="hidden" onclick="showTab('profile')">Mój profil</button><button id="btn-history" class="hidden" onclick="showTab('history')">Historia startów</button><button id="btn-players" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
-  <section id="tab-competitions">
+  <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="appVersionBadge">V${APP_VERSION}</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
+  <div class="tabs" role="tablist" aria-label="Menu główne"><button id="btn-competitions" role="tab" aria-controls="tab-competitions" aria-selected="false" onclick="showTab('competitions')">Zawody</button><button id="btn-rules" role="tab" aria-controls="tab-rules" aria-selected="false" class="hidden" onclick="showTab('rules')">Regulamin ogólny</button><button id="btn-notifications" role="tab" aria-controls="tab-notifications" aria-selected="false" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-profile" role="tab" aria-controls="tab-profile" aria-selected="false" class="hidden" onclick="showTab('profile')">Mój profil</button><button id="btn-history" role="tab" aria-controls="tab-history" aria-selected="false" class="hidden" onclick="showTab('history')">Historia startów</button><button id="btn-players" role="tab" aria-controls="tab-players" aria-selected="false" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
+  <section id="tab-competitions" role="tabpanel" aria-labelledby="btn-competitions">
     <details id="adminCreate" class="card hidden adminCreateV93"><summary class="adminCreateToggle">Robimy zawody</summary><div class="adminCreateBody"><h2>Utwórz zawody</h2><p class="small muted">Dane z tego formularza są później widoczne dla zawodnika.</p><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Zbiórka / godzina</label><input id="cMeetingTime" type="time" value="06:00"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div></div><div class="adminTextPair"><div><label>Tryb zawodów</label><select id="cStatus"><option value="OPEN">Zawody otwarte — każdy może się zapisać</option><option value="TEST">Zawody testowe — tylko admin</option><option value="CLOSED">Zapisy zakończone — widoczne, bez zapisów</option></select><label>Informacje organizacyjne</label><textarea id="cNotes" placeholder="Parking, miejsce zbiórki, godzina losowania, dodatkowe informacje…"></textarea></div><div><label>Program / regulamin tych zawodów</label><textarea id="cRegulations" class="rulesEditor" placeholder="Np. 06:00 zbiórka, 06:15 losowanie, 07:00–15:00 zawody, ważne zasady tylko dla tego wydarzenia…"></textarea></div></div><div class="adminReminderNote"><label for="cPresenceReminderNote">Krótka treść do dymku potwierdzenia D-2 (opcjonalnie)</label><textarea id="cPresenceReminderNote" maxlength="160" rows="2" placeholder="Np. Zbiórka 6:30. Prosimy o punktualność."></textarea><p class="small muted">Do 160 znaków. Pojawi się w przypomnieniu dwa dni przed zawodami.</p></div><button onclick="createCompetition(event)">Utwórz zawody</button></div></details>
     <div class="card"><h2>Lista zawodów</h2><div id="competitionsList"></div></div>
     <div id="competitionDetail" class="hidden"></div>
   </section>
-  <section id="tab-notifications" class="hidden"><div class="card"><div class="notificationHeaderRow"><h2>Powiadomienia</h2><div class="phoneAlertControls"><span id="notifPushState" class="small muted">Alerty telefonu</span><button type="button" id="notifPushBtn" class="secondary" onclick="enablePush(event)">Włącz alerty telefonu</button></div></div><div id="notifPushFeedback" class="pushFeedback hidden" role="status" aria-live="polite"></div><div id="notificationsList"></div></div></section>
-  <section id="tab-rules" class="hidden"><div id="playerRulesContent"></div></section>
-  <section id="tab-profile" class="hidden"><div id="myProfileContent"></div></section>
-  <section id="tab-history" class="hidden"><div id="playerHistoryContent"></div></section>
-  <section id="tab-players" class="hidden"><div class="card"><h2>Zawodnicy</h2><div id="playersList"></div></div></section>
+  <section id="tab-notifications" role="tabpanel" aria-labelledby="btn-notifications" class="hidden"><div class="card"><div class="notificationHeaderRow"><h2>Powiadomienia</h2><div class="phoneAlertControls"><span id="notifPushState" class="small muted">Alerty telefonu</span><button type="button" id="notifPushBtn" class="secondary" onclick="enablePush(event)">Włącz alerty telefonu</button></div></div><div id="notifPushFeedback" class="pushFeedback hidden" role="status" aria-live="polite"></div><div id="notificationsList"></div></div></section>
+  <section id="tab-rules" role="tabpanel" aria-labelledby="btn-rules" class="hidden"><div id="playerRulesContent"></div></section>
+  <section id="tab-profile" role="tabpanel" aria-labelledby="btn-profile" class="hidden"><div id="myProfileContent"></div></section>
+  <section id="tab-history" role="tabpanel" aria-labelledby="btn-history" class="hidden"><div id="playerHistoryContent"></div></section>
+  <section id="tab-players" role="tabpanel" aria-labelledby="btn-players" class="hidden"><div class="card"><h2>Zawodnicy</h2><div id="playersList"></div></div></section>
 </section>
 </main>
 <div class="quickScroll"><button onclick="scrollAppTop()">↑</button><button onclick="scrollAppBottom()">↓</button></div>
@@ -8198,6 +8217,7 @@ body:not(.playerTheme):not(.authMode) #app #playersList .playerLastActivityUnkno
 <script src="/pdf-vector.js?v=${APP_VERSION}" defer></script>
 <script src="/app.js?v=${APP_VERSION}" defer onerror="window.__lowcyRecover207&&window.__lowcyRecover207()"></script>
 <script src="/communication-ui.js?v=${APP_VERSION}" defer></script>
+<script src="/password-recovery-ui.js?v=${APP_VERSION}" defer></script>
 </body>
 </html>`;
 
@@ -8208,5 +8228,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V233_FOTOF_B_GOTOWE'); console.log('CARP_MOBILE_READY port=' + PORT); startPresenceReminderLoop(); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V234_ACCESSIBILITY_PASSWORD_REQUEST_READY'); console.log('CARP_MOBILE_READY port=' + PORT); startPresenceReminderLoop(); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });
