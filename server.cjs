@@ -24,8 +24,8 @@ const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const GOOGLE_VISION_API_KEY = process.env.GOOGLE_VISION_API_KEY || process.env.OCR_GOOGLE_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.PHOTO_OCR_OPENAI_API_KEY || '';
 const PHOTO_OCR_MODEL = process.env.PHOTO_OCR_OPENAI_MODEL || 'gpt-5.6-sol';
-const APP_VERSION = '234';
-const APP_VERSION_NAME = 'V234_ACCESSIBILITY_PASSWORD_REQUEST';
+const APP_VERSION = '235';
+const APP_VERSION_NAME = 'V235_PLAYER_EARLY_LIST_PHONE_BUTTON';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 const PODIUM_TROPHIES = fs.existsSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) ? fs.readFileSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) : null;
 const CARP_REAL = fs.readFileSync(pathModule.join(__dirname, 'carp-real-v116.png'));
@@ -459,6 +459,7 @@ async function initDb() {
     alter table users add column if not exists last_login_at timestamptz;
     alter table users add column if not exists last_active_at timestamptz;
     alter table users add column if not exists archived_at timestamptz;
+    alter table users add column if not exists contact_phone text;
     update users set account_source='EXTERNAL' where role='PLAYER' and last_login_at is null and upper(coalesce(account_source,''))='ADMIN' and (phone like 'ZPRO-%' or phone like 'IMPORT-%');
     update users set account_source='ADMIN' where role='PLAYER' and phone like 'MANUAL-%' and upper(coalesce(account_source,''))='SELF' and last_login_at is null;
     update users set last_login_at=created_at where role='PLAYER' and account_source='SELF' and last_login_at is null and phone not like 'MANUAL-%' and phone not like 'ZPRO-%' and phone not like 'IMPORT-%';
@@ -1722,7 +1723,7 @@ async function buildDetail(competitionId, user) {
   const comp = await getCompetition(competitionId);
   if (!comp || (comp.status==='TEST' && user.role!=='ADMIN')) return null;
   const entriesAll = await pool.query(`
-    select e.*, u.phone, u.first_name, u.last_name, u.pzw_club
+    select e.*, ${user.role==='ADMIN'?"coalesce(nullif(u.contact_phone,''),u.phone)":"u.phone"} as phone, u.first_name, u.last_name, u.pzw_club
     from entries e join users u on u.id=e.user_id
     where e.competition_id=$1
     order by case when e.status='ACTIVE' then 0 when e.status='RESERVE' then 1 else 2 end, e.joined_at, u.last_name, u.first_name
@@ -1805,6 +1806,7 @@ async function route(req, res) {
   if (path === '/communication-ui.js') return send(res,200,fs.readFileSync(pathModule.join(__dirname,'communication-ui.js'),'utf8'),{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-store'});
   if(path==='/password-recovery-ui.js')return send(res,200,fs.readFileSync(pathModule.join(__dirname,'password-recovery-ui.js'),'utf8'),{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-store'});
   if(path==='/accessibility-v234.css')return send(res,200,fs.readFileSync(pathModule.join(__dirname,'accessibility-v234.css'),'utf8'),{'Content-Type':'text/css; charset=utf-8','Cache-Control':'no-store'});
+  if(path==='/roster-preview-v235.css')return send(res,200,fs.readFileSync(pathModule.join(__dirname,'roster-preview-v235.css'),'utf8'),{'Content-Type':'text/css; charset=utf-8','Cache-Control':'no-store'});
   if (path === '/app.js') return send(res, 200, APP_JS, {'Content-Type':'application/javascript; charset=utf-8', 'Cache-Control':'no-store, no-cache, must-revalidate'});
 
   if (path === '/health') return sendJson(res, 200, { ok:true, time:nowIso(), version:APP_VERSION_NAME });
@@ -2010,13 +2012,14 @@ const PDF_JS='/pdf-vector.js?v=${APP_VERSION}';
 const COMM_JS='/communication-ui.js?v=${APP_VERSION}';
 const RECOVERY_JS='/password-recovery-ui.js?v=${APP_VERSION}';
 const ACCESS_CSS='/accessibility-v234.css?v=${APP_VERSION}';
-const SHELL=['/',APP_SHELL_JS,PDF_JS,COMM_JS,RECOVERY_JS,ACCESS_CSS];
+const ROSTER_CSS='/roster-preview-v235.css?v=${APP_VERSION}';
+const SHELL=['/',APP_SHELL_JS,PDF_JS,COMM_JS,RECOVERY_JS,ACCESS_CSS,ROSTER_CSS];
 async function fetchWithTimeout(req,ms=30000){const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),ms);try{return await fetch(req,{cache:'no-store',signal:ctrl.signal})}finally{clearTimeout(timer)}}
 self.addEventListener('install',event=>event.waitUntil((async()=>{const replies=await Promise.all(SHELL.map(url=>fetchWithTimeout(url)));if(replies.some(r=>!r.ok))throw Error('Incomplete shell');const cache=await caches.open(SHELL_CACHE);await Promise.all(SHELL.map((url,i)=>cache.put(url,replies[i])));await self.skipWaiting()})()));
 self.addEventListener('activate',event=>event.waitUntil((async()=>{await self.clients.claim();const keys=await caches.keys();await Promise.all(keys.filter(k=>k.startsWith('lowcy-shell-')&&k!==SHELL_CACHE).map(k=>caches.delete(k)))})()));
 self.addEventListener('fetch',event=>{const req=event.request,u=new URL(req.url);if(req.method!=='GET'||u.origin!==self.location.origin)return;
  if(req.mode==='navigate'){event.respondWith((async()=>{try{const r=await fetchWithTimeout(req);if(r.ok)return r}catch(e){}return(await(await caches.open(SHELL_CACHE)).match('/'))||new Response('Brak połączenia. Otwórz aplikację ponownie po połączeniu z internetem.',{headers:{'Content-Type':'text/plain; charset=utf-8'}})})());return}
- if(['/app.js','/pdf-vector.js','/communication-ui.js','/password-recovery-ui.js','/accessibility-v234.css'].includes(u.pathname)){event.respondWith((async()=>{const key=u.pathname+u.search,c=await caches.open(SHELL_CACHE);try{const fresh=await fetchWithTimeout(req,9000);if(fresh.ok){await c.put(key,fresh.clone());return fresh}}catch(e){}return(await c.match(key))||Response.error()})());return}
+ if(['/app.js','/pdf-vector.js','/communication-ui.js','/password-recovery-ui.js','/accessibility-v234.css','/roster-preview-v235.css'].includes(u.pathname)){event.respondWith((async()=>{const key=u.pathname+u.search,c=await caches.open(SHELL_CACHE);try{const fresh=await fetchWithTimeout(req,9000);if(fresh.ok){await c.put(key,fresh.clone());return fresh}}catch(e){}return(await c.match(key))||Response.error()})());return}
 });
 async function setLowcyBadge(n){try{const count=Math.max(0,Number(n||0));if(self.navigator&&typeof self.navigator.setAppBadge==='function'){if(count)await self.navigator.setAppBadge(count);else if(typeof self.navigator.clearAppBadge==='function')await self.navigator.clearAppBadge()}}catch(e){}}
 self.addEventListener('push', event => {
@@ -2931,7 +2934,7 @@ self.addEventListener('notificationclick', event => {
   if (path === '/api/admin/players' && method === 'GET') {
     if (!requireAdmin(user, res)) return;
     const { rows } = await pool.query(`
-      select u.id, u.phone, u.first_name, u.last_name, u.pzw_club, u.role, u.created_at,
+      select u.id, coalesce(nullif(u.contact_phone,''),u.phone) as phone, u.first_name, u.last_name, u.pzw_club, u.role, u.created_at,
       coalesce(u.account_source,'SELF') account_source, u.last_login_at, u.last_active_at,
       (u.last_login_at is not null) has_logged_in,
       (upper(coalesce(u.account_source,''))='EXTERNAL' and u.last_login_at is null) bulk_removable,
@@ -2968,20 +2971,37 @@ self.addEventListener('notificationclick', event => {
     if (!requireAdmin(user, res)) return;
     const playerId = Number(m[1]);
     const b = await readBody(req);
-    const hasName = Object.hasOwn(b, 'fullName'), hasClub = Object.hasOwn(b, 'pzwClub');
-    if (!hasName && !hasClub) return sendJson(res, 400, { ok:false, error:'Podaj dane zawodnika do poprawienia' });
-    const fullName = hasName ? normalizePersonName(b.fullName) : '';
-    if (hasName && !looksLikePersonName(fullName)) return sendJson(res, 400, { ok:false, error:'Podaj poprawne imię i nazwisko zawodnika' });
-    if (hasClub && typeof b.pzwClub !== 'string') return sendJson(res, 400, { ok:false, error:'Podaj poprawne Koło PZW' });
-    const pzwClub = hasClub ? b.pzwClub.replace(/\s+/g, ' ').trim() : null;
-    if (hasClub && pzwClub.length > 100) return sendJson(res, 400, { ok:false, error:'Koło PZW może mieć najwyżej 100 znaków' });
-    const parts = hasName ? splitFullName(fullName) : null;
-    const out = await pool.query(`update users set first_name=coalesce($1,first_name), last_name=coalesce($2,last_name), pzw_club=coalesce($3,pzw_club) where id=$4 and role='PLAYER' and archived_at is null returning id, first_name, last_name, pzw_club`, [parts?.firstName ?? null, parts?.lastName ?? null, pzwClub, playerId]);
-    if (!out.rowCount) return sendJson(res, 404, { ok:false, error:'Nie znaleziono zawodnika' });
-    const p = out.rows[0];
-    const title = hasName && hasClub ? 'Poprawiono dane zawodnika' : hasName ? 'Poprawiono nazwę zawodnika' : 'Poprawiono Koło PZW zawodnika';
-    await notifyAdmins(hasClub ? 'PLAYER_DETAILS_EDIT' : 'PLAYER_NAME_EDIT', title, `${p.first_name} ${p.last_name}, Koło PZW ${p.pzw_club || '—'}`, { userId:playerId });
-    return sendJson(res, 200, { ok:true, player:{id:playerId,name:`${p.first_name} ${p.last_name}`.trim(),first_name:p.first_name,last_name:p.last_name,pzw_club:p.pzw_club} });
+    const hasName = Object.hasOwn(b,'fullName'),hasClub=Object.hasOwn(b,'pzwClub'),hasPhone=Object.hasOwn(b,'phone');
+    if(!hasName&&!hasClub&&!hasPhone)return sendJson(res,400,{ok:false,error:'Podaj dane zawodnika do poprawienia'});
+    const fullName=hasName?normalizePersonName(b.fullName):'';
+    if(hasName&&!looksLikePersonName(fullName))return sendJson(res,400,{ok:false,error:'Podaj poprawne imię i nazwisko zawodnika'});
+    if(hasClub&&typeof b.pzwClub!=='string')return sendJson(res,400,{ok:false,error:'Podaj poprawne Koło PZW'});
+    const pzwClub=hasClub?b.pzwClub.replace(/\s+/g,' ').trim():null;
+    if(hasClub&&pzwClub.length>100)return sendJson(res,400,{ok:false,error:'Koło PZW może mieć najwyżej 100 znaków'});
+    if(hasPhone&&typeof b.phone!=='string')return sendJson(res,400,{ok:false,error:'Podaj poprawny numer telefonu'});
+    const contactPhone=hasPhone?normalizePhone(b.phone.replace(/[-()]/g,'')):null;
+    if(hasPhone&&contactPhone&&!/^(?:\d{9}|48\d{9}|\+48\d{9})$/.test(contactPhone))
+      return sendJson(res,400,{ok:false,error:'Podaj poprawny polski numer telefonu'});
+    const parts=hasName?splitFullName(fullName):null;
+    let out;
+    try{
+      out=await pool.query(
+        "update users set first_name=coalesce($1,first_name),last_name=coalesce($2,last_name),pzw_club=coalesce($3,pzw_club),"+
+        "contact_phone=case when $4::boolean then nullif($5::text,'') else contact_phone end "+
+        "where id=$6 and role='PLAYER' and archived_at is null "+
+        "returning id,first_name,last_name,pzw_club,coalesce(nullif(contact_phone,''),phone) as phone",
+        [parts?.firstName??null,parts?.lastName??null,pzwClub,hasPhone,contactPhone,playerId]
+      );
+    }catch(e){
+      if(String(e.code)==='23505')return sendJson(res,409,{ok:false,error:'Ten numer telefonu jest już zajęty'});
+      throw e;
+    }
+    if(!out.rowCount)return sendJson(res,404,{ok:false,error:'Nie znaleziono zawodnika'});
+    const p=out.rows[0];
+    const title=hasPhone?'Poprawiono telefon kontaktowy zawodnika':hasName&&hasClub?'Poprawiono dane zawodnika':hasName?'Poprawiono nazwę zawodnika':'Poprawiono Koło PZW zawodnika';
+    await notifyAdmins(hasPhone?'PLAYER_PHONE_EDIT':hasClub?'PLAYER_DETAILS_EDIT':'PLAYER_NAME_EDIT',title,
+      p.first_name+' '+p.last_name+', Koło PZW '+(p.pzw_club||'—'),{userId:playerId});
+    return sendJson(res,200,{ok:true,player:{id:playerId,name:(p.first_name+' '+p.last_name).trim(),first_name:p.first_name,last_name:p.last_name,pzw_club:p.pzw_club,phone:p.phone}});
   }
   if (m && method === 'DELETE') {
     if (!requireAdmin(user, res)) return;
@@ -3194,7 +3214,7 @@ const HTML = `<!doctype html>
 <link rel="apple-touch-icon" sizes="180x180" href="/brand/icon-v217-180.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/brand/icon-v217-32.png">
 <script>try{if(localStorage.getItem('carp_token'))document.documentElement.classList.add('hasSavedSession')}catch(e){}</script>
-<title>Łowcy Methodowcy — V234</title>
+<title>Łowcy Methodowcy — V235</title>
 <style>
 .adminReminderNote{margin:12px 0;padding:12px;border:1px solid #b5c7bd;background:#f3f8f4;border-radius:12px}.adminReminderNote label{display:block;font-weight:750;color:#173d2a}.adminReminderNote textarea{width:100%;min-height:66px;font-size:16px;line-height:1.35;background:#fff;color:#19322a;border:1px solid #819e8c;border-radius:8px;margin-top:6px;padding:9px}.adminReminderNote p{margin:5px 0 0;color:#38584b}
 :root{--green:#114b2f;--green2:#17643f;--bg:#f3f6ef;--card:#fff;--line:#cfd8cc;--txt:#18251d;--muted:#68746d;--red:#b32020;--gold:#ffc400;--blue:#1067c8;--soft:#eaf2eb}
@@ -8174,10 +8194,11 @@ body:not(.playerTheme):not(.authMode) #app #playersList .playerLastActivityUnkno
 }
 </style>
 <link rel="stylesheet" href="/accessibility-v234.css?v=${APP_VERSION}">
+<link rel="stylesheet" href="/roster-preview-v235.css?v=${APP_VERSION}">
 </head>
 <body class="authMode">
 <div id="bootGuard"><img src="/icon-192.png" alt=""><b>Łowcy Methodowcy</b><span>Uruchamiam aplikację…</span><button id="bootRetry" class="hidden" type="button" onclick="retryLowcyBoot()">Spróbuj ponownie</button></div>
-<header><div class="row"><h1><img class="brandIcon" src="/brand/icon-v217-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V234</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
+<header><div class="row"><h1><img class="brandIcon" src="/brand/icon-v217-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V235</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
 <main>
 <div id="msg"></div>
 <section id="auth" class="card">
@@ -8231,5 +8252,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V234_ACCESSIBILITY_PASSWORD_REQUEST_READY'); console.log('CARP_MOBILE_READY port=' + PORT); startPresenceReminderLoop(); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V235_PLAYER_EARLY_LIST_PHONE_READY'); console.log('CARP_MOBILE_READY port=' + PORT); startPresenceReminderLoop(); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });

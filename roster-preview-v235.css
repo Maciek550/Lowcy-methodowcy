@@ -1,0 +1,107 @@
+/* V235 – przycisk połączenia i lista startowa przed 06:00 */
+body:not(.playerTheme) #app .commPhonePair{display:inline-flex;align-items:center;gap:7px;flex-wrap:nowrap}
+body:not(.playerTheme) #app .phoneCallBtn.rosterPhoneCall,
+body:not(.playerTheme) #app .phoneCallBtn.playerDirectoryCall,
+body:not(.playerTheme) #app .phoneCallBtn.mobileRosterCallIcon{
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  width:44px!important;min-width:44px!important;height:44px!important;min-height:44px!important;
+  box-sizing:border-box!important;padding:0!important;border:2px solid #7ad39e!important;
+  border-radius:11px!important;background:linear-gradient(165deg,#249c56,#096336)!important;
+  color:#fff!important;-webkit-text-fill-color:#fff!important;box-shadow:0 2px 4px #071c1555!important
+}
+body:not(.playerTheme) #app .phoneCallBtn .phoneCallIcon{display:flex!important;align-items:center;justify-content:center}
+body:not(.playerTheme) #app .phoneCallBtn .phoneCallIcon svg{width:23px;height:23px;stroke:#fff;fill:none;stroke-width:2.5}
+body:not(.playerTheme) #app .phoneCallBtn:is(:hover,:focus-visible){outline:3px solid #ffd46c!important;outline-offset:2px}
+body:not(.playerTheme) #app .rosterMissingPhone{
+  display:inline-flex;align-items:center;justify-content:center;min-height:44px!important;
+  padding:7px 10px!important;border:1px dashed #e1be6c!important;border-radius:9px!important;
+  background:#405066!important;color:#fff4cd!important;-webkit-text-fill-color:#fff4cd!important;
+  font-size:12px!important;line-height:1.15!important;font-weight:850!important;white-space:nowrap!important
+}
+body:not(.playerTheme) #app .rosterMissingPhone:focus-visible{outline:3px solid #ffd46c!important;outline-offset:2px}
+#playerEditDialog label[for="editPlayerPhone"]{font-weight:850}
+#playerEditDialog #editPlayerPhone{width:100%;min-height:46px;font-size:16px}
+#playerEditDialog .playerPhoneHint{font-size:12px;margin:2px 0 9px;line-height:1.35}
+body.playerTheme .playerView .playerMapNav.withEarlyList,
+body.playerTheme .playerView .playerDesktopSubNav.withEarlyList{
+  display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 105px!important;gap:5px!important
+}
+body.playerTheme .playerView .earlyListTile{
+  display:flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;
+  min-height:44px!important;min-width:0!important;padding:6px 8px!important;margin:0!important;
+  border:2px solid #eacb72!important;border-radius:9px!important;
+  background:linear-gradient(155deg,#edbd52,#a36b1d)!important;color:#102b38!important;
+  -webkit-text-fill-color:#102b38!important;font-size:13px!important;font-weight:950!important;
+  white-space:nowrap!important
+}
+body.playerTheme .playerView .earlyListTile.active,
+body.playerTheme .playerView .earlyListTile:focus-visible{
+  outline:3px solid #278e59!important;outline-offset:1px!important
+}
+body.playerTheme .playerView .earlyListCount{
+  display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;padding:0 4px;
+  box-sizing:border-box;border-radius:99px;background:#133c4d;color:#fff!important;
+  -webkit-text-fill-color:#fff!important;font-size:12px;font-weight:900
+}
+body.playerTheme .playerView .playerEarlyListPanel{
+  background:#0d2b3b!important;color:#f5fbff!important;border:2px solid #a8c8d7!important;
+  border-radius:14px!important;padding:12px!important;max-width:100%;box-sizing:border-box
+}
+body.playerTheme .playerView .playerEarlyListHead{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;
+  padding:3px 1px 9px;margin-bottom:7px;border-bottom:1px solid #4c7181
+}
+body.playerTheme .playerView .playerEarlyListHead strong{color:#fff!important;font-size:18px;line-height:1.2}
+body.playerTheme .playerView .playerEarlyListHead .playerEarlyListBadge{
+  display:inline-flex;align-items:center;justify-content:center;min-width:36px;min-height:32px;
+  border-radius:20px;background:#ffda77;color:#112d38!important;font-size:19px;font-weight:950;padding:3px 10px
+}
+body.playerTheme .playerView .playerEarlyListHint{font-size:12px;color:#c5dbe5!important;margin:0 0 11px}
+body.playerTheme .playerView .playerEarlyListRows{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;
+  margin:0;padding:0;list-style:none;counter-reset:none
+}
+body.playerTheme .playerView .playerEarlyListRows li{
+  display:flex;align-items:center;min-width:0;gap:8px;padding:9px 10px;
+  border:1px solid #43748a;border-radius:9px;background:#164359;color:#fff!important;
+  font-size:15px;line-height:1.2;min-height:42px;box-sizing:border-box
+}
+body.playerTheme .playerView .playerEarlyListRows li.mine{
+  background:#205b44!important;border:2px solid #eacb72!important
+}
+body.playerTheme .playerView .playerEarlyListNo{
+  flex:0 0 27px;width:27px;height:27px;border-radius:7px;background:#f4d281;color:#183547!important;
+  display:inline-flex;justify-content:center;align-items:center;font-size:14px;font-weight:950
+}
+body.playerTheme .playerView .playerEarlyListName{font-weight:750;overflow-wrap:anywhere}
+body.playerTheme .playerView .playerEarlyReserve{margin-top:12px;border:1px solid #49788e;border-radius:9px;padding:8px}
+body.playerTheme .playerView .playerEarlyReserve>summary{cursor:pointer;font-size:15px;font-weight:900;color:#e8f8ff!important;min-height:36px;padding:6px 2px}
+body.playerTheme .playerView .playerEarlyReserve .playerEarlyListRows{margin-top:8px}
+@media(max-width:760px){
+  body.playerTheme .playerView .playerEarlyListRows{grid-template-columns:minmax(0,1fr)}
+  body.playerTheme .playerView .playerMapNav.withEarlyList{
+    grid-template-columns:1fr 1fr!important;gap:4px!important
+  }
+  body.playerTheme .playerView .playerMapNav.withEarlyList .earlyListTile{
+    grid-column:1/-1;min-height:40px!important
+  }
+  body.playerTheme .playerView .playerEarlyListPanel{padding:10px!important}
+}
+
+/* V235: mobile row keeps the call and envelope next to the surname. */
+@media(max-width:760px){
+ body:not(.playerTheme) #app #competitionDetail #adminZone-roster .mobileRosterCompactHead.hasCall{
+   grid-template-columns:26px minmax(0,1fr) max-content 44px!important;
+   gap:5px!important;align-items:center!important
+ }
+ body:not(.playerTheme) #app #competitionDetail #adminZone-roster .mobileRosterCompactIdentity{
+   display:flex!important;flex-wrap:wrap!important;align-items:center!important;gap:3px 7px!important;min-width:0!important
+ }
+ body:not(.playerTheme) #app #competitionDetail #adminZone-roster .mobileRosterCompactIdentity .rosterEditNameBtn{
+   min-height:30px!important;width:max-content!important;max-width:100%!important;
+   padding:4px 9px!important;font-size:11px!important
+ }
+ body:not(.playerTheme) #app #playersList .mobilePlayerManageCard .mobileAdminCardHead.hasCall{
+   grid-template-columns:28px minmax(0,1fr) max-content auto!important
+ }
+}

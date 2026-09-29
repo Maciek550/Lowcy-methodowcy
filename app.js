@@ -1,4 +1,4 @@
-const CLIENT_VERSION='234';const CLIENT_VERSION_NAME='V234_ACCESSIBILITY_PASSWORD_REQUEST';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='235';const CLIENT_VERSION_NAME='V235_PLAYER_EARLY_LIST_PHONE_BUTTON';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -261,6 +261,15 @@ function renderPhoneCall(phone,cls='',iconOnly=false){
   if(!href)return '<span class="muted">—</span>';
   return '<a class="phoneCallBtn '+esc(cls)+'" href="tel:'+esc(href)+'" title="Zadzwoń: '+esc(raw)+'" aria-label="Zadzwoń pod numer '+esc(raw)+'"><span class="phoneCallIcon" aria-hidden="true">☎</span>'+(iconOnly?'':'<span>'+esc(raw)+'</span>')+'</a>';
 }
+/* V235: real number = direct call; external import = quick-add phone. */
+function rosterPhoneControl(person,playerId,cls='rosterPhoneCall'){
+  if(phoneTelHref(person?.phone))return renderPhoneCall(person.phone,cls,true);
+  const encode=v=>encodeURIComponent(String(v||'')).replace(/'/g,'%27');
+  const name=String((person?.first_name||'')+' '+(person?.last_name||'')).trim();
+  const args=Number(playerId)+",decodeURIComponent('"+encode(name)+"'),decodeURIComponent('"+encode(person?.pzw_club)+"'),decodeURIComponent('"+encode(person?.phone)+"')";
+  return '<button type="button" class="rosterMissingPhone" title="Brak numeru telefonu — dopisz numer" onclick="editPlayerName('+args+')">+ TELEFON</button>';
+}
+
 function msg(t,type='ok'){const el=q('msg');if(!el)return;el.innerHTML='<div class="card '+(type==='bad'?'bad danger-line':'ok success-line')+'">'+esc(t)+'</div>';setTimeout(()=>{const x=q('msg');if(x)x.innerHTML=''},3500)}
 async function api(path, opts={}){const fetchOpts={...opts},timeoutMs=Math.max(800,Number(fetchOpts.timeoutMs||30000));delete fetchOpts.timeoutMs;const ctrl=typeof AbortController!=='undefined'?new AbortController():null;const to=ctrl?setTimeout(()=>ctrl.abort(),timeoutMs):null;try{const res=await fetch(path,Object.assign({cache:'no-store',signal:ctrl?ctrl.signal:undefined,headers:{'Content-Type':'application/json',...(TOKEN?{Authorization:'Bearer '+TOKEN}:{})}},fetchOpts));const data=await res.json().catch(()=>({ok:false,error:'Błąd odpowiedzi'}));if(!res.ok||data.ok===false){const error=new Error(data.error||'Błąd');error.status=res.status;throw error}return data}catch(e){if(e&&e.name==='AbortError'){const error=new Error('Serwer jeszcze nie odpowiada. Spróbuj ponownie.');error.timeout=true;throw error}throw e}finally{if(to)clearTimeout(to)}}
 let PLAYER_ACTIVITY_LAST_SENT=0, PLAYER_ACTIVITY_USER_ID=0;
@@ -297,11 +306,11 @@ function markPlayerResultSeen(round){const id=CURRENT_DETAIL?.competition?.id;if
 function markPlayerDrawSeen(round){const id=CURRENT_DETAIL?.competition?.id;if(!id)return;STORE.set(playerDrawSeenKey(id,round),'1');document.querySelectorAll('.playerNewResultStar[data-draw-round="'+Number(round)+'"]').forEach(x=>x.remove());markPlayerAttentionRead(id,'DRAW_PUBLISH',true)}
 function playerResultsSignature(d){const items=[...(d?.results||[]).map(r=>['r',r.round,r.user_id,r.weight,r.big_fish]),...(d?.resultItems||[]).map(r=>['i',r.round,r.user_id,r.kind,r.weight])];return JSON.stringify(items.sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b))))}
 function playerDrawSignature(d){const uid=Number(ME?.id||0);const items=(d?.draws||[]).filter(r=>!uid||Number(r.user_id)===uid).map(r=>[r.round,r.user_id,r.stand,r.sector]);return JSON.stringify(items.sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b))))}
-function playerContentSignature(d){return playerResultsSignature(d)+'|'+playerDrawSignature(d)}
+function playerContentSignature(d){const roster=playerEarlyListAvailable(d?.competition)?JSON.stringify([...(d?.activeEntries||[]).map(e=>[e.user_id,e.first_name,e.last_name]),...(d?.reserveEntries||[]).map(e=>['R',e.user_id,e.first_name,e.last_name])]):'';return playerResultsSignature(d)+'|'+playerDrawSignature(d)+'|'+roster}
 function syncPlayerContentStars(d=CURRENT_DETAIL){[1,2].forEach(round=>{const freshResult=playerHasNewResults(d,round);document.querySelectorAll('.playerNewResultStar[data-result-round="'+round+'"]').forEach(x=>{if(!freshResult)x.remove()});if(freshResult&&!document.querySelector('.playerNewResultStar[data-result-round="'+round+'"]'))document.querySelectorAll('.playerUnifiedNav button,.playerDesktopUnifiedNav button').forEach(btn=>{const click=btn.getAttribute('onclick')||'';if(click.includes("'t"+round+"'"))btn.insertAdjacentHTML('beforeend',playerResultStar(d,round))});const freshDraw=playerHasNewDraw(d,round);document.querySelectorAll('.playerNewResultStar[data-draw-round="'+round+'"]').forEach(x=>{if(!freshDraw)x.remove()});if(freshDraw&&!document.querySelector('.playerNewResultStar[data-draw-round="'+round+'"]'))document.querySelectorAll('.playerUnifiedNav button,.playerDesktopUnifiedNav button').forEach(btn=>{const click=btn.getAttribute('onclick')||'';if(click.includes("'draw"+round+"'"))btn.insertAdjacentHTML('beforeend',playerDrawStar(d,round))})})}
 function stopPlayerResultPolling(){if(PLAYER_RESULT_POLL_TIMER){clearInterval(PLAYER_RESULT_POLL_TIMER);PLAYER_RESULT_POLL_TIMER=null}}
-function startPlayerResultPolling(){if(PLAYER_RESULT_POLL_TIMER)return;PLAYER_RESULT_POLL_TIMER=setInterval(()=>pollPlayerCompetitionResults(),12000)}
-async function pollPlayerCompetitionResults(){if(PLAYER_RESULT_POLL_BUSY||!ME||ME.role==='ADMIN'||!CURRENT_DETAIL?.competition?.id||q('competitionDetail')?.classList.contains('hidden'))return;PLAYER_RESULT_POLL_BUSY=true;try{const id=CURRENT_DETAIL.competition.id,d=await api('/api/competitions/'+id);if(playerContentSignature(d)===playerContentSignature(CURRENT_DETAIL))return;CURRENT_DETAIL=d;const active=PLAYER_MOBILE_PANEL;if(active==='t1'||active==='t2')markPlayerResultSeen(active==='t1'?1:2);if(active==='draw1'||active==='draw2')markPlayerDrawSeen(active==='draw1'?1:2);const mobile=q('playerMobilePanelContent'),desktop=q('playerDesktopPanelContent');if(mobile)mobile.innerHTML=renderPlayerMobilePanelContent(d,active);if(desktop)desktop.innerHTML=renderPlayerDesktopPanelContent(d,active);syncPlayerContentStars(d);requestAnimationFrame(()=>{syncPlayerStickyBars();fitPlayerMobileFullMaps()})}catch(_){ }finally{PLAYER_RESULT_POLL_BUSY=false}}
+function startPlayerResultPolling(){if(PLAYER_RESULT_POLL_TIMER)return;PLAYER_RESULT_POLL_TIMER=setInterval(()=>{syncPlayerEarlyListCutoff();pollPlayerCompetitionResults()},12000)}
+async function pollPlayerCompetitionResults(){if(PLAYER_RESULT_POLL_BUSY||!ME||ME.role==='ADMIN'||!CURRENT_DETAIL?.competition?.id||q('competitionDetail')?.classList.contains('hidden'))return;PLAYER_RESULT_POLL_BUSY=true;try{const id=CURRENT_DETAIL.competition.id,d=await api('/api/competitions/'+id);if(playerContentSignature(d)===playerContentSignature(CURRENT_DETAIL))return;CURRENT_DETAIL=d;const active=PLAYER_MOBILE_PANEL;if(active==='t1'||active==='t2')markPlayerResultSeen(active==='t1'?1:2);if(active==='draw1'||active==='draw2')markPlayerDrawSeen(active==='draw1'?1:2);const mobile=q('playerMobilePanelContent'),desktop=q('playerDesktopPanelContent');if(mobile)mobile.innerHTML=renderPlayerMobilePanelContent(d,active);if(desktop)desktop.innerHTML=renderPlayerDesktopPanelContent(d,active);document.querySelectorAll('.playerEarlyListCount').forEach(x=>x.textContent=String((d.activeEntries||[]).length));syncPlayerContentStars(d);requestAnimationFrame(()=>{syncPlayerStickyBars();fitPlayerMobileFullMaps()})}catch(_){ }finally{PLAYER_RESULT_POLL_BUSY=false}}
 function syncNotificationBadges(unread=PLAYER_UNREAD_NOTIFICATIONS){const n=Math.max(0,Number(unread||0));document.querySelectorAll('#playerNotifBtn,.notificationTile').forEach(btn=>{btn.innerHTML=playerNotifLabel(n)});const top=q('btn-notifications');if(top){let b=top.querySelector('.topNotifBadge');if(n){if(!b){b=document.createElement('span');b.className='topNotifBadge';top.appendChild(b)}b.textContent=n>99?'99+':String(n)}else if(b)b.remove()}}
 
 function applyPlayerAppBadge(n){
@@ -823,7 +832,45 @@ function renderPlayerSectorAccordion(d,round){
   return '<div class="playerSectorAccordionList">'+layout.map((sec,idx)=>{const letter=String(sec.letter||''),open=(idx===0||letter===mineSector),total=activeSectorSize(sec,c);let inner='';if(c.map_mode==='ONE_BANK')inner+=renderPlayerSectorBank('JEDEN BRZEG',sec.bottom,c,byStand);else if(c.map_mode==='TWO_ALONG'){if(sec.top?.length)inner+=renderPlayerSectorBank('BRZEG 2',sec.top,c,byStand);if(sec.bottom?.length)inner+=renderPlayerSectorBank('BRZEG 1',sec.bottom,c,byStand)}else{if(sec.top?.length)inner+=renderPlayerSectorBank('BRZEG GÓRNY',sec.top,c,byStand);if(sec.bottom?.length)inner+=renderPlayerSectorBank('BRZEG DOLNY',sec.bottom,c,byStand)}return '<section class="playerSectorAccordion '+sectorColorClass(letter,c)+' '+(open?'open':'collapsed')+'"><button type="button" class="playerSectorAccordionHead" onclick="togglePlayerSectorAccordion(this,event)"><span class="playerSectorCircle">'+esc(letter)+'</span><b>SEKTOR '+esc(letter)+'</b><span class="playerSectorCount">'+total+' os.</span><span class="playerSectorChevron">⌃</span></button><div class="playerSectorAccordionBody">'+inner+'</div></section>'}).join('')+'</div>';
 }
 function togglePlayerSectorAccordion(btn,ev){if(ev){ev.preventDefault();ev.stopPropagation()}const box=btn&&btn.closest('.playerSectorAccordion');if(!box)return;box.classList.toggle('collapsed');box.classList.toggle('open');}
+
+/* V235: LISTA is available before 06:00 Europe/Warsaw on competition day; never exposes phone numbers. */
+function playerEarlyListAvailable(c,now=new Date()){
+  const key=playerCompetitionDateKey(c);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(key))return false;
+  const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Warsaw',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',hourCycle:'h23'}).formatToParts(now);
+  const p=t=>parts.find(x=>x.type===t)?.value||'';
+  const today=p('year')+'-'+p('month')+'-'+p('day');
+  return key>today||(key===today&&Number(p('hour'))<6);
+}
+function renderPlayerEarlyListPanel(d){
+  const main=d.activeEntries||[],reserve=d.reserveEntries||[];
+  const rows=entries=>'<ol class="playerEarlyListRows">'+entries.map((e,i)=>'<li class="'+(Number(e.user_id)===Number(ME?.id)?'mine':'')+'"><span class="playerEarlyListNo">'+(i+1)+'</span><span class="playerEarlyListName">'+esc((e.first_name||'')+' '+(e.last_name||''))+'</span></li>').join('')+'</ol>';
+  if(!playerEarlyListAvailable(d.competition))return '<div class="card"><p>Lista przedstartowa jest już zamknięta. Sprawdź losowanie i wyniki.</p></div>';
+  return '<section class="playerEarlyListPanel" aria-label="Lista zapisanych zawodników">'
+    +'<div class="playerEarlyListHead"><strong>LISTA GŁÓWNA — DO LOSOWANIA</strong><span class="playerEarlyListBadge">'+main.length+'</span></div>'
+    +'<p class="playerEarlyListHint">Lista zapisanych z L.P. Widoczna do 06:00 w dniu zawodów.</p>'
+    +(main.length?rows(main):'<p>Brak zapisanych na liście głównej.</p>')
+    +(reserve.length?'<details class="playerEarlyReserve"><summary>REZERWA ('+reserve.length+')</summary>'+rows(reserve)+'</details>':'')
+    +'</section>';
+}
+function syncPlayerEarlyListCutoff(){
+  if(ME?.role!=='PLAYER'||!CURRENT_DETAIL||playerEarlyListAvailable(CURRENT_DETAIL.competition))return;
+  const buttons=document.querySelectorAll('.earlyListTile');
+  if(!buttons.length)return;
+  buttons.forEach(b=>b.remove());
+  document.querySelectorAll('.withEarlyList').forEach(n=>n.classList.remove('withEarlyList'));
+  if(PLAYER_MOBILE_PANEL==='list'){
+    PLAYER_MOBILE_PANEL='draw1';
+    const mobile=q('playerMobilePanelContent'),desktop=q('playerDesktopPanelContent');
+    if(mobile)mobile.innerHTML=renderPlayerMobilePanelContent(CURRENT_DETAIL,'draw1');
+    if(desktop)desktop.innerHTML=renderPlayerDesktopPanelContent(CURRENT_DETAIL,'draw1');
+    document.querySelectorAll('.playerUnifiedNav button,.playerDesktopUnifiedNav button').forEach(b=>b.classList.toggle('active',(b.getAttribute('onclick')||'').includes("'draw1'")));
+    recordAppNavigation();
+  }
+  requestAnimationFrame(syncPlayerStickyBars);
+}
 function renderPlayerMobilePanelContent(d,panel){
+  if(panel==='list')return '<div class="playerMobileSelectedPanel">'+renderPlayerEarlyListPanel(d)+'</div>';
   if(panel==='draw1'||panel==='draw2'){
     const round=panel==='draw2'?2:1;
     const mapView=PLAYER_DRAW_VIEW!=='table';
@@ -846,7 +893,7 @@ function renderPlayerMobilePanelContent(d,panel){
   return '';
 }
 function renderPlayerMobileDashboard(d){
-  const p=PLAYER_MOBILE_PANEL;
+  const p=PLAYER_MOBILE_PANEL,early=playerEarlyListAvailable(d.competition);
   const b=(panel,label,cls='')=>'<button type="button" class="'+cls+' '+(p===panel?'active':'')+'" onclick="showPlayerMobilePanel(\''+panel+'\',event)">'+label+'</button>';
   return '<div class="playerMobileDashboard">'
     +'<div class="playerDrawStickySlot"><div class="card playerDrawHeaderCard playerUnifiedNav">'
@@ -857,12 +904,13 @@ function renderPlayerMobileDashboard(d){
       +b('t2','Wyniki<br>Tura 2'+playerResultStar(d,2),'resultTile')
       +'<div class="playerPrimaryStack">'+b('general','GENERAL','resultTile generalTile')+b('stats','STATYSTYKI','resultTile statsTile')+'</div>'
     +'</div>'
-    +'<div class="playerMapNav">'+b('map1','MAPA ŁOWISKA T1','mapTile')+b('map2','MAPA ŁOWISKA T2','mapTile')+'</div>'
+    +'<div class="playerMapNav '+(early?'withEarlyList':'')+'">'+b('map1','MAPA ŁOWISKA T1','mapTile')+b('map2','MAPA ŁOWISKA T2','mapTile')+(early?b('list','LISTA <span class="playerEarlyListCount">'+(d.activeEntries||[]).length+'</span>','earlyListTile'):'')+'</div>'
     +'</div></div>'
     +'<div id="playerMobilePanelContent">'+renderPlayerMobilePanelContent(d,p)+'</div>'
     +'</div>';
 }
 function renderPlayerDesktopPanelContent(d,panel){
+  if(panel==='list')return '<div class="playerDesktopSelectedPanel">'+renderPlayerEarlyListPanel(d)+'</div>';
   if(panel==='draw1'||panel==='draw2'){
     const round=panel==='draw2'?2:1;
     const mapView=PLAYER_DRAW_VIEW!=='table';
@@ -886,7 +934,7 @@ function renderPlayerDesktopPanelContent(d,panel){
   return '';
 }
 function renderPlayerDesktopDashboard(d){
-  const p=PLAYER_MOBILE_PANEL;
+  const p=PLAYER_MOBILE_PANEL,early=playerEarlyListAvailable(d.competition);
   const b=(panel,label,cls='')=>'<button type="button" class="'+cls+' '+(p===panel?'active':'')+'" onclick="showPlayerDesktopPanel(\''+panel+'\',event)">'+label+'</button>';
   return '<div class="playerDesktopDashboardV56 playerDesktopDashboardV55">'
     +'<div class="playerDesktopStickySlot"><div class="card playerDesktopUnifiedNav">'
@@ -897,7 +945,7 @@ function renderPlayerDesktopDashboard(d){
       +b('t2','Wyniki<br>Tura 2'+playerResultStar(d,2),'resultTile')
       +'<div class="playerPrimaryStack">'+b('general','GENERAL','resultTile generalTile')+b('stats','STATYSTYKI','resultTile statsTile')+'</div>'
     +'</div>'
-    +'<div class="playerDesktopSubNav playerDesktopMapsOnly">'+b('map1','MAPA ŁOWISKA T1','mapTile')+b('map2','MAPA ŁOWISKA T2','mapTile')+'</div>'
+    +'<div class="playerDesktopSubNav playerDesktopMapsOnly '+(early?'withEarlyList':'')+'">'+b('map1','MAPA ŁOWISKA T1','mapTile')+b('map2','MAPA ŁOWISKA T2','mapTile')+(early?b('list','LISTA <span class="playerEarlyListCount">'+(d.activeEntries||[]).length+'</span>','earlyListTile'):'')+'</div>'
     +'</div></div>'
     +'<div id="playerDesktopPanelContent">'+renderPlayerDesktopPanelContent(d,p)+'</div>'
     +'</div>';
@@ -945,7 +993,8 @@ function focusPlayerNavOnOpen(){
 function showPlayerDesktopPanel(panel,ev){
   if(ev){ev.preventDefault();ev.stopPropagation()}
   const keepY=APP_NAV_RESTORING?Math.round(window.scrollY||0):null;
-  const allowed=['draw1','draw2','map1','map2','t1','t2','general','stats'];
+  const allowed=['draw1','draw2','map1','map2','t1','t2','general','stats','list'];
+  if(panel==='list'&&!playerEarlyListAvailable(CURRENT_DETAIL?.competition))return;
   if(!allowed.includes(panel))return;
   if(panel==='t1'||panel==='t2')markPlayerResultSeen(panel==='t1'?1:2);
   if(panel==='general'&&CURRENT_DETAIL?.competition?.id)markPlayerAttentionRead(CURRENT_DETAIL.competition.id,'RESULTS_GENERAL',true);
@@ -969,7 +1018,7 @@ function setPlayerDrawView(view,ev){
   if(mobile&&(PLAYER_MOBILE_PANEL==='draw1'||PLAYER_MOBILE_PANEL==='draw2'))mobile.innerHTML=renderPlayerMobilePanelContent(CURRENT_DETAIL,PLAYER_MOBILE_PANEL);
 }
 function renderPlayerDetail(d){
-  if(!PLAYER_MOBILE_PANEL)PLAYER_MOBILE_PANEL='draw1';
+  if(!PLAYER_MOBILE_PANEL||(PLAYER_MOBILE_PANEL==='list'&&!playerEarlyListAvailable(d.competition)))PLAYER_MOBILE_PANEL='draw1';
   let html='<div class="playerView">';
   html+=renderPlayerDesktopDashboard(d);
   html+=renderPlayerMobileDashboard(d);
@@ -1015,7 +1064,8 @@ function showPlayerMobilePanel(panel,ev){
   if(ev){ev.preventDefault();ev.stopPropagation()}
   closePlayerSituationalMap();
   const keepY=APP_NAV_RESTORING?Math.round(window.scrollY||0):null;
-  const allowed=['draw1','draw2','map1','map2','t1','t2','general','stats'];
+  const allowed=['draw1','draw2','map1','map2','t1','t2','general','stats','list'];
+  if(panel==='list'&&!playerEarlyListAvailable(CURRENT_DETAIL?.competition))return;
   if(!allowed.includes(panel))return;
   if(panel==='t1'||panel==='t2')markPlayerResultSeen(panel==='t1'?1:2);
   if(panel==='general'&&CURRENT_DETAIL?.competition?.id)markPlayerAttentionRead(CURRENT_DETAIL.competition.id,'RESULTS_GENERAL',true);
@@ -1237,15 +1287,15 @@ function rosterTable(title,rows,compId,kind){
   const confirmBtn=(e,compact=false)=>kind==='ACTIVE'
     ?'<button type="button" class="confirmEntryBtn '+(e.confirmed?'confirmed':'')+'" aria-label="'+(e.confirmed?'Cofnij potwierdzenie obecności':'Potwierdź obecność')+'" onclick="toggleEntryConfirm('+compId+','+e.id+',this)">'+(e.confirmed?(compact?'✓ Obecny':'✓'):'Potwierdź')+'</button>'
     :'';
-  const editBtn=e=>{const nm=String((e.first_name||'')+' '+(e.last_name||'')).trim(),safe=encodeURIComponent(nm).replace(/'/g,'%27'),club=encodeURIComponent(e.pzw_club||'').replace(/'/g,'%27');return '<button type="button" class="secondary rosterEditNameBtn" onclick="editPlayerName('+Number(e.user_id)+',decodeURIComponent(\''+safe+'\'),decodeURIComponent(\''+club+'\'))">Edytuj</button>'};
+  const editBtn=e=>{const nm=String((e.first_name||'')+' '+(e.last_name||'')).trim(),safe=encodeURIComponent(nm).replace(/'/g,'%27'),club=encodeURIComponent(e.pzw_club||'').replace(/'/g,'%27'),phone=encodeURIComponent(e.phone||'').replace(/'/g,'%27');return '<button type="button" class="secondary rosterEditNameBtn" onclick="editPlayerName('+Number(e.user_id)+',decodeURIComponent(\''+safe+'\'),decodeURIComponent(\''+club+'\'),decodeURIComponent(\''+phone+'\'))">Edytuj</button>'};
   const callEnabled=kind==='ACTIVE'||kind==='RESERVE';
   const envelope=e=>callEnabled?window.lowcyCommEnvelope(Number(e.user_id),Number(compId),(e.first_name||'')+' '+(e.last_name||'')):'';
   const desktop='<div class="tablewrap adminDesktopOnly"><table><thead><tr><th style="width:46px">Lp.</th><th>Zawodnik</th><th>Telefon</th><th>Koło</th><th>Status</th><th>Potw.</th><th>Akcja</th></tr></thead><tbody>'
-    +rows.map((e,idx)=>'<tr data-confirmed="'+Boolean(e.confirmed)+'"><td class="center"><b>'+(idx+1)+'</b></td><td><div class="rosterNameEdit"><b>'+esc(e.first_name+' '+e.last_name)+'</b>'+editBtn(e)+'</div></td><td class="nowrap">'+(callEnabled?'<span class="commPhonePair">'+renderPhoneCall(e.phone)+envelope(e)+'</span>':esc(e.phone||'—'))+'</td><td>'+esc(e.pzw_club||'')+'</td><td>'+statusLabel(e.status)+'</td><td class="center">'+(confirmBtn(e)||'—')+'</td><td>'+makeButtons(e)+'</td></tr>').join('')
+    +rows.map((e,idx)=>'<tr data-confirmed="'+Boolean(e.confirmed)+'"><td class="center"><b>'+(idx+1)+'</b></td><td><div class="rosterNameEdit"><b>'+esc(e.first_name+' '+e.last_name)+'</b>'+editBtn(e)+'</div></td><td class="nowrap">'+(callEnabled?'<span class="commPhonePair">'+rosterPhoneControl(e,e.user_id,'rosterPhoneCall')+envelope(e)+'</span>':esc(e.phone||'—'))+'</td><td>'+esc(e.pzw_club||'')+'</td><td>'+statusLabel(e.status)+'</td><td class="center">'+(confirmBtn(e)||'—')+'</td><td>'+makeButtons(e)+'</td></tr>').join('')
     +'</tbody></table></div>';
   const mobile='<div class="adminMobileOnly mobileRosterCompact">'
     +rows.map((e,idx)=>{const club=e.pzw_club?('K'+esc(e.pzw_club)):'',hasCall=Boolean(phoneTelHref(e.phone));return '<div class="mobileRosterCompactRow" data-confirmed="'+Boolean(e.confirmed)+'">'
-        +'<div class="mobileRosterCompactHead '+(hasCall?'hasCall':'')+'"><span class="mobileRosterCompactLp">'+(idx+1)+'</span><div class="mobileRosterCompactIdentity"><b>'+esc(e.first_name+' '+e.last_name)+'</b>'+(club?'<small>'+club+'</small>':'')+'</div>'+(hasCall?renderPhoneCall(e.phone,'mobileRosterCallIcon',true):'')+envelope(e)+editBtn(e)+'</div>'
+        +'<div class="mobileRosterCompactHead hasCall"><span class="mobileRosterCompactLp">'+(idx+1)+'</span><div class="mobileRosterCompactIdentity"><b>'+esc(e.first_name+' '+e.last_name)+'</b>'+(club?'<small>'+club+'</small>':'')+editBtn(e)+'</div>'+rosterPhoneControl(e,e.user_id,'mobileRosterCallIcon')+envelope(e)+'</div>'
         +'<div class="mobileRosterCompactActions '+(kind==='ACTIVE'?'threeActions':'twoActions')+'">'+(confirmBtn(e,true)||'')+makeButtons(e)+'</div>'
         +'</div>';}).join('')
     +'</div>';
@@ -3083,12 +3133,12 @@ async function confirmAllNotifications(){try{const path=ME?.role==='ADMIN'?'/api
 async function deleteAllNotifications(){try{const admin=ME?.role==='ADMIN';const question=admin?'Usunąć wszystkie zwykłe i zakończone powiadomienia? Oczekujące prośby o wypisanie pozostaną.':'Usunąć wszystkie swoje powiadomienia?';if(!confirm(question))return;const path=admin?'/api/admin/notifications':'/api/notifications';const d=await api(path,{method:'DELETE',body:'{}'});msg('Usunięto powiadomienia: '+Number(d.deleted||0)+(Number(d.keptPending||0)?'. Oczekujące prośby: '+Number(d.keptPending):''));await loadNotifications()}catch(e){msg(e.message,'bad')}}
 async function decideLeaveRequest(requestId,decision,notifId){try{if(!requestId)throw new Error('Brak identyfikatora prośby');const approve=decision==='approve';if(!confirm(approve?'Zaakceptować prośbę i wypisać zawodnika z zawodów?':'Odrzucić prośbę o wypisanie?'))return;const out=await api('/api/admin/leave-requests/'+requestId+'/'+(approve?'approve':'reject'),{method:'POST',body:'{}'});msg(approve?'Zawodnik został wypisany':'Prośba została odrzucona');await loadNotifications();await loadCompetitions();if(CURRENT_DETAIL?.competition?.id==out.competitionId)await refreshCompetitionKeepScroll(out.competitionId)}catch(e){msg(e.message,'bad')}}
 async function readNotif(id){await api('/api/notifications/'+id+'/read',{method:'POST',body:'{}'});await loadNotifications();if(ME?.role==='PLAYER'){await refreshPlayerAttention(false);renderPlayerCompetitionList()}}
-function editPlayerName(id,currentName,currentClub=''){
+function editPlayerName(id,currentName,currentClub='',currentPhone=''){
   if(!ME||ME.role!=='ADMIN')return;
   q('playerEditDialog')?.remove();
   const dialog=document.createElement('dialog');
   dialog.id='playerEditDialog';
-  dialog.innerHTML='<form><h3>Edytuj zawodnika</h3><label for="editPlayerFullName">Imię i nazwisko</label><input id="editPlayerFullName" name="fullName" required maxlength="80" value="'+esc(currentName||'')+'"><label for="editPlayerClub">Koło PZW</label><input id="editPlayerClub" name="pzwClub" maxlength="100" value="'+esc(currentClub||'')+'"><div class="playerEditActions"><button type="submit">Zapisz</button><button type="button" class="secondary" data-cancel>Anuluj</button></div></form>';
+  dialog.innerHTML='<form><h3>Edytuj zawodnika</h3><label for="editPlayerFullName">Imię i nazwisko</label><input id="editPlayerFullName" name="fullName" required maxlength="80" value="'+esc(currentName||'')+'"><label for="editPlayerClub">Koło PZW</label><input id="editPlayerClub" name="pzwClub" maxlength="100" value="'+esc(currentClub||'')+'"><label for="editPlayerPhone">Telefon zawodnika</label><input id="editPlayerPhone" name="phone" type="tel" inputmode="tel" autocomplete="off" placeholder="np. 500600700" ' value="'+esc(phoneTelHref(currentPhone)?currentPhone:'')+'"><p class="playerPhoneHint">'+(phoneTelHref(currentPhone)?'Możesz poprawić telefon kontaktowy. To nie zmienia numeru używanego do logowania.':'Dopisz telefon kontaktowy, aby pojawił się zielony przycisk połączenia.')+'</p><div class="playerEditActions"><button type="submit">Zapisz</button><button type="button" class="secondary" data-cancel>Anuluj</button></div></form>';
   document.body.appendChild(dialog);
   dialog.addEventListener('close',()=>dialog.remove());
   dialog.querySelector('[data-cancel]').onclick=()=>dialog.close();
@@ -3096,10 +3146,13 @@ function editPlayerName(id,currentName,currentClub=''){
     ev.preventDefault();
     const fullName=dialog.querySelector('[name="fullName"]').value.replace(/\s+/g,' ').trim();
     const pzwClub=dialog.querySelector('[name="pzwClub"]').value.replace(/\s+/g,' ').trim();
+    const phone=dialog.querySelector('[name="phone"]').value.replace(/[\s()\-]/g,'').trim();
     if(!fullName){msg('Imię i nazwisko nie może być puste','bad');return}
     const changes={};
     if(fullName!==String(currentName||'').replace(/\s+/g,' ').trim())changes.fullName=fullName;
     if(pzwClub!==String(currentClub||'').replace(/\s+/g,' ').trim())changes.pzwClub=pzwClub;
+    const originalPhone=phoneTelHref(currentPhone)?String(currentPhone).replace(/[\s()\-]/g,''):'';
+    if(phone!==originalPhone){if(phone&&!/^(?:\d{9}|48\d{9}|\+48\d{9})$/.test(phone)){msg('Podaj poprawny polski numer telefonu.','bad');return}changes.phone=phone}
     if(!Object.keys(changes).length){dialog.close();return}
     const save=dialog.querySelector('[type="submit"]');save.disabled=true;
     try{
@@ -3127,20 +3180,20 @@ async function loadPlayers(){
   const adminAdded=d.players.filter(p=>p.bulk_removable===true).length;
   const legend='<div class="playerAccountTop"><div class="playerAccountLegend"><span><b class="playerAccountBadge playerAccountVerified">V</b> zalogował się w aplikacji</span><span><b class="playerAccountBadge playerAccountAdmin">A</b> import zewnętrzny bez konta</span><span>Aktywność zapisywana od V222</span></div><button type="button" class="warn playerDeleteAllAdminBtn" '+(adminAdded?'':'disabled')+' onclick="deleteAllAdminPlayers('+adminAdded+')">Usuń wszystkich A ('+adminAdded+')</button></div>';
   const desktop='<div class="tablewrap adminDesktopOnly"><table class="adminPlayersTable"><thead><tr><th style="width:46px">Lp.</th><th>Imię i nazwisko</th><th style="width:82px">Info</th><th>Telefon</th><th>Koło PZW</th><th>Aktywne zapisy</th><th style="width:150px">Akcja</th></tr></thead><tbody>'+d.players.map((p,i)=>{
-    const name=String((p.first_name||'')+' '+(p.last_name||'')).trim(),safeName=encodeURIComponent(name).replace(/'/g,'%27'),safeClub=encodeURIComponent(p.pzw_club||'').replace(/'/g,'%27');
-    return '<tr><td class="center"><b>'+(i+1)+'</b></td><td><b>'+esc(name)+'</b> '+playerLastActivityHtml(p.last_active_at)+'</td><td class="playerBadgeCell">'+playerInfoBadges(p)+'</td><td class="nowrap">'+'<span class="commPhonePair">'+renderPhoneCall(p.phone)+window.lowcyCommEnvelope(Number(p.id),0,name)+'</span>'+'</td><td>'+esc(p.pzw_club)+'</td><td class="center">'+esc(p.active_entries||0)+'</td><td><div class="inlineBtns playerManageBtns"><button type="button" class="secondary" onclick="editPlayerName('+Number(p.id)+',decodeURIComponent(\''+safeName+'\'),decodeURIComponent(\''+safeClub+'\'))">Edytuj</button><button type="button" class="warn playerDeleteBtn" onclick="deletePlayer('+Number(p.id)+',decodeURIComponent(\''+safeName+'\'))">Usuń</button></div></td></tr>'
+    const name=String((p.first_name||'')+' '+(p.last_name||'')).trim(),safeName=encodeURIComponent(name).replace(/'/g,'%27'),safeClub=encodeURIComponent(p.pzw_club||'').replace(/'/g,'%27'),safePhone=encodeURIComponent(p.phone||'').replace(/'/g,'%27');
+    return '<tr><td class="center"><b>'+(i+1)+'</b></td><td><b>'+esc(name)+'</b> '+playerLastActivityHtml(p.last_active_at)+'</td><td class="playerBadgeCell">'+playerInfoBadges(p)+'</td><td class="nowrap">'+'<span class="commPhonePair">'+rosterPhoneControl(p,p.id,'playerDirectoryCall')+window.lowcyCommEnvelope(Number(p.id),0,name)+'</span>'+'</td><td>'+esc(p.pzw_club)+'</td><td class="center">'+esc(p.active_entries||0)+'</td><td><div class="inlineBtns playerManageBtns"><button type="button" class="secondary" onclick="editPlayerName('+Number(p.id)+',decodeURIComponent(\''+safeName+'\'),decodeURIComponent(\''+safeClub+'\'),decodeURIComponent(\''+safePhone+'\'))">Edytuj</button><button type="button" class="warn playerDeleteBtn" onclick="deletePlayer('+Number(p.id)+',decodeURIComponent(\''+safeName+'\'))">Usuń</button></div></td></tr>'
   }).join('')+'</tbody></table></div>';
   const mobile='<div class="adminMobileOnly mobilePlayersList">'+d.players.map((p,i)=>{
     const name=String((p.first_name||'')+' '+(p.last_name||'')).trim();
-    const safeName=encodeURIComponent(name).replace(/'/g,'%27'),safeClub=encodeURIComponent(p.pzw_club||'').replace(/'/g,'%27');
-    const call=phoneTelHref(p.phone)?renderPhoneCall(p.phone,'mobilePhoneCallBtn playerDirectoryCall',true):'';
+    const safeName=encodeURIComponent(name).replace(/'/g,'%27'),safeClub=encodeURIComponent(p.pzw_club||'').replace(/'/g,'%27'),safePhone=encodeURIComponent(p.phone||'').replace(/'/g,'%27');
+    const call=rosterPhoneControl(p,p.id,'mobilePhoneCallBtn playerDirectoryCall');
     return `<article class="mobileAdminCard mobilePlayerManageCard">
       <div class="mobileAdminCardHead ${call?'hasCall':''}">
         <span class="mobileLp">${i+1}</span><b class="playerNameLogin">${esc(name)}${playerLastActivityHtml(p.last_active_at)}</b>${call}${window.lowcyCommEnvelope(Number(p.id),0,name)}<span class="mobilePlayerBadges">${playerInfoBadges(p)}</span>
       </div>
       <div class="mobilePlayerManageMeta"><span>Koło: <b>${esc(p.pzw_club||'—')}</b></span><span>Zapisy: <b>${esc(p.active_entries||0)}</b></span></div>
       <div class="mobilePlayerManageActions">
-        <button type="button" class="secondary" onclick="editPlayerName(${Number(p.id)},decodeURIComponent('${safeName}'),decodeURIComponent('${safeClub}'))">Edytuj</button>
+        <button type="button" class="secondary" onclick="editPlayerName(${Number(p.id)},decodeURIComponent('${safeName}'),decodeURIComponent('${safeClub}'),decodeURIComponent('${safePhone}'))">Edytuj</button>
         <button type="button" class="warn playerDeleteBtn mobilePlayerDeleteBtn" onclick="deletePlayer(${Number(p.id)},decodeURIComponent('${safeName}'))">Usuń</button>
       </div>
     </article>`
