@@ -156,3 +156,13 @@ body.playerTheme #app #competitionsList .playerFilterShort{display:none!importan
     min-width:76px!important
   }
 }
+
+/* At phone widths like 360–390px, use a short but legible first filter label. */
+@media(max-width:420px){
+  body.playerTheme #app #competitionsList .playerFilterFull{display:none!important}
+  body.playerTheme #app #competitionsList .playerFilterShort{display:inline!important}
+  body.playerTheme #app #competitionsList .playerCompFilter,
+  body.playerTheme #app #competitionsList .playerCompFilter:nth-child(3){
+    font-size:clamp(11px,3vw,12px)!important
+  }
+}
