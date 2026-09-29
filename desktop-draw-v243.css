@@ -1,0 +1,77 @@
+/* V243: desktop competitor draw ONLY; no changes to mobile, admin, T1/T2 maps or scoring. */
+@media (min-width:761px) {
+  /* Replace the isolated white sheet behind the MAPA/TABELA switch and sectors. */
+  body.playerTheme #playerDesktopPanelContent .playerDesktopDrawSelected > .playerDesktopPanelCard {
+    box-sizing:border-box!important;
+    background:linear-gradient(155deg,#142f43 0%,#0d2335 58%,#081b2a 100%)!important;
+    color:#eaf5ff!important;
+    border:1px solid #416781!important;
+    box-shadow:inset 0 1px 0 #ffffff14,0 7px 22px #0003!important;
+  }
+  body.playerTheme #playerDesktopPanelContent .playerDesktopDrawSelected .playerDesktopSectionTitle {
+    color:#e2f3ff!important;
+    -webkit-text-fill-color:#e2f3ff!important;
+    font-size:clamp(16px,1.6vw,19px)!important;
+    font-weight:950!important;
+    letter-spacing:.3px!important;
+    text-shadow:0 1px 2px #02131f!important;
+    margin:2px 0 12px!important;
+  }
+  body.playerTheme #playerDesktopPanelContent .playerDesktopDrawSelected .playerDrawViewSwitch button {
+    background:linear-gradient(160deg,#25485f,#153449)!important;
+    border:2px solid #537a94!important;
+    color:#e9f6ff!important;
+    -webkit-text-fill-color:#e9f6ff!important;
+    box-shadow:inset 0 1px 0 #ffffff20,0 2px 8px #061b2d70!important;
+  }
+  body.playerTheme #playerDesktopPanelContent .playerDesktopDrawSelected .playerDrawViewSwitch button.active {
+    background:linear-gradient(160deg,#258dcc,#1064a2)!important;
+    border-color:#8fd6ff!important;
+    color:#fff!important;
+    -webkit-text-fill-color:#fff!important;
+    box-shadow:inset 0 1px 0 #ffffff36,0 0 9px #36aeff66!important;
+  }
+  /* Keep sector A/B/C/... colors, but frame them on the dark dashboard. */
+  body.playerTheme #playerDesktopPanelContent .playerDesktopDrawSelected .playerSectorAccordionList {
+    gap:12px!important;align-items:start!important;
+    background:transparent!important;
+  }
+  body.playerTheme #playerDesktopPanelContent .playerDesktopDrawSelected .playerSectorAccordion {
+    background:#0a1d2d!important;
+    border:2px solid var(--sector,#567991)!important;
+    border-radius:10px!important;
+    overflow:hidden!important;
+    box-shadow:0 5px 14px #0007,inset 0 1px 0 #ffffff14!important;
+  }
+  body.playerTheme #playerDesktopPanelContent .playerDesktopDrawSelected .playerSectorAccordionBody {
+    background:linear-gradient(160deg,#112c3e,#091e2d)!important;
+    padding:9px!important;
+  }
+  body.playerTheme #playerDesktopPanelContent .playerDesktopDrawSelected .playerSectorBankTitle,
+  body.playerTheme #playerDesktopPanelContent .playerDesktopDrawSelected .playerSectorBankTitle span {
+    color:#b8e4ff!important;
+    -webkit-text-fill-color:#b8e4ff!important;
+    font-size:12px!important;
+  }
+  body.playerTheme #playerDesktopPanelContent .playerDesktopDrawSelected .playerSectorStand {
+    background:linear-gradient(145deg,#2b465a,#192e40)!important;
+    border:1px solid #68859b!important;
+    box-shadow:inset 0 1px 0 #ffffff1d!important;
+    min-width:0!important;
+  }
+  body.playerTheme #playerDesktopPanelContent .playerDesktopDrawSelected .playerSectorStandNo,
+  body.playerTheme #playerDesktopPanelContent .playerDesktopDrawSelected .playerSectorStandName {
+    color:#fff!important;
+    -webkit-text-fill-color:#fff!important;
+    text-shadow:0 1px 2px #051827!important;
+  }
+  body.playerTheme #playerDesktopPanelContent .playerDesktopDrawSelected .minePlayerSectorStand {
+    border:3px solid #ffdb4d!important;
+    background:linear-gradient(145deg,#38526b,#203d58)!important;
+    box-shadow:0 0 0 1px #ffe57f44,0 0 10px #ffd54f4d!important;
+  }
+  body.playerTheme #playerDesktopPanelContent .playerDesktopDrawSelected .playerDrawViewSwitch button:focus-visible,
+  body.playerTheme #playerDesktopPanelContent .playerDesktopDrawSelected .playerSectorAccordionHead:focus-visible {
+    outline:3px solid #ffe292!important;outline-offset:2px!important;
+  }
+}

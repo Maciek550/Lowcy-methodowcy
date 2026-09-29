@@ -30,7 +30,7 @@ test('V242: contrast stylesheet is in online and offline shell, version synchron
  assert.match(server,/const RESULT_CONTRAST_CSS='\/result-contrast-v242\.css\?v=\$\{APP_VERSION\}'/);
  assert.match(server,/<link rel="stylesheet" href="\/result-contrast-v242\.css\?v=\$\{APP_VERSION\}">/);
  assert.match(server,/HISTORY_COMPACT_CSS,DRAW_CSS,RESULT_CONTRAST_CSS,DRAW_JS/);
- assert.match(server,/const APP_VERSION = '242'/);
- assert.match(app,/const CLIENT_VERSION='242'/);
- assert.match(server,/class="headerVersion">V242</);
+ assert.match(server,/const APP_VERSION = '243'/);
+ assert.match(app,/const CLIENT_VERSION='243'/);
+ assert.match(server,/class="headerVersion">V243</);
 });
