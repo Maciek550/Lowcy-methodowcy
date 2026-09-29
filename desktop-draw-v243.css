@@ -1,4 +1,4 @@
-/* V243: desktop competitor draw ONLY; no changes to mobile, admin, T1/T2 maps or scoring. */
+/* Desktop draw: one dark surface and consistent spacing for the sector cards. */
 @media (min-width:761px) {
   /* Replace the isolated white sheet behind the MAPA/TABELA switch and sectors. */
   body.playerTheme #playerDesktopPanelContent .playerDesktopDrawSelected > .playerDesktopPanelCard {
@@ -23,6 +23,7 @@
     color:#e9f6ff!important;
     -webkit-text-fill-color:#e9f6ff!important;
     box-shadow:inset 0 1px 0 #ffffff20,0 2px 8px #061b2d70!important;
+    min-height:48px!important;
   }
   body.playerTheme #playerDesktopPanelContent .playerDesktopDrawSelected .playerDrawViewSwitch button.active {
     background:linear-gradient(160deg,#258dcc,#1064a2)!important;
@@ -45,19 +46,21 @@
   }
   body.playerTheme #playerDesktopPanelContent .playerDesktopDrawSelected .playerSectorAccordionBody {
     background:linear-gradient(160deg,#112c3e,#091e2d)!important;
-    padding:9px!important;
+    padding:11px!important;
   }
   body.playerTheme #playerDesktopPanelContent .playerDesktopDrawSelected .playerSectorBankTitle,
   body.playerTheme #playerDesktopPanelContent .playerDesktopDrawSelected .playerSectorBankTitle span {
     color:#b8e4ff!important;
     -webkit-text-fill-color:#b8e4ff!important;
-    font-size:12px!important;
+    font-size:14px!important;
+    line-height:1.3!important;
   }
   body.playerTheme #playerDesktopPanelContent .playerDesktopDrawSelected .playerSectorStand {
     background:linear-gradient(145deg,#2b465a,#192e40)!important;
     border:1px solid #68859b!important;
     box-shadow:inset 0 1px 0 #ffffff1d!important;
     min-width:0!important;
+    border-radius:7px!important;
   }
   body.playerTheme #playerDesktopPanelContent .playerDesktopDrawSelected .playerSectorStandNo,
   body.playerTheme #playerDesktopPanelContent .playerDesktopDrawSelected .playerSectorStandName {
