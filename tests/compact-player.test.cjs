@@ -14,7 +14,7 @@ function renderFixture(filter,nearest=[],remaining=[]){
     filterPlayerCompetitions:()=>remaining,
     renderPlayerCompetitionGroups:()=>'<div class="playerCompGroups">ZAWODY</div>',
     renderPlayerNearestThree:()=>'<section class="playerNearestThree">NAJBLIŻSZE ZAWODY</section>',
-    renderPlayerMyUpcoming:()=>'<section class="playerMyUpcoming">MOJE STARTY</section>'
+    renderPlayerMyUpcoming:()=>nearest.length?'<section class="playerMyUpcoming">MOJE STARTY</section>':''
   };
   vm.runInNewContext(slice('function renderPlayerCompetitionList(){','async function loadCompetitions(){')+';this.render=renderPlayerCompetitionList;',ctx);
   ctx.render();return box.innerHTML;
