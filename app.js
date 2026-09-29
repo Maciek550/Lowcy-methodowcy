@@ -1,4 +1,4 @@
-const CLIENT_VERSION='236';const CLIENT_VERSION_NAME='V236_ADAPTIVE_FIVE_BUTTON_PLAYER_DOCK';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='237';const CLIENT_VERSION_NAME='V237_COMPACT_EVENTS_UNIFORM_DOCK';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -595,7 +595,7 @@ function renderPlayerCompetitionFilters(arr){
   const base=filterPlayerCompetitions(arr,PLAYER_COMP_FILTER,false),months=[...new Set(base.map(playerCompetitionMonthKey))];
   months.sort((a,b)=>PLAYER_COMP_FILTER==='completed'?b.localeCompare(a):a.localeCompare(b));
   if(PLAYER_COMP_MONTH!=='all'&&!months.includes(PLAYER_COMP_MONTH))PLAYER_COMP_MONTH='all';
-  const f=(key,label,count)=>'<button type="button" class="playerCompFilter '+(PLAYER_COMP_FILTER===key?'active':'')+'" onclick="setPlayerCompetitionFilter(\''+key+'\')"><span>'+label+'</span><b>'+count+'</b></button>';
+  const f=(key,label,count)=>'<button type="button" class="playerCompFilter '+(PLAYER_COMP_FILTER===key?'active':'')+'" aria-label="'+label+' '+count+'" onclick="setPlayerCompetitionFilter(\''+key+'\')"><span class="playerFilterFull">'+label+'</span><span class="playerFilterShort" aria-hidden="true">'+(key==='upcoming'?'NADCHODZ.':label)+'</span><b>'+count+'</b></button>';
   const opts=['<option value="all">Wszystkie miesiące</option>'].concat(months.map(m=>'<option value="'+esc(m)+'" '+(PLAYER_COMP_MONTH===m?'selected':'')+'>'+esc(playerCompetitionMonthLabel(m))+'</option>')).join('');
   return '<div class="playerCompetitionOrganizer"><div class="playerCompFilters">'+f('upcoming','NADCHODZĄCE',upcoming)+f('registered','ZAPISANE',registered)+f('completed','HISTORIA',completed)+'</div><select class="playerCompMonthSelect" onchange="setPlayerCompetitionMonth(this.value)">'+opts+'</select></div>';
 }
@@ -652,8 +652,11 @@ function renderPlayerCompetitionList(){
   const defaultUpcoming=PLAYER_COMP_FILTER==='upcoming'&&PLAYER_COMP_MONTH==='all';
   const filteredView=mode=>remaining.length
     ?(defaultUpcoming?'<details class="playerMoreUpcoming"><summary>POZOSTAŁE NADCHODZĄCE <b>'+remaining.length+'</b></summary>'+renderPlayerCompetitionGroups(remaining,mode)+'</details>':renderPlayerCompetitionGroups(remaining,mode))
-    :'<div class="playerCompEmpty">'+(defaultUpcoming?'Wszystkie najbliższe zawody są wyżej.':'Brak innych zawodów w tym filtrze.')+'</div>';
-  const view=mode=>renderPlayerNearestThree(arr,mode)+
+    :defaultUpcoming&&nearest.length?''
+    :'<div class="playerCompEmpty">'+(defaultUpcoming?'Brak nadchodzących zawodów.':PLAYER_COMP_FILTER==='registered'?'Nie masz zapisanych nadchodzących zawodów.':'Brak zawodów w wybranym filtrze.')+'</div>';
+  // A history or saved-start filter must not waste the first screen on unrelated upcoming events.
+  // When there are no upcoming events, the short notice lives ONLY in the selected filter.
+  const view=mode=>(PLAYER_COMP_FILTER==='upcoming'&&nearest.length?renderPlayerNearestThree(arr,mode):'')+
     (PLAYER_COMP_FILTER==='upcoming'?renderPlayerMyUpcoming(arr,mode):'')+
     filtersHtml+filteredView(mode);
   box.innerHTML='<div class="playerCompetitionDesktopOnly">'+view('desktop')+'</div>'+
