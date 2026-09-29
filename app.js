@@ -1,4 +1,4 @@
-const CLIENT_VERSION='232';const CLIENT_VERSION_NAME='V232_NIEZALEZNE_KANALY_WIADOMOSCI';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='233';const CLIENT_VERSION_NAME='V233_FOTOF_B_GENERALNA_WIELOSTRONICOWA';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -2300,6 +2300,8 @@ function renderPdfPanel(d){
    Nie zapisuje nic do bazy i nie zmienia klasyfikacji. */
 let FOTO_FB_LAST=null;
 let FOTO_FB_PREVIEW_URL='';
+let FOTO_FB_PREVIEW_URLS=[];
+let FOTO_FB_FILES=[];
 const FOTO_FB_ASSET_CACHE={};
 const FOTO_FB_MASTER_CACHE={};
 let FOTO_FB_MASTER_STATUS={};
@@ -2828,9 +2830,81 @@ async function fotoFbSvgSectors(d,round){
   svg+=fotoFbFooter(w,h)+'</svg>';
   return {svg:svg,w:w,h:h,name:'FotoFB_Wyniki_Sektorowe_T'+round+'_'+fotoFbSafeFile(c.title)+'.jpg'};
 }
+
+/* V233: Generalna FotoFB: pelne, prawdziwe wyniki w czytelnych, dzielonych arkuszach JPG. */
+function fotoFbGeneralRows(d){
+  return (d.classification&&d.classification.general||[]).slice().sort(function(a,b){
+    return Number(a.rank||9999)-Number(b.rank||9999)||Number(a.user_id||0)-Number(b.user_id||0);
+  });
+}
+async function fotoFbSvgGeneral(d,topOnly){
+  const edited=fotoFbEditedDetail(d),c=edited.competition,all=fotoFbGeneralRows(edited);
+  if(!all.length)throw new Error('Brak wyników klasyfikacji generalnej.');
+  const rows=topOnly?all.slice(0,10):all,perPage=15,pageCount=Math.ceil(rows.length/perPage),
+    logo=await fotoFbAssetData('/brand/icon-v217-512.png'),
+    clubInput=q('fotoFbGeneralClub'),showClub=clubInput?!!clubInput.checked:!!SHOW_FINAL_CLUB;
+  const title=String(c.title||'ZAWODY').trim(),date=fotoFbDate(c),fishery=String(c.fishery||'—').trim(),
+    footer=String(c.__fbFooter||'Carp & Caraś & Asiotr & Hamur').replace(/\s*🐳\s*$/,'');
+  const titleFont=title.length>58?36:title.length>43?43:title.length>30?49:58;
+  const specs=[];
+  for(let page=0;page<pageCount;page++){
+    const slice=rows.slice(page*perPage,(page+1)*perPage),rowH=slice.length<=10?108:90,
+      startY=330,bodyEnd=startY+slice.length*rowH,h=bodyEnd+128,w=1400;
+    let svg='<svg xmlns="http://www.w3.org/2000/svg" width="2100" height="'+Math.round(h*1.5)+'" viewBox="0 0 '+w+' '+h+'">'+fotoFbDefs()+
+      '<defs><linearGradient id="genHero" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#174c90"/><stop offset=".52" stop-color="#071b36"/><stop offset="1" stop-color="#072b3a"/></linearGradient>'+
+      '<linearGradient id="genGold" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#f2a714"/><stop offset=".52" stop-color="#ffe18a"/><stop offset="1" stop-color="#faad22"/></linearGradient></defs>'+
+      '<rect width="'+w+'" height="'+h+'" fill="#0b2034"/>'+
+      '<rect width="'+w+'" height="251" fill="url(#genHero)"/>'+
+      '<path d="M0 249 H1400" stroke="#fbd366" stroke-width="7"/>'+
+      '<path d="M0 10 H1400" stroke="#52bbf8" stroke-width="5"/>';
+    if(logo)svg+='<image href="'+logo+'" x="36" y="24" width="132" height="132" preserveAspectRatio="xMidYMid meet"/>';
+    svg+='<text x="192" y="68" font-family="Arial Black,Arial,sans-serif" font-size="'+titleFont+'" font-weight="1000" fill="#ffdb71" stroke="#001322" stroke-width="2" paint-order="stroke"'+(title.length>28?' textLength="1156" lengthAdjust="spacingAndGlyphs"':'')+'>'+fotoFbEscXml(title)+'</text>'+
+      '<rect x="190" y="90" width="1166" height="63" rx="14" fill="#12558b" stroke="#67bcf3" stroke-width="2"/>'+
+      '<text x="211" y="133" font-family="Arial Black,Arial,sans-serif" font-size="31" fill="#fff">'+fotoFbEscXml(date)+'</text>'+
+      '<text x="500" y="133" font-family="Arial Black,Arial,sans-serif" font-size="31" fill="#fff"'+(fishery.length>24?' textLength="533" lengthAdjust="spacingAndGlyphs"':'')+'>ŁOWISKO: '+fotoFbEscXml(fishery)+'</text>'+
+      '<text x="1332" y="133" text-anchor="end" font-family="Arial Black,Arial,sans-serif" font-size="29" fill="#ffe18a">'+all.length+' OSÓB</text>'+
+      '<rect x="45" y="172" width="1310" height="68" rx="16" fill="url(#genGold)" stroke="#fff1bb" stroke-width="2"/>'+
+      '<text x="700" y="217" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="44" font-weight="1000" fill="#09223a">'+(topOnly?'KLASYFIKACJA GENERALNA — TOP 10':'KLASYFIKACJA GENERALNA')+'</text>'+
+      '<rect x="44" y="265" width="1312" height="62" rx="10" fill="#08649b" stroke="#79c8f5" stroke-width="2"/>';
+    const columns=[{x:45,w:90,t:'MSC'},{x:135,w:528,t:'ZAWODNIK'},{x:663,w:122,t:'T1'},{x:785,w:122,t:'T2'},{x:907,w:145,t:'SUMA'},{x:1052,w:303,t:'WAGA'}];
+    columns.forEach(function(col){
+      svg+='<text x="'+(col.t==='ZAWODNIK'?col.x+18:col.x+col.w/2)+'" y="307" '+(col.t==='ZAWODNIK'?'':'text-anchor="middle" ')+'font-family="Arial Black,Arial,sans-serif" font-size="29" fill="#fff">'+col.t+'</text>';
+    });
+    slice.forEach(function(r,i){
+      const y=startY+i*rowH,rank=Number(r.rank),nm=String(r.name||'').trim(),club=showClub?String(r.pzw_club||'').trim():'',
+        bf=Number(r.biggest_fish||0),bg=i%2?'#e5f0f5':'#fffaf0',
+        placeBg=rank===1?'#dc2535':rank===2?'#153a83':rank===3?'#14793e':'#184967',
+        nameFs=nm.length>35?27:nm.length>28?31:nm.length>22?34:38,
+        nameMax=498;
+      svg+='<g data-general-row="'+fotoFbEscXml(r.user_id||r.rank)+'" transform="translate(44 '+y+')">'+
+        '<rect x="0" y="0" width="1312" height="'+(rowH-4)+'" rx="11" fill="'+bg+'" stroke="#2b6c92" stroke-width="2"/>'+
+        '<rect x="0" y="0" width="90" height="'+(rowH-4)+'" rx="10" fill="'+placeBg+'"/>'+
+        '<rect x="1008" y="0" width="304" height="'+(rowH-4)+'" rx="10" fill="#fff0c3" opacity=".77"/>'+
+        '<text x="45" y="'+(rowH*.62)+'" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="43" fill="#fff">'+fotoFbEscXml(Number.isFinite(rank)?rank:'—')+'</text>'+
+        '<text x="108" y="'+(club?rowH*.42:rowH*.62)+'" font-family="Arial Black,Arial,sans-serif" font-size="'+nameFs+'" font-weight="900" fill="#09243c"'+(nm.length>23?' textLength="'+nameMax+'" lengthAdjust="spacingAndGlyphs"':'')+'>'+fotoFbEscXml(nm)+'</text>';
+      if(club)svg+='<text x="108" y="'+(rowH*.74)+'" font-family="Arial,sans-serif" font-weight="700" font-size="22" fill="#37556e"'+(club.length>38?' textLength="495" lengthAdjust="spacingAndGlyphs"':'')+'>'+fotoFbEscXml(club)+'</text>';
+      [[680, r.t1_points],[802,r.t2_points],[930,r.sum_points]].forEach(function(v,j){
+        svg+='<text x="'+v[0]+'" y="'+(rowH*.62)+'" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="'+(j===2?43:40)+'" fill="'+(j===2?'#a13a00':'#112e4d')+'">'+fotoFbEscXml(placeText(v[1]))+'</text>';
+      });
+      svg+='<text x="1300" y="'+(bf?rowH*.43:rowH*.62)+'" text-anchor="end" font-family="Arial Black,Arial,sans-serif" font-size="36" fill="#132f45">'+fotoFbEscXml(fotoFbGram(r.total_weight||0))+'</text>';
+      if(bf>0)svg+='<text x="1300" y="'+(rowH*.77)+'" text-anchor="end" font-family="Arial Black,Arial,sans-serif" font-size="25" fill="#a04405">BF: '+fotoFbEscXml(fotoFbGram(bf))+'</text>';
+      svg+='</g>';
+    });
+    svg+='<text x="52" y="'+(bodyEnd+36)+'" font-family="Arial Black,Arial,sans-serif" font-size="25" fill="#e9f5ff">POZYCJE '+(page*perPage+1)+'–'+(page*perPage+slice.length)+' Z '+rows.length+'</text>'+
+      '<text x="1350" y="'+(bodyEnd+36)+'" text-anchor="end" font-family="Arial Black,Arial,sans-serif" font-size="25" fill="#ffd66d">STRONA '+(page+1)+' / '+pageCount+'</text>'+
+      '<rect x="0" y="'+(h-81)+'" width="1400" height="81" fill="#031321"/>'+
+      '<path d="M0 '+(h-81)+' H1400" stroke="#efb12c" stroke-width="5"/>'+
+      '<text x="44" y="'+(h-29)+'" font-family="Arial Black,Arial,sans-serif" font-size="32" fill="#ffd06a">ŁOWCY METHODOWCY</text>'+
+      '<text x="1355" y="'+(h-29)+'" text-anchor="end" font-family="Arial,sans-serif" font-size="26" font-weight="800" fill="#fff"'+(footer.length>48?' textLength="690" lengthAdjust="spacingAndGlyphs"':'')+'>'+fotoFbEscXml(footer)+'</text></svg>';
+    specs.push({svg:svg,w:2100,h:Math.round(h*1.5),name:'FotoFB_'+(topOnly?'TOP10':'Generalna')+'_'+fotoFbSafeFile(c.title)+(pageCount>1?'_'+(page+1)+'_z_'+pageCount:'')+'.jpg'});
+  }
+  return specs;
+}
+
 async function fotoFbMakeSpec(kind){
   const d=CURRENT_DETAIL;if(!d)throw new Error('Otwórz najpierw zawody.');
   if(kind==='winners')return fotoFbSvgWinners(d);
+  if(kind==='general'||kind==='top10')return fotoFbSvgGeneral(d,kind==='top10');
   if(kind==='fish')return fotoFbSvgBigFish(d);
   if(kind==='t2')return fotoFbSvgSectors(d,2);
   return fotoFbSvgSectors(d,1);
@@ -2854,24 +2928,37 @@ async function generateFotoFb(kind){
   const preview=q('fotoFbPreview'),status=q('fotoFbStatus');
   try{
     if(status)status.textContent='Generuję grafikę…';
-    const spec=await fotoFbMakeSpec(kind),blob=await fotoFbSvgToBlob(spec);
-    if(FOTO_FB_PREVIEW_URL)URL.revokeObjectURL(FOTO_FB_PREVIEW_URL);
-    FOTO_FB_PREVIEW_URL=URL.createObjectURL(blob);FOTO_FB_LAST={blob:blob,name:spec.name};
-    if(preview)preview.innerHTML='<img src="'+FOTO_FB_PREVIEW_URL+'" alt="Podgląd FotoFB" style="display:block;width:100%;height:auto;border-radius:16px;border:1px solid #31556b;box-shadow:0 10px 28px #0005">';
+    const made=await fotoFbMakeSpec(kind),specs=Array.isArray(made)?made:[made];
+    const files=[];
+    for(const spec of specs)files.push({blob:await fotoFbSvgToBlob(spec),name:spec.name});
+    FOTO_FB_PREVIEW_URLS.forEach(function(u){URL.revokeObjectURL(u)});
+    FOTO_FB_PREVIEW_URLS=files.map(function(f){return URL.createObjectURL(f.blob)});
+    FOTO_FB_PREVIEW_URL=FOTO_FB_PREVIEW_URLS[0]||'';
+    FOTO_FB_FILES=files;FOTO_FB_LAST=files[0]||null;
+    if(preview)preview.innerHTML=files.map(function(f,i){
+      return '<section style="margin:0 0 22px"><img src="'+FOTO_FB_PREVIEW_URLS[i]+'" alt="Podgląd FotoFB — część '+(i+1)+'" style="display:block;width:100%;height:auto;border-radius:16px;border:2px solid #31556b;box-shadow:0 10px 28px #0005">'+(files.length>1?'<button type="button" class="blue" style="margin-top:9px;width:100%" onclick="downloadFotoFbPage('+i+')">Pobierz JPG — część '+(i+1)+' z '+files.length+'</button>':'')+'</section>';
+    }).join('');
     const actions=q('fotoFbActions');if(actions)actions.classList.remove('hidden');
-    if(status)status.textContent='Gotowe: '+spec.name;
+    const single=q('fotoFbDownloadButton');if(single)single.style.display=files.length>1?'none':'';
+    if(status)status.textContent=files.length>1?'Gotowe: '+files.length+' grafiki. Pobierz każdą część osobnym przyciskiem.':'Gotowe: '+files[0].name;
     preview&&preview.scrollIntoView({behavior:'smooth',block:'nearest'});
   }catch(e){if(status)status.textContent='';msg(e.message||'Błąd FotoFB','bad')}
 }
-function downloadFotoFb(){
-  if(!FOTO_FB_LAST){msg('Najpierw wygeneruj grafikę.','bad');return}
-  const u=URL.createObjectURL(FOTO_FB_LAST.blob),a=document.createElement('a');a.href=u;a.download=FOTO_FB_LAST.name;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u)},1500);
+function downloadFotoFbPage(index){
+  const f=FOTO_FB_FILES[Number(index)];
+  if(!f){msg('Najpierw wygeneruj grafikę.','bad');return}
+  const u=URL.createObjectURL(f.blob),a=document.createElement('a');a.href=u;a.download=f.name;
+  document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u)},1500);
 }
+function downloadFotoFb(){downloadFotoFbPage(0)}
 async function shareFotoFb(){
-  if(!FOTO_FB_LAST){msg('Najpierw wygeneruj grafikę.','bad');return}
+  if(!FOTO_FB_FILES.length){msg('Najpierw wygeneruj grafikę.','bad');return}
   try{
-    const file=new File([FOTO_FB_LAST.blob],FOTO_FB_LAST.name,{type:'image/jpeg'});
-    if(navigator.share&&(!navigator.canShare||navigator.canShare({files:[file]}))){await navigator.share({files:[file],title:'Łowcy Methodowcy — FotoFB'});return}
+    const files=FOTO_FB_FILES.map(function(f){return new File([f.blob],f.name,{type:'image/jpeg'})});
+    if(navigator.share&&(!navigator.canShare||navigator.canShare({files:files}))){
+      await navigator.share({files:files,title:'Łowcy Methodowcy — FotoFB'});return;
+    }
+    if(files.length>1){msg('Udostępnianie wielu grafik niedostępne. Pobierz każdą część przyciskiem pod zdjęciem.');return}
     downloadFotoFb();msg('Telefon nie obsługuje bezpośredniego udostępniania — zapisano JPG.');
   }catch(e){if(e&&e.name!=='AbortError')msg(e.message||'Nie udało się udostępnić','bad')}
 }
@@ -2901,6 +2988,9 @@ function renderFotoFbPanel(d){
       '<button type="button" class="blue" onclick="generateFotoFb(\'fish\')">🐟 TOP 5 największych ryb</button></div>'+
       '<div class="grid"><button type="button" onclick="generateFotoFb(\'t1\')">📷 Wyniki sektorowe — Tura 1</button>'+
       '<button type="button" onclick="generateFotoFb(\'t2\')">📷 Wyniki sektorowe — Tura 2</button></div>'+
+       '<div class="grid"><button type="button" class="blue" onclick="generateFotoFb(\'top10\')">🏅 TOP 10 — klasyfikacja generalna</button>'+ 
+       '<button type="button" class="blue" onclick="generateFotoFb(\'general\')">📷 Pełna klasyfikacja generalna</button></div>'+ 
+       '<label style="display:inline-flex;gap:10px;align-items:center;margin:9px 0;color:#e9f3ff"><input type="checkbox" id="fotoFbGeneralClub" '+(SHOW_FINAL_CLUB?'checked':'')+'> Pokaż koło PZW w klasyfikacji generalnej</label>'+
     '</div></details>'+
     '<details class="adminExportGroup"><summary>🏆 Własny podkład podium — wgraj lub zmień</summary><div class="adminExportGroupBody">'+bgCard()+'</div></details>'+
     '<details class="adminExportGroup"><summary>Pozostałe wzorce grafik</summary><div class="adminExportGroupBody">'+
@@ -2909,7 +2999,7 @@ function renderFotoFbPanel(d){
     '<p id="fotoFbStatus" class="small muted"></p>'+
     '<div id="fotoFbPreview" style="max-width:900px;margin:12px auto"></div>'+
     '<div id="fotoFbActions" class="inlineBtns hidden">'+
-      '<button type="button" class="blue" onclick="downloadFotoFb()">Pobierz JPG</button>'+
+      '<button type="button" id="fotoFbDownloadButton" class="blue" onclick="downloadFotoFb()">Pobierz JPG</button>'+
       '<button type="button" class="secondary" onclick="shareFotoFb()">Udostępnij</button></div></div>';
 }
 
