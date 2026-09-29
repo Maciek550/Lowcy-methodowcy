@@ -24,8 +24,8 @@ const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const GOOGLE_VISION_API_KEY = process.env.GOOGLE_VISION_API_KEY || process.env.OCR_GOOGLE_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.PHOTO_OCR_OPENAI_API_KEY || '';
 const PHOTO_OCR_MODEL = process.env.PHOTO_OCR_OPENAI_MODEL || 'gpt-5.6-sol';
-const APP_VERSION = '238';
-const APP_VERSION_NAME = 'V238_DESKTOP_PLAYER_TOP_NAV';
+const APP_VERSION = '239';
+const APP_VERSION_NAME = 'V239_HISTORY_LUX_COMPACT';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 const PODIUM_TROPHIES = fs.existsSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) ? fs.readFileSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) : null;
 const CARP_REAL = fs.readFileSync(pathModule.join(__dirname, 'carp-real-v116.png'));
@@ -1810,6 +1810,7 @@ async function route(req, res) {
   if(path==='/player-dock-v236.css')return send(res,200,fs.readFileSync(pathModule.join(__dirname,'player-dock-v236.css'),'utf8'),{'Content-Type':'text/css; charset=utf-8','Cache-Control':'no-store'});
   if(path==='/compact-player-v237.css')return send(res,200,fs.readFileSync(pathModule.join(__dirname,'compact-player-v237.css'),'utf8'),{'Content-Type':'text/css; charset=utf-8','Cache-Control':'no-store'});
   if(path==='/desktop-nav-v238.css')return send(res,200,fs.readFileSync(pathModule.join(__dirname,'desktop-nav-v238.css'),'utf8'),{'Content-Type':'text/css; charset=utf-8','Cache-Control':'no-store'});
+  if(path==='/history-lux-v239.css')return send(res,200,fs.readFileSync(pathModule.join(__dirname,'history-lux-v239.css'),'utf8'),{'Content-Type':'text/css; charset=utf-8','Cache-Control':'no-store'});
   if (path === '/app.js') return send(res, 200, APP_JS, {'Content-Type':'application/javascript; charset=utf-8', 'Cache-Control':'no-store, no-cache, must-revalidate'});
 
   if (path === '/health') return sendJson(res, 200, { ok:true, time:nowIso(), version:APP_VERSION_NAME });
@@ -2019,13 +2020,14 @@ const ROSTER_CSS='/roster-preview-v235.css?v=${APP_VERSION}';
 const DOCK_CSS='/player-dock-v236.css?v=${APP_VERSION}';
 const COMPACT_CSS='/compact-player-v237.css?v=${APP_VERSION}';
 const DESKTOP_NAV_CSS='/desktop-nav-v238.css?v=${APP_VERSION}';
-const SHELL=['/',APP_SHELL_JS,PDF_JS,COMM_JS,RECOVERY_JS,ACCESS_CSS,ROSTER_CSS,DOCK_CSS,COMPACT_CSS,DESKTOP_NAV_CSS];
+const HISTORY_CSS='/history-lux-v239.css?v=${APP_VERSION}';
+const SHELL=['/',APP_SHELL_JS,PDF_JS,COMM_JS,RECOVERY_JS,ACCESS_CSS,ROSTER_CSS,DOCK_CSS,COMPACT_CSS,DESKTOP_NAV_CSS,HISTORY_CSS];
 async function fetchWithTimeout(req,ms=30000){const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),ms);try{return await fetch(req,{cache:'no-store',signal:ctrl.signal})}finally{clearTimeout(timer)}}
 self.addEventListener('install',event=>event.waitUntil((async()=>{const replies=await Promise.all(SHELL.map(url=>fetchWithTimeout(url)));if(replies.some(r=>!r.ok))throw Error('Incomplete shell');const cache=await caches.open(SHELL_CACHE);await Promise.all(SHELL.map((url,i)=>cache.put(url,replies[i])));await self.skipWaiting()})()));
 self.addEventListener('activate',event=>event.waitUntil((async()=>{await self.clients.claim();const keys=await caches.keys();await Promise.all(keys.filter(k=>k.startsWith('lowcy-shell-')&&k!==SHELL_CACHE).map(k=>caches.delete(k)))})()));
 self.addEventListener('fetch',event=>{const req=event.request,u=new URL(req.url);if(req.method!=='GET'||u.origin!==self.location.origin)return;
  if(req.mode==='navigate'){event.respondWith((async()=>{try{const r=await fetchWithTimeout(req);if(r.ok)return r}catch(e){}return(await(await caches.open(SHELL_CACHE)).match('/'))||new Response('Brak połączenia. Otwórz aplikację ponownie po połączeniu z internetem.',{headers:{'Content-Type':'text/plain; charset=utf-8'}})})());return}
- if(['/app.js','/pdf-vector.js','/communication-ui.js','/password-recovery-ui.js','/accessibility-v234.css','/roster-preview-v235.css','/player-dock-v236.css','/compact-player-v237.css','/desktop-nav-v238.css'].includes(u.pathname)){event.respondWith((async()=>{const key=u.pathname+u.search,c=await caches.open(SHELL_CACHE);try{const fresh=await fetchWithTimeout(req,9000);if(fresh.ok){await c.put(key,fresh.clone());return fresh}}catch(e){}return(await c.match(key))||Response.error()})());return}
+ if(['/app.js','/pdf-vector.js','/communication-ui.js','/password-recovery-ui.js','/accessibility-v234.css','/roster-preview-v235.css','/player-dock-v236.css','/compact-player-v237.css','/desktop-nav-v238.css','/history-lux-v239.css'].includes(u.pathname)){event.respondWith((async()=>{const key=u.pathname+u.search,c=await caches.open(SHELL_CACHE);try{const fresh=await fetchWithTimeout(req,9000);if(fresh.ok){await c.put(key,fresh.clone());return fresh}}catch(e){}return(await c.match(key))||Response.error()})());return}
 });
 async function setLowcyBadge(n){try{const count=Math.max(0,Number(n||0));if(self.navigator&&typeof self.navigator.setAppBadge==='function'){if(count)await self.navigator.setAppBadge(count);else if(typeof self.navigator.clearAppBadge==='function')await self.navigator.clearAppBadge()}}catch(e){}}
 self.addEventListener('push', event => {
@@ -3220,7 +3222,7 @@ const HTML = `<!doctype html>
 <link rel="apple-touch-icon" sizes="180x180" href="/brand/icon-v217-180.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/brand/icon-v217-32.png">
 <script>try{if(localStorage.getItem('carp_token'))document.documentElement.classList.add('hasSavedSession')}catch(e){}</script>
-<title>Łowcy Methodowcy — V238</title>
+<title>Łowcy Methodowcy — V239</title>
 <style>
 .adminReminderNote{margin:12px 0;padding:12px;border:1px solid #b5c7bd;background:#f3f8f4;border-radius:12px}.adminReminderNote label{display:block;font-weight:750;color:#173d2a}.adminReminderNote textarea{width:100%;min-height:66px;font-size:16px;line-height:1.35;background:#fff;color:#19322a;border:1px solid #819e8c;border-radius:8px;margin-top:6px;padding:9px}.adminReminderNote p{margin:5px 0 0;color:#38584b}
 :root{--green:#114b2f;--green2:#17643f;--bg:#f3f6ef;--card:#fff;--line:#cfd8cc;--txt:#18251d;--muted:#68746d;--red:#b32020;--gold:#ffc400;--blue:#1067c8;--soft:#eaf2eb}
@@ -8204,10 +8206,11 @@ body:not(.playerTheme):not(.authMode) #app #playersList .playerLastActivityUnkno
 <link rel="stylesheet" href="/player-dock-v236.css?v=${APP_VERSION}">
 <link rel="stylesheet" href="/compact-player-v237.css?v=${APP_VERSION}">
 <link rel="stylesheet" href="/desktop-nav-v238.css?v=${APP_VERSION}">
+<link rel="stylesheet" href="/history-lux-v239.css?v=${APP_VERSION}">
 </head>
 <body class="authMode">
 <div id="bootGuard"><img src="/icon-192.png" alt=""><b>Łowcy Methodowcy</b><span>Uruchamiam aplikację…</span><button id="bootRetry" class="hidden" type="button" onclick="retryLowcyBoot()">Spróbuj ponownie</button></div>
-<header><div class="row"><h1><img class="brandIcon" src="/brand/icon-v217-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V238</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
+<header><div class="row"><h1><img class="brandIcon" src="/brand/icon-v217-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V239</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
 <main>
 <div id="msg"></div>
 <section id="auth" class="card">
@@ -8261,5 +8264,5 @@ waitForDb().then(() => {
       sendJson(res, 500, { ok:false, error:'Błąd serwera' });
     });
   });
-  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V238_DESKTOP_PLAYER_TOP_NAV_READY'); console.log('CARP_MOBILE_READY port=' + PORT); startPresenceReminderLoop(); });
+  server.listen(PORT, '0.0.0.0', () => { console.log('LOWCY_METHODOWCY_V239_HISTORY_LUX_COMPACT_READY'); console.log('CARP_MOBILE_READY port=' + PORT); startPresenceReminderLoop(); });
 }).catch(err => { console.error('START_FAILED', err); process.exit(1); });

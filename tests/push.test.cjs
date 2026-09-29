@@ -76,5 +76,5 @@ test('service worker installs when decorative images cannot be fetched',async()=
   handlers.install({waitUntil:promise=>{install=promise}});
   await install;
   assert.equal(installed,true);
-  assert.deepEqual(requested,['/','/app.js?v=225','/pdf-vector.js?v=225','/communication-ui.js?v=225','/password-recovery-ui.js?v=225','/accessibility-v234.css?v=225','/roster-preview-v235.css?v=225','/player-dock-v236.css?v=225','/compact-player-v237.css?v=225','/desktop-nav-v238.css?v=225']);
+  assert.deepEqual(requested,['/','/app.js?v=225','/pdf-vector.js?v=225','/communication-ui.js?v=225','/password-recovery-ui.js?v=225','/accessibility-v234.css?v=225','/roster-preview-v235.css?v=225','/player-dock-v236.css?v=225','/compact-player-v237.css?v=225','/desktop-nav-v238.css?v=225','/history-lux-v239.css?v=225']);
 });

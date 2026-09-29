@@ -1,4 +1,4 @@
-const CLIENT_VERSION='238';const CLIENT_VERSION_NAME='V238_DESKTOP_PLAYER_TOP_NAV';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='239';const CLIENT_VERSION_NAME='V239_HISTORY_LUX_COMPACT';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -509,18 +509,43 @@ function renderPlayerHistory(rows){
   rows=Array.isArray(rows)?rows:[];
   if(!rows.length){box.innerHTML='<div class="card playerHistoryCard"><h2>Historia startów</h2><p class="muted">Brak zakończonych startów z pełnymi wynikami T1 i T2.</p></div>';return}
   const years=[...new Set(rows.map(r=>String(r.competition_date||'').slice(0,4)).filter(y=>/^\d{4}$/.test(y)))].sort((a,b)=>b.localeCompare(a));
-  if(PLAYER_HISTORY_YEAR!=='all'&&!years.includes(PLAYER_HISTORY_YEAR))PLAYER_HISTORY_YEAR='all';
+  if(years.length===1||(PLAYER_HISTORY_YEAR!=='all'&&!years.includes(PLAYER_HISTORY_YEAR)))PLAYER_HISTORY_YEAR='all';
   const starts=rows.length,podiums=rows.filter(r=>Number(r.general_rank)>0&&Number(r.general_rank)<=3).length;
   const best=Math.min(...rows.map(r=>Number(r.general_rank||9999)).filter(Number.isFinite));
   const total=rows.reduce((s,r)=>s+Number(r.total_weight||0),0);
   const biggest=Math.max(0,...rows.map(r=>Number(r.biggest_fish||0)));
   const stat=(label,value,cls='')=>'<div class="historyStat '+cls+'"><small>'+esc(label)+'</small><strong>'+value+'</strong></div>';
-  const round=(r,n)=>{const place=placeText(r['t'+n+'_place']),size=Number(r['t'+n+'_sector_size']||0),stand=r['t'+n+'_stand'],sector=r['t'+n+'_sector']||'—',weight=Number(r['t'+n+'_weight']||0),bf=Number(r['t'+n+'_big_fish']||0);return '<div class="historyRound historyRound'+n+'"><div class="historyRoundTitle">TURA '+n+'</div><div class="historyRoundPlace"><b>'+place+'</b><span>/'+size+'</span></div><div class="historyRoundMeta"><span>Stan. <b>'+(stand??'—')+'</b></span><span>Sektor <b>'+esc(sector)+'</b></span></div><div class="historyRoundWeight">'+fmtGram(weight)+' g</div><div class="historyRoundBF">BF: <b>'+fmtGram(bf)+' g</b></div></div>'};
-  const card=r=>'<article class="historyStartCard '+(PLAYER_HISTORY_YEAR!=='all'&&String(r.competition_date||'').slice(0,4)!==PLAYER_HISTORY_YEAR?'hidden':'')+'" data-year="'+esc(String(r.competition_date||'').slice(0,4))+'"><div class="historyStartHead"><div><h3>'+esc(r.fishery||r.title||'Zawody')+'</h3><span>'+fmtDate(r.competition_date)+(r.title&&r.fishery?' · '+esc(r.title):'')+'</span></div><div class="historyGeneral"><small>GENERAL</small><strong>'+Number(r.general_rank||0)+'/'+Number(r.general_count||0)+'</strong></div></div><div class="historyRounds">'+round(r,1)+round(r,2)+'</div><div class="historyStartFoot"><div><small>SUMA WAGI</small><b>'+fmtGram(r.total_weight)+' g</b></div><div><small>NAJWIĘKSZA RYBA</small><b>'+fmtGram(r.biggest_fish||0)+' g</b></div><button type="button" onclick="openHistoryCompetition('+Number(r.competition_id)+')">PEŁNE WYNIKI</button></div></article>';
-  const seasonButtons='<div class="historySeasonFilter" role="group" aria-label="Sezon">'+
-    ['all',...years].map(y=>'<button type="button" class="historySeasonBtn '+(PLAYER_HISTORY_YEAR===y?'active':'')+'" data-year="'+y+'" aria-pressed="'+(PLAYER_HISTORY_YEAR===y)+'" onclick="setPlayerHistoryYear(\''+y+'\')">'+(y==='all'?'WSZYSTKIE':y)+'</button>').join('')+
-    '<span id="historySeasonCount">Widoczne starty: '+rows.filter(r=>PLAYER_HISTORY_YEAR==='all'||String(r.competition_date||'').slice(0,4)===PLAYER_HISTORY_YEAR).length+'</span></div>';
-  box.innerHTML='<section class="playerHistoryDashboard"><div class="historyHero"><div><h2>Historia startów</h2><p>Twoje wyniki i statystyki zawodów.</p></div><div class="historyStats">'+stat('STARTY',starts)+stat('MIEJSCA NA PODIUM',podiums,'podium')+stat('NAJLEPSZE MIEJSCE',best<9999?best:'—','best')+stat('NAJWIĘKSZA RYBA',fmtGram(biggest)+' g','fish')+stat('ŁĄCZNA WAGA',fmtGram(total)+' g','weight')+'</div></div>'+seasonButtons+'<div class="historyStartList">'+rows.map(card).join('')+'</div></section>';
+  const round=(r,n)=>{
+    const place=placeText(r['t'+n+'_place']),size=Number(r['t'+n+'_sector_size']||0),
+      stand=r['t'+n+'_stand'],sector=r['t'+n+'_sector']||'—',
+      weight=Number(r['t'+n+'_weight']||0),bf=Number(r['t'+n+'_big_fish']||0);
+    return '<div class="historyRound historyRound'+n+'"><div class="historyRoundTitle">TURA '+n+'</div>'
+      +'<div class="historyRoundPlace"><b>'+place+'</b><span class="historyRoundSlash" aria-hidden="true">/</span><span aria-label="na '+size+' zawodników w sektorze">'+size+'</span></div>'
+      +'<div class="historyRoundMeta"><span>Stan. <b>'+(stand??'—')+'</b></span><span>Sektor <b>'+esc(sector)+'</b></span></div>'
+      +'<div class="historyRoundWeight">'+fmtGram(weight)+' g</div>'
+      +(bf>0?'<div class="historyRoundBF">BF: <b>'+fmtGram(bf)+' g</b></div>':'')
+      +'</div>';
+  };
+  const card=r=>{
+    const year=String(r.competition_date||'').slice(0,4),
+      sum=Number(r.t1_place||0)+Number(r.t2_place||0);
+    return '<article class="historyStartCard '+(PLAYER_HISTORY_YEAR!=='all'&&year!==PLAYER_HISTORY_YEAR?'hidden':'')+'" data-year="'+esc(year)+'">'
+      +'<div class="historyStartHead"><div><h3>'+esc(r.fishery||r.title||'Zawody')+'</h3><span>'+fmtDate(r.competition_date)+(r.title&&r.fishery?' · '+esc(r.title):'')+'</span></div>'
+      +'<div class="historyGeneral"><small>GENERAL</small><strong>'+Number(r.general_rank||0)+'/'+Number(r.general_count||0)+'</strong></div></div>'
+      +'<div class="historyRounds">'+round(r,1)+round(r,2)+'</div>'
+      +'<div class="historyStartFoot"><div class="historySumPlaces"><small>SUMA MIEJSC</small><b>'+placeText(sum)+' pkt</b></div>'
+      +'<button type="button" onclick="openHistoryCompetition('+Number(r.competition_id)+')">PEŁNE WYNIKI</button></div></article>';
+  };
+  const seasonButtons='<div class="historySeasonFilter" role="group" aria-label="Sezon">'
+    +'<button type="button" class="historySeasonBtn '+(PLAYER_HISTORY_YEAR==='all'?'active':'')+'" data-year="all" aria-pressed="'+(PLAYER_HISTORY_YEAR==='all')+'" onclick="setPlayerHistoryYear(\'all\')">WSZYSTKIE</button>'
+    +(years.length===1?'<span class="historySingleYear" aria-label="Sezon '+years[0]+'">'+years[0]+'</span>':
+      years.map(y=>'<button type="button" class="historySeasonBtn '+(PLAYER_HISTORY_YEAR===y?'active':'')+'" data-year="'+y+'" aria-pressed="'+(PLAYER_HISTORY_YEAR===y)+'" onclick="setPlayerHistoryYear(\''+y+'\')">'+y+'</button>').join(''))
+    +'<span id="historySeasonCount">Widoczne starty: '+rows.filter(r=>PLAYER_HISTORY_YEAR==='all'||String(r.competition_date||'').slice(0,4)===PLAYER_HISTORY_YEAR).length+'</span></div>';
+  box.innerHTML='<section class="playerHistoryDashboard">'
+    +'<div class="historyHero"><div class="historyHeroHead"><div><h2>Historia startów</h2><p>Twoje wyniki i statystyki zawodów.</p></div></div>'
+    +'<div class="historyStats">'+stat('STARTY',starts)+stat('MIEJSCA NA PODIUM',podiums,'podium')+stat('NAJLEPSZE MIEJSCE',best<9999?best:'—','best')
+    +stat('NAJWIĘKSZA RYBA',fmtGram(biggest)+' g','fish')+stat('ŁĄCZNA WAGA',fmtGram(total)+' g','weight')+'</div></div>'
+    +seasonButtons+'<div class="historyStartList">'+rows.map(card).join('')+'</div></section>';
 }
 async function openHistoryCompetition(id){
   showTab('competitions');
