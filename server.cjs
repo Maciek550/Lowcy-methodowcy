@@ -25,8 +25,8 @@ const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const GOOGLE_VISION_API_KEY = process.env.GOOGLE_VISION_API_KEY || process.env.OCR_GOOGLE_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.PHOTO_OCR_OPENAI_API_KEY || '';
 const PHOTO_OCR_MODEL = process.env.PHOTO_OCR_OPENAI_MODEL || 'gpt-5.6-sol';
-const APP_VERSION = '257';
-const APP_VERSION_NAME = 'V257_COMPACT_START_LIST';
+const APP_VERSION = '258';
+const APP_VERSION_NAME = 'V258_INFO_MAPS_LIST_ACCORDION';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 const PODIUM_TROPHIES = fs.existsSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) ? fs.readFileSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) : null;
 const CARP_REAL = fs.readFileSync(pathModule.join(__dirname, 'carp-real-v116.png'));
@@ -8462,6 +8462,124 @@ body.playerTheme #app .player181List em{
   body.playerTheme #app .player181List b{font-size:15px!important}
 }
 
+
+/* V258: jeden zwarty rząd INFO / MAPA T1 / MAPA T2 / LISTA.
+   INFO zawiera dwa pola rosnące wyłącznie do wysokości swojej treści. */
+body.playerTheme #app .playerQuickInfoNav{
+  display:grid!important;
+  gap:6px!important;
+  width:100%!important;
+  min-width:0!important;
+  margin-top:7px!important;
+}
+body.playerTheme #app .playerQuickInfoNav.withEarlyList{
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+}
+body.playerTheme #app .playerQuickInfoNav.withoutEarlyList{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+}
+body.playerTheme #app .playerQuickInfoNav>button{
+  min-width:0!important;
+  min-height:44px!important;
+  height:44px!important;
+  padding:5px 4px!important;
+  border-radius:9px!important;
+  font-size:11px!important;
+  line-height:1.05!important;
+  font-weight:950!important;
+  white-space:normal!important;
+  overflow:hidden!important;
+  text-overflow:clip!important;
+}
+body.playerTheme #app .playerQuickInfoNav .infoTile{
+  background:linear-gradient(#a7791d,#79530e)!important;
+  border-color:#e0b957!important;
+  color:#fff6d3!important;
+}
+body.playerTheme #app .playerQuickInfoNav .mapTile{
+  background:linear-gradient(#a7273b,#741929)!important;
+  border-color:#d95768!important;
+  color:#fff!important;
+}
+body.playerTheme #app .playerQuickInfoNav .earlyListTile{
+  background:linear-gradient(#d7a332,#aa7815)!important;
+  border-color:#f4cf6b!important;
+  color:#142838!important;
+}
+body.playerTheme #app .playerQuickInfoNav>button.active{
+  outline:3px solid #f5cf5b!important;
+  outline-offset:1px!important;
+  box-shadow:0 0 0 1px #ffffff88 inset!important;
+}
+body.playerTheme #app .playerQuickInfoNav .playerEarlyListCount{
+  display:inline!important;
+  margin-left:3px!important;
+  font-size:inherit!important;
+  font-weight:1000!important;
+  color:inherit!important;
+}
+
+/* INFO — zero sztucznej wysokości: oba pola dopasowują się do zawartości. */
+body.playerTheme #app .playerEventInfoPanel{
+  display:grid!important;
+  grid-template-columns:1fr!important;
+  gap:8px!important;
+  width:100%!important;
+  min-width:0!important;
+  min-height:0!important;
+  height:auto!important;
+  margin:0!important;
+  padding:8px!important;
+  background:#0a2030!important;
+  border:1px solid #31566b!important;
+  border-radius:12px!important;
+}
+body.playerTheme #app .playerInfoField{
+  display:block!important;
+  box-sizing:border-box!important;
+  width:100%!important;
+  min-width:0!important;
+  min-height:0!important;
+  height:auto!important;
+  margin:0!important;
+  padding:10px 12px!important;
+  border:1px solid #31566b!important;
+  border-radius:10px!important;
+  background:#102d40!important;
+  color:#e9f5fc!important;
+}
+body.playerTheme #app .playerInfoFieldTitle{
+  margin:0 0 5px!important;
+  padding:0!important;
+  font-size:13px!important;
+  line-height:1.2!important;
+  font-weight:1000!important;
+}
+body.playerTheme #app .playerInfoField.notes .playerInfoFieldTitle{color:#6fd68a!important}
+body.playerTheme #app .playerInfoField.rules .playerInfoFieldTitle{color:#ffd36d!important}
+body.playerTheme #app .playerInfoFieldBody{
+  display:block!important;
+  min-height:0!important;
+  height:auto!important;
+  padding:0!important;
+  margin:0!important;
+  color:#e9f5fc!important;
+  font-size:13px!important;
+  line-height:1.45!important;
+  overflow-wrap:anywhere!important;
+}
+@media(max-width:760px){
+  body.playerTheme #app .playerQuickInfoNav{gap:4px!important;margin-top:5px!important}
+  body.playerTheme #app .playerQuickInfoNav>button{
+    min-height:42px!important;height:42px!important;
+    padding:4px 2px!important;font-size:9.5px!important;border-radius:8px!important
+  }
+  body.playerTheme #app .playerEventInfoPanel{gap:6px!important;padding:6px!important}
+  body.playerTheme #app .playerInfoField{padding:8px 9px!important}
+  body.playerTheme #app .playerInfoFieldTitle{font-size:11px!important;margin-bottom:4px!important}
+  body.playerTheme #app .playerInfoFieldBody{font-size:11.5px!important;line-height:1.4!important}
+}
+
 </style>
 <link rel="stylesheet" href="/accessibility-v234.css?v=${APP_VERSION}">
 <link rel="stylesheet" href="/roster-preview-v235.css?v=${APP_VERSION}">
@@ -8476,7 +8594,7 @@ body.playerTheme #app .player181List em{
 </head>
 <body class="authMode">
 <div id="bootGuard"><img src="/icon-192.png" alt=""><b>Łowcy Methodowcy</b><span>Uruchamiam aplikację…</span><button id="bootRetry" class="hidden" type="button" onclick="retryLowcyBoot()">Spróbuj ponownie</button></div>
-<header><div class="row"><h1><img class="brandIcon" src="/brand/icon-v217-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V257</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
+<header><div class="row"><h1><img class="brandIcon" src="/brand/icon-v217-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V258</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
 <main>
 <div id="msg"></div>
 <section id="auth" class="card">
