@@ -1094,7 +1094,7 @@ function showPlayerDesktopPanel(panel,ev){
   if(mobileBox&&CURRENT_DETAIL)mobileBox.innerHTML=active?renderPlayerMobilePanelContent(CURRENT_DETAIL,active):'';
   document.querySelectorAll('.playerDesktopUnifiedNav button,.playerUnifiedNav button').forEach(btn=>btn.classList.toggle('active',!!active&&btn.getAttribute('onclick')?.includes("'"+active+"'")));
   refreshPlayerDock();
-  if(keepY!==null)restorePlayerViewport(keepY);
+  if(keepY!==null)restorePlayerViewport(keepY);else if(!closing)focusPlayerNavOnOpen();
   recordAppNavigation();
 }
 function setPlayerDrawView(view,ev){
@@ -1256,7 +1256,7 @@ function showPlayerMobilePanel(panel,ev){
   if(desktopBox&&CURRENT_DETAIL)desktopBox.innerHTML=active?renderPlayerDesktopPanelContent(CURRENT_DETAIL,active):'';
   document.querySelectorAll('.playerUnifiedNav button,.playerDesktopUnifiedNav button').forEach(btn=>btn.classList.toggle('active',!!active&&btn.getAttribute('onclick')?.includes("'"+active+"'")));
   refreshPlayerDock();
-  if(keepY!==null)restorePlayerViewport(keepY);
+  if(keepY!==null)restorePlayerViewport(keepY);else if(!closing)focusPlayerNavOnOpen();
   recordAppNavigation();
 }
 function closePlayerSituationalMap(){
