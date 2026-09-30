@@ -1613,3 +1613,93 @@ body:not(.playerTheme):not(.authMode) #app #adminCreate .adminReminderNote p{
     font-size:15px!important;
   }
 }
+
+
+/* V273 — stable admin quick-action tiles; judge tile no longer wraps or stretches. */
+body:not(.playerTheme):not(.authMode) #app #adminQuickActions{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  align-items:stretch!important;
+  gap:8px!important;
+}
+body:not(.playerTheme):not(.authMode) #app #adminQuickActions button{
+  box-sizing:border-box!important;
+  width:100%!important;
+  height:68px!important;
+  min-height:68px!important;
+  margin:0!important;
+  padding:7px 8px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:3px!important;
+  overflow:hidden!important;
+  border-radius:12px!important;
+  line-height:1!important;
+}
+body:not(.playerTheme):not(.authMode) #app #adminQuickActions button>.adminQuickIcon{
+  flex:0 0 auto!important;
+  font-size:25px!important;
+  line-height:1!important;
+}
+body:not(.playerTheme):not(.authMode) #app #adminQuickActions button>span:last-child{
+  display:block!important;
+  max-width:100%!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+  font-size:16px!important;
+  line-height:1.05!important;
+  font-weight:1000!important;
+}
+body:not(.playerTheme):not(.authMode) #app #adminQuickActions button[aria-controls="adminCreate"]{
+  background:linear-gradient(180deg,#1b8a4d,#126d3d)!important;
+  border:1px solid #55bd7d!important;
+  color:#fff!important;
+}
+body:not(.playerTheme):not(.authMode) #app #adminQuickActions button[aria-controls="judgeManagement"]{
+  background:linear-gradient(180deg,#174d67,#10384d)!important;
+  border:1px solid #5d8fa7!important;
+  color:#fff!important;
+}
+body:not(.playerTheme):not(.authMode) #app #adminQuickActions button[aria-expanded="true"]{
+  outline:3px solid #f2ca58!important;
+  outline-offset:-3px!important;
+  box-shadow:0 4px 12px rgba(0,0,0,.28)!important;
+}
+body:not(.playerTheme):not(.authMode) #app #judgeManagement[open]{
+  margin:8px 0 12px!important;
+  padding:11px!important;
+  border:1px solid #456f84!important;
+  border-radius:12px!important;
+  background:linear-gradient(180deg,#0f3041,#0a2533)!important;
+  color:#eef8fc!important;
+}
+body:not(.playerTheme):not(.authMode) #app #judgeManagementBody>p{
+  margin:0 0 10px!important;
+  color:#c9dce5!important;
+  font-size:14px!important;
+  line-height:1.25!important;
+}
+@media(max-width:760px){
+  body:not(.playerTheme):not(.authMode) #app #adminQuickActions button{
+    height:66px!important;
+    min-height:66px!important;
+    padding:6px!important;
+  }
+  body:not(.playerTheme):not(.authMode) #app #adminQuickActions button>.adminQuickIcon{
+    font-size:24px!important;
+  }
+  body:not(.playerTheme):not(.authMode) #app #adminQuickActions button>span:last-child{
+    font-size:clamp(14px,3.9vw,16px)!important;
+  }
+}
+@media(max-width:360px){
+  body:not(.playerTheme):not(.authMode) #app #adminQuickActions{
+    gap:6px!important;
+  }
+  body:not(.playerTheme):not(.authMode) #app #adminQuickActions button>span:last-child{
+    font-size:13.5px!important;
+  }
+}
