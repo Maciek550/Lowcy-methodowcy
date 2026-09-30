@@ -92,11 +92,11 @@ test('V236: CSS has 5 proportional columns, 48+ px targets, clear label contrast
   assert.match(css,/grid-template-columns:repeat\(5,minmax\(0,1fr\)\)!important/);
   assert.match(css,/min-height:50px!important;height:50px!important/);
   assert.match(css,/min-height:48px!important;height:48px!important/);
-  assert.match(css,/font-size:clamp\(9px,2\.7vw,10\.7px\)/);
+  assert.match(css,/font-size:clamp\(10\.5px,3\.1vw,12px\)/);
   assert.match(css,/safe-area-inset-bottom/);
   assert.match(css,/playerDockBadge\[hidden\]/);
   assert.match(css,/#playerDockTopArrow:not\(\[hidden\]\)/);
   assert.match(server,/\/player-dock-v236\.css\?v=\$\{APP_VERSION\}/);
-  assert.match(server,/const APP_VERSION = '246'/);
-  assert.match(app,/const CLIENT_VERSION='246'/);
+  assert.match(server,/const APP_VERSION = '247'/);
+  assert.match(app,/const CLIENT_VERSION='247'/);
 });

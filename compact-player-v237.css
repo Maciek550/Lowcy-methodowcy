@@ -80,17 +80,17 @@ body.playerTheme #app #competitionsList .playerFilterShort{display:none!importan
     min-width:34px!important;height:32px!important
   }
   body.playerTheme #app #competitionsList .player181Title>b{
-    font-size:15px!important;line-height:1.17!important
+    font-size:18px!important;line-height:1.17!important
   }
   body.playerTheme #app #competitionsList .player181Identity>span{
-    margin-top:1px!important;font-size:12.5px!important;line-height:1.15!important
+    margin-top:1px!important;font-size:13px!important;line-height:1.15!important
   }
   body.playerTheme #app #competitionsList .player181Hour{
     min-width:80px!important;min-height:48px!important;
     padding:4px 6px!important;border-radius:8px!important
   }
   body.playerTheme #app #competitionsList .player181Hour small{
-    font-size:9.5px!important;line-height:1.08!important
+    font-size:11px!important;line-height:1.08!important
   }
   body.playerTheme #app #competitionsList .player181Hour strong{
     font-size:20px!important;line-height:1.05!important
@@ -100,12 +100,12 @@ body.playerTheme #app #competitionsList .playerFilterShort{display:none!importan
   }
   body.playerTheme #app #competitionsList .player181Date>strong{
     min-height:32px!important;padding:4px 7px!important;
-    font-size:16px!important
+    font-size:18px!important
   }
-  body.playerTheme #app #competitionsList .player181Weekday{font-size:12.5px!important}
+  body.playerTheme #app #competitionsList .player181Weekday{font-size:14px!important}
   body.playerTheme #app #competitionsList .player181Joined,
   body.playerTheme #app #competitionsList .player181Status{
-    padding:4px 6px!important;font-size:11px!important
+    padding:4px 6px!important;font-size:13px!important
   }
   body.playerTheme #app #competitionsList .player181Meta{
     gap:5px!important;margin-top:5px!important
@@ -114,19 +114,20 @@ body.playerTheme #app #competitionsList .playerFilterShort{display:none!importan
   body.playerTheme #app #competitionsList .player181Count{
     min-height:29px!important;padding:4px 7px!important
   }
+  body.playerTheme #app #competitionsList .player181Countdown{font-size:13px!important}
   body.playerTheme #app #competitionsList .player181Actions{
     gap:5px!important;margin-top:7px!important;padding-top:7px!important
   }
   body.playerTheme #app #competitionsList .player181Main{
     min-height:47px!important;padding:9px 10px!important;
-    font-size:15px!important;line-height:1.14!important;
+    font-size:16px!important;line-height:1.14!important;
     border-radius:8px!important
   }
   body.playerTheme #app #competitionsList .player181Secondary{
     gap:5px!important;margin:0!important
   }
   body.playerTheme #app #competitionsList .player181Small{
-    min-height:44px!important;padding:7px 9px!important;font-size:12.5px!important
+    min-height:44px!important;padding:7px 9px!important;font-size:13px!important
   }
   body.playerTheme #app #competitionsList .player181Confirmed{
     min-height:32px!important;margin:0!important;padding:6px 8px!important;

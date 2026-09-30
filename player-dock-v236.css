@@ -50,7 +50,7 @@ body.playerTheme:not(.authMode) #playerGlobalBottomNav .playerDockLabel{
   display:block!important;flex:none!important;max-width:100%!important;
   margin:0!important;padding:0!important;
   font-family:system-ui,-apple-system,"Segoe UI",sans-serif!important;
-  font-size:clamp(9px,2.7vw,10.7px)!important;
+  font-size:clamp(10.5px,3.1vw,12px)!important;
   font-weight:900!important;letter-spacing:-.12px!important;
   line-height:1.08!important;text-align:center!important;
   color:#fff!important;-webkit-text-fill-color:#fff!important;
@@ -93,7 +93,7 @@ body.playerTheme:not(.authMode) #playerDockTopArrow:focus-visible{
   body.playerTheme:not(.authMode) #playerGlobalBottomNav{gap:2px!important;padding-left:2px!important;padding-right:2px!important}
   body.playerTheme:not(.authMode) #playerGlobalBottomNav .playerDockItem{min-height:48px!important;height:48px!important;border-radius:7px!important}
   body.playerTheme:not(.authMode) #playerGlobalBottomNav .playerDockItem svg{width:19px!important;height:19px!important}
-  body.playerTheme:not(.authMode) #playerGlobalBottomNav .playerDockLabel{font-size:9px!important;letter-spacing:-.25px!important}
+  body.playerTheme:not(.authMode) #playerGlobalBottomNav .playerDockLabel{font-size:10.5px!important;letter-spacing:-.25px!important}
 }
 @media(min-width:761px){
   body.playerTheme:not(.authMode) #playerGlobalBottomNav{
