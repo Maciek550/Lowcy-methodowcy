@@ -1703,3 +1703,28 @@ body:not(.playerTheme):not(.authMode) #app #judgeManagementBody>p{
     font-size:13.5px!important;
   }
 }
+
+
+/* V275 — player competition fishery as prominent as the competition title on mobile. */
+@media(max-width:760px){
+  body.playerTheme #app .playerCompCardV98 .playerCompFishery,
+  body.playerTheme #app .playerCompLocationDate .playerCompFishery{
+    font-size:18px!important;
+    line-height:1.08!important;
+    font-weight:900!important;
+    color:#d9efff!important;
+  }
+  body.playerTheme #app .playerCompCardV98 .playerCompCardFishery{
+    margin-top:2px!important;
+    min-height:27px!important;
+  }
+  body.playerTheme #app .playerCompLocationDate{
+    margin-top:3px!important;
+  }
+}
+@media(max-width:370px){
+  body.playerTheme #app .playerCompCardV98 .playerCompFishery,
+  body.playerTheme #app .playerCompLocationDate .playerCompFishery{
+    font-size:17px!important;
+  }
+}
