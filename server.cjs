@@ -25,8 +25,8 @@ const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const GOOGLE_VISION_API_KEY = process.env.GOOGLE_VISION_API_KEY || process.env.OCR_GOOGLE_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.PHOTO_OCR_OPENAI_API_KEY || '';
 const PHOTO_OCR_MODEL = process.env.PHOTO_OCR_OPENAI_MODEL || 'gpt-5.6-sol';
-const APP_VERSION = '256';
-const APP_VERSION_NAME = 'V256_NEAREST_CARD_COLORS';
+const APP_VERSION = '257';
+const APP_VERSION_NAME = 'V257_COMPACT_START_LIST';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 const PODIUM_TROPHIES = fs.existsSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) ? fs.readFileSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) : null;
 const CARP_REAL = fs.readFileSync(pathModule.join(__dirname, 'carp-real-v116.png'));
@@ -8414,6 +8414,54 @@ body.playerTheme #app .playerNearestThreeBody>.playerCompCardV181:nth-child(-n+3
   }
 }
 
+
+/* V257: zwarty wiersz START + LISTA z licznikiem zapisanych. */
+body.playerTheme #app .player181Meta:has(.player181List){
+  display:grid!important;
+  grid-template-columns:minmax(0,1.2fr) minmax(0,1fr)!important;
+  gap:7px!important;
+  align-items:stretch!important
+}
+body.playerTheme #app .player181Meta:has(.player181List) .player181Countdown,
+body.playerTheme #app .player181Meta:has(.player181List) .player181List{
+  width:100%!important;
+  min-width:0!important;
+  min-height:44px!important;
+  height:44px!important;
+  box-sizing:border-box!important;
+  margin:0!important
+}
+body.playerTheme #app .player181Meta:has(.player181List) .player181Countdown{
+  padding:6px 8px!important;
+  text-align:center!important
+}
+body.playerTheme #app .player181List{
+  gap:6px!important;
+  padding:6px 9px!important
+}
+body.playerTheme #app .player181List span{font-weight:900!important}
+body.playerTheme #app .player181List b{
+  font-size:16px!important;
+  line-height:1!important;
+  font-weight:950!important;
+  font-variant-numeric:tabular-nums
+}
+body.playerTheme #app .player181List em{
+  font-size:10px!important;
+  line-height:1!important;
+  font-style:normal!important;
+  font-weight:850!important;
+  color:#d8f7e5!important
+}
+@media(max-width:380px){
+  body.playerTheme #app .player181Meta:has(.player181List){
+    grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)!important;
+    gap:5px!important
+  }
+  body.playerTheme #app .player181List{gap:4px!important;padding-left:6px!important;padding-right:6px!important}
+  body.playerTheme #app .player181List b{font-size:15px!important}
+}
+
 </style>
 <link rel="stylesheet" href="/accessibility-v234.css?v=${APP_VERSION}">
 <link rel="stylesheet" href="/roster-preview-v235.css?v=${APP_VERSION}">
@@ -8428,7 +8476,7 @@ body.playerTheme #app .playerNearestThreeBody>.playerCompCardV181:nth-child(-n+3
 </head>
 <body class="authMode">
 <div id="bootGuard"><img src="/icon-192.png" alt=""><b>Łowcy Methodowcy</b><span>Uruchamiam aplikację…</span><button id="bootRetry" class="hidden" type="button" onclick="retryLowcyBoot()">Spróbuj ponownie</button></div>
-<header><div class="row"><h1><img class="brandIcon" src="/brand/icon-v217-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V256</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
+<header><div class="row"><h1><img class="brandIcon" src="/brand/icon-v217-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V257</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
 <main>
 <div id="msg"></div>
 <section id="auth" class="card">
