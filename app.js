@@ -689,8 +689,7 @@ function renderPlayerNearestThree(arr,mode){
 function renderPlayerMyUpcoming(arr,mode){
   const mine=(arr||[]).filter(playerCompetitionRegisteredUpcoming).sort((a,b)=>(playerCompetitionDateKey(a)||'').localeCompare(playerCompetitionDateKey(b)||''));
   if(!mine.length)return '';
-  const item=c=>mode==='desktop'?renderPlayerCompetitionDesktopItem(c):renderPlayerCompetitionMobileItem(c);
-  return '<details class="playerMyUpcoming"><summary><span>MOJE NADCHODZĄCE STARTY</span><b>'+mine.length+'</b></summary><div class="playerMyUpcomingBody">'+mine.map(item).join('')+'</div></details>';
+  return '<details class="playerMyUpcoming" onclick="event.preventDefault();setPlayerCompetitionFilter(\'registered\')"><summary><span>MOJE NADCHODZĄCE STARTY</span><b>'+mine.length+'</b></summary></details>';
 }
 function renderPlayerCompetitionList(){
   const box=q('competitionsList');if(!box)return;
