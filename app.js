@@ -1,4 +1,4 @@
-const CLIENT_VERSION='256';const CLIENT_VERSION_NAME='V256_NEAREST_CARD_COLORS';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='257';const CLIENT_VERSION_NAME='V257_COMPACT_START_LIST';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -663,11 +663,13 @@ function renderPlayerCompetitionCompactActions(c){
 }
 function renderPlayerCompetitionMobileItem(c){
   const st=playerCompetitionStatus(c),mine=playerCompetitionMineLabel(c),x=playerCompetitionDateInfo(c),cc=playerCompetitionCountdownClass(x);
-  const main=Number(c.active_count||0),reserve=Number(c.reserve_count||0),limit=Number(c.limit_places||0);
+  const main=Number(c.active_count||0),reserve=Number(c.reserve_count||0),limit=Number(c.limit_places||0),countText=main+(limit?'/'+limit:'');
+  const listOpen=playerEarlyListAvailable(c);
+  const roster=listOpen?'<button type="button" class="player181List" data-competition-id="'+Number(c.id)+'" aria-label="Lista zawodników: '+esc(c.title)+' — '+countText+'" onclick="openPlayerCompetitionList('+Number(c.id)+',event)"><span>LISTA</span><b>'+countText+'</b>'+(reserve?'<em>+R'+reserve+'</em>':'')+'</button>':'<span class="player181Count"><small>ZAPISANI</small><b>'+countText+'</b>'+(reserve?'<em>+ R:'+reserve+'</em>':'')+'</span>';
   return '<article class="playerCompCompactCard playerCompCardV181 '+(mine?'mine':'')+'">'
     +'<div class="player181Header"><span class="player181No">'+playerCompetitionNo(c)+'</span><div class="player181Identity"><div class="player181Title"><b>'+esc(c.title)+'</b>'+playerCompetitionAttentionBadge(c)+'</div><span>'+esc(c.fishery||'—')+'</span></div><span class="player181Hour"><small>ZBIÓRKA</small><strong>'+esc(meetingTimeText(c))+'</strong></span></div>'
     +'<div class="player181Date"><strong>'+esc(x.date)+'</strong><span class="player181Weekday">'+esc(x.weekday)+'</span>'+(mine?'<span class="player181Joined">'+esc(mine)+'</span>':'<span class="player181Status '+st.cls+'">'+esc(st.label)+'</span>')+'</div>'
-    +'<div class="player181Meta">'+(x.countdown?'<span class="player181Countdown '+cc+'">'+esc(x.countdown)+'</span>':'')+(playerEarlyListAvailable(c)?'<button type="button" class="player181List" data-competition-id="'+Number(c.id)+'" aria-label="Lista zawodników: '+esc(c.title)+'" onclick="openPlayerCompetitionList('+Number(c.id)+',event)">LISTA</button>':'')+'<span class="player181Count"><small>ZAPISANI</small><b>'+main+(limit?'/'+limit:'')+'</b>'+(reserve?'<em>+ R:'+reserve+'</em>':'')+'</span></div>'
+    +'<div class="player181Meta">'+(x.countdown?'<span class="player181Countdown '+cc+'">'+esc(x.countdown)+'</span>':'')+roster+'</div>'
     +renderPlayerCompetitionCompactActions(c)
     +'</article>';
 }
