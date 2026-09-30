@@ -1,4 +1,4 @@
-const CLIENT_VERSION='270';const CLIENT_VERSION_NAME='V270_ADMIN_DASHBOARD_PROPORTIONS';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='271';const CLIENT_VERSION_NAME='V271_ADMIN_DATE_CONTRAST_WEEKDAY';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -571,11 +571,11 @@ function renderCompetitionMobileCard(c,admin){
   const mine=c.my_status==='ACTIVE'||c.my_status==='RESERVE',closed=c.status!=='OPEN'||c.signup_open===false,main=Number(c.active_count||0),reserve=Number(c.reserve_count||0),limit=Number(c.limit_places||0),stat=main+(limit?' / '+limit:'');
   const ended=admin&&playerCompetitionPast(c),status=ended?'ZAWODY ZAKOŃCZONE':statusName(c.status);
   if(admin){
-    const stateClass=ended?'ended':String(c.status||'').toLowerCase();
+    const stateClass=ended?'ended':String(c.status||'').toLowerCase(),dateInfo=playerCompetitionDateInfo(c);
     return '<article class="competitionMobileCard adminCompetitionMobileCard adminCompPremium '+stateClass+'">'
       +'<div class="adminCompHeadline"><b>'+esc(c.title)+'</b></div>'
       +'<div class="adminCompVenue"><span aria-hidden="true">📍</span><b>'+esc(c.fishery||'—')+'</b></div>'
-      +'<div class="adminCompWhen"><span><span aria-hidden="true">📅</span> '+fmtDate(c.competition_date)+'</span><span><span aria-hidden="true">⏰</span> ZBIÓRKA '+esc(meetingTimeText(c))+'</span></div>'
+      +'<div class="adminCompWhen"><span class="adminCompDate"><span aria-hidden="true">📅</span><b>'+esc(dateInfo.date)+'</b><em>'+esc(dateInfo.weekday||'')+'</em></span><span class="adminCompMeeting"><span aria-hidden="true">⏰</span><b>ZBIÓRKA '+esc(meetingTimeText(c))+'</b></span></div>'
       +'<div class="adminCompState '+stateClass+'">'+status+'</div>'
       +'<div class="adminCompSignup"><span class="adminCompSignupIcon" aria-hidden="true">👥</span><div><span class="adminCompSignupLabel">ZAPISY</span><strong>'+stat+'</strong>'+(reserve?'<em>REZERWA '+reserve+'</em>':'')+'</div></div>'
       +competitionActionHtml(c,true,false,closed,true)
