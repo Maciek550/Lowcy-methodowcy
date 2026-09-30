@@ -1759,3 +1759,16 @@ body:not(.playerTheme):not(.authMode) #app #judgeManagementBody>p{
     overflow-wrap:anywhere!important;
   }
 }
+
+
+/* V278 — override compact-player specificity: fishery exactly equals title size. */
+@media(max-width:760px){
+  body.playerTheme #app #competitionsList .playerCompCardV181 .player181Identity>span{
+    margin-top:1px!important;
+    color:#e5f4ff!important;
+    font-size:18px!important;
+    line-height:1.17!important;
+    font-weight:1000!important;
+    overflow-wrap:anywhere!important;
+  }
+}
