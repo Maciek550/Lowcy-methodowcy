@@ -1,4 +1,4 @@
-const CLIENT_VERSION='250';const CLIENT_VERSION_NAME='V250_PRIVATE_INVITATIONS';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='251';const CLIENT_VERSION_NAME='V251_INVITATION_LAYOUT';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -1498,7 +1498,7 @@ let ADMIN_INVITE_SEARCH_TIMER=null;
 function renderCompetitionInvitationsPanel(c){
   if(!['OPEN','PRIVATE'].includes(c.status))return '';
   const id=Number(c.id);
-  return '<details class="adminInvitationPanel" ontoggle="if(this.open)loadAdminInvitationCandidates('+id+')">'
+  return '<details class="adminInvitationPanel" '+(c.status==='PRIVATE'?'open ':'')+'ontoggle="if(this.open)loadAdminInvitationCandidates('+id+')">'
     +'<summary>✉ '+(c.status==='PRIVATE'?'Zaproś zawodników na prywatne zawody':'Zaproś zawodników')+'</summary>'
     +'<div class="adminInvitationBody"><label for="adminInviteSearch">Wybierz osobę z kontem</label>'
     +'<input id="adminInviteSearch" type="search" autocomplete="off" placeholder="Imię, nazwisko lub koło" oninput="scheduleAdminInvitationSearch('+id+')">'
@@ -1539,12 +1539,11 @@ function renderEntries(d){
   const choices=[['ALL','Wszyscy'],['ACTIVE','Lista główna'],['PRESENT','Obecni'],['UNCONFIRMED','Niepotwierdzeni'],['RESERVE','Rezerwa'],['CANCELLED','Wypisani']];
   const buttons=choices.map(([status,label])=>'<button type="button" data-status="'+status+'" aria-pressed="'+(status===ADMIN_ROSTER_STATUS)+'" class="adminRosterFilterBtn '+(status===ADMIN_ROSTER_STATUS?'selected':'')+'" onclick="setAdminRosterStatus(\''+status+'\')"><span class="adminRosterFilterLabel">'+label+'</span><span class="adminRosterFilterBadge">'+counts[status]+'</span></button>').join('');
   const group=(kind,label,rows)=>'<section class="adminRosterGroup" data-kind="'+kind+'">'+rosterTable(label,rows||[],c.id,kind)+'</section>';
-  return '<div class="card adminRosterEntries" id="adminRosterEntries"><h2>Panel zapisów — lista główna i rezerwa</h2>'+
+  return '<div class="card adminRosterEntries" id="adminRosterEntries">'+renderCompetitionInvitationsPanel(c)+'<h2>Panel zapisów — lista główna i rezerwa</h2>'+
     '<div class="adminRosterSearchBar"><label for="adminRosterSearch">Szukaj zawodnika lub koła</label>'+
     '<input id="adminRosterSearch" type="search" autocomplete="off" placeholder="Nazwisko, imię, koło…" value="'+esc(ADMIN_ROSTER_SEARCH)+'" oninput="applyAdminRosterFilter()" aria-label="Szukaj zawodnika na liście">'+
     '<div class="adminRosterFilters" role="group" aria-label="Filtr listy">'+buttons+'</div>'+
     '<div id="adminRosterFilterCount" aria-live="polite" class="adminRosterFilterCount"></div></div>'+
-    renderCompetitionInvitationsPanel(c)+
     '<button type="button" class="commGroupBtn" onclick="openAdminMessage(0,'+c.id+',\'\')">✉ Wyślij wiadomość do grupy zawodników</button>'+
     group('ACTIVE','Lista główna — bierze udział w losowaniu',d.activeEntries)+
     group('RESERVE','Lista rezerwowa',d.reserveEntries)+group('CANCELLED','Wypisani',d.cancelledEntries)+
