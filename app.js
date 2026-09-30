@@ -1,4 +1,4 @@
-const CLIENT_VERSION='254';const CLIENT_VERSION_NAME='V254_NO_DUPLICATE_UPCOMING';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='255';const CLIENT_VERSION_NAME='V255_FILTERS_ALWAYS_TOP';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -707,8 +707,9 @@ function renderPlayerCompetitionList(){
   // When there are no upcoming events, the short notice lives ONLY in the selected filter.
   // V254: do not render the same competition twice. "ZAPISANE" is the single place
   // for the player's own upcoming starts; the default view keeps only the nearest cards.
-  const view=mode=>(PLAYER_COMP_FILTER==='upcoming'&&nearest.length?renderPlayerNearestThree(arr,mode):'')+
-    filtersHtml+filteredView(mode);
+  const view=mode=>filtersHtml+
+    (PLAYER_COMP_FILTER==='upcoming'&&nearest.length?renderPlayerNearestThree(arr,mode):'')+
+    filteredView(mode);
   box.innerHTML='<div class="playerCompetitionDesktopOnly">'+view('desktop')+'</div>'+
     '<div class="playerCompetitionMobileOnly">'+view('mobile')+'</div>';
 }
