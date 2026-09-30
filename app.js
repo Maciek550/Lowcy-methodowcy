@@ -156,8 +156,9 @@ async function restoreAppNavigation(view,scrollY,restoreId){
       }
     }
     if(ME.role==='ADMIN'){
-      for(const [name,open] of [['adminCreate',Boolean(view.createOpen)],['judgeManagement',Boolean(view.judgesOpen)]]){
-        const panel=q(name),button=q('adminQuickActions')?.querySelector('[aria-controls="'+name+'"]');
+      const activeQuickPanel=view.judgesOpen?'judgeManagement':view.createOpen?'adminCreate':null;
+      for(const name of ['adminCreate','judgeManagement']){
+        const open=name===activeQuickPanel,panel=q(name),button=q('adminQuickActions')?.querySelector('[aria-controls="'+name+'"]');
         if(panel)panel.open=open;
         if(button)button.setAttribute('aria-expanded',String(open));
       }
@@ -3841,7 +3842,7 @@ function renderJudgeWork(){
 async function loadJudgeManagement(){
   if(ME?.role!=='ADMIN')return;
   if(!q('adminQuickActions')){const bar=document.createElement('div');bar.id='adminQuickActions';bar.innerHTML='<button type="button" aria-controls="adminCreate" aria-expanded="false" onclick="toggleAdminQuickPanel(\'adminCreate\',this)"><span class="adminQuickIcon" aria-hidden="true">＋</span><span>Robimy zawody</span></button><button type="button" class="secondary" aria-controls="judgeManagement" aria-expanded="false" onclick="toggleAdminQuickPanel(\'judgeManagement\',this)"><span class="adminQuickIcon" aria-hidden="true">⚖️</span><span>Sędziowie wagowi</span></button>';q('adminCreate').before(bar)}
-  let root=q('judgeManagement');if(!root){root=document.createElement('details');root.id='judgeManagement';root.className='card';root.innerHTML='<summary>⚖️ Sędziowie wagowi</summary><div id="judgeManagementBody"></div>';q('adminCreate').after(root);root.addEventListener('toggle',()=>{if(root.open)refreshJudgeManagement()})}
+  let root=q('judgeManagement');if(!root){root=document.createElement('details');root.id='judgeManagement';root.className='card';root.innerHTML='<summary>⚖️ Sędziowie wagowi</summary><div id="judgeManagementBody"></div>';q('adminCreate').before(root);root.addEventListener('toggle',()=>{if(root.open)refreshJudgeManagement()})}
 }
 async function refreshJudgeManagement(){
   try{JUDGE_MANAGEMENT=await api('/api/admin/judges');renderJudgeManagement()}catch(e){q('judgeManagementBody').textContent=e.message}
@@ -3859,7 +3860,14 @@ async function saveJudgeAccount(ev,id){
   catch(e){msg(e.message,'bad');button.disabled=false}
 }
 
-function toggleAdminQuickPanel(id,button){const panel=q(id);if(!panel)return;panel.open=!panel.open;button.setAttribute('aria-expanded',String(panel.open));recordAppNavigation()}
+function toggleAdminQuickPanel(id,button){
+  const panel=q(id);if(!panel)return;
+  const willOpen=!panel.open,otherId=id==='adminCreate'?'judgeManagement':'adminCreate',other=q(otherId);
+  if(other)other.open=false;
+  panel.open=willOpen;
+  q('adminQuickActions')?.querySelectorAll('[aria-controls]').forEach(btn=>btn.setAttribute('aria-expanded',String(willOpen&&btn.getAttribute('aria-controls')===id)));
+  recordAppNavigation();
+}
 
 // Account switching remembers independently authenticated sessions on this device.
 function savedAccountSessions(){try{return JSON.parse(STORE.get('lowcy_account_sessions')||'{}')}catch(_){return {}}}
