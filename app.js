@@ -1,4 +1,4 @@
-const CLIENT_VERSION='248';const CLIENT_VERSION_NAME='V248_CONTEXTUAL_LIST';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='249';const CLIENT_VERSION_NAME='V249_COMPETITION_CARD_LIST';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -626,6 +626,12 @@ async function confirmPlayerPresence(id,el,ev){
     msg('Obecność potwierdzona');
   }catch(e){msg(e.message,'bad');if(el){el.disabled=false;el.textContent='POTWIERDŹ OBECNOŚĆ'}}
 }
+async function openPlayerCompetitionList(id,ev){
+  if(ev){ev.preventDefault();ev.stopPropagation()}
+  if(!await openCompetition(id))return;
+  if(Number(CURRENT_DETAIL?.competition?.id)!==Number(id)||!playerEarlyListAvailable(CURRENT_DETAIL.competition))return;
+  showPlayerMobilePanel('list');
+}
 function filterPlayerCompetitions(arr,filter,applyMonth=true){
   let out=(arr||[]).filter(c=>filter==='registered'?playerCompetitionRegisteredUpcoming(c):filter==='completed'?playerCompetitionPast(c):!playerCompetitionPast(c));
   if(applyMonth&&PLAYER_COMP_MONTH!=='all')out=out.filter(c=>playerCompetitionMonthKey(c)===PLAYER_COMP_MONTH);
@@ -661,7 +667,7 @@ function renderPlayerCompetitionMobileItem(c){
   return '<article class="playerCompCompactCard playerCompCardV181 '+(mine?'mine':'')+'">'
     +'<div class="player181Header"><span class="player181No">'+playerCompetitionNo(c)+'</span><div class="player181Identity"><div class="player181Title"><b>'+esc(c.title)+'</b>'+playerCompetitionAttentionBadge(c)+'</div><span>'+esc(c.fishery||'—')+'</span></div><span class="player181Hour"><small>ZBIÓRKA</small><strong>'+esc(meetingTimeText(c))+'</strong></span></div>'
     +'<div class="player181Date"><strong>'+esc(x.date)+'</strong><span class="player181Weekday">'+esc(x.weekday)+'</span>'+(mine?'<span class="player181Joined">'+esc(mine)+'</span>':'<span class="player181Status '+st.cls+'">'+esc(st.label)+'</span>')+'</div>'
-    +'<div class="player181Meta">'+(x.countdown?'<span class="player181Countdown '+cc+'">'+esc(x.countdown)+'</span>':'')+'<span class="player181Count"><small>ZAPISANI</small><b>'+main+(limit?'/'+limit:'')+'</b>'+(reserve?'<em>+ R:'+reserve+'</em>':'')+'</span></div>'
+    +'<div class="player181Meta">'+(x.countdown?'<span class="player181Countdown '+cc+'">'+esc(x.countdown)+'</span>':'')+(playerEarlyListAvailable(c)?'<button type="button" class="player181List" data-competition-id="'+Number(c.id)+'" aria-label="Lista zawodników: '+esc(c.title)+'" onclick="openPlayerCompetitionList('+Number(c.id)+',event)">LISTA</button>':'')+'<span class="player181Count"><small>ZAPISANI</small><b>'+main+(limit?'/'+limit:'')+'</b>'+(reserve?'<em>+ R:'+reserve+'</em>':'')+'</span></div>'
     +renderPlayerCompetitionCompactActions(c)
     +'</article>';
 }
@@ -903,6 +909,10 @@ function renderPlayerEarlyListPanel(d){
     +'</section>';
 }
 function syncPlayerEarlyListCutoff(){
+  document.querySelectorAll('.player181List[data-competition-id]').forEach(btn=>{
+    const c=(PLAYER_COMPETITIONS_CACHE||[]).find(x=>Number(x.id)===Number(btn.dataset.competitionId));
+    if(!c||!playerEarlyListAvailable(c))btn.remove();
+  });
   if(ME?.role!=='PLAYER'||!CURRENT_DETAIL||playerEarlyListAvailable(CURRENT_DETAIL.competition))return;
   const buttons=document.querySelectorAll('.earlyListTile');
   if(!buttons.length){refreshPlayerDock();return}
