@@ -25,8 +25,8 @@ const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const GOOGLE_VISION_API_KEY = process.env.GOOGLE_VISION_API_KEY || process.env.OCR_GOOGLE_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.PHOTO_OCR_OPENAI_API_KEY || '';
 const PHOTO_OCR_MODEL = process.env.PHOTO_OCR_OPENAI_MODEL || 'gpt-5.6-sol';
-const APP_VERSION = '263';
-const APP_VERSION_NAME = 'V263_LARGE_EVENT_HEADER_RESULT_ACTIONS';
+const APP_VERSION = '264';
+const APP_VERSION_NAME = 'V264_PREPARE_VS_RUN';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 const PODIUM_TROPHIES = fs.existsSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) ? fs.readFileSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) : null;
 const CARP_REAL = fs.readFileSync(pathModule.join(__dirname, 'carp-real-v116.png'));
@@ -8697,6 +8697,78 @@ body:not(.playerTheme):not(.authMode) #adminZone-results .zeroScoreRule p{
   }
 }
 
+
+/* V264 — EDYCJA = przygotowanie, PANEL ZAWODÓW = prowadzenie. */
+body:not(.playerTheme):not(.authMode) #app #competitionsList .adminEditCompetitionBtn{
+  display:flex!important;align-items:center!important;justify-content:center!important;gap:7px!important;
+  min-height:50px!important;padding:6px 10px!important;
+  background:linear-gradient(180deg,#173f59,#0d2c40)!important;
+  border:2px solid #4b8eb2!important;color:#fff!important;
+  border-radius:10px!important;font-weight:950!important
+}
+body:not(.playerTheme):not(.authMode) #app #competitionsList .adminEditCompetitionBtn .adminEditGear{
+  font-size:28px!important;line-height:1!important
+}
+body:not(.playerTheme):not(.authMode) #app #competitionsList .adminEditCompetitionBtn .adminEditText{
+  font-size:12px!important;line-height:1!important;letter-spacing:.2px!important
+}
+body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationView{
+  display:grid!important;gap:10px!important
+}
+body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationIntro{
+  display:grid!important;grid-template-columns:auto minmax(0,1fr) auto!important;
+  align-items:center!important;gap:12px!important;
+  padding:12px!important;border:2px solid #4c86a4!important;
+  background:linear-gradient(100deg,#0b2637,#124a68)!important
+}
+body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationGear{
+  font-size:36px!important;line-height:1!important
+}
+body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationIntro h2{
+  margin:0!important;color:#fff!important;font-size:20px!important;line-height:1.1!important
+}
+body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationIntro p{
+  margin:4px 0 0!important;color:#c9dce8!important;font-size:12px!important;font-weight:750!important
+}
+body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminGoPanelBtn{
+  min-height:46px!important;padding:7px 12px!important;white-space:nowrap!important
+}
+body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationView .adminEventDetails{
+  margin:0!important
+}
+body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationView .adminEventSummary{
+  font-size:18px!important
+}
+@media(max-width:760px){
+  body:not(.playerTheme):not(.authMode) #app #competitionsList .adminCompetitionCardActions{
+    grid-template-columns:minmax(0,1fr) minmax(86px,.46fr)!important;
+  }
+  body:not(.playerTheme):not(.authMode) #app #competitionsList .adminCompetitionCardActions .adminEditCompetitionBtn{
+    min-height:56px!important;padding:4px 6px!important;flex-direction:column!important;gap:2px!important
+  }
+  body:not(.playerTheme):not(.authMode) #app #competitionsList .adminEditCompetitionBtn .adminEditGear{
+    font-size:31px!important
+  }
+  body:not(.playerTheme):not(.authMode) #app #competitionsList .adminEditCompetitionBtn .adminEditText{
+    font-size:10px!important
+  }
+  body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationIntro{
+    grid-template-columns:auto minmax(0,1fr)!important;gap:9px!important;padding:10px!important
+  }
+  body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationGear{
+    font-size:34px!important
+  }
+  body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationIntro h2{
+    font-size:18px!important
+  }
+  body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationIntro p{
+    font-size:11px!important
+  }
+  body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminGoPanelBtn{
+    grid-column:1/-1!important;width:100%!important;min-height:48px!important
+  }
+}
+
 </style>
 <link rel="stylesheet" href="/accessibility-v234.css?v=${APP_VERSION}">
 <link rel="stylesheet" href="/roster-preview-v235.css?v=${APP_VERSION}">
@@ -8711,7 +8783,7 @@ body:not(.playerTheme):not(.authMode) #adminZone-results .zeroScoreRule p{
 </head>
 <body class="authMode">
 <div id="bootGuard"><img src="/icon-192.png" alt=""><b>Łowcy Methodowcy</b><span>Uruchamiam aplikację…</span><button id="bootRetry" class="hidden" type="button" onclick="retryLowcyBoot()">Spróbuj ponownie</button></div>
-<header><div class="row"><h1><img class="brandIcon" src="/brand/icon-v217-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V263</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
+<header><div class="row"><h1><img class="brandIcon" src="/brand/icon-v217-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V264</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
 <main>
 <div id="msg"></div>
 <section id="auth" class="card">
