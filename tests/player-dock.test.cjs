@@ -62,10 +62,11 @@ test('V236: exactly five buttons, readable labels and separate top arrow',()=>{
   assert.ok(nav);assert.ok(arrow);
   assert.equal((nav.innerHTML.match(/class="playerDockItem"/g)||[]).length,5);
   for(const text of ['START','LOS T1','MAPA','WYNIKI','NOWOŚCI'])assert.ok(nav.innerHTML.includes(text));
+  assert.equal((nav.innerHTML.match(/playerDockBadge/g)||[]).length,1,'the dock only badges notifications');
   assert.equal(arrow.getAttribute,undefined,'arrow is a distinct control with own attribute setter mock');
   assert.match(extractDock(),/arrow\.setAttribute\('aria-label','Przewiń na górę strony'\)/);
 });
-test('V236: primary switches between pre-06 LISTA and post-06 T1, other actions route correctly',async()=>{
+test('V248: dock opens T1 before and after 06:00; LISTA stays in each competition panel',async()=>{
   const clicks=[],ctx=context();
   const detail={competition:{id:2,competition_date:'2026-09-29'},activeEntries:[{},{}],draws:[{round:1},{round:2}],results:[{round:1},{round:2}],classification:{general:[{}]}};
   ctx.CURRENT_DETAIL=detail;
@@ -76,10 +77,12 @@ test('V236: primary switches between pre-06 LISTA and post-06 T1, other actions 
   ctx.showPlayerMobilePanel=panel=>clicks.push(panel);
   ctx.playerEarlyListAvailable=()=>true;
   await ctx.dock.action('primary');
-  assert.ok(clicks.includes('list'));
+  assert.equal(clicks.at(-1),'draw1');
   ctx.playerEarlyListAvailable=()=>false;
   await ctx.dock.action('primary');
-  assert.ok(clicks.includes('draw1'));
+  assert.equal(clicks.at(-1),'draw1');
+  assert.ok(!clicks.includes('list'));
+  assert.match(app,/early\?b\('list','LISTA <span class="playerEarlyListCount">'/);
   await ctx.dock.action('map');
   assert.ok(clicks.includes('map1'));
   await ctx.dock.action('results');
@@ -97,6 +100,6 @@ test('V236: CSS has 5 proportional columns, 48+ px targets, clear label contrast
   assert.match(css,/playerDockBadge\[hidden\]/);
   assert.match(css,/#playerDockTopArrow:not\(\[hidden\]\)/);
   assert.match(server,/\/player-dock-v236\.css\?v=\$\{APP_VERSION\}/);
-  assert.match(server,/const APP_VERSION = '247'/);
-  assert.match(app,/const CLIENT_VERSION='247'/);
+  assert.match(server,/const APP_VERSION = '248'/);
+  assert.match(app,/const CLIENT_VERSION='248'/);
 });

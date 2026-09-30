@@ -1,4 +1,4 @@
-const CLIENT_VERSION='247';const CLIENT_VERSION_NAME='V247_MOBILE_READABILITY';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='248';const CLIENT_VERSION_NAME='V248_CONTEXTUAL_LIST';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -1103,20 +1103,13 @@ function playerDockLatestResults(d){
 function refreshPlayerDock(){
   if(ME?.role!=='PLAYER')return;
   const nav=q('playerGlobalBottomNav');if(!nav)return;
-  const competition=playerDockPreviewCompetition(),early=!!competition&&playerEarlyListAvailable(competition);
   const primary=nav.querySelector('[data-action="primary"]');
   if(primary){
-    const label=primary.querySelector('.playerDockLabel'),badge=primary.querySelector('.playerDockBadge');
-    const text=early?'LISTA':'LOS T1';
-    if(label&&label.textContent!==text)label.textContent=text;
-    primary.title=early?'Lista zapisanych zawodników':'Losowanie Tura 1';
+    const label=primary.querySelector('.playerDockLabel');
+    if(label&&label.textContent!=='LOS T1')label.textContent='LOS T1';
+    primary.title='Losowanie Tura 1';
     primary.setAttribute('aria-label',primary.title);
-    primary.dataset.mode=early?'list':'draw1';
-    if(badge){
-      const n=playerDockDetailedView()?CURRENT_DETAIL.activeEntries?.length:Number(competition?.active_count||0);
-      const count=Math.max(0,Number(n||0));badge.textContent=count>99?'99+':String(count);
-      badge.hidden=!early;
-    }
+    primary.dataset.mode='draw1';
   }
   const notices=nav.querySelector('[data-action="notifications"] .playerDockBadge');
   if(notices){const count=Math.max(0,Number(PLAYER_DOCK_NOTICES||0));notices.textContent=count>99?'99+':String(count);notices.hidden=!count}
@@ -1127,7 +1120,7 @@ function refreshPlayerDock(){
     const active=action==='notifications'?activeTab==='notifications':
       action==='start'?activeTab==='competitions'&&!playerDockDetailedView():
       activeTab==='competitions'&&(
-        action==='primary'&&(panel==='list'||panel==='draw1'&&!early)||
+        action==='primary'&&panel==='draw1'||
         action==='map'&&(panel==='map1'||panel==='map2')||
         action==='results'&&['t1','t2','general'].includes(panel));
     btn.classList.toggle('active',!!active);
@@ -1158,7 +1151,7 @@ function mountPlayerBottomNav(){
     '<button type="button" class="playerDockItem" data-action="'+key+'" aria-label="'+labels[key]+'">'+
       '<svg viewBox="0 0 24 24" aria-hidden="true">'+icons[key]+'</svg>'+
       '<span class="playerDockLabel">'+labels[key]+'</span>'+
-      (key==='primary'||key==='notifications'?'<span class="playerDockBadge '+(key==='notifications'?'notif':'')+'" hidden aria-hidden="true"></span>':'')+
+      (key==='notifications'?'<span class="playerDockBadge notif" hidden aria-hidden="true"></span>':'')+
     '</button>').join('');
   nav.addEventListener('click',ev=>{const button=ev.target.closest('button[data-action]');if(button)playerDockAction(button.dataset.action)});
   document.body.appendChild(nav);
@@ -1194,7 +1187,6 @@ async function playerDockAction(action){
       if(Number(CURRENT_DETAIL?.competition?.id)!==Number(selected.id)||!detail||detail.classList.contains('hidden'))return;
     }
     let panel='draw1';
-    if(action==='primary')panel=playerEarlyListAvailable(CURRENT_DETAIL.competition)?'list':'draw1';
     if(action==='map')panel=playerDockLatestMap(CURRENT_DETAIL);
     if(action==='results')panel=playerDockLatestResults(CURRENT_DETAIL);
     showTab('competitions');showPlayerMobilePanel(panel);

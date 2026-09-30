@@ -62,7 +62,7 @@ test('V237: only active dock buttons are green; passive primary and news are nav
 test('V237: CSS is loaded last and cached in offline shell, version labels stay in sync',()=>{
   assert.match(server,/<link rel="stylesheet" href="\/compact-player-v237\.css\?v=\$\{APP_VERSION\}">/);
   assert.match(server,/const COMPACT_CSS='\/compact-player-v237\.css\?v=\$\{APP_VERSION\}'/);
-  assert.match(server,/const APP_VERSION = '247'/);
-  assert.match(app,/const CLIENT_VERSION='247'/);
-  assert.match(server,/class="headerVersion">V247</);
+  assert.match(server,/const APP_VERSION = '248'/);
+  assert.match(app,/const CLIENT_VERSION='248'/);
+  assert.match(server,/class="headerVersion">V248</);
 });
