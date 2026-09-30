@@ -1,4 +1,4 @@
-const CLIENT_VERSION='271';const CLIENT_VERSION_NAME='V271_ADMIN_DATE_CONTRAST_WEEKDAY';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='272';const CLIENT_VERSION_NAME='V272_SINGLE_ROW_DATE_TIME_DARK_REMINDER';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -575,7 +575,7 @@ function renderCompetitionMobileCard(c,admin){
     return '<article class="competitionMobileCard adminCompetitionMobileCard adminCompPremium '+stateClass+'">'
       +'<div class="adminCompHeadline"><b>'+esc(c.title)+'</b></div>'
       +'<div class="adminCompVenue"><span aria-hidden="true">📍</span><b>'+esc(c.fishery||'—')+'</b></div>'
-      +'<div class="adminCompWhen"><span class="adminCompDate"><span aria-hidden="true">📅</span><b>'+esc(dateInfo.date)+'</b><em>'+esc(dateInfo.weekday||'')+'</em></span><span class="adminCompMeeting"><span aria-hidden="true">⏰</span><b>ZBIÓRKA '+esc(meetingTimeText(c))+'</b></span></div>'
+      +'<div class="adminCompWhen"><span class="adminCompDate"><span aria-hidden="true">📅</span><b>'+esc(dateInfo.date)+'</b><em>'+esc(dateInfo.weekday||'')+'</em><span class="adminCompMeeting" aria-label="Zbiórka '+esc(meetingTimeText(c))+'"><span aria-hidden="true">⏰</span><b>'+esc(meetingTimeText(c))+'</b></span></span></div>'
       +'<div class="adminCompState '+stateClass+'">'+status+'</div>'
       +'<div class="adminCompSignup"><span class="adminCompSignupIcon" aria-hidden="true">👥</span><div><span class="adminCompSignupLabel">ZAPISY</span><strong>'+stat+'</strong>'+(reserve?'<em>REZERWA '+reserve+'</em>':'')+'</div></div>'
       +competitionActionHtml(c,true,false,closed,true)
