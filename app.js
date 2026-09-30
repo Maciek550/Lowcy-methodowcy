@@ -1,4 +1,4 @@
-const CLIENT_VERSION='265';const CLIENT_VERSION_NAME='V265_DARK_COMPACT_PREPARATION';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='266';const CLIENT_VERSION_NAME='V266_CUSTOM_CONFIRM_MODAL';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -740,7 +740,65 @@ async function loadCompetitions(){
   if(q('tab-rules')&&!q('tab-rules').classList.contains('hidden'))renderPlayerRules();
 }
 async function createCompetition(ev){if(CREATING_COMPETITION)return;CREATING_COMPETITION=true;const btn=ev?.target;if(btn){btn.disabled=true;btn.textContent='Tworzę...'}try{const limit=q('cLimit').value.trim();if(!limit)throw new Error('Podaj liczbę osób');await api('/api/competitions',{method:'POST',body:JSON.stringify({title:q('cTitle')?.value||'Method Feeder',fishery:q('cFishery').value,competitionDate:q('cDate').value,meetingTime:q('cMeetingTime')?.value||'06:00',limitPlaces:limit,notes:q('cNotes').value,regulations:q('cRegulations')?.value||'',presenceReminderNote:q('cPresenceReminderNote')?.value||'',status:q('cStatus')?.value||'OPEN'})});['cFishery','cDate','cLimit','cNotes','cRegulations','cPresenceReminderNote'].forEach(id=>{const el=q(id);if(el)el.value=''});if(q('cMeetingTime'))q('cMeetingTime').value='06:00';if(q('cTitle'))q('cTitle').value='Method Feeder';await loadCompetitions();await loadNotifications();q('adminCreate').open=false;msg('Utworzono zawody')}catch(e){msg(e.message,'bad')}finally{CREATING_COMPETITION=false;if(btn){btn.disabled=false;btn.textContent='Utwórz zawody'}}}
-async function deleteCompetition(id){try{const c=ADMIN_COMPETITIONS_CACHE.find(c=>Number(c.id)===Number(id));let confirmTitle='';if(c&&playerCompetitionPast(c)){confirmTitle=prompt('Trwałe usunięcie zawodów z ARCHIWUM usunie również ich wyniki. Aby potwierdzić, wpisz dokładną nazwę zawodów:\n'+c.title);if(confirmTitle!==c.title)return}else if(!confirm('Usunąć te zawody?'))return;await api('/api/competitions/'+id,{method:'DELETE',body:JSON.stringify({confirmTitle})});q('competitionDetail').classList.add('hidden');recordAppNavigation(0);msg('Usunięto zawody');await loadCompetitions();await loadNotifications()}catch(e){msg(e.message,'bad')}}
+let APP_CONFIRM_CLEANUP=null;
+function closeAppConfirmModal(result={confirmed:false,value:''}){
+  if(APP_CONFIRM_CLEANUP){const fn=APP_CONFIRM_CLEANUP;APP_CONFIRM_CLEANUP=null;fn(result)}
+}
+function appConfirmModal({title='POTWIERDŹ OPERACJĘ',subject='',message='',confirmLabel='POTWIERDŹ',requireText='' }={}){
+  closeAppConfirmModal({confirmed:false,value:''});
+  return new Promise(resolve=>{
+    const overlay=document.createElement('div');
+    overlay.className='appConfirmOverlay';
+    overlay.setAttribute('role','presentation');
+    const needsText=!!String(requireText||'');
+    overlay.innerHTML='<section class="appConfirmModal" role="dialog" aria-modal="true" aria-labelledby="appConfirmTitle">'
+      +'<div class="appConfirmIcon" aria-hidden="true">🗑️</div>'
+      +'<h2 id="appConfirmTitle">'+esc(title)+'</h2>'
+      +(subject?'<div class="appConfirmSubject">'+esc(subject)+'</div>':'')
+      +(message?'<p class="appConfirmMessage">'+esc(message)+'</p>':'')
+      +(needsText?'<div class="appConfirmVerify"><label>Wpisz dokładną nazwę zawodów, aby potwierdzić:</label><div class="appConfirmRequired">'+esc(requireText)+'</div><input id="appConfirmInput" autocomplete="off" autocapitalize="off" spellcheck="false"></div>':'')
+      +'<div class="appConfirmActions"><button type="button" class="secondary appConfirmCancel">ANULUJ</button><button type="button" class="warn appConfirmAccept" '+(needsText?'disabled':'')+'>'+esc(confirmLabel)+'</button></div>'
+      +'</section>';
+    document.body.appendChild(overlay);
+    document.body.classList.add('appConfirmOpen');
+    const input=overlay.querySelector('#appConfirmInput'),accept=overlay.querySelector('.appConfirmAccept'),cancel=overlay.querySelector('.appConfirmCancel');
+    const cleanup=result=>{
+      document.removeEventListener('keydown',onKey);
+      overlay.remove();
+      document.body.classList.remove('appConfirmOpen');
+      resolve(result);
+    };
+    APP_CONFIRM_CLEANUP=cleanup;
+    const onKey=ev=>{if(ev.key==='Escape'){ev.preventDefault();closeAppConfirmModal({confirmed:false,value:''})}};
+    document.addEventListener('keydown',onKey);
+    cancel.onclick=()=>closeAppConfirmModal({confirmed:false,value:''});
+    accept.onclick=()=>closeAppConfirmModal({confirmed:true,value:input?.value||''});
+    overlay.addEventListener('click',ev=>{if(ev.target===overlay)closeAppConfirmModal({confirmed:false,value:''})});
+    if(input){
+      const sync=()=>{accept.disabled=input.value.trim()!==String(requireText).trim()};
+      input.addEventListener('input',sync);sync();setTimeout(()=>input.focus(),30);
+    }else setTimeout(()=>cancel.focus(),30);
+  });
+}
+async function deleteCompetition(id){
+  try{
+    const c=ADMIN_COMPETITIONS_CACHE.find(c=>Number(c.id)===Number(id));
+    const archived=!!(c&&playerCompetitionPast(c));
+    const title=c?.title||'Te zawody';
+    const answer=await appConfirmModal({
+      title:archived?'USUNĄĆ TRWALE Z ARCHIWUM?':'USUNĄĆ ZAWODY?',
+      subject:title,
+      message:archived?'Usunięte zostaną zawody, wyniki i historia tego startu. Tej operacji nie można cofnąć.':'Usunięte zostaną zawody i powiązane dane. Tej operacji nie można cofnąć.',
+      confirmLabel:archived?'USUŃ TRWALE':'USUŃ',
+      requireText:archived?title:''
+    });
+    if(!answer.confirmed)return;
+    const confirmTitle=archived?answer.value.trim():'';
+    await api('/api/competitions/'+id,{method:'DELETE',body:JSON.stringify({confirmTitle})});
+    q('competitionDetail')?.classList.add('hidden');recordAppNavigation(0);msg('Usunięto zawody');
+    await loadCompetitions();await loadNotifications();
+  }catch(e){msg(e.message,'bad')}
+}
 async function joinComp(id){try{await api('/api/competitions/'+id+'/join',{method:'POST',body:'{}'});msg('Zapisano na zawody');await loadCompetitions();await loadNotifications();if(CURRENT_DETAIL?.competition?.id==id)await refreshCompetitionKeepScroll(id)}catch(e){msg(e.message,'bad')}}
 async function declineCompetitionInvitation(id){try{await api('/api/competitions/'+Number(id)+'/invitation/decline',{method:'POST',body:'{}'});msg('Zaproszenie odrzucone. Nadal możesz zobaczyć te zawody.');await loadNotifications();await loadCompetitions();if(CURRENT_DETAIL?.competition?.id==id)await refreshCompetitionKeepScroll(id)}catch(e){msg(e.message,'bad')}}
 async function openInvitationCompetition(id,notificationId){try{showTab('competitions');if(!await openCompetition(Number(id)))return;if(notificationId)await api('/api/notifications/'+Number(notificationId)+'/read',{method:'POST',body:'{}'});await loadNotifications()}catch(e){msg(e.message,'bad')}}
