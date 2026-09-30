@@ -48,6 +48,22 @@ test('V235: mobile and desktop nav include the compact LISTA tile conditionally'
   }
   assert.match(app,/setInterval\(\(\)=>\{syncPlayerEarlyListCutoff\(\);pollPlayerCompetitionResults\(\)\},12000\)/);
 });
+test('V249: each competition card has its own LISTA between countdown and enrolled count until 06:00',()=>{
+  const ctx={playerCompetitionStatus:()=>({label:'OTWARTE',cls:'open'}),playerCompetitionMineLabel:()=>'',
+    playerCompetitionDateInfo:()=>({date:'10.10.2026',weekday:'SOBOTA',countdown:'START ZA 3 DNI',days:3}),
+    playerCompetitionCountdownClass:()=> 'soon',playerCompetitionNo:()=> '#01',
+    playerCompetitionAttentionBadge:()=>'',meetingTimeText:()=> '06:30',
+    renderPlayerCompetitionCompactActions:()=>'',esc:x=>String(x),playerEarlyListAvailable:()=>true};
+  vm.runInNewContext(sourceBetween('function renderPlayerCompetitionMobileItem','function renderPlayerCompetitionDesktopItem')+';this.render=renderPlayerCompetitionMobileItem;',ctx);
+  const c={id:42,title:'Lasomin',active_count:28,limit_places:30};
+  const before=ctx.render(c);
+  assert.match(before,/player181Countdown[\s\S]*player181List[\s\S]*player181Count/);
+  assert.match(before,/data-competition-id="42"[\s\S]*openPlayerCompetitionList\(42,event\)/);
+  ctx.playerEarlyListAvailable=()=>false;
+  assert.doesNotMatch(ctx.render(c),/player181List/);
+  assert.match(app,/if\(Number\(CURRENT_DETAIL\?\.competition\?\.id\)!==Number\(id\)\|\|!playerEarlyListAvailable\(CURRENT_DETAIL\.competition\)\)return/);
+  assert.match(server,/\.player181List\{[\s\S]*min-height:44px!important/);
+});
 test('V235: call icon and quick-add are distinct for real versus imported telephone numbers',()=>{
   const ctx={phoneTelHref:p=>/^\+?\d{9,15}$/.test(String(p))?p:'',renderPhoneCall:(p,cls,small)=>'CALL '+p+' '+cls+' '+small};
   vm.runInNewContext(sourceBetween('function rosterPhoneControl','function msg(')+';this.phoneAction=rosterPhoneControl;',ctx);
@@ -65,7 +81,7 @@ test('V235: admin contact phone remains separate from login, with dedicated CSS 
   assert.match(server,/\/roster-preview-v235\.css/);
   assert.match(css,/\.phoneCallBtn\.rosterPhoneCall/);
   assert.match(css,/\.playerMapNav\.withEarlyList/);
-  assert.match(app,/const CLIENT_VERSION='248'/);
-  assert.match(server,/const APP_VERSION = '248'/);
-  assert.match(server,/class="headerVersion">V248</);
+  assert.match(app,/const CLIENT_VERSION='249'/);
+  assert.match(server,/const APP_VERSION = '249'/);
+  assert.match(server,/class="headerVersion">V249</);
 });
