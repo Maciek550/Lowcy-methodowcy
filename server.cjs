@@ -25,8 +25,8 @@ const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const GOOGLE_VISION_API_KEY = process.env.GOOGLE_VISION_API_KEY || process.env.OCR_GOOGLE_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.PHOTO_OCR_OPENAI_API_KEY || '';
 const PHOTO_OCR_MODEL = process.env.PHOTO_OCR_OPENAI_MODEL || 'gpt-5.6-sol';
-const APP_VERSION = '275';
-const APP_VERSION_NAME = 'V275_PLAYER_FISHERY_TEXT';
+const APP_VERSION = '276';
+const APP_VERSION_NAME = 'V276_PLAYER_FISHERY_TITLE_SIZE';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 const PODIUM_TROPHIES = fs.existsSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) ? fs.readFileSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) : null;
 const CARP_REAL = fs.readFileSync(pathModule.join(__dirname, 'carp-real-v116.png'));
@@ -8783,7 +8783,7 @@ body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationV
 </head>
 <body class="authMode">
 <div id="bootGuard"><img src="/icon-192.png" alt=""><b>Łowcy Methodowcy</b><span>Uruchamiam aplikację…</span><button id="bootRetry" class="hidden" type="button" onclick="retryLowcyBoot()">Spróbuj ponownie</button></div>
-<header><div class="row"><h1><img class="brandIcon" src="/brand/icon-v217-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V275</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
+<header><div class="row"><h1><img class="brandIcon" src="/brand/icon-v217-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V276</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
 <main>
 <div id="msg"></div>
 <section id="auth" class="card">
