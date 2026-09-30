@@ -705,3 +705,50 @@ body.appConfirmOpen{overflow:hidden!important}
   .appConfirmActions{gap:7px!important}
   .appConfirmActions button{min-height:50px!important;font-size:14px!important}
 }
+
+
+/* V267 — one confirmation system across the app, with action-specific tone. */
+.appConfirmTone-info .appConfirmModal{
+  border-color:#3e7898!important;
+}
+.appConfirmTone-info .appConfirmIcon{
+  background:linear-gradient(180deg,#246d92,#16465f)!important;
+  border-color:#66acd0!important;
+}
+.appConfirmTone-info .appConfirmAccept{
+  background:linear-gradient(180deg,#237fad,#145a7b)!important;
+  border-color:#61b2d7!important;
+}
+.appConfirmTone-success .appConfirmModal{
+  border-color:#3f9360!important;
+}
+.appConfirmTone-success .appConfirmIcon{
+  background:linear-gradient(180deg,#249f51,#13713a)!important;
+  border-color:#69cf88!important;
+}
+.appConfirmTone-success .appConfirmAccept{
+  background:linear-gradient(180deg,#20a64f,#0d7c35)!important;
+  border-color:#5bd17d!important;
+}
+.appConfirmTone-warning .appConfirmModal{
+  border-color:#b28a31!important;
+}
+.appConfirmTone-warning .appConfirmIcon{
+  background:linear-gradient(180deg,#c99524,#8b6310)!important;
+  border-color:#f0ca68!important;
+}
+.appConfirmTone-warning .appConfirmAccept{
+  background:linear-gradient(180deg,#c18c1f,#8e6310)!important;
+  border-color:#edc863!important;
+}
+.appConfirmTone-danger .appConfirmModal{
+  border-color:#a74955!important;
+}
+.appConfirmTone-danger .appConfirmIcon{
+  background:linear-gradient(180deg,#aa3041,#731a27)!important;
+  border-color:#e46473!important;
+}
+.appConfirmTone-danger .appConfirmAccept{
+  background:linear-gradient(180deg,#b93042,#7b1927)!important;
+  border-color:#e26470!important;
+}
