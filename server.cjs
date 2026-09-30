@@ -25,8 +25,8 @@ const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const GOOGLE_VISION_API_KEY = process.env.GOOGLE_VISION_API_KEY || process.env.OCR_GOOGLE_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.PHOTO_OCR_OPENAI_API_KEY || '';
 const PHOTO_OCR_MODEL = process.env.PHOTO_OCR_OPENAI_MODEL || 'gpt-5.6-sol';
-const APP_VERSION = '258';
-const APP_VERSION_NAME = 'V258_INFO_MAPS_LIST_ACCORDION';
+const APP_VERSION = '259';
+const APP_VERSION_NAME = 'V259_SMALL_GOLD_LIST_TILES';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 const PODIUM_TROPHIES = fs.existsSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) ? fs.readFileSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) : null;
 const CARP_REAL = fs.readFileSync(pathModule.join(__dirname, 'carp-real-v116.png'));
@@ -8580,6 +8580,64 @@ body.playerTheme #app .playerInfoFieldBody{
   body.playerTheme #app .playerInfoFieldBody{font-size:11.5px!important;line-height:1.4!important}
 }
 
+
+/* V259: LISTA jest małym złotym kaflem — także obok INFO/MAPA T1/MAPA T2. */
+body.playerTheme #app .playerQuickInfoNav.withEarlyList{
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+}
+body.playerTheme #app .playerQuickInfoNav.withEarlyList .earlyListTile{
+  grid-column:auto!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:none!important;
+  height:42px!important;
+  min-height:42px!important;
+  padding:4px 2px!important;
+  font-size:13px!important;
+  line-height:1!important;
+  font-weight:1000!important;
+  background:linear-gradient(145deg,#e2ad35,#a87310)!important;
+  border:2px solid #f0ca68!important;
+  color:#102b38!important;
+  -webkit-text-fill-color:#102b38!important;
+}
+body.playerTheme #app .playerQuickInfoNav.withEarlyList .earlyListTile .playerEarlyListCount{
+  display:inline!important;
+  margin-left:2px!important;
+  font-size:14px!important;
+  line-height:1!important;
+  font-weight:1000!important;
+  color:#102b38!important;
+  -webkit-text-fill-color:#102b38!important;
+}
+
+/* LISTA na kartach zawodów — ten sam złoty kod wizualny i wyraźniejszy napis. */
+body.playerTheme #app .player181List{
+  background:linear-gradient(145deg,#e2ad35,#a87310)!important;
+  border:1px solid #f0ca68!important;
+  color:#102b38!important;
+  -webkit-text-fill-color:#102b38!important;
+  font-size:13px!important;
+  font-weight:1000!important;
+}
+body.playerTheme #app .player181List span{
+  color:#102b38!important;
+  -webkit-text-fill-color:#102b38!important;
+  font-size:13px!important;
+  font-weight:1000!important;
+}
+body.playerTheme #app .player181List b{
+  color:#102b38!important;
+  -webkit-text-fill-color:#102b38!important;
+  font-size:17px!important;
+  font-weight:1000!important;
+}
+body.playerTheme #app .player181List em{
+  color:#273643!important;
+  -webkit-text-fill-color:#273643!important;
+  font-weight:950!important;
+}
+
 </style>
 <link rel="stylesheet" href="/accessibility-v234.css?v=${APP_VERSION}">
 <link rel="stylesheet" href="/roster-preview-v235.css?v=${APP_VERSION}">
@@ -8594,7 +8652,7 @@ body.playerTheme #app .playerInfoFieldBody{
 </head>
 <body class="authMode">
 <div id="bootGuard"><img src="/icon-192.png" alt=""><b>Łowcy Methodowcy</b><span>Uruchamiam aplikację…</span><button id="bootRetry" class="hidden" type="button" onclick="retryLowcyBoot()">Spróbuj ponownie</button></div>
-<header><div class="row"><h1><img class="brandIcon" src="/brand/icon-v217-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V258</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
+<header><div class="row"><h1><img class="brandIcon" src="/brand/icon-v217-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V259</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
 <main>
 <div id="msg"></div>
 <section id="auth" class="card">
