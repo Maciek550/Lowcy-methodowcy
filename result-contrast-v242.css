@@ -1177,3 +1177,191 @@ body:not(.playerTheme):not(.authMode) #app #competitionsList .adminCompPremium .
     font-size:15px!important;
   }
 }
+
+
+/* V270 — admin dashboard proportions closer to approved visual; no duplicate date block. */
+body:not(.playerTheme):not(.authMode) #app>.tabs button.hidden{
+  display:none!important;
+}
+body:not(.playerTheme):not(.authMode) #app>.tabs{
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:7px!important;
+}
+body:not(.playerTheme):not(.authMode) #app>.tabs button{
+  min-height:78px!important;
+  padding:8px 5px!important;
+  font-size:16px!important;
+  line-height:1.06!important;
+  gap:4px!important;
+}
+body:not(.playerTheme):not(.authMode) #app>.tabs button::before{
+  font-size:24px!important;
+}
+body:not(.playerTheme):not(.authMode) #app>.tabs #btn-notifications::before{
+  display:none!important;
+  content:none!important;
+}
+body:not(.playerTheme):not(.authMode) #app>.tabs #btn-notifications .adminNavOnlyIcon{
+  display:block!important;
+  font-size:34px!important;
+  line-height:1!important;
+}
+body:not(.playerTheme):not(.authMode) #app>.tabs #btn-notifications{
+  font-size:0!important;
+}
+body:not(.playerTheme):not(.authMode) #app #adminQuickActions button{
+  min-height:60px!important;
+  font-size:18px!important;
+}
+body:not(.playerTheme):not(.authMode) #app #adminQuickActions .adminQuickIcon{
+  font-size:29px!important;
+}
+
+body:not(.playerTheme):not(.authMode) #app #competitionsList .adminCompPremium{
+  padding:13px!important;
+}
+body:not(.playerTheme):not(.authMode) #app #competitionsList .adminCompHeadline>b{
+  display:block!important;
+  font-size:25px!important;
+  line-height:1.08!important;
+  font-weight:1000!important;
+  color:#fff!important;
+}
+body:not(.playerTheme):not(.authMode) #app #competitionsList .adminCompVenue{
+  display:flex!important;
+  align-items:center!important;
+  gap:7px!important;
+  margin-top:9px!important;
+  color:#d6e7ef!important;
+  font-size:18px!important;
+  line-height:1.1!important;
+}
+body:not(.playerTheme):not(.authMode) #app #competitionsList .adminCompVenue>span{
+  font-size:19px!important;
+}
+body:not(.playerTheme):not(.authMode) #app #competitionsList .adminCompVenue>b{
+  color:#fff!important;
+  font-size:19px!important;
+  font-weight:1000!important;
+}
+body:not(.playerTheme):not(.authMode) #app #competitionsList .adminCompWhen{
+  display:flex!important;
+  flex-wrap:wrap!important;
+  align-items:center!important;
+  gap:8px 16px!important;
+  margin-top:8px!important;
+  color:#c6dbe6!important;
+  font-size:16px!important;
+  line-height:1.15!important;
+  font-weight:900!important;
+}
+body:not(.playerTheme):not(.authMode) #app #competitionsList .adminCompWhen>span{
+  display:inline-flex!important;
+  align-items:center!important;
+  gap:4px!important;
+}
+body:not(.playerTheme):not(.authMode) #app #competitionsList .adminCompPremium>.adminCompState{
+  margin-top:11px!important;
+  min-height:40px!important;
+  padding:7px 10px!important;
+  font-size:15px!important;
+}
+body:not(.playerTheme):not(.authMode) #app #competitionsList .adminCompSignup{
+  display:grid!important;
+  grid-template-columns:auto minmax(0,1fr)!important;
+  align-items:center!important;
+  gap:10px!important;
+  margin-top:8px!important;
+  padding:10px 12px!important;
+  border:1px solid #31586b!important;
+  border-radius:11px!important;
+  background:linear-gradient(180deg,#102c3c,#0a2230)!important;
+}
+body:not(.playerTheme):not(.authMode) #app #competitionsList .adminCompSignupIcon{
+  font-size:29px!important;
+  line-height:1!important;
+}
+body:not(.playerTheme):not(.authMode) #app #competitionsList .adminCompSignup>div{
+  display:flex!important;
+  align-items:baseline!important;
+  gap:10px!important;
+  min-width:0!important;
+}
+body:not(.playerTheme):not(.authMode) #app #competitionsList .adminCompSignupLabel{
+  color:#a8c5d3!important;
+  font-size:14px!important;
+  line-height:1!important;
+  font-weight:1000!important;
+}
+body:not(.playerTheme):not(.authMode) #app #competitionsList .adminCompSignup strong{
+  color:#fff!important;
+  font-size:24px!important;
+  line-height:1!important;
+  font-weight:1000!important;
+}
+body:not(.playerTheme):not(.authMode) #app #competitionsList .adminCompSignup em{
+  margin-left:auto!important;
+  color:#ffd36d!important;
+  font-size:14px!important;
+  font-style:normal!important;
+  font-weight:1000!important;
+}
+body:not(.playerTheme):not(.authMode) #app #competitionsList .adminCompPremium .adminOpenCompetitionBtn{
+  min-height:60px!important;
+  font-size:21px!important;
+}
+body:not(.playerTheme):not(.authMode) #app #competitionsList .adminCompPremium .adminEditCompetitionBtn,
+body:not(.playerTheme):not(.authMode) #app #competitionsList .adminCompPremium .adminDeleteCompetitionBtn{
+  min-height:52px!important;
+}
+body:not(.playerTheme):not(.authMode) #app #competitionsList .adminCompPremium .adminEditText,
+body:not(.playerTheme):not(.authMode) #app #competitionsList .adminCompPremium .adminDeleteCompetitionBtn{
+  font-size:15px!important;
+}
+
+@media(max-width:760px){
+  body:not(.playerTheme):not(.authMode) #app>.tabs{
+    gap:5px!important;
+    margin:8px 0 10px!important;
+  }
+  body:not(.playerTheme):not(.authMode) #app>.tabs button{
+    min-height:74px!important;
+    padding:7px 3px!important;
+    font-size:clamp(15px,3.65vw,17px)!important;
+  }
+  body:not(.playerTheme):not(.authMode) #app>.tabs button::before{
+    font-size:22px!important;
+  }
+  body:not(.playerTheme):not(.authMode) #app>.tabs #btn-notifications .adminNavOnlyIcon{
+    font-size:32px!important;
+  }
+  body:not(.playerTheme):not(.authMode) #app #adminQuickActions button{
+    min-height:58px!important;
+    font-size:clamp(17px,4.25vw,19px)!important;
+  }
+  body:not(.playerTheme):not(.authMode) #app #competitionsList .adminCompPremium{
+    padding:12px!important;
+  }
+  body:not(.playerTheme):not(.authMode) #app #competitionsList .adminCompHeadline>b{
+    font-size:clamp(23px,6vw,27px)!important;
+  }
+  body:not(.playerTheme):not(.authMode) #app #competitionsList .adminCompVenue{
+    font-size:clamp(17px,4.2vw,19px)!important;
+  }
+  body:not(.playerTheme):not(.authMode) #app #competitionsList .adminCompVenue>b{
+    font-size:clamp(18px,4.5vw,20px)!important;
+  }
+  body:not(.playerTheme):not(.authMode) #app #competitionsList .adminCompWhen{
+    font-size:clamp(15px,3.8vw,17px)!important;
+    gap:7px 12px!important;
+  }
+  body:not(.playerTheme):not(.authMode) #app #competitionsList .adminCompSignup{
+    padding:9px 10px!important;
+  }
+  body:not(.playerTheme):not(.authMode) #app #competitionsList .adminCompSignupLabel{
+    font-size:14px!important;
+  }
+  body:not(.playerTheme):not(.authMode) #app #competitionsList .adminCompSignup strong{
+    font-size:23px!important;
+  }
+}
