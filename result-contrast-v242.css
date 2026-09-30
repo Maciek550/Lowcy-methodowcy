@@ -1728,3 +1728,21 @@ body:not(.playerTheme):not(.authMode) #app #judgeManagementBody>p{
     font-size:17px!important;
   }
 }
+
+
+/* V276 — fishery text truly matches competition-title prominence on mobile. */
+@media(max-width:760px){
+  body.playerTheme #app .playerCompCardV98 .playerCompFishery,
+  body.playerTheme #app .playerCompLocationDate .playerCompFishery{
+    font-size:22px!important;
+    line-height:1.05!important;
+    font-weight:1000!important;
+    color:#e4f4ff!important;
+  }
+}
+@media(max-width:370px){
+  body.playerTheme #app .playerCompCardV98 .playerCompFishery,
+  body.playerTheme #app .playerCompLocationDate .playerCompFishery{
+    font-size:21px!important;
+  }
+}
