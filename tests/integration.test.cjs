@@ -18,6 +18,36 @@ test('staging PostgreSQL: preview, 29=>28 absence, draw, reset/restore, results 
   const tracked=await request('/api/register','POST',{phone:'501000001',password:'staging-player',firstName:'Test',lastName:'Aktywny',pzwClub:'7'});
   assert.equal(tracked.status,200,JSON.stringify(tracked));
   const playerId=Number(tracked.user.id),originalLogin=String(tracked.user.last_login_at);
+  // V253: invitation acknowledgement is part of both new and repeated joins.
+  const privateEvent=await request('/api/competitions','POST',{title:'TEST ZAPROSZEŃ V253',fishery:'Test',status:'PRIVATE',competitionDate:'2026-12-02',limitPlaces:1},token);
+  assert.equal(privateEvent.status,200,JSON.stringify(privateEvent));const privateId=Number(privateEvent.competition.id);
+  const blockedPrivate=await request('/api/competitions/'+privateId+'/join','POST',{},tracked.token);
+  assert.equal(blockedPrivate.status,404);
+  await db.query('insert into competition_invitations(competition_id,user_id) values($1,$2)',[privateId,playerId]);
+  const invitation=(await db.query("insert into notifications(recipient_user_id,type,title,body,data) values($1,'COMPETITION_INVITATION','Test','Test',$2::jsonb) returning id",[playerId,JSON.stringify({competitionId:privateId,status:'PENDING'})])).rows[0].id;
+  const unrelated=(await db.query("insert into notifications(recipient_user_id,type,title,body,data) values($1,'COMPETITION_INVITATION','Other','Other',$2::jsonb) returning id",[playerId,JSON.stringify({competitionId:0,status:'PENDING'})])).rows[0].id;
+  const firstJoin=await request('/api/competitions/'+privateId+'/join','POST',{},tracked.token);
+  assert.equal(firstJoin.ok,true,JSON.stringify(firstJoin));assert.equal(firstJoin.status,'ACTIVE');
+  async function checkInvitation(){
+    const n=(await db.query('select data,read_at,popup_seen_at from notifications where id=$1',[invitation])).rows[0];
+    assert.equal(n.data.status,'ACCEPTED');assert.ok(n.read_at);assert.ok(n.popup_seen_at);
+    const i=(await db.query('select status,responded_at from competition_invitations where competition_id=$1 and user_id=$2',[privateId,playerId])).rows[0];
+    assert.equal(i.status,'ACCEPTED');assert.ok(i.responded_at);
+    const other=(await db.query('select data,read_at,popup_seen_at from notifications where id=$1',[unrelated])).rows[0];
+    assert.equal(other.data.status,'PENDING');assert.equal(other.read_at,null);assert.equal(other.popup_seen_at,null);
+  }
+  await checkInvitation();
+  const confirmationsBefore=Number((await db.query("select count(*)::int n from notifications where type='JOIN_CONFIRM' and data->>'competitionId'=$1",[String(privateId)])).rows[0].n);
+  for(const status of ['ACTIVE','RESERVE']){
+    await db.query("update competition_invitations set status='PENDING',responded_at=null where competition_id=$1 and user_id=$2",[privateId,playerId]);
+    await db.query("update notifications set data=jsonb_set(data,'{status}','\"PENDING\"'::jsonb),read_at=null,popup_seen_at=null where id=$1",[invitation]);
+    await db.query('update entries set status=$3,confirmed=true,confirmed_at=now() where competition_id=$1 and user_id=$2',[privateId,playerId,status]);
+    const repeat=await request('/api/competitions/'+privateId+'/join','POST',{},tracked.token);
+    assert.equal(repeat.ok,true,JSON.stringify(repeat));await checkInvitation();
+    const entry=(await db.query('select status,confirmed from entries where competition_id=$1 and user_id=$2',[privateId,playerId])).rows[0];
+    assert.equal(entry.status,status);assert.equal(entry.confirmed,true);
+  }
+  assert.equal(Number((await db.query("select count(*)::int n from notifications where type='JOIN_CONFIRM' and data->>'competitionId'=$1",[String(privateId)])).rows[0].n),confirmationsBefore);
   await db.query("update users set last_active_at=now()-interval '1 day' where id=$1",[playerId]);
   const seen=await request('/api/me/activity','POST',null,tracked.token);
   assert.equal(seen.status,200,JSON.stringify(seen));
