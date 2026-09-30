@@ -452,3 +452,161 @@ body:not(.playerTheme):not(.authMode) #app #adminZone-results .resultToastTile b
     font-size:10.5px!important;
   }
 }
+
+
+/* V265 — dark, compact preparation screen; no white card, textareas fit content. */
+body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationView .adminEventDetails{
+  background:linear-gradient(180deg,#0d2b3b 0%,#091f2d 100%)!important;
+  border:1px solid #315b70!important;
+  color:#eef8ff!important;
+  box-shadow:none!important;
+  border-radius:14px!important;
+  overflow:hidden!important;
+}
+body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationView .adminEventSummary{
+  display:flex!important;
+  align-items:center!important;
+  gap:8px!important;
+  min-height:48px!important;
+  padding:10px 12px!important;
+  background:#12384c!important;
+  border-bottom:1px solid #315b70!important;
+  color:#ffffff!important;
+  list-style:none!important;
+}
+body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationView .adminEventSummary::-webkit-details-marker{
+  display:none!important;
+}
+body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationView .adminEventSummary>b{
+  color:#ffffff!important;
+  font-size:18px!important;
+  line-height:1.1!important;
+  font-weight:1000!important;
+  text-transform:uppercase!important;
+}
+body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationView .adminEventSummaryMeta{
+  margin-left:auto!important;
+  min-width:0!important;
+  color:#a8c5d4!important;
+  font-size:11px!important;
+  font-weight:800!important;
+  text-align:right!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationView .adminEventSummary:after{
+  content:''!important;
+  display:none!important;
+}
+body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationView .adminEventDetailsBody{
+  padding:11px!important;
+  background:transparent!important;
+}
+body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationView .adminEventDetailsBody>.grid{
+  gap:8px!important;
+}
+body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationView label{
+  margin:7px 0 4px!important;
+  color:#c8dbe5!important;
+  font-size:12px!important;
+  line-height:1.2!important;
+  font-weight:900!important;
+}
+body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationView input,
+body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationView select,
+body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationView textarea{
+  background:#071f2d!important;
+  color:#f2f9fc!important;
+  -webkit-text-fill-color:#f2f9fc!important;
+  border:1px solid #3a6a82!important;
+  box-shadow:inset 0 1px 4px #0005!important;
+}
+body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationView textarea::placeholder{
+  color:#7f98a6!important;
+  -webkit-text-fill-color:#7f98a6!important;
+  opacity:1!important;
+}
+body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationView .adminTextPair{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:8px!important;
+  margin:8px 0!important;
+}
+body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationView #dNotes,
+body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationView #dRegulations,
+body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationView #dPresenceReminderNote{
+  field-sizing:content!important;
+  height:auto!important;
+  max-height:360px!important;
+  overflow:auto!important;
+  resize:vertical!important;
+  line-height:1.38!important;
+}
+body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationView #dNotes{
+  min-height:78px!important;
+}
+body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationView #dRegulations{
+  min-height:96px!important;
+}
+body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationView .adminReminderNote{
+  margin:8px 0 0!important;
+  padding:10px!important;
+  background:#0d3143!important;
+  border:1px solid #3e6e83!important;
+  border-radius:11px!important;
+  color:#eaf6fb!important;
+}
+body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationView .adminReminderNote label{
+  margin-top:0!important;
+  color:#d9edf5!important;
+}
+body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationView .adminReminderNote p{
+  margin:5px 0 0!important;
+  color:#91afbd!important;
+}
+body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationView .adminEventDetailsBody>button{
+  min-height:50px!important;
+  margin-top:10px!important;
+  background:linear-gradient(180deg,#1fa64d,#0d7b35)!important;
+  border:1px solid #55cf78!important;
+  color:#ffffff!important;
+  -webkit-text-fill-color:#ffffff!important;
+  font-size:15px!important;
+  font-weight:1000!important;
+  border-radius:10px!important;
+}
+
+@media(max-width:760px){
+  body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationView .adminEventDetailsBody{
+    padding:9px!important;
+  }
+  body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationView .adminEventSummary{
+    min-height:46px!important;
+    padding:9px 10px!important;
+  }
+  body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationView .adminEventSummary>b{
+    font-size:17px!important;
+  }
+  body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationView .adminEventSummaryMeta{
+    max-width:45%!important;
+    font-size:10px!important;
+  }
+  body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationView .adminEventDetailsBody>.grid{
+    grid-template-columns:1fr!important;
+    gap:5px!important;
+  }
+  body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationView .adminTextPair{
+    grid-template-columns:1fr!important;
+    gap:6px!important;
+  }
+  body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationView #dNotes{
+    min-height:72px!important;
+  }
+  body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationView #dRegulations{
+    min-height:88px!important;
+  }
+  body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationView #dPresenceReminderNote{
+    min-height:64px!important;
+  }
+}
