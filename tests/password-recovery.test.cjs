@@ -3,6 +3,7 @@ const test=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
+const vm=require('node:vm');
 const {makeRoute,phoneVariants,smsBody}=require('../password-recovery.cjs');
 const root=path.join(__dirname,'..');
 test('V234: Polish phone variants are accepted without creating number-enumeration leaks',()=>{
@@ -76,7 +77,37 @@ test('V234: login form accessibility, separate recovery tile, and version badge 
   assert.match(style,/min-height:44px/);
   assert.match(ui,/adminPasswordResetTile/);
   assert.match(server,/<span class="appVersionBadge">V\$\{APP_VERSION\}<\/span>/);
-  assert.match(server,/const APP_VERSION = '244'/);
-  assert.match(app,/const CLIENT_VERSION='244'/);
+  assert.match(server,/const APP_VERSION = '245'/);
+  assert.match(app,/const CLIENT_VERSION='245'/);
   assert.match(server,/token:signToken\(user\)/);
+});
+test('prepared SMS can be closed from the request card after returning from the SMS app',async()=>{
+  const ui=fs.readFileSync(path.join(root,'password-recovery-ui.js'),'utf8');
+  const nodes={};
+  const parent={insertBefore(node){nodes[node.id]=node}};
+  nodes['tab-notifications']=parent;
+  nodes['btn-notifications']={querySelector:()=>null,appendChild(){}};
+  const document={
+    readyState:'loading',addEventListener(){},
+    getElementById:id=>nodes[id]||null,
+    createElement:()=>({setAttribute(){},addEventListener(type,fn){this[type]=fn}})
+  };
+  let closed=false;
+  const request={id:20,status:'PREPARED',first_name:'Anna',last_name:'Nowak',phone:'500600700',created_at:'2026-09-30T07:00:00Z'};
+  const fetch=async(url,options)=>{
+    if(url.endsWith('/sent')&&options?.method==='POST'){closed=true;return {ok:true,json:async()=>({ok:true})}}
+    if(url==='/api/admin/password-resets')return {ok:true,json:async()=>({requests:closed?[]:[request]})};
+    throw Error('Unexpected request '+url);
+  };
+  const window={loadNotifications(){}};
+  vm.runInNewContext(ui,{document,window,fetch,confirm:()=>true,ME:{role:'ADMIN'},TOKEN:'test'});
+  await window.lowcyPasswordResetRefresh();
+  const tile=nodes.adminPasswordResetTile;
+  assert.match(tile.innerHTML,/data-reset-action="sent" data-id="20"/);
+  const button={dataset:{resetAction:'sent',id:'20'},disabled:false};
+  tile.click({target:{closest:()=>button}});
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(closed,true);
+  assert.match(tile.innerHTML,/Brak oczekujących próśb/);
+  assert.doesNotMatch(tile.innerHTML,/data-reset-action="sent"/);
 });
