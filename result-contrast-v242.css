@@ -44,3 +44,198 @@ body:not(.playerTheme):not(.authMode) #app #adminZone-results .finalClubToggle {
     width:20px!important;height:20px!important;flex:0 0 20px!important;margin:0!important;accent-color:#125e92!important;
   }
 }
+
+
+/* V262 — dark admin results theme: less white, consistent with the rest of the app. */
+body:not(.playerTheme):not(.authMode) #app #adminZone-results{
+  color:#eef8ff!important;
+}
+body:not(.playerTheme):not(.authMode) #app #adminZone-results>.card,
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .card{
+  background:linear-gradient(180deg,#0d2b3b 0%,#091f2d 100%)!important;
+  border-color:#315b70!important;
+  color:#eef8ff!important;
+  box-shadow:none!important;
+}
+body:not(.playerTheme):not(.authMode) #app #adminZone-results h2{
+  color:#f4fbff!important;
+  text-shadow:none!important;
+}
+body:not(.playerTheme):not(.authMode) #app #adminZone-results h3{
+  color:#f6c957!important;
+  text-shadow:none!important;
+}
+body:not(.playerTheme):not(.authMode) #app #adminZone-results h4{
+  color:#eef8ff!important;
+}
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .muted,
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .small{
+  color:#b9d0dc!important;
+}
+
+/* 0 pkt selector */
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .zeroScoreRule{
+  background:linear-gradient(180deg,#0f3144,#0b2636)!important;
+  border-color:#4c7d94!important;
+}
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .zeroScoreRuleHead b{
+  color:#ffd05c!important;
+}
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .zeroScoreRuleHead span{
+  color:#91c8e4!important;
+}
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .zeroScoreRuleBtns button{
+  background:linear-gradient(180deg,#194763,#10344a)!important;
+  border-color:#4d91b5!important;
+  color:#ffffff!important;
+  -webkit-text-fill-color:#ffffff!important;
+}
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .zeroScoreRuleBtns button.active{
+  background:linear-gradient(180deg,#e1ad32,#a97512)!important;
+  border-color:#ffd56b!important;
+  color:#122839!important;
+  -webkit-text-fill-color:#122839!important;
+  box-shadow:inset 0 0 0 1px #fff4b866,0 0 12px #d49b2438!important;
+}
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .zeroScoreRule p{
+  color:#eaf7ff!important;
+}
+
+/* Pre-publication audit */
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .resultPreflight{
+  background:linear-gradient(180deg,#123b50,#0d2c3e)!important;
+  border:2px solid #47758b!important;
+  color:#f4fbff!important;
+}
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .resultPreflight>summary{
+  background:#16465d!important;
+  color:#ffffff!important;
+  border-radius:10px!important;
+}
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .resultPreflightRound{
+  background:#103448!important;
+  border:1px solid #386679!important;
+  color:#eaf6fb!important;
+}
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .resultPreflightRound h3{
+  color:#ffd36c!important;
+}
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .resultPreflightRound .missing{
+  background:#643b32!important;
+  color:#fff5ec!important;
+}
+
+/* Primary result actions */
+body:not(.playerTheme):not(.authMode) #app #adminZone-results button.blue{
+  background:linear-gradient(180deg,#1aa14b,#087632)!important;
+  border-color:#55cf78!important;
+  color:#ffffff!important;
+  -webkit-text-fill-color:#ffffff!important;
+}
+body:not(.playerTheme):not(.authMode) #app #adminZone-results button.secondary{
+  background:linear-gradient(180deg,#11527a,#0a3654)!important;
+  border-color:#4096c8!important;
+  color:#ffffff!important;
+  -webkit-text-fill-color:#ffffff!important;
+}
+
+/* Sector/results/statistics blocks */
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .twoCols>div{
+  min-width:0!important;
+}
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .sectorMiniTitle{
+  color:#f4fbff!important;
+  background:#17465d!important;
+  border:1px solid #3f7086!important;
+  border-radius:8px!important;
+  padding:7px 8px!important;
+}
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .tablewrap{
+  background:transparent!important;
+  border-color:#365e71!important;
+}
+body:not(.playerTheme):not(.authMode) #app #adminZone-results table.sharpTable,
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .generalTable,
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .roundClassTable{
+  background:#123448!important;
+  color:#f3fbff!important;
+}
+body:not(.playerTheme):not(.authMode) #app #adminZone-results table.sharpTable th,
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .generalTable th,
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .roundClassTable th{
+  background:#07553a!important;
+  color:#ffffff!important;
+  border-color:#3b7362!important;
+  -webkit-text-fill-color:#ffffff!important;
+}
+body:not(.playerTheme):not(.authMode) #app #adminZone-results table.sharpTable td,
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .generalTable td,
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .roundClassTable td{
+  background:#173d50!important;
+  color:#eef8ff!important;
+  border-color:#3b6173!important;
+  -webkit-text-fill-color:#eef8ff!important;
+}
+body:not(.playerTheme):not(.authMode) #app #adminZone-results table.sharpTable tbody tr:nth-child(even) td,
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .generalTable tbody tr:nth-child(even) td,
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .roundClassTable tbody tr:nth-child(even) td{
+  background:#133548!important;
+}
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .place1 td:first-child{
+  background:#a92929!important;color:#fff!important;-webkit-text-fill-color:#fff!important;
+}
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .place2 td:first-child{
+  background:#234d88!important;color:#fff!important;-webkit-text-fill-color:#fff!important;
+}
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .place3 td:first-child{
+  background:#16813c!important;color:#fff!important;-webkit-text-fill-color:#fff!important;
+}
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .bfLine{
+  color:#ffd36c!important;
+}
+
+/* Mobile classification/statistics cards */
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .mobileAdminCard,
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .mobileStatsCard{
+  background:#15394b!important;
+  border-color:#3c687b!important;
+  color:#eef8ff!important;
+}
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .mobileAdminCardHead,
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .mobileResultFooter,
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .mobileScoreGrid span,
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .mobileAdminMeta span,
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .mobileStatsCard span{
+  background:#103246!important;
+  color:#eef8ff!important;
+  border-color:#355f73!important;
+}
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .mobileAdminCard small,
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .mobileStatsCard small{
+  color:#9fc4d5!important;
+}
+
+/* Club toggle follows the dark results panel. */
+body:not(.playerTheme):not(.authMode) #app #adminZone-results .finalClubToggle{
+  --club-bg:#12384a!important;
+  --club-ink:#eef8ff!important;
+  --club-line:#467187!important;
+}
+
+@media(max-width:760px){
+  body:not(.playerTheme):not(.authMode) #app #adminZone-results>.card{
+    padding:9px!important;
+  }
+  body:not(.playerTheme):not(.authMode) #app #adminZone-results .card{
+    border-radius:12px!important;
+  }
+  body:not(.playerTheme):not(.authMode) #app #adminZone-results h2{
+    font-size:20px!important;
+  }
+  body:not(.playerTheme):not(.authMode) #app #adminZone-results h3{
+    font-size:16px!important;
+  }
+  body:not(.playerTheme):not(.authMode) #app #adminZone-results .sectorMiniTitle{
+    padding:6px!important;
+  }
+}
