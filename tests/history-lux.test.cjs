@@ -87,7 +87,7 @@ test('V241: only history gets a new stylesheet; old V239 and draw V240 remain, o
  assert.match(server,/const HISTORY_COMPACT_CSS='\/history-compact-v241\.css\?v=\$\{APP_VERSION\}'/);
  assert.match(server,/<link rel="stylesheet" href="\/history-compact-v241\.css\?v=\$\{APP_VERSION\}">/);
  assert.match(server,/DESKTOP_NAV_CSS,HISTORY_CSS,HISTORY_COMPACT_CSS,DRAW_CSS/);
- assert.match(server,/const APP_VERSION = '246'/);
- assert.match(app,/const CLIENT_VERSION='246'/);
- assert.match(server,/class="headerVersion">V246/);
+ assert.match(server,/const APP_VERSION = '247'/);
+ assert.match(app,/const CLIENT_VERSION='247'/);
+ assert.match(server,/class="headerVersion">V247/);
 });
