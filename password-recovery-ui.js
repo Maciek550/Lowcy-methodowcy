@@ -57,7 +57,7 @@ function adminTile(){
   const parent=el('tab-notifications');if(!parent)return null;
   node=document.createElement('section');node.id='adminPasswordResetTile';node.className='card passwordResetAdminTile';
   node.setAttribute('aria-label','Prośby o nowe hasło');
-  parent.insertBefore(node,parent.firstChild);
+  parent.insertBefore(node,el('adminNotificationOverview')?.nextSibling||parent.firstChild);
   node.addEventListener('click',event=>{
     const btn=event.target.closest('button[data-reset-action]');if(!btn)return;
     const id=Number(btn.dataset.id),action=btn.dataset.resetAction;if(!id||adminBusy)return;
@@ -125,12 +125,11 @@ async function refreshAdmin(){
   const tile=adminTile();if(!tile)return;
   let rows;
   try{const r=await fetch('/api/admin/password-resets',{cache:'no-store',headers:{Authorization:'Bearer '+TOKEN}});if(!r.ok)throw Error('Nie udało się pobrać próśb.');rows=(await r.json()).requests||[]}
-  catch(e){tile.innerHTML='<h2>🔐 Prośby o nowe hasło</h2><p role="alert">'+safe(e.message)+'</p>';return}
+  catch(e){window.lowcyAdminNotificationsUpdate?.(null);tile.innerHTML='<h2>🔐 Prośby o nowe hasło</h2><p role="alert">'+safe(e.message)+'</p>';return}
   window.__lowcyPasswordRequests=rows;
-  const count=rows.length,top=el('btn-notifications');
-  top?.querySelector('.passwordResetTopBadge')?.remove();
-  if(top&&count){const badge=document.createElement('b');badge.className='passwordResetTopBadge';badge.textContent='Hasło: '+count;top.appendChild(badge)}
-  tile.innerHTML='<div class="passwordResetAdminHead"><div><h2>🔐 Prośby o nowe hasło</h2><p>Oddzielna kolejka. Przygotuj SMS i wyślij go ze swojego telefonu.</p></div><span class="passwordResetCount">'+count+'</span></div><div id="passwordResetAdminFeedback" role="status" aria-live="polite"></div>'+
+  const count=rows.length;
+  window.lowcyAdminNotificationsUpdate?.(count);
+  tile.innerHTML='<div class="passwordResetAdminHead"><div><h2>🔐 Prośby o nowe hasło</h2><p>Przygotuj SMS i wyślij go ze swojego telefonu. Po wysłaniu zamknij prośbę.</p></div><span class="passwordResetCount">'+count+'</span></div><div id="passwordResetAdminFeedback" role="status" aria-live="polite"></div>'+
     (count?'<div class="passwordResetRequestList">'+rows.map(r=>'<article class="passwordResetRequest"><div class="resetRequestIdentity"><strong>'+safe(r.first_name+' '+r.last_name)+'</strong><a href="tel:'+safe(r.phone)+'">'+safe(r.phone)+'</a></div><small>'+new Date(r.created_at).toLocaleString('pl-PL')+' · '+(r.status==='PREPARED'?'SMS przygotowany':'Nowa prośba')+'</small><div class="passwordResetRequestActions"><button type="button" data-reset-action="prepare" data-id="'+Number(r.id)+'" class="resetMainButton">'+(r.status==='PREPARED'?'PONOWNIE OTWÓRZ SMS':'STWÓRZ SMS')+'</button>'+(r.status==='PREPARED'?'<button type="button" data-reset-action="sent" data-id="'+Number(r.id)+'" class="resetSentButton">SMS WYSŁANY — ZAMKNIJ PROŚBĘ</button>':'<button type="button" data-reset-action="reject" data-id="'+Number(r.id)+'" class="resetSecondaryButton">Odrzuć</button>')+'</div></article>').join('')+'</div>':'<p class="passwordResetEmpty">Brak oczekujących próśb.</p>');
 }
 window.lowcyPasswordResetRefresh=refreshAdmin;
