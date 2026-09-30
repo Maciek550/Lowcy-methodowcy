@@ -25,8 +25,8 @@ const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const GOOGLE_VISION_API_KEY = process.env.GOOGLE_VISION_API_KEY || process.env.OCR_GOOGLE_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.PHOTO_OCR_OPENAI_API_KEY || '';
 const PHOTO_OCR_MODEL = process.env.PHOTO_OCR_OPENAI_MODEL || 'gpt-5.6-sol';
-const APP_VERSION = '255';
-const APP_VERSION_NAME = 'V255_FILTERS_ALWAYS_TOP';
+const APP_VERSION = '256';
+const APP_VERSION_NAME = 'V256_NEAREST_CARD_COLORS';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 const PODIUM_TROPHIES = fs.existsSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) ? fs.readFileSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) : null;
 const CARP_REAL = fs.readFileSync(pathModule.join(__dirname, 'carp-real-v116.png'));
@@ -8379,6 +8379,41 @@ body #app #btn-notifications .adminAttentionBadge{position:absolute!important;to
  body:not(.playerTheme):not(.authMode) #app>.compactUserBar #notifCounter{display:none!important}
  body #app .adminCompetitionArchive>summary{padding:13px;flex-wrap:wrap}
 }
+
+/* V256: trzy najbliższe zawody — spokojne, pozycyjne akcenty kolorystyczne.
+   Tylko wygląd: bez zmian logiki, kolejności, statusów i przycisków. */
+body.playerTheme #app .playerNearestThreeBody>.playerCompCardV181:nth-child(1){
+  --nearestAccent:#1976d2;--nearestSoft:#1976d226;
+  border-color:#4b86b7!important;border-left:6px solid var(--nearestAccent)!important;
+  box-shadow:inset 1px 0 0 #ffffff12,0 5px 15px #0000002b!important
+}
+body.playerTheme #app .playerNearestThreeBody>.playerCompCardV181:nth-child(2){
+  --nearestAccent:#a52d49;--nearestSoft:#a52d492b;
+  border-color:#995062!important;border-left:6px solid var(--nearestAccent)!important;
+  box-shadow:inset 1px 0 0 #ffffff12,0 5px 15px #0000002b!important
+}
+body.playerTheme #app .playerNearestThreeBody>.playerCompCardV181:nth-child(3){
+  --nearestAccent:#198754;--nearestSoft:#19875429;
+  border-color:#43815f!important;border-left:6px solid var(--nearestAccent)!important;
+  box-shadow:inset 1px 0 0 #ffffff12,0 5px 15px #0000002b!important
+}
+body.playerTheme #app .playerNearestThreeBody>.playerCompCardV181:nth-child(-n+3) .player181No{
+  background:var(--nearestAccent)!important;border-color:#ffffff55!important;
+  box-shadow:0 2px 8px #00000038!important
+}
+body.playerTheme #app .playerNearestThreeBody>.playerCompCardV181:nth-child(-n+3) .player181Identity{
+  padding:4px 7px;border-radius:8px;
+  background:linear-gradient(90deg,var(--nearestSoft),transparent 88%)
+}
+@media(max-width:760px){
+  body.playerTheme #app .playerNearestThreeBody>.playerCompCardV181:nth-child(-n+3){
+    border-left-width:5px!important
+  }
+  body.playerTheme #app .playerNearestThreeBody>.playerCompCardV181:nth-child(-n+3) .player181Identity{
+    padding:3px 5px
+  }
+}
+
 </style>
 <link rel="stylesheet" href="/accessibility-v234.css?v=${APP_VERSION}">
 <link rel="stylesheet" href="/roster-preview-v235.css?v=${APP_VERSION}">
@@ -8393,7 +8428,7 @@ body #app #btn-notifications .adminAttentionBadge{position:absolute!important;to
 </head>
 <body class="authMode">
 <div id="bootGuard"><img src="/icon-192.png" alt=""><b>Łowcy Methodowcy</b><span>Uruchamiam aplikację…</span><button id="bootRetry" class="hidden" type="button" onclick="retryLowcyBoot()">Spróbuj ponownie</button></div>
-<header><div class="row"><h1><img class="brandIcon" src="/brand/icon-v217-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V255</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
+<header><div class="row"><h1><img class="brandIcon" src="/brand/icon-v217-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V256</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
 <main>
 <div id="msg"></div>
 <section id="auth" class="card">
