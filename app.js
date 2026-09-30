@@ -1,4 +1,4 @@
-const CLIENT_VERSION='269';const CLIENT_VERSION_NAME='V269_LARGE_ADMIN_DASHBOARD_TYPE';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='270';const CLIENT_VERSION_NAME='V270_ADMIN_DASHBOARD_PROPORTIONS';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -434,7 +434,7 @@ async function boot(){
   CURRENT_DETAIL=null;PLAYER_MOBILE_PANEL=null;ACTIVE_ADMIN_ZONE='roster';
   if(ME.role==='ADMIN')await loadJudgeManagement();else {q('judgeManagement')?.remove();q('adminQuickActions')?.remove()}
   q('who').textContent=ME.first_name+' '+ME.last_name+' — Koło PZW '+(ME.pzw_club||'');q('role').textContent=ME.role==='ADMIN'?'Administrator':'Zawodnik';
-  const admin=ME.role==='ADMIN';document.body.classList.remove('authMode');document.body.classList.toggle('playerTheme',!admin);q('btn-players').classList.toggle('hidden',!admin);q('btn-profile')?.classList.toggle('hidden',admin);q('btn-history')?.classList.toggle('hidden',admin);q('btn-rules')?.classList.remove('hidden');q('adminCreate').classList.toggle('hidden',!admin);if(q('adminCreate'))q('adminCreate').open=false;const notifTop=q('btn-notifications');if(notifTop)notifTop.textContent=admin?'Powiadomienia':'NOWOŚCI';const rulesTop=q('btn-rules');if(rulesTop)rulesTop.innerHTML=admin?'Regulamin ogólny':'Regulamin<br>ogólny';const historyTop=q('btn-history');if(historyTop&&!admin)historyTop.innerHTML='Historia<br>startów';if(!admin)initPlayerDesktopNavLabels();
+  const admin=ME.role==='ADMIN';document.body.classList.remove('authMode');document.body.classList.toggle('playerTheme',!admin);q('btn-players').classList.toggle('hidden',!admin);q('btn-profile')?.classList.toggle('hidden',admin);q('btn-history')?.classList.toggle('hidden',admin);q('btn-rules')?.classList.remove('hidden');q('adminCreate').classList.toggle('hidden',!admin);if(q('adminCreate'))q('adminCreate').open=false;const notifTop=q('btn-notifications');if(notifTop){if(admin){notifTop.innerHTML='<span class="adminNavOnlyIcon" aria-hidden="true">🔔</span>';notifTop.setAttribute('aria-label','Powiadomienia');notifTop.title='Powiadomienia'}else{notifTop.textContent='NOWOŚCI';notifTop.removeAttribute('aria-label');notifTop.title=''}}const rulesTop=q('btn-rules');if(rulesTop)rulesTop.innerHTML=admin?'Regulamin<br>ogólny':'Regulamin<br>ogólny';const historyTop=q('btn-history');if(historyTop&&!admin)historyTop.innerHTML='Historia<br>startów';if(!admin)initPlayerDesktopNavLabels();
   mountPlayerBottomNav();
   renderPushStatus();
   showTab('competitions');
@@ -568,18 +568,21 @@ function competitionActionHtml(c,admin,mine,closed,cardMode=false){
   return '<div class="inlineBtns competitionActions '+(cardMode?'competitionCardActions':'')+'"><button type="button" onclick="openCompetition('+c.id+')">LOSOWANIE / WYNIKI</button>'+(mine?leaveButton:'<button type="button" '+(closed?'disabled':'')+' onclick="joinComp('+c.id+')">Zapisz</button>')+'</div>';
 }
 function renderCompetitionMobileCard(c,admin){
-  const mine=c.my_status==='ACTIVE'||c.my_status==='RESERVE',closed=c.status!=='OPEN'||c.signup_open===false,main=Number(c.active_count||0),reserve=Number(c.reserve_count||0),limit=Number(c.limit_places||0),stat='<b>'+main+'</b>'+(limit?' / '+limit:'')+(reserve?' + rezerwa '+reserve:'');
+  const mine=c.my_status==='ACTIVE'||c.my_status==='RESERVE',closed=c.status!=='OPEN'||c.signup_open===false,main=Number(c.active_count||0),reserve=Number(c.reserve_count||0),limit=Number(c.limit_places||0),stat=main+(limit?' / '+limit:'');
   const ended=admin&&playerCompetitionPast(c),status=ended?'ZAWODY ZAKOŃCZONE':statusName(c.status);
   if(admin){
     const stateClass=ended?'ended':String(c.status||'').toLowerCase();
     return '<article class="competitionMobileCard adminCompetitionMobileCard adminCompPremium '+stateClass+'">'
-      +'<div class="adminCompHeader"><div class="adminCompHeadline"><b>'+esc(c.title)+'</b><span>'+esc(c.fishery||'—')+' • '+fmtDate(c.competition_date)+' • zbiórka '+esc(meetingTimeText(c))+'</span></div></div>'
+      +'<div class="adminCompHeadline"><b>'+esc(c.title)+'</b></div>'
+      +'<div class="adminCompVenue"><span aria-hidden="true">📍</span><b>'+esc(c.fishery||'—')+'</b></div>'
+      +'<div class="adminCompWhen"><span><span aria-hidden="true">📅</span> '+fmtDate(c.competition_date)+'</span><span><span aria-hidden="true">⏰</span> ZBIÓRKA '+esc(meetingTimeText(c))+'</span></div>'
       +'<div class="adminCompState '+stateClass+'">'+status+'</div>'
-      +'<div class="competitionMobileMeta adminCompMetrics"><div><small>DATA / ZBIÓRKA</small><strong>'+fmtDate(c.competition_date)+' · '+esc(meetingTimeText(c))+'</strong></div><div><small>STAN ZAPISÓW</small><strong>'+stat+'</strong></div></div>'
+      +'<div class="adminCompSignup"><span class="adminCompSignupIcon" aria-hidden="true">👥</span><div><span class="adminCompSignupLabel">ZAPISY</span><strong>'+stat+'</strong>'+(reserve?'<em>REZERWA '+reserve+'</em>':'')+'</div></div>'
       +competitionActionHtml(c,true,false,closed,true)
       +'</article>';
   }
-  return '<article class="competitionMobileCard '+(mine?'mine':'')+'"><div class="competitionMobileTitle"><b>'+esc(c.title)+'</b><span>'+esc(c.fishery||'')+'</span></div><div class="competitionMobileMeta"><div><small>Data / zbiórka</small><strong>'+fmtDate(c.competition_date)+' · '+esc(meetingTimeText(c))+'</strong></div><div><small>Stan zapisów</small><strong>'+stat+'</strong></div><div><small>Status</small><span class="pill">'+status+'</span></div></div>'+competitionActionHtml(c,false,mine,closed,true)+'</article>';
+  const playerStat='<b>'+main+'</b>'+(limit?' / '+limit:'')+(reserve?' + rezerwa '+reserve:'');
+  return '<article class="competitionMobileCard '+(mine?'mine':'')+'"><div class="competitionMobileTitle"><b>'+esc(c.title)+'</b><span>'+esc(c.fishery||'')+'</span></div><div class="competitionMobileMeta"><div><small>Data / zbiórka</small><strong>'+fmtDate(c.competition_date)+' · '+esc(meetingTimeText(c))+'</strong></div><div><small>Stan zapisów</small><strong>'+playerStat+'</strong></div><div><small>Status</small><span class="pill">'+status+'</span></div></div>'+competitionActionHtml(c,false,mine,closed,true)+'</article>';
 }
 function playerCompetitionMine(c){return c.my_status==='ACTIVE'||c.my_status==='RESERVE'}
 function playerCompetitionDateKey(c){return dateInputValue(c?.competition_date)||''}
