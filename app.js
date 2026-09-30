@@ -1,4 +1,4 @@
-const CLIENT_VERSION='251';const CLIENT_VERSION_NAME='V251_INVITATION_LAYOUT';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='252';const CLIENT_VERSION_NAME='V252_ADMIN_ARCHIVE';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -561,7 +561,7 @@ async function loadPlayerHistory(){
 }
 function showTab(n){if(ME?.password_must_change&&n!=='profile'){msg('Ustaw nowe hasło w profilu, aby kontynuować.','bad');n='profile'}if(n!=='competitions')closePlayerSituationalMap();syncPlayerStickyBars();['competitions','rules','notifications','players','profile','history'].forEach(x=>{q('tab-'+x)?.classList.toggle('hidden',x!==n);q('btn-'+x)?.classList.toggle('active',x===n);q('btn-'+x)?.setAttribute('aria-selected',String(x===n))});if(n==='rules')renderPlayerRules();if(n==='notifications')loadNotifications();if(n==='players')loadPlayers();if(n==='profile')renderMyProfile();if(n==='history')loadPlayerHistory();recordAppNavigation();refreshPlayerDock()}
 function competitionActionHtml(c,admin,mine,closed,cardMode=false){
-  if(admin)return '<div class="inlineBtns adminCompetitionActions '+(cardMode?'competitionCardActions adminCompetitionCardActions':'')+'"><button type="button" class="adminOpenCompetitionBtn" onclick="openCompetition('+c.id+')">Otwórz panel zawodów <span aria-hidden="true">→</span></button><button type="button" class="secondary adminEditCompetitionBtn" onclick="openCompetitionEdit('+c.id+')">Edytuj</button><button type="button" class="warn adminDeleteCompetitionBtn" onclick="deleteCompetition('+c.id+')">Usuń</button></div>';
+  if(admin)return '<div class="inlineBtns adminCompetitionActions '+(cardMode?'competitionCardActions adminCompetitionCardActions':'')+'"><button type="button" class="adminOpenCompetitionBtn" onclick="openCompetition('+c.id+')">Otwórz panel zawodów <span aria-hidden="true">→</span></button><button type="button" class="secondary adminEditCompetitionBtn" onclick="openCompetitionEdit('+c.id+')">Edytuj</button>'+(playerCompetitionPast(c)?'<details class="adminArchiveDelete"><summary>Opcje archiwum</summary><button type="button" class="warn adminDeleteCompetitionBtn" onclick="deleteCompetition('+c.id+')">Usuń trwale</button></details>':'<button type="button" class="warn adminDeleteCompetitionBtn" onclick="deleteCompetition('+c.id+')">Usuń</button>')+'</div>';
   const leavePending=String(c.my_leave_request_status||'').toUpperCase()==='PENDING';
   const leaveButton=leavePending?'<button type="button" class="secondary leavePendingBtn" disabled>Prośba wysłana</button>':'<button type="button" class="warn" onclick="leaveComp('+c.id+')">Zrezygnuj</button>';
   return '<div class="inlineBtns competitionActions '+(cardMode?'competitionCardActions':'')+'"><button type="button" onclick="openCompetition('+c.id+')">LOSOWANIE / WYNIKI</button>'+(mine?leaveButton:'<button type="button" '+(closed?'disabled':'')+' onclick="joinComp('+c.id+')">Zapisz</button>')+'</div>';
@@ -712,16 +712,23 @@ function renderPlayerCompetitionList(){
   box.innerHTML='<div class="playerCompetitionDesktopOnly">'+view('desktop')+'</div>'+
     '<div class="playerCompetitionMobileOnly">'+view('mobile')+'</div>';
 }
+let ADMIN_COMPETITIONS_CACHE=[];
+function renderAdminCompetitionList(arr){
+  const admin=true;
+  let desktop='<div class="competitionDesktopList tablewrap"><table><thead><tr><th>Zawody</th><th>Data</th><th>Stan zapisów</th><th>Status</th><th>Akcja</th></tr></thead><tbody>';
+  desktop+=arr.map(c=>{const mine=playerCompetitionMine(c);const closed=c.status!=='OPEN'||c.signup_open===false;const main=Number(c.active_count||0), reserve=Number(c.reserve_count||0), limit=Number(c.limit_places||0);const stat='<b>'+main+'</b>'+(limit?' / '+limit:'')+(reserve?' + rezerwa '+reserve:'');return '<tr class="'+(mine?'mine':'')+'"><td><b>'+esc(c.title)+'</b><br><span class="muted small">'+esc(c.fishery||'')+'</span></td><td class="nowrap">'+fmtDate(c.competition_date)+'<br><span class="small muted">Zbiórka '+esc(meetingTimeText(c))+'</span></td><td class="nowrap">'+stat+'</td><td><span class="pill">'+(playerCompetitionPast(c)?'ZAWODY ZAKOŃCZONE':statusName(c.status))+'</span></td><td>'+competitionActionHtml(c,admin,mine,closed,false)+'</td></tr>'}).join('');
+  desktop+='</tbody></table></div>';
+  const mobile='<div class="competitionMobileList">'+arr.map(c=>renderCompetitionMobileCard(c,admin)).join('')+'</div>';
+  return desktop+mobile;
+}
 async function loadCompetitions(){
   if(ME?.role==='JUDGE')return judgeLoadCompetitions();
   const d=await api('/api/competitions'); const arr=d.competitions||[]; const admin=ME&&ME.role==='ADMIN'; let html='';
   if(admin){
-    if(!arr.length){q('competitionsList').innerHTML=html+'<p class="muted">Brak zawodów.</p>';return}
-    let desktop='<div class="competitionDesktopList tablewrap"><table><thead><tr><th>Zawody</th><th>Data</th><th>Stan zapisów</th><th>Status</th><th>Akcja</th></tr></thead><tbody>';
-    desktop+=arr.map(c=>{const mine=playerCompetitionMine(c);const closed=c.status!=='OPEN'||c.signup_open===false;const main=Number(c.active_count||0), reserve=Number(c.reserve_count||0), limit=Number(c.limit_places||0);const stat='<b>'+main+'</b>'+(limit?' / '+limit:'')+(reserve?' + rezerwa '+reserve:'');return '<tr class="'+(mine?'mine':'')+'"><td><b>'+esc(c.title)+'</b><br><span class="muted small">'+esc(c.fishery||'')+'</span></td><td class="nowrap">'+fmtDate(c.competition_date)+'<br><span class="small muted">Zbiórka '+esc(meetingTimeText(c))+'</span></td><td class="nowrap">'+stat+'</td><td><span class="pill">'+(playerCompetitionPast(c)?'ZAWODY ZAKOŃCZONE':statusName(c.status))+'</span></td><td>'+competitionActionHtml(c,admin,mine,closed,false)+'</td></tr>'}).join('');
-    desktop+='</tbody></table></div>';
-    const mobile='<div class="competitionMobileList">'+arr.map(c=>renderCompetitionMobileCard(c,admin)).join('')+'</div>';
-    q('competitionsList').innerHTML=html+desktop+mobile;return;
+    ADMIN_COMPETITIONS_CACHE=arr;
+    const current=arr.filter(c=>!playerCompetitionPast(c)),archived=arr.filter(playerCompetitionPast);
+    const archiveOpen=q('adminCompetitionArchive')?.open;
+    q('competitionsList').innerHTML=(current.length?renderAdminCompetitionList(current):'<p class="muted">Brak bieżących zawodów.</p>')+'<details id="adminCompetitionArchive" class="adminCompetitionArchive" '+(archiveOpen?'open':'')+'><summary><b>ARCHIWUM</b><span>'+archived.length+' zakończonych zawodów</span></summary><div class="adminArchiveBody"><p class="small muted">Zakończone zawody — panele i wyniki pozostają dostępne.</p>'+(archived.length?renderAdminCompetitionList(archived):'<p class="muted">Archiwum jest puste.</p>')+'</div></details>';return;
   }
   PLAYER_COMPETITIONS_CACHE=arr;
   await refreshPlayerAttention(false);
@@ -729,7 +736,7 @@ async function loadCompetitions(){
   if(q('tab-rules')&&!q('tab-rules').classList.contains('hidden'))renderPlayerRules();
 }
 async function createCompetition(ev){if(CREATING_COMPETITION)return;CREATING_COMPETITION=true;const btn=ev?.target;if(btn){btn.disabled=true;btn.textContent='Tworzę...'}try{const limit=q('cLimit').value.trim();if(!limit)throw new Error('Podaj liczbę osób');await api('/api/competitions',{method:'POST',body:JSON.stringify({title:q('cTitle')?.value||'Method Feeder',fishery:q('cFishery').value,competitionDate:q('cDate').value,meetingTime:q('cMeetingTime')?.value||'06:00',limitPlaces:limit,notes:q('cNotes').value,regulations:q('cRegulations')?.value||'',presenceReminderNote:q('cPresenceReminderNote')?.value||'',status:q('cStatus')?.value||'OPEN'})});['cFishery','cDate','cLimit','cNotes','cRegulations','cPresenceReminderNote'].forEach(id=>{const el=q(id);if(el)el.value=''});if(q('cMeetingTime'))q('cMeetingTime').value='06:00';if(q('cTitle'))q('cTitle').value='Method Feeder';await loadCompetitions();await loadNotifications();q('adminCreate').open=false;msg('Utworzono zawody')}catch(e){msg(e.message,'bad')}finally{CREATING_COMPETITION=false;if(btn){btn.disabled=false;btn.textContent='Utwórz zawody'}}}
-async function deleteCompetition(id){try{if(!confirm('Usunąć te zawody?'))return;await api('/api/competitions/'+id,{method:'DELETE'});q('competitionDetail').classList.add('hidden');recordAppNavigation(0);msg('Usunięto zawody');await loadCompetitions();await loadNotifications()}catch(e){msg(e.message,'bad')}}
+async function deleteCompetition(id){try{const c=ADMIN_COMPETITIONS_CACHE.find(c=>Number(c.id)===Number(id));let confirmTitle='';if(c&&playerCompetitionPast(c)){confirmTitle=prompt('Trwałe usunięcie zawodów z ARCHIWUM usunie również ich wyniki. Aby potwierdzić, wpisz dokładną nazwę zawodów:\n'+c.title);if(confirmTitle!==c.title)return}else if(!confirm('Usunąć te zawody?'))return;await api('/api/competitions/'+id,{method:'DELETE',body:JSON.stringify({confirmTitle})});q('competitionDetail').classList.add('hidden');recordAppNavigation(0);msg('Usunięto zawody');await loadCompetitions();await loadNotifications()}catch(e){msg(e.message,'bad')}}
 async function joinComp(id){try{await api('/api/competitions/'+id+'/join',{method:'POST',body:'{}'});msg('Zapisano na zawody');await loadCompetitions();await loadNotifications();if(CURRENT_DETAIL?.competition?.id==id)await refreshCompetitionKeepScroll(id)}catch(e){msg(e.message,'bad')}}
 async function declineCompetitionInvitation(id){try{await api('/api/competitions/'+Number(id)+'/invitation/decline',{method:'POST',body:'{}'});msg('Zaproszenie odrzucone. Nadal możesz zobaczyć te zawody.');await loadNotifications();await loadCompetitions();if(CURRENT_DETAIL?.competition?.id==id)await refreshCompetitionKeepScroll(id)}catch(e){msg(e.message,'bad')}}
 async function openInvitationCompetition(id,notificationId){try{if(notificationId)await api('/api/notifications/'+Number(notificationId)+'/read',{method:'POST',body:'{}'});await openCompetition(id);await loadNotifications()}catch(e){msg(e.message,'bad')}}
@@ -1498,7 +1505,7 @@ let ADMIN_INVITE_SEARCH_TIMER=null;
 function renderCompetitionInvitationsPanel(c){
   if(!['OPEN','PRIVATE'].includes(c.status))return '';
   const id=Number(c.id);
-  return '<details class="adminInvitationPanel" '+(c.status==='PRIVATE'?'open ':'')+'ontoggle="if(this.open)loadAdminInvitationCandidates('+id+')">'
+  return '<details class="adminInvitationPanel" ontoggle="if(this.open)loadAdminInvitationCandidates('+id+')">'
     +'<summary>✉ '+(c.status==='PRIVATE'?'Zaproś zawodników na prywatne zawody':'Zaproś zawodników')+'</summary>'
     +'<div class="adminInvitationBody"><label for="adminInviteSearch">Wybierz osobę z kontem</label>'
     +'<input id="adminInviteSearch" type="search" autocomplete="off" placeholder="Imię, nazwisko lub koło" oninput="scheduleAdminInvitationSearch('+id+')">'
@@ -3298,7 +3305,7 @@ function updateAdminNotificationOverview(){
   overview.innerHTML='<strong>Do obsłużenia: '+(total===null?'…':total)+'</strong><span>Hasła: '+(password===null?'…':password)+'</span><span>Wypisania: '+leave+'</span><span>Nowe inne: '+other+'</span>';
   const counter=q('notifCounter');if(counter)counter.textContent=total?'Do obsłużenia: '+total:'';
   top?.querySelector('.adminAttentionBadge')?.remove();
-  if(top&&total){const badge=document.createElement('b');badge.className='adminAttentionBadge';badge.textContent='Do obsłużenia: '+total;top.appendChild(badge)}
+  if(top&&total){const badge=document.createElement('b');badge.className='adminAttentionBadge';badge.textContent=total>99?'99+':String(total);badge.setAttribute('aria-label','Do obsłużenia: '+total);top.appendChild(badge)}
 }
 window.lowcyAdminNotificationsUpdate=count=>{ADMIN_PASSWORD_REQUEST_COUNT=count===null?null:Math.max(0,Number(count)||0);updateAdminNotificationOverview()};
 function setAdminNotificationTab(tab){

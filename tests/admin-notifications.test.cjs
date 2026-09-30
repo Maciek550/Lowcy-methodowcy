@@ -16,7 +16,7 @@ test('admin notification overview counts each pending task once and explains an 
   nodes.notifCounter={textContent:''};
   nodes['btn-notifications']={badge:null,querySelector(){return this.badge},appendChild(badge){this.badge=badge;badge.remove=()=>{this.badge=null}}};
   const ctx={
-    ME:{role:'ADMIN'},window:{},document:{createElement:()=>({innerHTML:'',textContent:''})},
+    ME:{role:'ADMIN'},window:{},document:{createElement:()=>({innerHTML:'',textContent:'',setAttribute(key,value){this[key]=value}})},
     q:id=>nodes[id]||null,esc:x=>String(x),fmtDate:x=>x
   };
   vm.runInNewContext(app.slice(start,end)+';this.setItems=(notices,leaves)=>{NOTIFICATION_CACHE=notices;ADMIN_PENDING_REQUESTS=leaves};this.render=renderNotificationContent;',ctx);
@@ -41,9 +41,10 @@ test('admin notification overview counts each pending task once and explains an 
   assert.match(nodes.adminNotificationOverview.innerHTML,/Nowe inne: 1/);
   assert.match(nodes.notificationsList.innerHTML,/Inne powiadomienia · nowe <b class="notificationTabCount hasItems">1/);
   assert.doesNotMatch(nodes.notificationsList.innerHTML,/PASSWORD_RESET_REQUEST/);
-  assert.equal(nodes['btn-notifications'].badge.textContent,'Do obsłużenia: 3');
+  assert.equal(nodes['btn-notifications'].badge.textContent,'3');
+  assert.equal(nodes['btn-notifications'].badge['aria-label'],'Do obsłużenia: 3');
 
   ctx.window.lowcyAdminNotificationsUpdate(0);
   assert.match(nodes.adminNotificationOverview.innerHTML,/Do obsłużenia: 2/);
-  assert.equal(nodes['btn-notifications'].badge.textContent,'Do obsłużenia: 2');
+  assert.equal(nodes['btn-notifications'].badge.textContent,'2');
 });

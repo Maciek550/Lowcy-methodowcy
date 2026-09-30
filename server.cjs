@@ -25,8 +25,8 @@ const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const GOOGLE_VISION_API_KEY = process.env.GOOGLE_VISION_API_KEY || process.env.OCR_GOOGLE_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.PHOTO_OCR_OPENAI_API_KEY || '';
 const PHOTO_OCR_MODEL = process.env.PHOTO_OCR_OPENAI_MODEL || 'gpt-5.6-sol';
-const APP_VERSION = '251';
-const APP_VERSION_NAME = 'V251_INVITATION_LAYOUT';
+const APP_VERSION = '252';
+const APP_VERSION_NAME = 'V252_ADMIN_ARCHIVE';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 const PODIUM_TROPHIES = fs.existsSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) ? fs.readFileSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) : null;
 const CARP_REAL = fs.readFileSync(pathModule.join(__dirname, 'carp-real-v116.png'));
@@ -2423,8 +2423,9 @@ self.addEventListener('notificationclick', event => {
   if (m && method === 'DELETE') {
     if (!requireAdmin(user, res)) return;
     const id = Number(m[1]);
-    const old = await pool.query('select title from competitions where id=$1', [id]);
+    const old = await pool.query("select title, competition_date::date < (now() at time zone 'Europe/Warsaw')::date as archived from competitions where id=$1", [id]);
     if (!old.rows[0]) return sendJson(res, 404, { ok:false, error:'Nie znaleziono zawodów' });
+    if(old.rows[0].archived){const b=await readBody(req);if(b.confirmTitle!==old.rows[0].title)return sendJson(res,409,{ok:false,error:'Zawody są w archiwum. Wpisz ich dokładną nazwę, aby potwierdzić trwałe usunięcie.'})}
     await pool.query('delete from competitions where id=$1', [id]);
     await notifyAdmins('COMPETITION_DELETE', 'Usunięto zawody', user.first_name + ' ' + user.last_name + ' usunął zawody: ' + old.rows[0].title, { competitionId: id });
     return sendJson(res, 200, { ok:true });
@@ -3341,7 +3342,7 @@ const HTML = `<!doctype html>
 <link rel="apple-touch-icon" sizes="180x180" href="/brand/icon-v217-180.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/brand/icon-v217-32.png">
 <script>try{if(localStorage.getItem('carp_token'))document.documentElement.classList.add('hasSavedSession')}catch(e){}</script>
-<title>Łowcy Methodowcy — V251</title>
+<title>Łowcy Methodowcy — V252</title>
 <style>
 .adminReminderNote{margin:12px 0;padding:12px;border:1px solid #b5c7bd;background:#f3f8f4;border-radius:12px}.adminReminderNote label{display:block;font-weight:750;color:#173d2a}.adminReminderNote textarea{width:100%;min-height:66px;font-size:16px;line-height:1.35;background:#fff;color:#19322a;border:1px solid #819e8c;border-radius:8px;margin-top:6px;padding:9px}.adminReminderNote p{margin:5px 0 0;color:#38584b}
 :root{--green:#114b2f;--green2:#17643f;--bg:#f3f6ef;--card:#fff;--line:#cfd8cc;--txt:#18251d;--muted:#68746d;--red:#b32020;--gold:#ffc400;--blue:#1067c8;--soft:#eaf2eb}
@@ -8354,6 +8355,22 @@ body #app #competitionDetail .adminInvitationBody input{box-sizing:border-box;ba
  body #app #competitionDetail .adminInvitePerson{gap:8px}
  body #app #competitionDetail .adminInvitePerson>em{max-width:105px}
 }
+/* Admin archive and stable notification tiles. */
+body #app .adminCompetitionArchive{margin-top:18px;border:2px solid #638ca5;border-radius:12px;background:#102c40;color:#f4faff}
+body #app .adminCompetitionArchive>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px;cursor:pointer;color:#fff}
+body #app .adminCompetitionArchive>summary b{font-size:19px}
+body #app .adminCompetitionArchive>summary span{font-size:13px;color:#c8dfed}
+body #app .adminArchiveBody{padding:0 12px 12px}
+body #app .adminArchiveDelete{font-size:12px;color:#c8dfed;align-self:center}
+body #app .adminArchiveDelete>summary{cursor:pointer;padding:10px}
+body #app #btn-notifications{position:relative!important}
+body #app #btn-notifications .adminAttentionBadge{position:absolute!important;top:3px!important;right:3px!important;margin:0!important;min-width:20px;padding:2px 5px!important;line-height:16px!important;font-size:11px!important;background:#f5c95d!important;color:#142838!important}
+@media(max-width:760px){
+ body:not(.playerTheme):not(.authMode) #app>.tabs{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:5px!important;overflow:visible!important}
+ body:not(.playerTheme):not(.authMode) #app>.tabs>button{width:100%!important;min-width:0!important;min-height:58px!important;padding:16px 2px 6px!important;font-size:clamp(10px,2.8vw,13px)!important;overflow-wrap:normal!important}
+ body:not(.playerTheme):not(.authMode) #app>.compactUserBar #notifCounter{display:none!important}
+ body #app .adminCompetitionArchive>summary{padding:13px;flex-wrap:wrap}
+}
 </style>
 <link rel="stylesheet" href="/accessibility-v234.css?v=${APP_VERSION}">
 <link rel="stylesheet" href="/roster-preview-v235.css?v=${APP_VERSION}">
@@ -8368,7 +8385,7 @@ body #app #competitionDetail .adminInvitationBody input{box-sizing:border-box;ba
 </head>
 <body class="authMode">
 <div id="bootGuard"><img src="/icon-192.png" alt=""><b>Łowcy Methodowcy</b><span>Uruchamiam aplikację…</span><button id="bootRetry" class="hidden" type="button" onclick="retryLowcyBoot()">Spróbuj ponownie</button></div>
-<header><div class="row"><h1><img class="brandIcon" src="/brand/icon-v217-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V251</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
+<header><div class="row"><h1><img class="brandIcon" src="/brand/icon-v217-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V252</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
 <main>
 <div id="msg"></div>
 <section id="auth" class="card">
