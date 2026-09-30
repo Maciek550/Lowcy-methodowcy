@@ -25,8 +25,8 @@ const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const GOOGLE_VISION_API_KEY = process.env.GOOGLE_VISION_API_KEY || process.env.OCR_GOOGLE_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.PHOTO_OCR_OPENAI_API_KEY || '';
 const PHOTO_OCR_MODEL = process.env.PHOTO_OCR_OPENAI_MODEL || 'gpt-5.6-sol';
-const APP_VERSION = '260';
-const APP_VERSION_NAME = 'V260_OPEN_DRAW1_BY_DEFAULT';
+const APP_VERSION = '261';
+const APP_VERSION_NAME = 'V261_ZERO_SCORE_RULE';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 const PODIUM_TROPHIES = fs.existsSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) ? fs.readFileSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) : null;
 const CARP_REAL = fs.readFileSync(pathModule.join(__dirname, 'carp-real-v116.png'));
@@ -485,6 +485,7 @@ async function initDb() {
     alter table competitions add column if not exists regulations text not null default '';
     alter table competitions add column if not exists presence_reminder_note text not null default '';
     alter table competitions add column if not exists disabled_stands jsonb not null default '[]'::jsonb;
+    alter table competitions add column if not exists zero_score_rule text not null default 'MIN';
     alter table competitions alter column meeting_time set default '06:00';
     update competitions set meeting_time='06:00' where meeting_time is null;
   `);
@@ -1420,7 +1421,10 @@ function computeClassification(comp, entries, draws, results) {
       grouped.get(row.sector).push(row);
     }
     const sectorGroupSizes = Array.from(grouped.values()).map(a => a.length);
-    const minSectorSize = sectorGroupSizes.length ? Math.max(1, Math.min(...sectorGroupSizes)) : 1;
+    const zeroRule = String(comp?.zero_score_rule || 'MIN').toUpperCase() === 'MAX' ? 'MAX' : 'MIN';
+    const zeroSectorSize = sectorGroupSizes.length
+      ? Math.max(1, zeroRule === 'MAX' ? Math.max(...sectorGroupSizes) : Math.min(...sectorGroupSizes))
+      : 1;
     for (const rows of grouped.values()) {
       const positives = rows.filter(r => r.weight > 0).sort((a,b)=>b.weight-a.weight || a.name.localeCompare(b.name, 'pl'));
       for(let start=0;start<positives.length;){
@@ -1433,7 +1437,7 @@ function computeClassification(comp, entries, draws, results) {
         }
         start=end;
       }
-      rows.filter(r => r.weight <= 0).forEach(r => { r.sector_place = minSectorSize; r.points = minSectorSize; });
+      rows.filter(r => r.weight <= 0).forEach(r => { r.sector_place = zeroSectorSize; r.points = zeroSectorSize; });
     }
     roundRows[round] = Array.from(grouped.values()).flat().sort((a,b)=>(a.points-b.points) || (b.weight-a.weight) || String(a.sector).localeCompare(String(b.sector),'pl') || (a.stand||9999)-(b.stand||9999) || a.name.localeCompare(b.name,'pl'));
   }
@@ -2316,6 +2320,18 @@ self.addEventListener('notificationclick', event => {
     if(b.status==='PRIVATE')await pool.query(`insert into competition_invitations(competition_id,user_id,invited_by,status)
       select $1,e.user_id,$2,'ACCEPTED' from entries e where e.competition_id=$1 and e.status in ('ACTIVE','RESERVE')
       on conflict(competition_id,user_id) do nothing`,[Number(modeMatch[1]),user.id]);
+    return sendJson(res,200,{ok:true,competition:out.rows[0]});
+  }
+
+  const zeroScoreRuleMatch=path.match(/^\/api\/admin\/competitions\/(\d+)\/zero-score-rule$/);
+  if(zeroScoreRuleMatch && method==='POST'){
+    if(!requireAdmin(user,res))return;
+    const id=Number(zeroScoreRuleMatch[1]),b=await readBody(req);
+    const rule=String(b.rule||'').toUpperCase();
+    if(!['MAX','MIN'].includes(rule))return sendJson(res,400,{ok:false,error:'Wybierz MAX SEKTOR albo MIN SEKTOR'});
+    const out=await pool.query('update competitions set zero_score_rule=$1 where id=$2 returning *',[rule,id]);
+    if(!out.rows[0])return sendJson(res,404,{ok:false,error:'Nie znaleziono zawodów'});
+    await notifyAdmins('ZERO_SCORE_RULE','Zmieniono zasadę 0 pkt',`${user.first_name} ${user.last_name}: ${out.rows[0].title} — 0 pkt = ${rule} SEKTOR`,{competitionId:id,rule});
     return sendJson(res,200,{ok:true,competition:out.rows[0]});
   }
 
@@ -8638,6 +8654,49 @@ body.playerTheme #app .player181List em{
   font-weight:950!important;
 }
 
+
+/* V261: przełącznik sposobu naliczania 0 pkt. */
+body:not(.playerTheme):not(.authMode) #adminZone-results .zeroScoreRule{
+  margin:10px 0 14px!important;padding:11px!important;
+  border:2px solid #b68b2b!important;border-radius:12px!important;
+  background:#132f40!important;color:#fff!important
+}
+body:not(.playerTheme):not(.authMode) #adminZone-results .zeroScoreRuleHead{
+  display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px
+}
+body:not(.playerTheme):not(.authMode) #adminZone-results .zeroScoreRuleHead b{
+  color:#ffd56f!important;font-size:15px!important
+}
+body:not(.playerTheme):not(.authMode) #adminZone-results .zeroScoreRuleHead span{
+  color:#c9dce8!important;font-size:11px!important;font-weight:750
+}
+body:not(.playerTheme):not(.authMode) #adminZone-results .zeroScoreRuleBtns{
+  display:grid;grid-template-columns:1fr 1fr;gap:8px
+}
+body:not(.playerTheme):not(.authMode) #adminZone-results .zeroScoreRuleBtns button{
+  min-height:48px!important;border:2px solid #557c91!important;border-radius:9px!important;
+  background:#183e53!important;color:#fff!important;font-size:14px!important;font-weight:950!important
+}
+body:not(.playerTheme):not(.authMode) #adminZone-results .zeroScoreRuleBtns button small{
+  font-size:11px!important;margin-right:5px;color:#bdd5e3!important
+}
+body:not(.playerTheme):not(.authMode) #adminZone-results .zeroScoreRuleBtns button.active{
+  background:linear-gradient(#d7a331,#a87513)!important;
+  border-color:#f2ce72!important;color:#132838!important;
+  box-shadow:inset 0 0 0 1px #fff5b555!important
+}
+body:not(.playerTheme):not(.authMode) #adminZone-results .zeroScoreRuleBtns button.active small{color:#3b3219!important}
+body:not(.playerTheme):not(.authMode) #adminZone-results .zeroScoreRule p{
+  margin:8px 0 0!important;color:#e8f3f8!important;font-size:12px!important;font-weight:800
+}
+@media(max-width:760px){
+  body:not(.playerTheme):not(.authMode) #adminZone-results .zeroScoreRule{padding:9px!important}
+  body:not(.playerTheme):not(.authMode) #adminZone-results .zeroScoreRuleBtns{gap:6px!important}
+  body:not(.playerTheme):not(.authMode) #adminZone-results .zeroScoreRuleBtns button{
+    min-height:44px!important;padding:6px 4px!important;font-size:12px!important
+  }
+}
+
 </style>
 <link rel="stylesheet" href="/accessibility-v234.css?v=${APP_VERSION}">
 <link rel="stylesheet" href="/roster-preview-v235.css?v=${APP_VERSION}">
@@ -8652,7 +8711,7 @@ body.playerTheme #app .player181List em{
 </head>
 <body class="authMode">
 <div id="bootGuard"><img src="/icon-192.png" alt=""><b>Łowcy Methodowcy</b><span>Uruchamiam aplikację…</span><button id="bootRetry" class="hidden" type="button" onclick="retryLowcyBoot()">Spróbuj ponownie</button></div>
-<header><div class="row"><h1><img class="brandIcon" src="/brand/icon-v217-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V260</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
+<header><div class="row"><h1><img class="brandIcon" src="/brand/icon-v217-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V261</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
 <main>
 <div id="msg"></div>
 <section id="auth" class="card">
