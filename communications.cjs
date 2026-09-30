@@ -48,18 +48,20 @@ async function route(ctx){
     const compId=Number(b.competitionId||0),userId=Number(b.userId||0);
     const group=String(b.group||'ACTIVE').toUpperCase();
     if(!Number.isSafeInteger(compId)||compId<0||!Number.isSafeInteger(userId)||userId<0){sendJson(res,400,{ok:false,error:'Nieprawidłowy identyfikator'});return true}
+    let compStatus='OPEN';
     if(compId){
       const cq=await pool.query("select id,title,status from competitions where id=$1",[compId]);
       if(!cq.rows[0]||cq.rows[0].status==='TEST'){sendJson(res,409,{ok:false,error:'Wysyłka wymaga prawdziwych, istniejących zawodów.'});return true}
+      compStatus=cq.rows[0].status;
     }
     let recipients=[],label='',compTitle='';
     if(compId){const cq=await pool.query("select title from competitions where id=$1",[compId]);compTitle=cq.rows[0]?.title||''}
     if(userId){
-      const q=await pool.query("select u.id,u.first_name,u.last_name from users u where u.id=$1 and u.role='PLAYER' and u.archived_at is null and ($2::bigint=0 or exists(select 1 from entries e where e.user_id=u.id and e.competition_id=$2 and e.status in ('ACTIVE','RESERVE')))",[userId,compId]);
+      const q=await pool.query("select u.id,u.first_name,u.last_name from users u where u.id=$1 and u.role='PLAYER' and u.archived_at is null and ($2::bigint=0 or exists(select 1 from entries e where e.user_id=u.id and e.competition_id=$2 and e.status in ('ACTIVE','RESERVE'))) and ($3::boolean or exists(select 1 from competition_invitations i where i.competition_id=$2 and i.user_id=u.id))",[userId,compId,compStatus!=='PRIVATE']);
       recipients=q.rows;label=recipients[0]?(recipients[0].first_name+' '+recipients[0].last_name):'';
     }else{
       if(!compId||!['ACTIVE','RESERVE','ALL','UNCONFIRMED'].includes(group)){sendJson(res,400,{ok:false,error:'Wybierz zawody oraz poprawną grupę odbiorców.'});return true}
-      const q=await pool.query("select distinct u.id,u.first_name,u.last_name from entries e join users u on u.id=e.user_id and u.role='PLAYER' and u.archived_at is null where e.competition_id=$1 and ($2='ALL' and e.status in ('ACTIVE','RESERVE') or $2='ACTIVE' and e.status='ACTIVE' or $2='RESERVE' and e.status='RESERVE' or $2='UNCONFIRMED' and e.status='ACTIVE' and e.confirmed=false) order by u.last_name,u.first_name",[compId,group]);
+      const q=await pool.query("select distinct u.id,u.first_name,u.last_name from entries e join users u on u.id=e.user_id and u.role='PLAYER' and u.archived_at is null where e.competition_id=$1 and ($2='ALL' and e.status in ('ACTIVE','RESERVE') or $2='ACTIVE' and e.status='ACTIVE' or $2='RESERVE' and e.status='RESERVE' or $2='UNCONFIRMED' and e.status='ACTIVE' and e.confirmed=false) and ($3::boolean or exists(select 1 from competition_invitations i where i.competition_id=$1 and i.user_id=u.id)) order by u.last_name,u.first_name",[compId,group,compStatus!=='PRIVATE']);
       recipients=q.rows;label={ACTIVE:'Lista główna',RESERVE:'Rezerwa',ALL:'Główna i rezerwa',UNCONFIRMED:'Niepotwierdzeni'}[group]||group;
     }
     if(!recipients.length){sendJson(res,409,{ok:false,error:'Brak uprawnionych odbiorców w wybranej grupie.'});return true}

@@ -27,19 +27,23 @@ function closePopup(){
 function showPopup(n){
   if(popupId||shown.has(Number(n.id)))return;
   shown.add(Number(n.id));popupId=Number(n.id);
-  const d=n.data||{},reminder=n.type==='PRESENCE_REMINDER_2D';
+  const d=n.data||{},reminder=n.type==='PRESENCE_REMINDER_2D',invitation=n.type==='COMPETITION_INVITATION';
   const c=(window.PLAYER_COMPETITIONS_CACHE||[]).find(x=>Number(x.id)===Number(d.competitionId))||{};
-  const title=reminder?'POTWIERDŹ SWÓJ UDZIAŁ!':String(n.title||'Wiadomość od organizatora');
+  const title=reminder?'POTWIERDŹ SWÓJ UDZIAŁ!':invitation?'Zaproszenie na zawody':String(n.title||'Wiadomość od organizatora');
   const comp=String(d.competitionTitle||c.title||''),fishery=String(d.fishery||c.fishery||'');
   const date=notifDate(d.competitionDate||c.competition_date);
   const organizerNote=String(Object.prototype.hasOwnProperty.call(c,'presence_reminder_note')?c.presence_reminder_note:(d.organizerNote||'')).trim().slice(0,160);
   const modal=document.createElement('div');modal.id='commPopup';modal.className='commPopup';modal.setAttribute('role','dialog');modal.setAttribute('aria-modal','true');modal.setAttribute('aria-label',title);
-  const msg=reminder?'<div class="commPopupText">'+safe(comp)+'</div><div class="commPopupDate">'+safe(date)+'</div><div class="commPopupText">'+safe(fishery)+'</div>'+(organizerNote?'<div class="commPopupOrganizer"><b>OD ORGANIZATORA</b>'+safe(organizerNote)+'</div>':'')+'<p>Czy potwierdzasz obecność na zawodach?</p>':'<div class="commPopupText">'+safe(n.body||'')+'</div>';
-  const act=reminder?'<button type="button" class="commConfirm" id="commYes">✓ POTWIERDZAM UDZIAŁ</button><button type="button" class="commResign" id="commNo">REZYGNUJĘ</button>':'<button type="button" id="commInbox">'+(hasInbox(n)?'ZOBACZ W POWIADOMIENIACH':'ROZUMIEM')+'</button>';
+  const msg=reminder?'<div class="commPopupText">'+safe(comp)+'</div><div class="commPopupDate">'+safe(date)+'</div><div class="commPopupText">'+safe(fishery)+'</div>'+(organizerNote?'<div class="commPopupOrganizer"><b>OD ORGANIZATORA</b>'+safe(organizerNote)+'</div>':'')+'<p>Czy potwierdzasz obecność na zawodach?</p>':invitation?'<div class="commPopupText">'+safe(comp)+'</div><div class="commPopupDate">'+safe(date)+'</div><div class="commPopupText">'+safe(fishery)+'</div><p>Możesz obejrzeć zawody nawet po odrzuceniu zaproszenia.</p>':'<div class="commPopupText">'+safe(n.body||'')+'</div>';
+  const act=reminder?'<button type="button" class="commConfirm" id="commYes">✓ POTWIERDZAM UDZIAŁ</button><button type="button" class="commResign" id="commNo">REZYGNUJĘ</button>':invitation?'<button type="button" class="commConfirm" id="commYes">ZAPISZ SIĘ</button><button type="button" id="commView">ZOBACZ ZAWODY</button><button type="button" class="commResign" id="commNo">ODRZUĆ ZAPROSZENIE</button>':'<button type="button" id="commInbox">'+(hasInbox(n)?'ZOBACZ W POWIADOMIENIACH':'ROZUMIEM')+'</button>';
   modal.innerHTML='<div class="commPopupPanel"><h2 class="commPopupTitle">'+safe(title)+'</h2>'+msg+'<div class="commPopupActions">'+act+'<button type="button" id="commDismiss" class="commPopupClose">Zamknij</button></div><div class="commPopupTimer">Komunikat zamknie się po 15 sekundach.'+(hasInbox(n)?' Pozostanie w powiadomieniach.':'')+'</div></div>';
   document.body.appendChild(modal);
   find('commDismiss').onclick=closePopup;
-  if(reminder){
+  if(invitation){
+    find('commYes').onclick=()=>{closePopup();window.joinComp?.(Number(d.competitionId))};
+    find('commNo').onclick=()=>{closePopup();window.declineCompetitionInvitation?.(Number(d.competitionId))};
+    find('commView').onclick=()=>{closePopup();window.openInvitationCompetition?.(Number(d.competitionId),Number(n.id))};
+  }else if(reminder){
     find('commYes').onclick=async()=>{closePopup();if(typeof window.confirmPlayerPresence==='function')await window.confirmPlayerPresence(Number(d.competitionId),null,null)};
     find('commNo').onclick=()=>{closePopup();if(typeof window.leaveComp==='function')window.leaveComp(Number(d.competitionId))};
   }else find('commInbox').onclick=()=>{closePopup();if(hasInbox(n))window.showTab?.('notifications')};
@@ -48,7 +52,7 @@ function showPopup(n){
 }
 window.lowcyCommPopup=function(notifs){
   if(ME?.role!=='PLAYER'||popupId)return;
-  const arr=(notifs||[]).filter(n=>!n.read_at&&!n.popup_seen_at&&!shown.has(Number(n.id))&&((n.type==='ADMIN_MESSAGE'&&hasPopup(n))||n.type==='PRESENCE_REMINDER_2D'));
+  const arr=(notifs||[]).filter(n=>!n.read_at&&!n.popup_seen_at&&!shown.has(Number(n.id))&&((n.type==='ADMIN_MESSAGE'&&hasPopup(n))||n.type==='PRESENCE_REMINDER_2D'||n.type==='COMPETITION_INVITATION'));
   const first=arr[0];if(first)showPopup(first);
 };
 window.lowcyCommEnvelope=function(userId,compId,name){
