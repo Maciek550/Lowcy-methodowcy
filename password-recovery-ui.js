@@ -62,6 +62,7 @@ function adminTile(){
     const btn=event.target.closest('button[data-reset-action]');if(!btn)return;
     const id=Number(btn.dataset.id),action=btn.dataset.resetAction;if(!id||adminBusy)return;
     if(action==='prepare')prepareSms(id,btn);
+    else if(action==='sent')markSmsSent(id,btn);
     else if(action==='reject')rejectRequest(id,btn);
   });
   return node;
@@ -70,7 +71,7 @@ function draftDialog(request,body){
   lastSms={id:Number(request.id),phone:String(request.phone),body:String(body)};
   el('passwordSmsDialog')?.remove();
   const d=document.createElement('dialog');d.className='passwordResetDialog';d.id='passwordSmsDialog';
-  d.innerHTML='<div class="passwordResetForm"><button type="button" data-close class="resetClose" aria-label="Zamknij">×</button><h2>Gotowy SMS do zawodnika</h2><p><b>'+safe(request.first_name+' '+request.last_name)+'</b><br><strong>'+safe(request.phone)+'</strong></p><label for="passwordSmsText">Treść wiadomości</label><textarea id="passwordSmsText" readonly rows="5">'+safe(body)+'</textarea><p class="resetFeedback">Hasło 12345678 jest tymczasowe. Wyślij wiadomość wyłącznie na numer przypisany do konta. Zawodnik musi zmienić hasło po zalogowaniu.</p><div class="resetSmsActions"><button type="button" id="passwordSmsOpen" class="resetMainButton">OTWÓRZ SMS</button><button type="button" id="passwordSmsCopy" class="resetSecondaryButton">KOPIUJ TREŚĆ</button></div><p id="passwordSmsFeedback" role="status" aria-live="polite"></p><button type="button" id="passwordSmsSent" class="resetSentButton">SMS WYSŁANY — ZAMKNIJ PROŚBĘ</button><button type="button" data-close class="resetSecondaryButton">Wróć do prośby</button></div>';
+  d.innerHTML='<div class="passwordResetForm"><button type="button" data-close class="resetClose" aria-label="Zamknij">×</button><h2>Gotowy SMS do zawodnika</h2><p><b>'+safe(request.first_name+' '+request.last_name)+'</b><br><strong>'+safe(request.phone)+'</strong></p><label for="passwordSmsText">Treść wiadomości</label><textarea id="passwordSmsText" readonly rows="5">'+safe(body)+'</textarea><p class="resetFeedback">Hasło 12345678 jest tymczasowe. Wyślij wiadomość wyłącznie na numer przypisany do konta. Zawodnik musi zmienić hasło po zalogowaniu.</p><div class="resetSmsActions"><button type="button" id="passwordSmsOpen" class="resetMainButton">OTWÓRZ SMS</button><button type="button" id="passwordSmsCopy" class="resetSecondaryButton">KOPIUJ TREŚĆ</button></div><p id="passwordSmsFeedback" role="status" aria-live="polite">Po wysłaniu SMS-a wróć tutaj i zamknij prośbę. Ten sam przycisk jest też na karcie prośby.</p><button type="button" id="passwordSmsSent" class="resetSentButton">SMS WYSŁANY — ZAMKNIJ PROŚBĘ</button><button type="button" data-close class="resetSecondaryButton">Wróć do prośby</button></div>';
   document.body.appendChild(d);
   d.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>d.close()));
   d.addEventListener('close',()=>d.remove(),{once:true});
@@ -85,13 +86,7 @@ function draftDialog(request,body){
       el('passwordSmsFeedback').textContent='Treść SMS skopiowana.';
     }catch(e){el('passwordSmsFeedback').textContent=e.message||'Zaznacz i skopiuj treść ręcznie.'}
   };
-  el('passwordSmsSent').onclick=async()=>{
-    const btn=el('passwordSmsSent');if(btn.disabled)return;btn.disabled=true;
-    try{
-      await post('/api/admin/password-resets/'+lastSms.id+'/sent',{});
-      d.close();await refreshAdmin();window.loadNotifications?.();
-    }catch(e){el('passwordSmsFeedback').textContent=e.message;btn.disabled=false}
-  };
+  el('passwordSmsSent').onclick=()=>markSmsSent(lastSms.id,el('passwordSmsSent'),d);
   d.showModal();
 }
 async function prepareSms(id,button){
@@ -112,6 +107,19 @@ async function rejectRequest(id,button){
   catch(e){const status=el('passwordResetAdminFeedback');if(status)status.textContent=e.message}
   finally{adminBusy=false;button.disabled=false}
 }
+async function markSmsSent(id,button,dialog){
+  if(adminBusy||!confirm('Potwierdzasz, że SMS został wysłany? Prośba zniknie z kolejki.'))return;
+  adminBusy=true;button.disabled=true;
+  try{
+    await post('/api/admin/password-resets/'+id+'/sent',{});
+    dialog?.close();
+    await refreshAdmin();
+    window.loadNotifications?.();
+  }catch(e){
+    const status=dialog?el('passwordSmsFeedback'):el('passwordResetAdminFeedback');
+    if(status)status.textContent=e.message;
+  }finally{adminBusy=false;button.disabled=false}
+}
 async function refreshAdmin(){
   if(typeof ME==='undefined'||ME?.role!=='ADMIN')return;
   const tile=adminTile();if(!tile)return;
@@ -123,7 +131,7 @@ async function refreshAdmin(){
   top?.querySelector('.passwordResetTopBadge')?.remove();
   if(top&&count){const badge=document.createElement('b');badge.className='passwordResetTopBadge';badge.textContent='Hasło: '+count;top.appendChild(badge)}
   tile.innerHTML='<div class="passwordResetAdminHead"><div><h2>🔐 Prośby o nowe hasło</h2><p>Oddzielna kolejka. Przygotuj SMS i wyślij go ze swojego telefonu.</p></div><span class="passwordResetCount">'+count+'</span></div><div id="passwordResetAdminFeedback" role="status" aria-live="polite"></div>'+
-    (count?'<div class="passwordResetRequestList">'+rows.map(r=>'<article class="passwordResetRequest"><div class="resetRequestIdentity"><strong>'+safe(r.first_name+' '+r.last_name)+'</strong><a href="tel:'+safe(r.phone)+'">'+safe(r.phone)+'</a></div><small>'+new Date(r.created_at).toLocaleString('pl-PL')+' · '+(r.status==='PREPARED'?'SMS przygotowany':'Nowa prośba')+'</small><div class="passwordResetRequestActions"><button type="button" data-reset-action="prepare" data-id="'+Number(r.id)+'" class="resetMainButton">'+(r.status==='PREPARED'?'PONOWNIE OTWÓRZ SMS':'STWÓRZ SMS')+'</button>'+(r.status==='PENDING'?'<button type="button" data-reset-action="reject" data-id="'+Number(r.id)+'" class="resetSecondaryButton">Odrzuć</button>':'')+'</div></article>').join('')+'</div>':'<p class="passwordResetEmpty">Brak oczekujących próśb.</p>');
+    (count?'<div class="passwordResetRequestList">'+rows.map(r=>'<article class="passwordResetRequest"><div class="resetRequestIdentity"><strong>'+safe(r.first_name+' '+r.last_name)+'</strong><a href="tel:'+safe(r.phone)+'">'+safe(r.phone)+'</a></div><small>'+new Date(r.created_at).toLocaleString('pl-PL')+' · '+(r.status==='PREPARED'?'SMS przygotowany':'Nowa prośba')+'</small><div class="passwordResetRequestActions"><button type="button" data-reset-action="prepare" data-id="'+Number(r.id)+'" class="resetMainButton">'+(r.status==='PREPARED'?'PONOWNIE OTWÓRZ SMS':'STWÓRZ SMS')+'</button>'+(r.status==='PREPARED'?'<button type="button" data-reset-action="sent" data-id="'+Number(r.id)+'" class="resetSentButton">SMS WYSŁANY — ZAMKNIJ PROŚBĘ</button>':'<button type="button" data-reset-action="reject" data-id="'+Number(r.id)+'" class="resetSecondaryButton">Odrzuć</button>')+'</div></article>').join('')+'</div>':'<p class="passwordResetEmpty">Brak oczekujących próśb.</p>');
 }
 window.lowcyPasswordResetRefresh=refreshAdmin;
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initLogin,{once:true});else initLogin();
