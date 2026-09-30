@@ -43,7 +43,7 @@ test('V243: new CSS online and offline, versions matched',()=>{
  assert.match(server,/<link rel="stylesheet" href="\/desktop-draw-v243\.css\?v=\$\{APP_VERSION\}">/);
  assert.match(server,/if\(path==='\/desktop-draw-v243\.css'\)/);
  assert.match(server,/RESULT_CONTRAST_CSS,DESKTOP_DRAW_CSS,DRAW_JS/);
- assert.match(server,/const APP_VERSION = '251'/);
- assert.match(app,/const CLIENT_VERSION='251'/);
- assert.match(server,/class="headerVersion">V251/);
+ assert.match(server,/const APP_VERSION = '252'/);
+ assert.match(app,/const CLIENT_VERSION='252'/);
+ assert.match(server,/class="headerVersion">V252/);
 });

@@ -58,7 +58,7 @@ test('V238 asset loaded last, cached for offline use, version synchronized',()=>
   assert.match(server,/<link rel="stylesheet" href="\/desktop-nav-v238\.css\?v=\$\{APP_VERSION\}">/);
   assert.ok(server.indexOf('<link rel="stylesheet" href="/desktop-nav-v238.css')>server.indexOf('<link rel="stylesheet" href="/compact-player-v237.css'));
   assert.match(server,/const DESKTOP_NAV_CSS='\/desktop-nav-v238\.css\?v=\$\{APP_VERSION\}'/);
-  assert.match(server,/const APP_VERSION = '251'/);
-  assert.match(app,/const CLIENT_VERSION='251'/);
-  assert.match(server,/class="headerVersion">V251</);
+  assert.match(server,/const APP_VERSION = '252'/);
+  assert.match(app,/const CLIENT_VERSION='252'/);
+  assert.match(server,/class="headerVersion">V252</);
 });
