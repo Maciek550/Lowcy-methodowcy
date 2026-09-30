@@ -25,8 +25,8 @@ const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const GOOGLE_VISION_API_KEY = process.env.GOOGLE_VISION_API_KEY || process.env.OCR_GOOGLE_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.PHOTO_OCR_OPENAI_API_KEY || '';
 const PHOTO_OCR_MODEL = process.env.PHOTO_OCR_OPENAI_MODEL || 'gpt-5.6-sol';
-const APP_VERSION = '252';
-const APP_VERSION_NAME = 'V252_ADMIN_ARCHIVE';
+const APP_VERSION = '253';
+const APP_VERSION_NAME = 'V253_INVITATION_ACTIONS';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 const PODIUM_TROPHIES = fs.existsSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) ? fs.readFileSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) : null;
 const CARP_REAL = fs.readFileSync(pathModule.join(__dirname, 'carp-real-v116.png'));
@@ -1252,6 +1252,12 @@ async function inviteCompetitionPlayer(comp,userId,adminId){
     `${comp.title} — ${comp.fishery||'łowisko'} — ${date}. Otwórz zawody, aby się zapisać lub odrzucić zaproszenie.`,
     {competitionId:comp.id,competitionTitle:comp.title,competitionDate:date,fishery:comp.fishery||'',popupEnabled:true,inboxEnabled:true,url:'/'});
   return true;
+}
+async function acceptCompetitionInvitation(client,competitionId,userId){
+  await client.query("update competition_invitations set status='ACCEPTED',responded_at=case when status='ACCEPTED' then coalesce(responded_at,now()) else now() end where competition_id=$1 and user_id=$2",[competitionId,userId]);
+  await client.query(`update notifications set data=jsonb_set(coalesce(data,'{}'::jsonb),'{status}','"ACCEPTED"'::jsonb,true),
+    read_at=coalesce(read_at,now()),popup_seen_at=coalesce(popup_seen_at,now())
+    where recipient_user_id=$1 and type='COMPETITION_INVITATION' and data->>'competitionId'=$2`,[userId,String(competitionId)]);
 }
 async function getActiveEntries(id) {
   const { rows } = await pool.query(`
@@ -2539,19 +2545,17 @@ self.addEventListener('notificationclick', event => {
         if(!access.rows.length){await client.query('ROLLBACK');return sendJson(res,404,{ok:false,error:'Nie znaleziono zawodów'});}
       }
       const existing=(await client.query('select status from entries where competition_id=$1 and user_id=$2',[id,user.id])).rows[0];
-      if(existing && ['ACTIVE','RESERVE'].includes(existing.status)){await client.query('COMMIT');return sendJson(res,200,{ok:true,status:existing.status});}
+      if(existing && ['ACTIVE','RESERVE'].includes(existing.status)){await acceptCompetitionInvitation(client,id,user.id);await client.query('COMMIT');return sendJson(res,200,{ok:true,status:existing.status});}
       const count=Number((await client.query("select count(*)::int n from entries where competition_id=$1 and status='ACTIVE'",[id])).rows[0].n);
       wantedStatus=c.limit_places && count>=Number(c.limit_places)?'RESERVE':'ACTIVE';
       await client.query(`insert into entries(competition_id,user_id,status,joined_at,cancelled_at,confirmed,confirmed_at) values($1,$2,$3,now(),null,false,null)
         on conflict(competition_id,user_id) do update set status=excluded.status,joined_at=now(),cancelled_at=null,confirmed=false,confirmed_at=null`,[id,user.id,wantedStatus]);
-      await client.query("update competition_invitations set status='ACCEPTED',responded_at=now() where competition_id=$1 and user_id=$2",[id,user.id]);
+      await acceptCompetitionInvitation(client,id,user.id);
       await client.query('COMMIT');
     }catch(e){await client.query('ROLLBACK');throw e}finally{client.release()}
     const label = rosterStatusLabel(wantedStatus);
     await notifyAdmins('JOIN', 'Nowy zapis', `${user.first_name} ${user.last_name} zapisał się: ${c.title} — ${label}`, { competitionId:id, userId:user.id, status:wantedStatus });
     await notifyUser(user.id, 'JOIN_CONFIRM', wantedStatus === 'RESERVE' ? 'Zapisano na rezerwę' : 'Zapisano na zawody', `${c.title}: ${label}`, { competitionId:id, status:wantedStatus });
-    await pool.query(`update notifications set data=jsonb_set(data,'{status}','"ACCEPTED"'::jsonb,true),read_at=coalesce(read_at,now())
-      where recipient_user_id=$1 and type='COMPETITION_INVITATION' and data->>'competitionId'=$2`,[user.id,String(id)]);
     await autoSyncBanksForRoster(id);
     return sendJson(res, 200, { ok:true, status:wantedStatus, label });
   }
@@ -3342,7 +3346,7 @@ const HTML = `<!doctype html>
 <link rel="apple-touch-icon" sizes="180x180" href="/brand/icon-v217-180.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/brand/icon-v217-32.png">
 <script>try{if(localStorage.getItem('carp_token'))document.documentElement.classList.add('hasSavedSession')}catch(e){}</script>
-<title>Łowcy Methodowcy — V252</title>
+<title>Łowcy Methodowcy — V253</title>
 <style>
 .adminReminderNote{margin:12px 0;padding:12px;border:1px solid #b5c7bd;background:#f3f8f4;border-radius:12px}.adminReminderNote label{display:block;font-weight:750;color:#173d2a}.adminReminderNote textarea{width:100%;min-height:66px;font-size:16px;line-height:1.35;background:#fff;color:#19322a;border:1px solid #819e8c;border-radius:8px;margin-top:6px;padding:9px}.adminReminderNote p{margin:5px 0 0;color:#38584b}
 :root{--green:#114b2f;--green2:#17643f;--bg:#f3f6ef;--card:#fff;--line:#cfd8cc;--txt:#18251d;--muted:#68746d;--red:#b32020;--gold:#ffc400;--blue:#1067c8;--soft:#eaf2eb}
@@ -8343,7 +8347,11 @@ body:not(.playerTheme):not(.authMode) #app #playersList .playerLastActivityUnkno
   }
 }
 /* Invitation accounts stay readable on desktop and mobile. */
-body #app #competitionDetail .adminInvitationPanel{margin:0 0 18px;border:2px solid #83b8d9}
+body #app #competitionDetail .adminInvitationPanel{margin:0 0 18px;border:2px solid #e7b84f;background:#332b1d!important;color:#fff4d7!important;border-radius:12px;box-shadow:0 3px 12px #0004}
+body #app #competitionDetail .adminInvitationPanel>summary{padding:14px 12px!important;min-height:48px;box-sizing:border-box;border-radius:9px;background:linear-gradient(110deg,#f4d681,#e9b94e)!important;color:#34230a!important;font-size:17px!important;font-weight:900!important;line-height:1.3;overflow-wrap:break-word}
+body #app #competitionDetail .adminInvitationPanel[open]>summary{border-radius:9px 9px 0 0;margin-bottom:10px}
+body #app #competitionDetail .adminInvitationPanel>summary:hover{background:#ffe39a!important}
+body #app #competitionDetail .adminInvitationPanel>summary:focus-visible{outline:3px solid #fff4d7;outline-offset:3px}
 body #app #competitionDetail .adminInvitePerson{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:12px;align-items:center}
 body #app #competitionDetail .adminInvitePerson>span{min-width:0;width:auto!important}
 body #app #competitionDetail .adminInvitePerson b{overflow-wrap:break-word;word-break:normal}
@@ -8385,7 +8393,7 @@ body #app #btn-notifications .adminAttentionBadge{position:absolute!important;to
 </head>
 <body class="authMode">
 <div id="bootGuard"><img src="/icon-192.png" alt=""><b>Łowcy Methodowcy</b><span>Uruchamiam aplikację…</span><button id="bootRetry" class="hidden" type="button" onclick="retryLowcyBoot()">Spróbuj ponownie</button></div>
-<header><div class="row"><h1><img class="brandIcon" src="/brand/icon-v217-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V252</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
+<header><div class="row"><h1><img class="brandIcon" src="/brand/icon-v217-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V253</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
 <main>
 <div id="msg"></div>
 <section id="auth" class="card">
