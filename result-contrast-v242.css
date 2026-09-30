@@ -1746,3 +1746,16 @@ body:not(.playerTheme):not(.authMode) #app #judgeManagementBody>p{
     font-size:21px!important;
   }
 }
+
+
+/* V277 — current V181 competition card: fishery equals competition-title prominence. */
+@media(max-width:760px){
+  body.playerTheme #app .playerCompCardV181 .player181Identity>span{
+    margin-top:2px!important;
+    color:#d9efff!important;
+    font-size:16px!important;
+    line-height:1.2!important;
+    font-weight:900!important;
+    overflow-wrap:anywhere!important;
+  }
+}
