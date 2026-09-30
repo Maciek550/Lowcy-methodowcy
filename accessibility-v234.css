@@ -64,8 +64,13 @@ body:not(.playerTheme) #app #adminPasswordResetTile{background:#0b2839!important
 body:not(.playerTheme) #app #adminPasswordResetTile h2{color:#fff!important;font-size:21px;margin:0 0 5px}
 body:not(.playerTheme) #app #adminPasswordResetTile p{color:#d4e7f0!important;line-height:1.35;margin:5px 0}
 .passwordResetAdminHead{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.passwordResetCount,.passwordResetTopBadge{display:inline-flex;align-items:center;justify-content:center;min-width:32px;min-height:32px;border-radius:20px;background:#f5c95d;color:#142838;padding:5px 9px;font-size:18px;font-weight:950}
-.passwordResetTopBadge{font-size:11px;min-width:0;min-height:24px;margin-left:5px}
+.passwordResetCount{display:inline-flex;align-items:center;justify-content:center;min-width:32px;min-height:32px;border-radius:20px;background:#f5c95d;color:#142838;padding:5px 9px;font-size:18px;font-weight:950}
+.adminNotificationOverview{display:flex;align-items:center;gap:8px 16px;flex-wrap:wrap;background:#123f56;color:#f4fbff;border:2px solid #67a9c4;border-radius:12px;padding:12px 15px;margin:0 0 12px;font-size:15px}
+.adminNotificationOverview strong{font-size:19px;color:#fff;margin-right:8px}
+.adminNotificationOverview span{white-space:nowrap}
+body #app #btn-notifications .adminAttentionBadge{display:inline-flex;align-items:center;justify-content:center;margin-left:7px;padding:4px 8px;border-radius:16px;background:#f5c95d;color:#142838;font-size:11px;font-weight:950;white-space:nowrap}
+body #app .adminNotificationTabs .notificationTabCount{display:inline-flex;align-items:center;justify-content:center;margin-left:6px;min-width:23px;min-height:23px;padding:1px 5px;border-radius:13px;background:#174157;color:#fff;border:1px solid #77acc3;font-size:13px}
+body #app .adminNotificationTabs .notificationTabCount.hasItems{background:#f5c95d;color:#142838;border-color:#f5c95d}
 .passwordResetRequestList{display:grid;gap:10px;margin-top:14px}
 .passwordResetRequest{border:2px solid #6b97a9;border-radius:11px;padding:13px;background:#174257;color:#fff}
 .passwordResetRequest strong{font-size:19px}
@@ -76,6 +81,8 @@ body:not(.playerTheme) #app #adminPasswordResetTile p{color:#d4e7f0!important;li
 .passwordResetRequestActions button{min-height:48px!important}
 .passwordResetEmpty{font-size:15px}
 @media(max-width:760px){
+ .adminNotificationOverview{gap:5px 12px;padding:10px 12px;font-size:13px}
+ .adminNotificationOverview strong{flex:1 0 100%;font-size:18px}
  body.authMode #auth .authLoginArea .grid{grid-template-columns:1fr}
  body.authMode #auth .authLoginArea{padding:0 2px 12px}
  body.authMode #auth{padding:12px!important}

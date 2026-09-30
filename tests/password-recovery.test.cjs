@@ -77,8 +77,8 @@ test('V234: login form accessibility, separate recovery tile, and version badge 
   assert.match(style,/min-height:44px/);
   assert.match(ui,/adminPasswordResetTile/);
   assert.match(server,/<span class="appVersionBadge">V\$\{APP_VERSION\}<\/span>/);
-  assert.match(server,/const APP_VERSION = '245'/);
-  assert.match(app,/const CLIENT_VERSION='245'/);
+  assert.match(server,/const APP_VERSION = '246'/);
+  assert.match(app,/const CLIENT_VERSION='246'/);
   assert.match(server,/token:signToken\(user\)/);
 });
 test('prepared SMS can be closed from the request card after returning from the SMS app',async()=>{
@@ -99,7 +99,8 @@ test('prepared SMS can be closed from the request card after returning from the 
     if(url==='/api/admin/password-resets')return {ok:true,json:async()=>({requests:closed?[]:[request]})};
     throw Error('Unexpected request '+url);
   };
-  const window={loadNotifications(){}};
+  const counts=[];
+  const window={loadNotifications(){},lowcyAdminNotificationsUpdate(count){counts.push(count)}};
   vm.runInNewContext(ui,{document,window,fetch,confirm:()=>true,ME:{role:'ADMIN'},TOKEN:'test'});
   await window.lowcyPasswordResetRefresh();
   const tile=nodes.adminPasswordResetTile;
@@ -108,6 +109,7 @@ test('prepared SMS can be closed from the request card after returning from the 
   tile.click({target:{closest:()=>button}});
   await new Promise(resolve=>setImmediate(resolve));
   assert.equal(closed,true);
+  assert.deepEqual(counts,[1,0]);
   assert.match(tile.innerHTML,/Brak oczekujących próśb/);
   assert.doesNotMatch(tile.innerHTML,/data-reset-action="sent"/);
 });

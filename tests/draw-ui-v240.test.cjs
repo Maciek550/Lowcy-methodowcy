@@ -97,7 +97,7 @@ test('V240: assets included in production shell and code version is synchronized
  assert.match(server,/const DRAW_JS='\/draw-notice-ui-v240\.js\?v=\$\{APP_VERSION\}'/);
  assert.match(server,/<link rel="stylesheet" href="\/draw-ui-v240\.css\?v=\$\{APP_VERSION\}">/);
  assert.match(server,/<script src="\/draw-notice-ui-v240\.js\?v=\$\{APP_VERSION\}" defer><\/script>/);
- assert.match(server,/const APP_VERSION = '245'/);
- assert.match(app,/const CLIENT_VERSION='245'/);
- assert.match(server,/class="headerVersion">V245</);
+ assert.match(server,/const APP_VERSION = '246'/);
+ assert.match(app,/const CLIENT_VERSION='246'/);
+ assert.match(server,/class="headerVersion">V246</);
 });
