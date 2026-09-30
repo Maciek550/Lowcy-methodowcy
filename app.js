@@ -1,4 +1,4 @@
-const CLIENT_VERSION='257';const CLIENT_VERSION_NAME='V257_COMPACT_START_LIST';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='258';const CLIENT_VERSION_NAME='V258_INFO_MAPS_LIST_ACCORDION';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -143,7 +143,7 @@ async function restoreAppNavigation(view,scrollY,restoreId){
         CURRENT_DETAIL=data;
       }
       if(ME.role==='ADMIN')ACTIVE_ADMIN_ZONE=view.adminZone||'roster';
-      else PLAYER_MOBILE_PANEL=view.playerPanel||'draw1';
+      else PLAYER_MOBILE_PANEL=view.playerPanel||null;
       const needsRender=oldId!==id||!detail?.innerHTML||detail.classList.contains('hidden');
       if(needsRender)renderDetail();
       detail?.classList.remove('hidden');
@@ -773,7 +773,7 @@ function resultItems(round,userId,kind){return (CURRENT_DETAIL.resultItems||[]).
 function drawMap(round){const m={};(CURRENT_DETAIL.draws||[]).forEach(r=>{if(Number(r.round)===round)m[Number(r.user_id)]=r});return m}
 function renderDetail(){
   if(ME?.role==='JUDGE'){renderJudgeWork();return}
-  const d=CURRENT_DETAIL;const c=d.competition;const admin=ME.role==='ADMIN';const confirmed=(d.activeEntries||[]).filter(e=>e.confirmed===true||String(e.confirmed).toLowerCase()==='true').length;let html='<div class="card competitionDetailHead '+(admin?'adminDetailHead':'playerDetailHead')+'"><div class="inlineBtns"><button type="button" class="secondary" onclick="closeCompetitionDetail()">Zamknij panel zawodów</button><button type="button" onclick="openCompetition('+c.id+')">Odśwież</button></div><h2>'+esc(c.title)+'</h2><div class="competitionDetailMeta"><span>📅 '+fmtDate(c.competition_date)+'</span><span>📍 '+esc(c.fishery||'—')+'</span><span class="meetingStrong">⏰ Zbiórka '+esc(meetingTimeText(c))+'</span>'+(admin?'<span>👥 '+Number(d.rosterCounts?.active_count||0)+' + R'+Number(d.rosterCounts?.reserve_count||0)+'</span><span>✓ '+confirmed+' potwierdzonych</span>':'')+'</div></div>';if(!admin&&(String(c.notes||'').trim()||String(c.regulations||'').trim()))html+='<div class="playerEventInfo card">'+(String(c.notes||'').trim()?'<div class="playerEventNote"><b>INFORMACJE</b><span>'+esc(c.notes).replace(/\n/g,'<br>')+'</span></div>':'')+(String(c.regulations||'').trim()?'<details class="playerEventRules" open><summary>PROGRAM / REGULAMIN ZAWODÓW</summary><div>'+esc(c.regulations).replace(/\n/g,'<br>')+'</div></details>':'')+'</div>';
+  const d=CURRENT_DETAIL;const c=d.competition;const admin=ME.role==='ADMIN';const confirmed=(d.activeEntries||[]).filter(e=>e.confirmed===true||String(e.confirmed).toLowerCase()==='true').length;let html='<div class="card competitionDetailHead '+(admin?'adminDetailHead':'playerDetailHead')+'"><div class="inlineBtns"><button type="button" class="secondary" onclick="closeCompetitionDetail()">Zamknij panel zawodów</button><button type="button" onclick="openCompetition('+c.id+')">Odśwież</button></div><h2>'+esc(c.title)+'</h2><div class="competitionDetailMeta"><span>📅 '+fmtDate(c.competition_date)+'</span><span>📍 '+esc(c.fishery||'—')+'</span><span class="meetingStrong">⏰ Zbiórka '+esc(meetingTimeText(c))+'</span>'+(admin?'<span>👥 '+Number(d.rosterCounts?.active_count||0)+' + R'+Number(d.rosterCounts?.reserve_count||0)+'</span><span>✓ '+confirmed+' potwierdzonych</span>':'')+'</div></div>';
   SECTOR_MANUAL_DRAFT=undefined;
   if(admin) html+=renderAdminDetail(d); else html+=renderPlayerDetail(d);
   q('competitionDetail').innerHTML=html;
@@ -920,6 +920,14 @@ function renderPlayerEarlyListPanel(d){
     +(reserve.length?'<details class="playerEarlyReserve"><summary>REZERWA ('+reserve.length+')</summary>'+rows(reserve)+'</details>':'')
     +'</section>';
 }
+function renderPlayerEventInfoPanel(d){
+  const c=d?.competition||{},note=String(c.notes||'').trim(),rules=String(c.regulations||'').trim();
+  const field=(title,body,cls)=>'<section class="playerInfoField '+cls+'"><div class="playerInfoFieldTitle">'+title+'</div><div class="playerInfoFieldBody">'+body+'</div></section>';
+  return '<div class="playerEventInfoPanel card">'
+    +field('INFORMACJE',note?esc(note).replace(/\n/g,'<br>'):'Brak dodatkowych informacji.','notes')
+    +field('PROGRAM / REGULAMIN ZAWODÓW',rules?esc(rules).replace(/\n/g,'<br>'):'Brak programu lub regulaminu.','rules')
+    +'</div>';
+}
 function syncPlayerEarlyListCutoff(){
   document.querySelectorAll('.player181List[data-competition-id]').forEach(btn=>{
     const c=(PLAYER_COMPETITIONS_CACHE||[]).find(x=>Number(x.id)===Number(btn.dataset.competitionId));
@@ -941,6 +949,7 @@ function syncPlayerEarlyListCutoff(){
   refreshPlayerDock();requestAnimationFrame(syncPlayerStickyBars);
 }
 function renderPlayerMobilePanelContent(d,panel){
+  if(panel==='info')return '<div class="playerMobileSelectedPanel">'+renderPlayerEventInfoPanel(d)+'</div>';
   if(panel==='list')return '<div class="playerMobileSelectedPanel">'+renderPlayerEarlyListPanel(d)+'</div>';
   if(panel==='draw1'||panel==='draw2'){
     const round=panel==='draw2'?2:1;
@@ -975,12 +984,13 @@ function renderPlayerMobileDashboard(d){
       +b('t2','Wyniki<br>Tura 2'+playerResultStar(d,2),'resultTile')
       +'<div class="playerPrimaryStack">'+b('general','GENERAL','resultTile generalTile')+b('stats','STATYSTYKI','resultTile statsTile')+'</div>'
     +'</div>'
-    +'<div class="playerMapNav '+(early?'withEarlyList':'')+'">'+b('map1','MAPA ŁOWISKA T1','mapTile')+b('map2','MAPA ŁOWISKA T2','mapTile')+(early?b('list','LISTA <span class="playerEarlyListCount">'+(d.activeEntries||[]).length+'</span>','earlyListTile'):'')+'</div>'
+    +'<div class="playerMapNav playerQuickInfoNav '+(early?'withEarlyList':'withoutEarlyList')+'">'+b('info','INFO','infoTile')+b('map1','MAPA T1','mapTile')+b('map2','MAPA T2','mapTile')+(early?b('list','LISTA <span class="playerEarlyListCount">'+(d.activeEntries||[]).length+'</span>','earlyListTile'):'')+'</div>'
     +'</div></div>'
     +'<div id="playerMobilePanelContent">'+renderPlayerMobilePanelContent(d,p)+'</div>'
     +'</div>';
 }
 function renderPlayerDesktopPanelContent(d,panel){
+  if(panel==='info')return '<div class="playerDesktopSelectedPanel">'+renderPlayerEventInfoPanel(d)+'</div>';
   if(panel==='list')return '<div class="playerDesktopSelectedPanel">'+renderPlayerEarlyListPanel(d)+'</div>';
   if(panel==='draw1'||panel==='draw2'){
     const round=panel==='draw2'?2:1;
@@ -1016,7 +1026,7 @@ function renderPlayerDesktopDashboard(d){
       +b('t2','Wyniki<br>Tura 2'+playerResultStar(d,2),'resultTile')
       +'<div class="playerPrimaryStack">'+b('general','GENERAL','resultTile generalTile')+b('stats','STATYSTYKI','resultTile statsTile')+'</div>'
     +'</div>'
-    +'<div class="playerDesktopSubNav playerDesktopMapsOnly '+(early?'withEarlyList':'')+'">'+b('map1','MAPA ŁOWISKA T1','mapTile')+b('map2','MAPA ŁOWISKA T2','mapTile')+(early?b('list','LISTA <span class="playerEarlyListCount">'+(d.activeEntries||[]).length+'</span>','earlyListTile'):'')+'</div>'
+    +'<div class="playerDesktopSubNav playerDesktopMapsOnly playerQuickInfoNav '+(early?'withEarlyList':'withoutEarlyList')+'">'+b('info','INFO','infoTile')+b('map1','MAPA T1','mapTile')+b('map2','MAPA T2','mapTile')+(early?b('list','LISTA <span class="playerEarlyListCount">'+(d.activeEntries||[]).length+'</span>','earlyListTile'):'')+'</div>'
     +'</div></div>'
     +'<div id="playerDesktopPanelContent">'+renderPlayerDesktopPanelContent(d,p)+'</div>'
     +'</div>';
@@ -1063,23 +1073,29 @@ function focusPlayerNavOnOpen(){
 }
 function showPlayerDesktopPanel(panel,ev){
   if(ev){ev.preventDefault();ev.stopPropagation()}
+  closePlayerSituationalMap();
   const keepY=APP_NAV_RESTORING?Math.round(window.scrollY||0):null;
-  const allowed=['draw1','draw2','map1','map2','t1','t2','general','stats','list'];
+  const allowed=['info','draw1','draw2','map1','map2','t1','t2','general','stats','list'];
   if(panel==='list'&&!playerEarlyListAvailable(CURRENT_DETAIL?.competition))return;
   if(!allowed.includes(panel))return;
-  if(panel==='t1'||panel==='t2')markPlayerResultSeen(panel==='t1'?1:2);
-  if(panel==='general'&&CURRENT_DETAIL?.competition?.id)markPlayerAttentionRead(CURRENT_DETAIL.competition.id,'RESULTS_GENERAL',true);
-  if(panel==='draw1'||panel==='draw2')markPlayerDrawSeen(panel==='draw1'?1:2);
-  PLAYER_MOBILE_PANEL=panel;
-  if(panel==='draw1'||panel==='draw2'||panel==='map1'||panel==='map2')PLAYER_DRAW_ROUND=(panel==='draw2'||panel==='map2')?2:1;
-  if(['t1','t2','general','stats'].includes(panel))PLAYER_RESULTS_TAB=panel;
+  const closing=PLAYER_MOBILE_PANEL===panel;
+  if(!closing){
+    if(panel==='t1'||panel==='t2')markPlayerResultSeen(panel==='t1'?1:2);
+    if(panel==='general'&&CURRENT_DETAIL?.competition?.id)markPlayerAttentionRead(CURRENT_DETAIL.competition.id,'RESULTS_GENERAL',true);
+    if(panel==='draw1'||panel==='draw2')markPlayerDrawSeen(panel==='draw1'?1:2);
+    if(panel==='draw1'||panel==='draw2'||panel==='map1'||panel==='map2')PLAYER_DRAW_ROUND=(panel==='draw2'||panel==='map2')?2:1;
+    if(['t1','t2','general','stats'].includes(panel))PLAYER_RESULTS_TAB=panel;
+  }
+  PLAYER_MOBILE_PANEL=closing?null:panel;
+  const active=PLAYER_MOBILE_PANEL;
   const desktopBox=q('playerDesktopPanelContent');
-  if(desktopBox&&CURRENT_DETAIL)desktopBox.innerHTML=renderPlayerDesktopPanelContent(CURRENT_DETAIL,panel);
+  if(desktopBox&&CURRENT_DETAIL)desktopBox.innerHTML=active?renderPlayerDesktopPanelContent(CURRENT_DETAIL,active):'';
   const mobileBox=q('playerMobilePanelContent');
-  if(mobileBox&&CURRENT_DETAIL)mobileBox.innerHTML=renderPlayerMobilePanelContent(CURRENT_DETAIL,panel);
-  document.querySelectorAll('.playerDesktopUnifiedNav button,.playerUnifiedNav button').forEach(btn=>btn.classList.toggle('active',btn.getAttribute('onclick')?.includes("'"+panel+"'")));
+  if(mobileBox&&CURRENT_DETAIL)mobileBox.innerHTML=active?renderPlayerMobilePanelContent(CURRENT_DETAIL,active):'';
+  document.querySelectorAll('.playerDesktopUnifiedNav button,.playerUnifiedNav button').forEach(btn=>btn.classList.toggle('active',!!active&&btn.getAttribute('onclick')?.includes("'"+active+"'")));
   refreshPlayerDock();
-  if(keepY===null)focusPlayerNavOnOpen();else restorePlayerViewport(keepY);
+  if(keepY!==null)restorePlayerViewport(keepY);
+  recordAppNavigation();
 }
 function setPlayerDrawView(view,ev){
   if(ev){ev.preventDefault();ev.stopPropagation()}
@@ -1091,7 +1107,7 @@ function setPlayerDrawView(view,ev){
   // The selected map/table mode is shared by the mobile and desktop dashboards.
 }
 function renderPlayerDetail(d){
-  if(!PLAYER_MOBILE_PANEL||(PLAYER_MOBILE_PANEL==='list'&&!playerEarlyListAvailable(d.competition)))PLAYER_MOBILE_PANEL='draw1';
+  if(PLAYER_MOBILE_PANEL==='list'&&!playerEarlyListAvailable(d.competition))PLAYER_MOBILE_PANEL=null;
   let html='<div class="playerView">';
   html+=renderPlayerDesktopDashboard(d);
   html+=renderPlayerMobileDashboard(d);
@@ -1221,22 +1237,26 @@ function showPlayerMobilePanel(panel,ev){
   if(ev){ev.preventDefault();ev.stopPropagation()}
   closePlayerSituationalMap();
   const keepY=APP_NAV_RESTORING?Math.round(window.scrollY||0):null;
-  const allowed=['draw1','draw2','map1','map2','t1','t2','general','stats','list'];
+  const allowed=['info','draw1','draw2','map1','map2','t1','t2','general','stats','list'];
   if(panel==='list'&&!playerEarlyListAvailable(CURRENT_DETAIL?.competition))return;
   if(!allowed.includes(panel))return;
-  if(panel==='t1'||panel==='t2')markPlayerResultSeen(panel==='t1'?1:2);
-  if(panel==='general'&&CURRENT_DETAIL?.competition?.id)markPlayerAttentionRead(CURRENT_DETAIL.competition.id,'RESULTS_GENERAL',true);
-  if(panel==='draw1'||panel==='draw2')markPlayerDrawSeen(panel==='draw1'?1:2);
-  PLAYER_MOBILE_PANEL=panel;
-  if(panel==='draw1'||panel==='draw2'||panel==='map1'||panel==='map2')PLAYER_DRAW_ROUND=(panel==='draw2'||panel==='map2')?2:1;
-  if(['t1','t2','general','stats'].includes(panel))PLAYER_RESULTS_TAB=panel;
+  const closing=PLAYER_MOBILE_PANEL===panel;
+  if(!closing){
+    if(panel==='t1'||panel==='t2')markPlayerResultSeen(panel==='t1'?1:2);
+    if(panel==='general'&&CURRENT_DETAIL?.competition?.id)markPlayerAttentionRead(CURRENT_DETAIL.competition.id,'RESULTS_GENERAL',true);
+    if(panel==='draw1'||panel==='draw2')markPlayerDrawSeen(panel==='draw1'?1:2);
+    if(panel==='draw1'||panel==='draw2'||panel==='map1'||panel==='map2')PLAYER_DRAW_ROUND=(panel==='draw2'||panel==='map2')?2:1;
+    if(['t1','t2','general','stats'].includes(panel))PLAYER_RESULTS_TAB=panel;
+  }
+  PLAYER_MOBILE_PANEL=closing?null:panel;
+  const active=PLAYER_MOBILE_PANEL;
   const box=q('playerMobilePanelContent');
-  if(box&&CURRENT_DETAIL)box.innerHTML=renderPlayerMobilePanelContent(CURRENT_DETAIL,panel);
+  if(box&&CURRENT_DETAIL)box.innerHTML=active?renderPlayerMobilePanelContent(CURRENT_DETAIL,active):'';
   const desktopBox=q('playerDesktopPanelContent');
-  if(desktopBox&&CURRENT_DETAIL)desktopBox.innerHTML=renderPlayerDesktopPanelContent(CURRENT_DETAIL,panel);
-  document.querySelectorAll('.playerUnifiedNav button,.playerDesktopUnifiedNav button').forEach(btn=>btn.classList.toggle('active',btn.getAttribute('onclick')?.includes("'"+panel+"'")));
+  if(desktopBox&&CURRENT_DETAIL)desktopBox.innerHTML=active?renderPlayerDesktopPanelContent(CURRENT_DETAIL,active):'';
+  document.querySelectorAll('.playerUnifiedNav button,.playerDesktopUnifiedNav button').forEach(btn=>btn.classList.toggle('active',!!active&&btn.getAttribute('onclick')?.includes("'"+active+"'")));
   refreshPlayerDock();
-  if(keepY===null)focusPlayerNavOnOpen();else restorePlayerViewport(keepY);
+  if(keepY!==null)restorePlayerViewport(keepY);
   recordAppNavigation();
 }
 function closePlayerSituationalMap(){
