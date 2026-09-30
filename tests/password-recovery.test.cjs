@@ -77,8 +77,8 @@ test('V234: login form accessibility, separate recovery tile, and version badge 
   assert.match(style,/min-height:44px/);
   assert.match(ui,/adminPasswordResetTile/);
   assert.match(server,/<span class="appVersionBadge">V\$\{APP_VERSION\}<\/span>/);
-  assert.match(server,/const APP_VERSION = '247'/);
-  assert.match(app,/const CLIENT_VERSION='247'/);
+  assert.match(server,/const APP_VERSION = '248'/);
+  assert.match(app,/const CLIENT_VERSION='248'/);
   assert.match(server,/token:signToken\(user\)/);
 });
 test('prepared SMS can be closed from the request card after returning from the SMS app',async()=>{
