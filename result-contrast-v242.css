@@ -1772,3 +1772,21 @@ body:not(.playerTheme):not(.authMode) #app #judgeManagementBody>p{
     overflow-wrap:anywhere!important;
   }
 }
+
+
+/* V279 — approved mockup: V181 fishery at 22px, bold, compact. */
+@media(max-width:760px){
+  body.playerTheme #app #competitionsList .playerCompCardV181 .player181Identity>span{
+    margin-top:1px!important;
+    color:#e5f4ff!important;
+    font-size:22px!important;
+    line-height:1.05!important;
+    font-weight:1000!important;
+    overflow-wrap:anywhere!important;
+  }
+}
+@media(max-width:370px){
+  body.playerTheme #app #competitionsList .playerCompCardV181 .player181Identity>span{
+    font-size:21px!important;
+  }
+}
