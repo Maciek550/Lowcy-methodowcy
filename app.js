@@ -1,4 +1,4 @@
-const CLIENT_VERSION='268';const CLIENT_VERSION_NAME='V268_ADMIN_COMPETITION_CARDS';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='269';const CLIENT_VERSION_NAME='V269_LARGE_ADMIN_DASHBOARD_TYPE';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -3837,7 +3837,7 @@ function renderJudgeWork(){
 }
 async function loadJudgeManagement(){
   if(ME?.role!=='ADMIN')return;
-  if(!q('adminQuickActions')){const bar=document.createElement('div');bar.id='adminQuickActions';bar.innerHTML='<button type="button" aria-controls="adminCreate" aria-expanded="false" onclick="toggleAdminQuickPanel(\'adminCreate\',this)">Robimy zawody</button><button type="button" class="secondary" aria-controls="judgeManagement" aria-expanded="false" onclick="toggleAdminQuickPanel(\'judgeManagement\',this)">⚖️ Sędziowie wagowi</button>';q('adminCreate').before(bar)}
+  if(!q('adminQuickActions')){const bar=document.createElement('div');bar.id='adminQuickActions';bar.innerHTML='<button type="button" aria-controls="adminCreate" aria-expanded="false" onclick="toggleAdminQuickPanel(\'adminCreate\',this)"><span class="adminQuickIcon" aria-hidden="true">＋</span><span>Robimy zawody</span></button><button type="button" class="secondary" aria-controls="judgeManagement" aria-expanded="false" onclick="toggleAdminQuickPanel(\'judgeManagement\',this)"><span class="adminQuickIcon" aria-hidden="true">⚖️</span><span>Sędziowie wagowi</span></button>';q('adminCreate').before(bar)}
   let root=q('judgeManagement');if(!root){root=document.createElement('details');root.id='judgeManagement';root.className='card';root.innerHTML='<summary>⚖️ Sędziowie wagowi</summary><div id="judgeManagementBody"></div>';q('adminCreate').after(root);root.addEventListener('toggle',()=>{if(root.open)refreshJudgeManagement()})}
 }
 async function refreshJudgeManagement(){
