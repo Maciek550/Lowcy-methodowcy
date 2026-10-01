@@ -406,3 +406,83 @@ body:not(.playerTheme):not(.authMode) #playersList .playerDeleteBtn{
     text-shadow:0 1px 0 rgba(255,255,255,.22)!important;
   }
 }
+
+
+/* V291 — MOBILE Zawodnicy: większa i krótsza aktywność + ciaśniejsza karta. */
+.activityShort{display:none}
+@media(max-width:760px){
+  body #app #playersList .activityLong{display:none!important}
+  body #app #playersList .activityShort{display:inline!important}
+
+  body #app #playersList .mobilePlayersList{
+    gap:5px!important;
+  }
+  body #app #playersList .mobilePlayersList .mobileAdminCard.mobilePlayerManageCard{
+    padding:6px 7px!important;
+    border-radius:9px!important;
+  }
+  body #app #playersList .mobilePlayersList .mobilePlayerManageCard .mobileAdminCardHead{
+    gap:5px!important;
+  }
+  body #app #playersList .mobilePlayersList .mobilePlayerManageCard .playerNameLogin{
+    font-size:clamp(15px,4vw,17px)!important;
+    line-height:1.12!important;
+  }
+  body #app #playersList .mobilePlayersList .mobilePlayerManageCard .playerLastActivity{
+    display:table!important;
+    margin:3px 0 0!important;
+    padding:3px 6px!important;
+    min-height:0!important;
+    border-radius:7px!important;
+    font-size:clamp(11.5px,3.05vw,12.5px)!important;
+    line-height:1.05!important;
+    font-weight:900!important;
+    white-space:nowrap!important;
+  }
+
+  body #app #playersList .mobilePlayersList .mobilePlayerManageMeta{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) auto!important;
+    align-items:center!important;
+    gap:6px!important;
+    margin:3px 0 4px 34px!important;
+  }
+  body #app #playersList .mobilePlayersList .mobilePlayerManageMeta>span{
+    width:max-content!important;
+    max-width:100%!important;
+    min-height:0!important;
+    padding:3px 7px!important;
+    border-radius:7px!important;
+    font-size:11.5px!important;
+    line-height:1.05!important;
+  }
+  body #app #playersList .mobilePlayersList .mobilePlayerManageMeta>span:last-child{
+    justify-self:end!important;
+  }
+  body #app #playersList .mobilePlayersList .mobilePlayerManageMeta b{
+    font-size:13.5px!important;
+    line-height:1!important;
+  }
+
+  body #app #playersList .mobilePlayersList .mobilePlayerManageActions{
+    gap:6px!important;
+    margin:0 0 0 34px!important;
+  }
+  body #app #playersList .mobilePlayersList .mobilePlayerManageActions button{
+    min-height:36px!important;
+    padding:4px 7px!important;
+    border-radius:8px!important;
+    font-size:12.5px!important;
+    line-height:1!important;
+  }
+}
+@media(max-width:380px){
+  body #app #playersList .mobilePlayersList .mobilePlayerManageCard .playerLastActivity{
+    font-size:11px!important;
+    padding:3px 5px!important;
+  }
+  body #app #playersList .mobilePlayersList .mobilePlayerManageMeta>span{
+    font-size:11px!important;
+    padding:3px 6px!important;
+  }
+}
