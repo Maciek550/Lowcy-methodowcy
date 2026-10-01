@@ -3542,7 +3542,17 @@ async function deleteAllAdminPlayers(count){if(!ME||ME.role!=='ADMIN')return;con
 async function loadPlayers(){
   if(!ME||ME.role!=='ADMIN')return;
   const d=await api('/api/admin/players');
-  const adminAdded=d.players.filter(p=>p.bulk_removable===true).length;
+  const playerRows=Array.isArray(d.players)?d.players:[];
+  d.players=playerRows;
+  const totalPlayers=Number.isFinite(Number(d.counts?.all))?Number(d.counts.all):playerRows.length;
+  const accountPlayers=Number.isFinite(Number(d.counts?.accounts))?Number(d.counts.accounts):playerRows.filter(p=>p.has_account===true).length;
+  const playerTab=q('btn-players');
+  if(playerTab){
+    playerTab.innerHTML='<span class="adminPlayersTabMain"><span class="adminPlayersTabIcon" aria-hidden="true">👥</span><b>Zawodnicy</b></span><span class="adminPlayersTabStats"><span>Wszyscy <b>'+totalPlayers+'</b></span><span>Konta <b>'+accountPlayers+'</b></span></span>';
+    playerTab.setAttribute('aria-label','Zawodnicy. Wszyscy: '+totalPlayers+'. Konta: '+accountPlayers+'.');
+    playerTab.title='Wszyscy zawodnicy: '+totalPlayers+' · posiadają konto: '+accountPlayers;
+  }
+  const adminAdded=playerRows.filter(p=>p.bulk_removable===true).length;
   const legend='<div class="playerAccountTop"><div class="playerAccountLegend"><span><b class="playerAccountBadge playerAccountVerified">V</b> zalogował się w aplikacji</span><span><b class="playerAccountBadge playerAccountAdmin">A</b> import zewnętrzny bez konta</span><span>Aktywność zapisywana od V222</span></div><button type="button" class="warn playerDeleteAllAdminBtn" '+(adminAdded?'':'disabled')+' onclick="deleteAllAdminPlayers('+adminAdded+')">Usuń wszystkich A ('+adminAdded+')</button></div>';
   const desktop='<div class="tablewrap adminDesktopOnly"><table class="adminPlayersTable"><thead><tr><th style="width:46px">Lp.</th><th>Imię i nazwisko</th><th style="width:82px">Info</th><th>Telefon</th><th>Koło PZW</th><th>Aktywne zapisy</th><th style="width:150px">Akcja</th></tr></thead><tbody>'+d.players.map((p,i)=>{
     const name=String((p.first_name||'')+' '+(p.last_name||'')).trim(),safeName=encodeURIComponent(name).replace(/'/g,'%27'),safeClub=encodeURIComponent(p.pzw_club||'').replace(/'/g,'%27'),safePhone=encodeURIComponent(p.phone||'').replace(/'/g,'%27');

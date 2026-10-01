@@ -25,8 +25,8 @@ const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const GOOGLE_VISION_API_KEY = process.env.GOOGLE_VISION_API_KEY || process.env.OCR_GOOGLE_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.PHOTO_OCR_OPENAI_API_KEY || '';
 const PHOTO_OCR_MODEL = process.env.PHOTO_OCR_OPENAI_MODEL || 'gpt-5.6-sol';
-const APP_VERSION = '279';
-const APP_VERSION_NAME = 'V279_APPROVED_22PX_FISHERY';
+const APP_VERSION = '280';
+const APP_VERSION_NAME = 'V280_ADMIN_PLAYERS_ACCOUNT_COUNT';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 const PODIUM_TROPHIES = fs.existsSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) ? fs.readFileSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) : null;
 const CARP_REAL = fs.readFileSync(pathModule.join(__dirname, 'carp-real-v116.png'));
@@ -3084,13 +3084,16 @@ self.addEventListener('notificationclick', event => {
     const { rows } = await pool.query(`
       select u.id, coalesce(nullif(u.contact_phone,''),u.phone) as phone, u.first_name, u.last_name, u.pzw_club, u.role, u.created_at,
       coalesce(u.account_source,'SELF') account_source, u.last_login_at, u.last_active_at,
+      (nullif(trim(u.phone),'') is not null and nullif(trim(u.password_hash),'') is not null
+        and u.phone not like 'MANUAL-%' and u.phone not like 'ZPRO-%' and u.phone not like 'IMPORT-%') has_account,
       (u.last_login_at is not null) has_logged_in,
       (upper(coalesce(u.account_source,''))='EXTERNAL' and u.last_login_at is null) bulk_removable,
       (select count(*)::int from entries e where e.user_id=u.id and e.status='ACTIVE') active_entries
       from users u where u.role='PLAYER' and u.archived_at is null
       order by u.last_active_at desc nulls last, u.created_at desc, u.id desc
     `);
-    return sendJson(res, 200, { ok:true, players:rows });
+    const accountCount=rows.filter(p=>p.has_account===true).length;
+    return sendJson(res, 200, { ok:true, players:rows, counts:{all:rows.length,accounts:accountCount} });
   }
   if (path === '/api/admin/players/admin-added' && method === 'DELETE') {
     if (!requireAdmin(user, res)) return;
@@ -8769,6 +8772,58 @@ body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationV
   }
 }
 
+
+/* V280 — admin: czytelny kafel Zawodnicy + licznik realnych kont, bez zwiększania wysokości nawigacji. */
+body:not(.playerTheme):not(.authMode) #btn-players{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:10px!important;
+  white-space:nowrap!important;
+  flex-wrap:nowrap!important;
+}
+body:not(.playerTheme):not(.authMode) #btn-players .adminPlayersTabMain,
+body:not(.playerTheme):not(.authMode) #btn-players .adminPlayersTabStats{
+  display:inline-flex!important;
+  align-items:center!important;
+  gap:5px!important;
+  line-height:1!important;
+  white-space:nowrap!important;
+}
+body:not(.playerTheme):not(.authMode) #btn-players .adminPlayersTabMain{
+  color:#fff!important;
+  font-size:14px!important;
+  font-weight:1000!important;
+}
+body:not(.playerTheme):not(.authMode) #btn-players .adminPlayersTabIcon{
+  font-size:17px!important;
+  line-height:1!important;
+}
+body:not(.playerTheme):not(.authMode) #btn-players .adminPlayersTabStats{
+  padding-left:10px!important;
+  border-left:1px solid rgba(255,255,255,.38)!important;
+  color:#d9f4e2!important;
+  font-size:10px!important;
+  font-weight:850!important;
+}
+body:not(.playerTheme):not(.authMode) #btn-players .adminPlayersTabStats b{
+  color:#ffe066!important;
+  font-size:12px!important;
+  font-weight:1000!important;
+}
+body:not(.playerTheme):not(.authMode) #btn-players.active .adminPlayersTabStats{
+  color:#effff3!important;
+}
+@media(max-width:760px){
+  body:not(.playerTheme):not(.authMode) #btn-players{gap:5px!important}
+  body:not(.playerTheme):not(.authMode) #btn-players .adminPlayersTabMain{font-size:11px!important}
+  body:not(.playerTheme):not(.authMode) #btn-players .adminPlayersTabIcon{font-size:13px!important}
+  body:not(.playerTheme):not(.authMode) #btn-players .adminPlayersTabStats{
+    gap:3px!important;padding-left:5px!important;font-size:8px!important
+  }
+  body:not(.playerTheme):not(.authMode) #btn-players .adminPlayersTabStats b{font-size:9px!important}
+}
+
 </style>
 <link rel="stylesheet" href="/accessibility-v234.css?v=${APP_VERSION}">
 <link rel="stylesheet" href="/roster-preview-v235.css?v=${APP_VERSION}">
@@ -8783,7 +8838,7 @@ body:not(.playerTheme):not(.authMode) #app #competitionDetail .adminPreparationV
 </head>
 <body class="authMode">
 <div id="bootGuard"><img src="/icon-192.png" alt=""><b>Łowcy Methodowcy</b><span>Uruchamiam aplikację…</span><button id="bootRetry" class="hidden" type="button" onclick="retryLowcyBoot()">Spróbuj ponownie</button></div>
-<header><div class="row"><h1><img class="brandIcon" src="/brand/icon-v217-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V279</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
+<header><div class="row"><h1><img class="brandIcon" src="/brand/icon-v217-64.png" alt="">Łowcy Methodowcy <span class="headerVersion">V${APP_VERSION}</span></h1><div class="top-actions"><button type="button" id="logoutBtn" class="hidden">Wyloguj</button></div></div></header>
 <main>
 <div id="msg"></div>
 <section id="auth" class="card">
