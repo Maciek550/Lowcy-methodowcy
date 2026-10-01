@@ -226,3 +226,62 @@ body:not(.playerTheme):not(.authMode) #playersList .commPhonePair button{
     padding:3px 5px!important;
   }
 }
+
+
+/* V284 — desktop: srebrne wiersze + naprawa czytelności "Ostatnia aktywność".
+   Mobile zachowuje ciemne karty V283. */
+@media(min-width:761px){
+  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable tbody tr:nth-child(odd)>td{
+    background:linear-gradient(180deg,#d6dde1 0%,#c5cfd5 100%)!important;
+    color:#0b2533!important;
+    -webkit-text-fill-color:#0b2533!important;
+    border-color:#7d929e!important;
+  }
+  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable tbody tr:nth-child(even)>td{
+    background:linear-gradient(180deg,#c5ced4 0%,#b7c2c9 100%)!important;
+    color:#0b2533!important;
+    -webkit-text-fill-color:#0b2533!important;
+    border-color:#748a96!important;
+  }
+  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable tbody tr:hover>td{
+    background:linear-gradient(180deg,#dfe7eb 0%,#cbd7dd 100%)!important;
+  }
+  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable td>b{
+    color:#071f2c!important;
+    -webkit-text-fill-color:#071f2c!important;
+    font-weight:1000!important;
+  }
+  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable .center,
+  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable .center>b{
+    color:#0b3d2c!important;
+    -webkit-text-fill-color:#0b3d2c!important;
+    font-weight:1000!important;
+  }
+}
+
+/* Chip aktywności: tekst ma być zawsze widoczny na desktopie i mobile. */
+body:not(.playerTheme):not(.authMode) #playersList .playerLastActivity{
+  width:auto!important;
+  max-width:none!important;
+  min-width:0!important;
+  color:#eafff1!important;
+  -webkit-text-fill-color:#eafff1!important;
+  opacity:1!important;
+  visibility:visible!important;
+  text-indent:0!important;
+  font-weight:900!important;
+  letter-spacing:0!important;
+  white-space:nowrap!important;
+}
+body:not(.playerTheme):not(.authMode) #playersList .playerLastActivityUnknown{
+  color:#fff0b8!important;
+  -webkit-text-fill-color:#fff0b8!important;
+}
+@media(max-width:760px){
+  body:not(.playerTheme):not(.authMode) #playersList .playerNameLogin .playerLastActivity{
+    width:auto!important;
+    max-width:100%!important;
+    color:#eafff1!important;
+    -webkit-text-fill-color:#eafff1!important;
+  }
+}
