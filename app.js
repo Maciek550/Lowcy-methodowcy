@@ -1,4 +1,4 @@
-const CLIENT_VERSION='290';const CLIENT_VERSION_NAME='V290_MOBILE_PLAYERS_GRAY';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='291';const CLIENT_VERSION_NAME='V291_COMPACT_PLAYER_ACTIVITY';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -3534,11 +3534,13 @@ function editPlayerName(id,currentName,currentClub='',currentPhone=''){
 }
 function playerInfoBadges(p){let out='';if(p.has_logged_in)out+='<span class="playerAccountBadge playerAccountVerified" title="Zawodnik zalogował się w aplikacji">V</span>';if(p.bulk_removable)out+='<span class="playerAccountBadge playerAccountAdmin" title="Import zewnętrzny bez konta — podlega zbiorczemu usunięciu">A</span>';return out||'<span class="muted">—</span>'}
 const PLAYER_ACTIVITY_DATE_FORMAT=new Intl.DateTimeFormat('pl-PL',{timeZone:'Europe/Warsaw',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
+const PLAYER_ACTIVITY_SHORT_FORMAT=new Intl.DateTimeFormat('pl-PL',{timeZone:'Europe/Warsaw',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
 function playerLastActivityHtml(value){
   const date=value?new Date(value):null;
-  if(!date||!Number.isFinite(date.getTime()))return '<span class="playerLastActivity playerLastActivityUnknown" title="Pomiar aktywności od V222">Ostatnia aktywność: brak danych</span>';
-  const label='Ostatnia aktywność: '+PLAYER_ACTIVITY_DATE_FORMAT.format(date);
-  return '<time class="playerLastActivity" datetime="'+esc(date.toISOString())+'">'+esc(label)+'</time>';
+  if(!date||!Number.isFinite(date.getTime()))return '<span class="playerLastActivity playerLastActivityUnknown" title="Pomiar aktywności od V222"><span class="activityLong">Ostatnia aktywność: brak danych</span><span class="activityShort">Aktywność: brak</span></span>';
+  const full='Ostatnia aktywność: '+PLAYER_ACTIVITY_DATE_FORMAT.format(date);
+  const short='Aktywność: '+PLAYER_ACTIVITY_SHORT_FORMAT.format(date).replace(',','');
+  return '<time class="playerLastActivity" datetime="'+esc(date.toISOString())+'"><span class="activityLong">'+esc(full)+'</span><span class="activityShort">'+esc(short)+'</span></time>';
 }
 async function deletePlayer(id,name){if(!ME||ME.role!=='ADMIN')return;const label=String(name||'zawodnika');if(!await appConfirmLegacy('Usunąć zawodnika '+label+' z aktywnej bazy?\n\nJego dotychczasowe zapisy, losowania, wagi i wyniki zostaną zachowane. Konto zostanie zarchiwizowane i nie będzie mogło się logować.'))return;try{const d=await api('/api/admin/players/'+Number(id),{method:'DELETE',body:'{}'});msg('Zarchiwizowano zawodnika: '+(d.player?.name||label));await loadPlayers();await loadCompetitions();if(CURRENT_DETAIL?.competition?.id)await refreshCompetitionKeepScroll(CURRENT_DETAIL.competition.id)}catch(e){msg(e.message,'bad')}}
 async function deleteAllAdminPlayers(count){if(!ME||ME.role!=='ADMIN')return;const n=Number(count||0);if(n<1){msg('Brak zawodników oznaczonych A.');return}if(!await appConfirmLegacy('Zarchiwizować TYLKO zaimportowanych zawodników bez konta (A)?\n\nLiczba zawodników: '+n+'\n\nKonta założone przez administratora i zalogowani zawodnicy pozostaną bez zmian.'))return;try{const d=await api('/api/admin/players/admin-added',{method:'DELETE',body:'{}'});msg('Zarchiwizowano zawodników A: '+Number(d.archived||d.deleted||0));await loadPlayers();await loadCompetitions();if(CURRENT_DETAIL?.competition?.id)await refreshCompetitionKeepScroll(CURRENT_DETAIL.competition.id)}catch(e){msg(e.message,'bad')}}
