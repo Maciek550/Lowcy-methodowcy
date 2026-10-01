@@ -797,7 +797,9 @@ async function appConfirmLegacy(message){
   const text=String(message||'').trim();
   const lower=text.toLocaleLowerCase('pl-PL');
   let tone='info',icon='✓',title='POTWIERDŹ OPERACJĘ',confirmLabel='POTWIERDŹ';
-  if(/usun|wyczy|zarchiw|wypisa|wyłączyć|zastąpi|reset|całe losowanie|wyniki t1 i t2/.test(lower)){
+  if(/sms.*wysłan|został wysłan/.test(lower)){
+    tone='success';icon='✉️';title='SMS WYSŁANY?';confirmLabel='TAK, ZAMKNIJ';
+  }else if(/usun|wyczy|zarchiw|wypisa|wyłączyć|zastąpi|reset|całe losowanie|wyniki t1 i t2/.test(lower)){
     tone='danger';icon='⚠️';title='POTWIERDŹ USUNIĘCIE';confirmLabel='POTWIERDŹ';
   }else if(/opublik|wysłać|powiadom|zaproszenie|gratulacje|udostępnić/.test(lower)){
     tone='success';icon='📣';title='WYSŁAĆ / OPUBLIKOWAĆ?';confirmLabel='TAK, WYKONAJ';

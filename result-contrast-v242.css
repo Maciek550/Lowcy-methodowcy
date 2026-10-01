@@ -1992,3 +1992,143 @@ body:not(.playerTheme):not(.authMode) #app>.tabs #btn-players .adminPlayersStatS
   body:not(.playerTheme):not(.authMode) #app>.tabs #btn-players .adminPlayersTabStats{font-size:9px!important;gap:4px!important}
   body:not(.playerTheme):not(.authMode) #app>.tabs #btn-players .adminPlayersTabStats b{font-size:11px!important}
 }
+
+
+/* V286 — potwierdzenia w stylu Łowców: granat + morski + złoto, bez krzykliwego kontrastu. */
+.appConfirmOverlay{
+  background:rgba(2,14,22,.84)!important;
+  backdrop-filter:blur(5px)!important;
+  -webkit-backdrop-filter:blur(5px)!important;
+}
+.appConfirmModal{
+  position:relative!important;
+  overflow:hidden!important;
+  border:1px solid #4c7589!important;
+  border-top:3px solid #d9ad38!important;
+  border-radius:18px!important;
+  background:
+    radial-gradient(circle at 50% -25%,rgba(28,104,124,.26),transparent 44%),
+    linear-gradient(180deg,#103346 0%,#0b2737 48%,#071d2a 100%)!important;
+  box-shadow:0 26px 72px rgba(0,0,0,.68),inset 0 1px 0 rgba(255,255,255,.06)!important;
+  color:#eef7fb!important;
+}
+.appConfirmModal::after{
+  content:""!important;
+  position:absolute!important;
+  left:20%!important;right:20%!important;top:0!important;
+  height:2px!important;
+  background:linear-gradient(90deg,transparent,#ffe07a,transparent)!important;
+  opacity:.9!important;
+  pointer-events:none!important;
+}
+.appConfirmIcon{
+  width:60px!important;height:60px!important;margin-bottom:12px!important;
+  background:linear-gradient(180deg,#174e61,#0c3445)!important;
+  border:2px solid #d9ad38!important;
+  color:#ffe28a!important;
+  box-shadow:0 5px 16px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.10)!important;
+}
+.appConfirmModal h2{
+  color:#ffffff!important;
+  font-size:23px!important;
+  letter-spacing:.01em!important;
+  text-shadow:0 1px 2px #0008!important;
+}
+.appConfirmSubject{
+  border:1px solid #416b7d!important;
+  background:linear-gradient(180deg,#12384a,#0b2938)!important;
+  color:#ffe18a!important;
+  box-shadow:inset 0 1px 0 #ffffff0b!important;
+}
+.appConfirmMessage{
+  color:#d6e6ee!important;
+  font-size:14px!important;
+  line-height:1.5!important;
+  font-weight:750!important;
+}
+.appConfirmVerify{
+  border:1px solid #456879!important;
+  background:#0a2331!important;
+}
+.appConfirmVerify label{color:#cfe1e9!important}
+.appConfirmRequired{color:#ffe18a!important}
+.appConfirmVerify input{
+  background:#061b27!important;
+  border:1px solid #587f91!important;
+  color:#fff!important;
+  -webkit-text-fill-color:#fff!important;
+}
+.appConfirmActions{
+  gap:10px!important;
+  margin-top:16px!important;
+}
+.appConfirmActions button{
+  min-height:52px!important;
+  border-radius:11px!important;
+  box-shadow:0 2px 6px rgba(0,0,0,.30)!important;
+}
+.appConfirmActions .appConfirmCancel{
+  background:linear-gradient(180deg,#24485a,#173544)!important;
+  border:1px solid #5d8395!important;
+  color:#f2f8fb!important;
+}
+.appConfirmActions .appConfirmCancel:hover{
+  background:linear-gradient(180deg,#2d566a,#1b3d4e)!important;
+}
+.appConfirmActions .appConfirmAccept{
+  background:linear-gradient(180deg,#1d724d,#125438)!important;
+  border:1px solid #56a97b!important;
+  color:#fff!important;
+}
+
+/* Ton operacji jest tylko akcentem — nie zmienia całego okna w czerwone/zielone. */
+.appConfirmTone-info .appConfirmModal,
+.appConfirmTone-success .appConfirmModal,
+.appConfirmTone-warning .appConfirmModal,
+.appConfirmTone-danger .appConfirmModal{
+  border-left-color:#4c7589!important;
+  border-right-color:#4c7589!important;
+  border-bottom-color:#4c7589!important;
+  border-top-color:#d9ad38!important;
+}
+.appConfirmTone-info .appConfirmIcon,
+.appConfirmTone-success .appConfirmIcon,
+.appConfirmTone-warning .appConfirmIcon{
+  background:linear-gradient(180deg,#174e61,#0c3445)!important;
+  border-color:#d9ad38!important;
+  color:#ffe28a!important;
+}
+.appConfirmTone-info .appConfirmAccept{
+  background:linear-gradient(180deg,#1c6684,#124b65)!important;
+  border-color:#5590a9!important;
+}
+.appConfirmTone-success .appConfirmAccept{
+  background:linear-gradient(180deg,#237a50,#155a3b)!important;
+  border-color:#5ba77e!important;
+}
+.appConfirmTone-warning .appConfirmAccept{
+  background:linear-gradient(180deg,#a87822,#765317)!important;
+  border-color:#d2ad5a!important;
+  color:#fff7dc!important;
+}
+.appConfirmTone-danger .appConfirmIcon{
+  background:linear-gradient(180deg,#61323c,#44232b)!important;
+  border-color:#c07a82!important;
+  color:#ffe5e8!important;
+}
+.appConfirmTone-danger .appConfirmAccept{
+  background:linear-gradient(180deg,#8f3441,#6b2631)!important;
+  border-color:#bd6974!important;
+}
+@media(max-width:760px){
+  .appConfirmOverlay{padding:12px!important}
+  .appConfirmModal{
+    width:min(94vw,460px)!important;
+    padding:17px 14px 15px!important;
+    border-radius:16px!important;
+  }
+  .appConfirmIcon{width:54px!important;height:54px!important;font-size:25px!important}
+  .appConfirmModal h2{font-size:20px!important}
+  .appConfirmMessage{font-size:13.5px!important;line-height:1.45!important}
+  .appConfirmActions button{min-height:50px!important;font-size:14px!important}
+}
