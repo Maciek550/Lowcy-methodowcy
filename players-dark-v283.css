@@ -385,3 +385,24 @@ body:not(.playerTheme):not(.authMode) #playersList .playerDeleteBtn{
     text-shadow:none!important;
   }
 }
+
+
+/* V290 — MOBILE Zawodnicy: średni szary gunmetal zamiast jasnych/białych kart.
+   Wyższa specyficzność celowo nadpisuje starszą regułę inline z V107. */
+@media(max-width:760px){
+  body #app #playersList .mobilePlayersList .mobileAdminCard.mobilePlayerManageCard{
+    background:linear-gradient(145deg,#929ca1 0%,#818d93 48%,#707f86 100%)!important;
+    border-color:#b6c0c4!important;
+    color:#082f2b!important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.24),0 3px 10px rgba(0,0,0,.30)!important;
+  }
+  body #app #playersList .mobilePlayersList .mobileAdminCard.mobilePlayerManageCard:nth-child(even){
+    background:linear-gradient(145deg,#879399 0%,#77868d 50%,#687980 100%)!important;
+  }
+  body #app #playersList .mobilePlayersList .mobilePlayerManageCard .mobileAdminCardHead>b,
+  body #app #playersList .mobilePlayersList .mobilePlayerManageCard .playerNameLogin{
+    color:#062f27!important;
+    -webkit-text-fill-color:#062f27!important;
+    text-shadow:0 1px 0 rgba(255,255,255,.22)!important;
+  }
+}
