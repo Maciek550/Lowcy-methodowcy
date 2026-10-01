@@ -285,3 +285,58 @@ body:not(.playerTheme):not(.authMode) #playersList .playerLastActivityUnknown{
     -webkit-text-fill-color:#eafff1!important;
   }
 }
+
+
+/* V287 — finalny desktop Zawodnicy: gunmetal Łowcy + pewny kontrast akcji. */
+@media(min-width:761px){
+  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable tbody tr:nth-child(odd)>td{
+    background:linear-gradient(180deg,#6f8089 0%,#62737c 100%)!important;
+    color:#f7fbfd!important;
+    -webkit-text-fill-color:#f7fbfd!important;
+    border-color:#8fa2ab!important;
+  }
+  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable tbody tr:nth-child(even)>td{
+    background:linear-gradient(180deg,#5f7079 0%,#53646d 100%)!important;
+    color:#f3f8fb!important;
+    -webkit-text-fill-color:#f3f8fb!important;
+    border-color:#879ba5!important;
+  }
+  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable tbody tr:hover>td{
+    background:linear-gradient(180deg,#7f919a 0%,#70838c 100%)!important;
+  }
+  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable td>b{
+    color:#ffffff!important;
+    -webkit-text-fill-color:#ffffff!important;
+    text-shadow:0 1px 2px rgba(0,0,0,.50)!important;
+  }
+  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable .center,
+  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable .center>b{
+    color:#ffe27a!important;
+    -webkit-text-fill-color:#ffe27a!important;
+    text-shadow:0 1px 2px rgba(0,0,0,.55)!important;
+  }
+  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable td:nth-child(5){
+    color:#f6fbfd!important;
+    -webkit-text-fill-color:#f6fbfd!important;
+  }
+}
+
+/* Akcje: biały tekst niezależnie od globalnych reguł button. */
+body:not(.playerTheme):not(.authMode) #playersList .playerManageBtns .secondary,
+body:not(.playerTheme):not(.authMode) #playersList .mobilePlayerManageActions .secondary,
+body:not(.playerTheme):not(.authMode) #playersList .playerManageBtns .warn,
+body:not(.playerTheme):not(.authMode) #playersList .mobilePlayerManageActions .warn,
+body:not(.playerTheme):not(.authMode) #playersList .playerDeleteBtn{
+  color:#ffffff!important;
+  -webkit-text-fill-color:#ffffff!important;
+  text-shadow:0 1px 2px rgba(0,0,0,.45)!important;
+}
+body:not(.playerTheme):not(.authMode) #playersList .playerManageBtns .secondary{
+  background:linear-gradient(180deg,#17658a,#0f4a67)!important;
+  border-color:#62a7c4!important;
+}
+body:not(.playerTheme):not(.authMode) #playersList .playerManageBtns .warn,
+body:not(.playerTheme):not(.authMode) #playersList .playerDeleteBtn{
+  background:linear-gradient(180deg,#9b3444,#742631)!important;
+  border-color:#cf7180!important;
+}
