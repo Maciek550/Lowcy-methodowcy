@@ -1790,3 +1790,121 @@ body:not(.playerTheme):not(.authMode) #app #judgeManagementBody>p{
     font-size:21px!important;
   }
 }
+
+
+/* V281 — admin: maksymalna czytelność bez zwiększania wysokości kafli. */
+body:not(.playerTheme):not(.authMode) #app>.tabs #btn-players{
+  flex-direction:row!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:9px!important;
+  min-height:78px!important;
+  height:auto!important;
+  padding:7px 10px!important;
+  white-space:nowrap!important;
+}
+body:not(.playerTheme):not(.authMode) #app>.tabs #btn-players::before{
+  display:block!important;
+  content:'👥'!important;
+  flex:0 0 auto!important;
+  font-size:27px!important;
+  line-height:1!important;
+  margin:0!important;
+  filter:brightness(1.35) saturate(.85)!important;
+}
+body:not(.playerTheme):not(.authMode) #app>.tabs #btn-players .adminPlayersTabMain{
+  display:inline-flex!important;
+  align-items:center!important;
+  flex:0 0 auto!important;
+  color:#fff!important;
+  -webkit-text-fill-color:#fff!important;
+  font-size:16px!important;
+  line-height:1!important;
+  font-weight:1000!important;
+  text-shadow:0 1px 2px #0008!important;
+  white-space:nowrap!important;
+}
+body:not(.playerTheme):not(.authMode) #app>.tabs #btn-players .adminPlayersTabStats{
+  display:inline-flex!important;
+  align-items:center!important;
+  gap:9px!important;
+  flex:0 0 auto!important;
+  margin:0!important;
+  padding:0 0 0 9px!important;
+  border-left:2px solid #82c7df!important;
+  color:#f4fbff!important;
+  -webkit-text-fill-color:#f4fbff!important;
+  font-size:11.5px!important;
+  line-height:1!important;
+  font-weight:950!important;
+  white-space:nowrap!important;
+  text-shadow:0 1px 2px #0008!important;
+}
+body:not(.playerTheme):not(.authMode) #app>.tabs #btn-players .adminPlayersTabStats>span{
+  display:inline-flex!important;
+  align-items:baseline!important;
+  gap:3px!important;
+}
+body:not(.playerTheme):not(.authMode) #app>.tabs #btn-players .adminPlayersTabStats b{
+  color:#ffe36e!important;
+  -webkit-text-fill-color:#ffe36e!important;
+  font-size:14px!important;
+  line-height:1!important;
+  font-weight:1000!important;
+  text-shadow:0 1px 2px #0009!important;
+}
+body:not(.playerTheme):not(.authMode) #app>.compactUserBar #notifCounter{
+  color:#f6fbff!important;
+  -webkit-text-fill-color:#f6fbff!important;
+  font-size:12.5px!important;
+  line-height:1!important;
+  font-weight:950!important;
+  white-space:nowrap!important;
+  text-shadow:0 1px 2px #000a!important;
+}
+body:not(.playerTheme):not(.authMode) #app>.compactUserBar #notifCounter b{
+  color:#ffe36e!important;
+  -webkit-text-fill-color:#ffe36e!important;
+  font-size:14px!important;
+  font-weight:1000!important;
+}
+@media(max-width:760px){
+  body:not(.playerTheme):not(.authMode) #app>.tabs #btn-players{
+    gap:6px!important;
+    min-height:78px!important;
+    padding:6px 7px!important;
+  }
+  body:not(.playerTheme):not(.authMode) #app>.tabs #btn-players::before{
+    font-size:23px!important;
+  }
+  body:not(.playerTheme):not(.authMode) #app>.tabs #btn-players .adminPlayersTabMain{
+    font-size:14px!important;
+  }
+  body:not(.playerTheme):not(.authMode) #app>.tabs #btn-players .adminPlayersTabStats{
+    gap:6px!important;
+    padding-left:6px!important;
+    font-size:10.5px!important;
+  }
+  body:not(.playerTheme):not(.authMode) #app>.tabs #btn-players .adminPlayersTabStats b{
+    font-size:12.5px!important;
+  }
+  body:not(.playerTheme):not(.authMode) #app>.compactUserBar #notifCounter{
+    font-size:11.5px!important;
+  }
+  body:not(.playerTheme):not(.authMode) #app>.compactUserBar #notifCounter b{
+    font-size:13px!important;
+  }
+}
+@media(max-width:380px){
+  body:not(.playerTheme):not(.authMode) #app>.tabs #btn-players{
+    gap:4px!important;
+    padding-left:5px!important;
+    padding-right:5px!important;
+  }
+  body:not(.playerTheme):not(.authMode) #app>.tabs #btn-players::before{font-size:20px!important}
+  body:not(.playerTheme):not(.authMode) #app>.tabs #btn-players .adminPlayersTabMain{font-size:13px!important}
+  body:not(.playerTheme):not(.authMode) #app>.tabs #btn-players .adminPlayersTabStats{
+    gap:4px!important;padding-left:4px!important;font-size:9.5px!important
+  }
+  body:not(.playerTheme):not(.authMode) #app>.tabs #btn-players .adminPlayersTabStats b{font-size:11.5px!important}
+}

@@ -3454,7 +3454,7 @@ function updateAdminNotificationOverview(){
   const leave=ADMIN_PENDING_REQUESTS.length,other=otherAdminNotifications().filter(n=>!n.read_at).length;
   const password=ADMIN_PASSWORD_REQUEST_COUNT,total=password===null?null:password+leave+other;
   overview.innerHTML='<strong>Do obsłużenia: '+(total===null?'…':total)+'</strong><span>Hasła: '+(password===null?'…':password)+'</span><span>Wypisania: '+leave+'</span><span>Nowe inne: '+other+'</span>';
-  const counter=q('notifCounter');if(counter)counter.textContent=total?'Do obsłużenia: '+total:'';
+  const counter=q('notifCounter');if(counter)counter.innerHTML=total?'Do obsłużenia: <b>'+total+'</b>':'';
   top?.querySelector('.adminAttentionBadge')?.remove();
   if(top&&total){const badge=document.createElement('b');badge.className='adminAttentionBadge';badge.textContent=total>99?'99+':String(total);badge.setAttribute('aria-label','Do obsłużenia: '+total);top.appendChild(badge)}
 }
@@ -3548,7 +3548,7 @@ async function loadPlayers(){
   const accountPlayers=Number.isFinite(Number(d.counts?.accounts))?Number(d.counts.accounts):playerRows.filter(p=>p.has_account===true).length;
   const playerTab=q('btn-players');
   if(playerTab){
-    playerTab.innerHTML='<span class="adminPlayersTabMain"><span class="adminPlayersTabIcon" aria-hidden="true">👥</span><b>Zawodnicy</b></span><span class="adminPlayersTabStats"><span>Wszyscy <b>'+totalPlayers+'</b></span><span>Konta <b>'+accountPlayers+'</b></span></span>';
+    playerTab.innerHTML='<span class="adminPlayersTabMain"><b>Zawodnicy</b></span><span class="adminPlayersTabStats"><span>Wszyscy <b>'+totalPlayers+'</b></span><span>Konta <b>'+accountPlayers+'</b></span></span>';
     playerTab.setAttribute('aria-label','Zawodnicy. Wszyscy: '+totalPlayers+'. Konta: '+accountPlayers+'.');
     playerTab.title='Wszyscy zawodnicy: '+totalPlayers+' · posiadają konto: '+accountPlayers;
   }
