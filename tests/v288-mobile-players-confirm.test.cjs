@@ -20,8 +20,8 @@ test('password recovery confirmations never use the browser native confirm',()=>
   assert.equal((js.match(/await passwordConfirm\(/g)||[]).length,3);
 });
 
-test('server exposes V288 so PWA shell cache refreshes',()=>{
+test('server exposes V289 so PWA shell cache refreshes',()=>{
   const js=fs.readFileSync(path.join(root,'server.cjs'),'utf8');
-  assert.match(js,/const APP_VERSION = '288';/);
-  assert.match(js,/V288_MOBILE_PLAYERS_SILVER_CONFIRM/);
+  assert.match(js,/const APP_VERSION = '289';/);
+  assert.match(js,/V289_MOBILE_PLAYERS_SILVER_CONFIRM_SYNC/);
 });
