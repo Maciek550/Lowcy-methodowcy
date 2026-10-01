@@ -340,3 +340,48 @@ body:not(.playerTheme):not(.authMode) #playersList .playerDeleteBtn{
   background:linear-gradient(180deg,#9b3444,#742631)!important;
   border-color:#cf7180!important;
 }
+
+
+/* V288 — MOBILE Zawodnicy: srebrny gunmetal zamiast białych kart.
+   Reguła celowo bez zależności od klas body: #playersList istnieje tylko w panelu admina. */
+@media(max-width:760px){
+  #playersList .mobilePlayersList .mobileAdminCard.mobilePlayerManageCard{
+    background:linear-gradient(145deg,#a2adb3 0%,#919fa6 48%,#7f8f97 100%)!important;
+    border:1px solid #c3ccd0!important;
+    color:#082c2b!important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.34),0 3px 10px rgba(0,0,0,.30)!important;
+  }
+  #playersList .mobilePlayersList .mobileAdminCard.mobilePlayerManageCard:nth-child(even){
+    background:linear-gradient(145deg,#96a3aa 0%,#87969e 50%,#75868e 100%)!important;
+  }
+  #playersList .mobilePlayersList .mobilePlayerManageCard .mobileAdminCardHead,
+  #playersList .mobilePlayersList .mobilePlayerManageCard .playerNameLogin{
+    color:#073a2e!important;
+    -webkit-text-fill-color:#073a2e!important;
+    text-shadow:0 1px 0 rgba(255,255,255,.28)!important;
+  }
+  #playersList .mobilePlayersList .mobilePlayerManageCard .mobileLp{
+    background:linear-gradient(180deg,#e0e6e8,#cbd4d8)!important;
+    color:#12362f!important;
+    -webkit-text-fill-color:#12362f!important;
+    border-color:#587985!important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.7)!important;
+  }
+  #playersList .mobilePlayersList .mobilePlayerManageCard .mobilePlayerManageMeta>span{
+    background:linear-gradient(180deg,#123549,#0b2938)!important;
+    color:#cbdde6!important;
+    -webkit-text-fill-color:#cbdde6!important;
+    border-color:#426878!important;
+  }
+  #playersList .mobilePlayersList .mobilePlayerManageCard .mobilePlayerManageMeta b{
+    color:#ffffff!important;
+    -webkit-text-fill-color:#ffffff!important;
+  }
+  #playersList .mobilePlayersList .mobilePlayerManageCard .playerLastActivity{
+    background:#17633f!important;
+    border-color:#55a876!important;
+    color:#f2fff6!important;
+    -webkit-text-fill-color:#f2fff6!important;
+    text-shadow:none!important;
+  }
+}

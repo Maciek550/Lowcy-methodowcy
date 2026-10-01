@@ -5,6 +5,32 @@ const el=id=>document.getElementById(id);
 const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let busy=false,adminBusy=false;
 let lastSms=null;
+async function passwordConfirm(message){
+  const text=String(message||'').trim();
+  if(typeof window.appConfirmLegacy==='function'){
+    try{return !!(await window.appConfirmLegacy(text))}catch(_){}
+  }
+  el('passwordConfirmDialog')?.remove();
+  return new Promise(resolve=>{
+    const d=document.createElement('dialog');
+    d.id='passwordConfirmDialog';
+    d.className='passwordResetDialog passwordConfirmDialog';
+    const sms=/sms.*wysłan|został wysłan/i.test(text);
+    const reject=/odrzucić|usunąć|skasować/i.test(text);
+    const title=sms?'SMS WYSŁANY?':(reject?'POTWIERDŹ DECYZJĘ':'POTWIERDŹ OPERACJĘ');
+    const yes=sms?'TAK, ZAMKNIJ':'POTWIERDŹ';
+    d.innerHTML='<div class="passwordResetForm passwordConfirmForm"><div class="passwordConfirmIcon" aria-hidden="true">'+(sms?'✉️':(reject?'⚠️':'✓'))+'</div><h2>'+safe(title)+'</h2><p class="passwordConfirmText">'+safe(text)+'</p><div class="resetSmsActions"><button type="button" data-no class="resetSecondaryButton">ANULUJ</button><button type="button" data-yes class="resetMainButton">'+safe(yes)+'</button></div></div>';
+    document.body.appendChild(d);
+    let settled=false;
+    const finish=value=>{if(settled)return;settled=true;try{d.close()}catch(_){}d.remove();resolve(!!value)};
+    d.querySelector('[data-no]').onclick=()=>finish(false);
+    d.querySelector('[data-yes]').onclick=()=>finish(true);
+    d.addEventListener('cancel',ev=>{ev.preventDefault();finish(false)});
+    d.addEventListener('close',()=>finish(false),{once:true});
+    d.showModal();
+    setTimeout(()=>d.querySelector('[data-no]')?.focus(),20);
+  });
+}
 async function post(url,body){
   const res=await fetch(url,{method:'POST',cache:'no-store',headers:{'Content-Type':'application/json',...(typeof TOKEN!=='undefined'&&TOKEN?{Authorization:'Bearer '+TOKEN}:{})},body:JSON.stringify(body||{})});
   const d=await res.json().catch(()=>({ok:false,error:'Błąd odpowiedzi'}));
@@ -90,7 +116,7 @@ function draftDialog(request,body){
   d.showModal();
 }
 async function prepareSms(id,button){
-  if(button.textContent.includes('STWÓRZ')&&!await appConfirmLegacy('Przygotować SMS? Dotychczasowe hasło zawodnika przestanie działać. Nowe hasło 12345678 będzie ważne przez 24 godziny.'))return;
+  if(button.textContent.includes('STWÓRZ')&&!await passwordConfirm('Przygotować SMS? Dotychczasowe hasło zawodnika przestanie działać. Nowe hasło 12345678 będzie ważne przez 24 godziny.'))return;
   adminBusy=true;button.disabled=true;
   try{
     const r=await post('/api/admin/password-resets/'+id+'/prepare',{});
@@ -101,14 +127,14 @@ async function prepareSms(id,button){
   finally{adminBusy=false;button.disabled=false}
 }
 async function rejectRequest(id,button){
-  if(!await appConfirmLegacy('Odrzucić prośbę o nowe hasło?'))return;
+  if(!await passwordConfirm('Odrzucić prośbę o nowe hasło?'))return;
   adminBusy=true;button.disabled=true;
   try{await post('/api/admin/password-resets/'+id+'/reject',{});await refreshAdmin()}
   catch(e){const status=el('passwordResetAdminFeedback');if(status)status.textContent=e.message}
   finally{adminBusy=false;button.disabled=false}
 }
 async function markSmsSent(id,button,dialog){
-  if(adminBusy||!await appConfirmLegacy('Potwierdzasz, że SMS został wysłany? Prośba zniknie z kolejki.'))return;
+  if(adminBusy||!await passwordConfirm('Potwierdzasz, że SMS został wysłany? Prośba zniknie z kolejki.'))return;
   adminBusy=true;button.disabled=true;
   try{
     await post('/api/admin/password-resets/'+id+'/sent',{});
