@@ -3548,7 +3548,7 @@ async function loadPlayers(){
   const accountPlayers=Number.isFinite(Number(d.counts?.accounts))?Number(d.counts.accounts):playerRows.filter(p=>p.has_account===true).length;
   const playerTab=q('btn-players');
   if(playerTab){
-    playerTab.innerHTML='<span class="adminPlayersTabMain"><b>Zawodnicy</b></span><span class="adminPlayersTabStats"><span>Wszyscy <b>'+totalPlayers+'</b></span><span>Konta <b>'+accountPlayers+'</b></span></span>';
+    playerTab.innerHTML='<span class="adminPlayersTabMain"><b>Zawodnicy</b></span><span class="adminPlayersTabStats"><span class="adminPlayersStatAll"><i class="adminPlayersStatLong">Wszyscy</i><i class="adminPlayersStatShort">W</i> <b>'+totalPlayers+'</b></span><span class="adminPlayersStatAccounts"><i class="adminPlayersStatLong">Konta</i><i class="adminPlayersStatShort">K</i> <b>'+accountPlayers+'</b></span></span>';
     playerTab.setAttribute('aria-label','Zawodnicy. Wszyscy: '+totalPlayers+'. Konta: '+accountPlayers+'.');
     playerTab.title='Wszyscy zawodnicy: '+totalPlayers+' · posiadają konto: '+accountPlayers;
   }
