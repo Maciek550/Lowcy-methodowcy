@@ -816,6 +816,7 @@ async function appConfirmLegacy(message){
     confirmLabel,tone,icon
   })).confirmed;
 }
+window.appConfirmLegacy=appConfirmLegacy;
 async function deleteCompetition(id){
   try{
     const c=ADMIN_COMPETITIONS_CACHE.find(c=>Number(c.id)===Number(id));

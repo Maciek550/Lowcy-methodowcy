@@ -90,7 +90,7 @@ function draftDialog(request,body){
   d.showModal();
 }
 async function prepareSms(id,button){
-  if(button.textContent.includes('STWÓRZ')&&!confirm('Przygotować SMS? Dotychczasowe hasło zawodnika przestanie działać. Nowe hasło 12345678 będzie ważne przez 24 godziny.'))return;
+  if(button.textContent.includes('STWÓRZ')&&!await appConfirmLegacy('Przygotować SMS? Dotychczasowe hasło zawodnika przestanie działać. Nowe hasło 12345678 będzie ważne przez 24 godziny.'))return;
   adminBusy=true;button.disabled=true;
   try{
     const r=await post('/api/admin/password-resets/'+id+'/prepare',{});
@@ -101,14 +101,14 @@ async function prepareSms(id,button){
   finally{adminBusy=false;button.disabled=false}
 }
 async function rejectRequest(id,button){
-  if(!confirm('Odrzucić prośbę o nowe hasło?'))return;
+  if(!await appConfirmLegacy('Odrzucić prośbę o nowe hasło?'))return;
   adminBusy=true;button.disabled=true;
   try{await post('/api/admin/password-resets/'+id+'/reject',{});await refreshAdmin()}
   catch(e){const status=el('passwordResetAdminFeedback');if(status)status.textContent=e.message}
   finally{adminBusy=false;button.disabled=false}
 }
 async function markSmsSent(id,button,dialog){
-  if(adminBusy||!confirm('Potwierdzasz, że SMS został wysłany? Prośba zniknie z kolejki.'))return;
+  if(adminBusy||!await appConfirmLegacy('Potwierdzasz, że SMS został wysłany? Prośba zniknie z kolejki.'))return;
   adminBusy=true;button.disabled=true;
   try{
     await post('/api/admin/password-resets/'+id+'/sent',{});
