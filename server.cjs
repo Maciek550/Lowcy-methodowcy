@@ -25,8 +25,8 @@ const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const GOOGLE_VISION_API_KEY = process.env.GOOGLE_VISION_API_KEY || process.env.OCR_GOOGLE_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.PHOTO_OCR_OPENAI_API_KEY || '';
 const PHOTO_OCR_MODEL = process.env.PHOTO_OCR_OPENAI_MODEL || 'gpt-5.6-sol';
-const APP_VERSION = '291';
-const APP_VERSION_NAME = 'V291_COMPACT_PLAYER_ACTIVITY';
+const APP_VERSION = '292';
+const APP_VERSION_NAME = 'V292_LM_NOTIFICATION_BADGE';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 const PODIUM_TROPHIES = fs.existsSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) ? fs.readFileSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) : null;
 const CARP_REAL = fs.readFileSync(pathModule.join(__dirname, 'carp-real-v116.png'));
@@ -41,6 +41,7 @@ function brandAsset(name, fallback) {
   return fs.existsSync(file)?fs.readFileSync(file):fallback;
 }
 const BRAND_PNG={
+  'notification-lm-v292-96.png':fs.readFileSync(pathModule.join(__dirname,'brand','notification-lm-v292-96.png')),
   'icon-v217-32.png':brandAsset('icon-v217-32.png',FAVICON_32),
   'icon-v217-64.png':brandAsset('icon-v217-64.png',ICON_64),
   'icon-v217-180.png':brandAsset('icon-v217-180.png',ICON_180),
@@ -2095,7 +2096,7 @@ async function setLowcyBadge(n){try{const count=Math.max(0,Number(n||0));if(self
 self.addEventListener('push', event => {
   let data={}; try{data=event.data?event.data.json():{}}catch(e){}
   const title=data.title||'Łowcy Methodowcy';
-  const options={body:data.body||'Nowe powiadomienie',icon:'/brand/icon-v217-192.png',badge:'/brand/icon-v217-64.png',data:{url:data.url||'/'},tag:data.type?(data.type+'-'+(data.competitionId||'')):undefined,renotify:true};
+  const options={body:data.body||'Nowe powiadomienie',icon:'/brand/icon-v217-192.png',badge:'/brand/notification-lm-v292-96.png',data:{url:data.url||'/'},tag:data.type?(data.type+'-'+(data.competitionId||'')):undefined,renotify:true};
   event.waitUntil((async()=>{await Promise.all([self.registration.showNotification(title,options),setLowcyBadge(data.badgeCount)]);const list=await clients.matchAll({type:'window',includeUncontrolled:true});for(const c of list){try{c.postMessage({type:'LOWCY_ATTENTION_REFRESH'})}catch(e){}}})());
 });
 self.addEventListener('notificationclick', event => {
