@@ -25,8 +25,8 @@ const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const GOOGLE_VISION_API_KEY = process.env.GOOGLE_VISION_API_KEY || process.env.OCR_GOOGLE_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.PHOTO_OCR_OPENAI_API_KEY || '';
 const PHOTO_OCR_MODEL = process.env.PHOTO_OCR_OPENAI_MODEL || 'gpt-5.6-sol';
-const APP_VERSION = '293';
-const APP_VERSION_NAME = 'V293_FISH_NOTIFICATION_WORKER_SYNC';
+const APP_VERSION = '294';
+const APP_VERSION_NAME = 'V294_PUSH_UPDATE_RECOVERY';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 const PODIUM_TROPHIES = fs.existsSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) ? fs.readFileSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) : null;
 const CARP_REAL = fs.readFileSync(pathModule.join(__dirname, 'carp-real-v116.png'));
@@ -2087,11 +2087,19 @@ const PLAYERS_DARK_CSS='/players-dark-v283.css?v=${APP_VERSION}';
 const DRAW_JS='/draw-notice-ui-v240.js?v=${APP_VERSION}';
 const SHELL=['/',APP_SHELL_JS,PDF_JS,COMM_JS,RECOVERY_JS,ACCESS_CSS,ROSTER_CSS,DOCK_CSS,COMPACT_CSS,DESKTOP_NAV_CSS,HISTORY_CSS,HISTORY_COMPACT_CSS,DRAW_CSS,RESULT_CONTRAST_CSS,DESKTOP_DRAW_CSS,PLAYERS_DARK_CSS,DRAW_JS];
 async function fetchWithTimeout(req,ms=30000){const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),ms);try{return await fetch(req,{cache:'no-store',signal:ctrl.signal})}finally{clearTimeout(timer)}}
-self.addEventListener('install',event=>event.waitUntil((async()=>{const replies=await Promise.all(SHELL.map(url=>fetchWithTimeout(url)));if(replies.some(r=>!r.ok))throw Error('Incomplete shell');const cache=await caches.open(SHELL_CACHE);await Promise.all(SHELL.map((url,i)=>cache.put(url,replies[i])));await self.skipWaiting()})()));
-self.addEventListener('activate',event=>event.waitUntil((async()=>{await self.clients.claim();const keys=await caches.keys();await Promise.all(keys.filter(k=>k.startsWith('lowcy-shell-')&&k!==SHELL_CACHE).map(k=>caches.delete(k)))})()));
+// A failed shell download must not prevent the notification worker from updating.
+self.addEventListener('install',event=>event.waitUntil((async()=>{
+ try{const cache=await caches.open(SHELL_CACHE);await Promise.allSettled(SHELL.map(async url=>{const reply=await fetchWithTimeout(url,8000);if(reply.ok)await cache.put(url,reply)}));if(!(await Promise.all(SHELL.map(url=>cache.match(url)))).every(Boolean))await cache.delete('/')}catch(e){}
+ await self.skipWaiting();
+})()));
+self.addEventListener('activate',event=>event.waitUntil((async()=>{
+ await self.clients.claim();
+ // Keep the previous offline shell until every file of the new shell is cached.
+ try{const cache=await caches.open(SHELL_CACHE),complete=(await Promise.all(SHELL.map(url=>cache.match(url)))).every(Boolean);if(complete){const keys=await caches.keys();await Promise.all(keys.filter(k=>k.startsWith('lowcy-shell-')&&k!==SHELL_CACHE).map(k=>caches.delete(k)))}}catch(e){}
+})()));
 self.addEventListener('fetch',event=>{const req=event.request,u=new URL(req.url);if(req.method!=='GET'||u.origin!==self.location.origin)return;
- if(req.mode==='navigate'){event.respondWith((async()=>{try{const r=await fetchWithTimeout(req);if(r.ok)return r}catch(e){}return(await(await caches.open(SHELL_CACHE)).match('/'))||new Response('Brak połączenia. Otwórz aplikację ponownie po połączeniu z internetem.',{headers:{'Content-Type':'text/plain; charset=utf-8'}})})());return}
- if(['/app.js','/pdf-vector.js','/communication-ui.js','/password-recovery-ui.js','/accessibility-v234.css','/roster-preview-v235.css','/player-dock-v236.css','/compact-player-v237.css','/desktop-nav-v238.css','/history-lux-v239.css','/history-compact-v241.css','/draw-ui-v240.css','/result-contrast-v242.css','/desktop-draw-v243.css','/players-dark-v283.css','/draw-notice-ui-v240.js'].includes(u.pathname)){event.respondWith((async()=>{const key=u.pathname+u.search,c=await caches.open(SHELL_CACHE);try{const fresh=await fetchWithTimeout(req,9000);if(fresh.ok){await c.put(key,fresh.clone());return fresh}}catch(e){}return(await c.match(key))||Response.error()})());return}
+ if(req.mode==='navigate'){event.respondWith((async()=>{try{const r=await fetchWithTimeout(req);if(r.ok)return r}catch(e){}return(await(await caches.open(SHELL_CACHE)).match('/'))||(await caches.match('/'))||new Response('Brak połączenia. Otwórz aplikację ponownie po połączeniu z internetem.',{headers:{'Content-Type':'text/plain; charset=utf-8'}})})());return}
+ if(['/app.js','/pdf-vector.js','/communication-ui.js','/password-recovery-ui.js','/accessibility-v234.css','/roster-preview-v235.css','/player-dock-v236.css','/compact-player-v237.css','/desktop-nav-v238.css','/history-lux-v239.css','/history-compact-v241.css','/draw-ui-v240.css','/result-contrast-v242.css','/desktop-draw-v243.css','/players-dark-v283.css','/draw-notice-ui-v240.js'].includes(u.pathname)){event.respondWith((async()=>{const key=u.pathname+u.search,c=await caches.open(SHELL_CACHE);try{const fresh=await fetchWithTimeout(req,9000);if(fresh.ok){await c.put(key,fresh.clone());return fresh}}catch(e){}return(await c.match(key))||(await caches.match(key))||Response.error()})());return}
 });
 async function setLowcyBadge(n){try{const count=Math.max(0,Number(n||0));if(self.navigator&&typeof self.navigator.setAppBadge==='function'){if(count)await self.navigator.setAppBadge(count);else if(typeof self.navigator.clearAppBadge==='function')await self.navigator.clearAppBadge()}}catch(e){}}
 self.addEventListener('message', event => {
@@ -8883,7 +8891,7 @@ body:not(.playerTheme):not(.authMode) #btn-players.active .adminPlayersTabStats{
 (function(){
  window.__lowcyRecover207=function(){var g=document.getElementById('bootGuard');if(!g)return;g.classList.remove('hidden');var sp=g.querySelector('span');if(sp)sp.textContent='Nie udało się pobrać aplikacji. Sprawdź połączenie i spróbuj ponownie.';var b=document.getElementById('bootRetry');if(b)b.classList.remove('hidden')};
  window.retryLowcyBoot=function(){if(typeof startBoot==='function'){startBoot();return}location.reload()};
- if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'}).then(function(reg){return reg.update()}).catch(function(){});
+ if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js?v=${APP_VERSION}',{scope:'/',updateViaCache:'none'}).catch(function(){});
  setTimeout(function(){if(!window.__LOWCY_JS_STARTED)window.__lowcyRecover207()},30000);
 })();
 </script>

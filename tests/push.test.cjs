@@ -4,14 +4,14 @@ const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const app=fs.readFileSync(path.join(__dirname,'..','app.js'),'utf8');
 const start=app.indexOf('function urlBase64ToUint8Array('),end=app.indexOf('function scrollAppTop(',start);
 
-function pushClient({getSubscription,subscribe,permission='granted',testSent=1,existingWorker=true}){
+function pushClient({getSubscription,subscribe,permission='granted',testSent=1,existingWorker=true,workerUpdate,notificationCleanup}){
   assert.ok(start>0&&end>start);
   const calls=[],feedback={textContent:'',className:'hidden'},button={disabled:false},state={textContent:''};
   const notification={permission,requestPermission:()=>{calls.push('permission');notification.permission='granted';return Promise.resolve('granted')}};
-  const registration={active:existingWorker?{}:null,pushManager:{getSubscription,subscribe}};
+  const registration={active:existingWorker?{postMessage:()=>{}}:null,update:workerUpdate,pushManager:{getSubscription,subscribe},getNotifications:notificationCleanup};
   let registrations=0;
   const context={
-    PUSH_CONFIG:null,PUSH_SUBSCRIBED:false,TOKEN:'test-token',
+    PUSH_CONFIG:null,PUSH_SUBSCRIBED:false,TOKEN:'test-token',CLIENT_VERSION:'294',MessageChannel:require('node:worker_threads').MessageChannel,
     q:id=>({'notifPushFeedback':feedback,'notifPushBtn':button,'notifPushState':state})[id]||null,
     window:{Notification:notification,PushManager:function(){}},Notification:notification,
     navigator:{userAgent:'Android',serviceWorker:{getRegistration:async()=>existingWorker?registration:null,register:async()=>{registrations++;registration.active={};return registration},ready:Promise.resolve(registration)}},
@@ -76,5 +76,38 @@ test('service worker installs when decorative images cannot be fetched',async()=
   handlers.install({waitUntil:promise=>{install=promise}});
   await install;
   assert.equal(installed,true);
-  assert.deepEqual(requested,['/','/app.js?v=225','/pdf-vector.js?v=225','/communication-ui.js?v=225','/password-recovery-ui.js?v=225','/accessibility-v234.css?v=225','/roster-preview-v235.css?v=225','/player-dock-v236.css?v=225','/compact-player-v237.css?v=225','/desktop-nav-v238.css?v=225','/history-lux-v239.css?v=225','/history-compact-v241.css?v=225','/draw-ui-v240.css?v=225','/result-contrast-v242.css?v=225','/desktop-draw-v243.css?v=225','/draw-notice-ui-v240.js?v=225']);
+  assert.deepEqual(requested,['/','/app.js?v=225','/pdf-vector.js?v=225','/communication-ui.js?v=225','/password-recovery-ui.js?v=225','/accessibility-v234.css?v=225','/roster-preview-v235.css?v=225','/player-dock-v236.css?v=225','/compact-player-v237.css?v=225','/desktop-nav-v238.css?v=225','/history-lux-v239.css?v=225','/history-compact-v241.css?v=225','/draw-ui-v240.css?v=225','/result-contrast-v242.css?v=225','/desktop-draw-v243.css?v=225','/players-dark-v283.css?v=225','/draw-notice-ui-v240.js?v=225']);
+});
+
+
+test('a stalled worker update and failed old-notification cleanup do not block a real push test',async()=>{
+  let updated=false;
+  const subscription={toJSON:()=>({endpoint:'https://push.example/existing'})};
+  const p=pushClient({getSubscription:async()=>subscription,subscribe:async()=>{throw Error('Existing subscription must stay')},workerUpdate:()=>{updated=true;return new Promise(()=>{})},notificationCleanup:async()=>{throw Error('Notification cleanup unavailable')}});
+  await p.context.enablePush();
+  assert.equal(updated,false);
+  assert.deepEqual(p.calls,['/api/config','/api/push-subscription','/api/push-test']);
+  assert.equal(p.registrations(),0);
+  assert.match(p.feedback.textContent,/Wysłano próbny alert/);
+  assert.equal(p.button.disabled,false);
+});
+
+test('worker still activates after a shell download fails and retains previous offline cache',async()=>{
+  const server=fs.readFileSync(path.join(__dirname,'..','server.cjs'),'utf8');
+  const start=server.indexOf("if (path === '/sw.js') return send(res, 200, `");
+  const from=server.indexOf('`',start)+1,end=server.indexOf('`, {\'Content-Type\':\'application/javascript',from);
+  const code=server.slice(from,end).replaceAll('${APP_VERSION}','294');
+  const handlers={},entries=new Map();let installed=false,claimed=false,deleted=false;
+  const self={addEventListener:(name,fn)=>{handlers[name]=fn},skipWaiting:async()=>{installed=true},clients:{claim:async()=>{claimed=true}}};
+  const cache={put:async(key,value)=>entries.set(key,value),match:async key=>entries.get(key),delete:async key=>entries.delete(key)};
+  const context={self,caches:{open:async()=>cache,keys:async()=>['lowcy-shell-v293','lowcy-shell-v294'],delete:async()=>{deleted=true}},fetch:async url=>{if(url.startsWith('/app.js'))throw Error('Interrupted shell download');return {ok:true}},AbortController,setTimeout,clearTimeout};
+  vm.runInNewContext(code,context);
+  let pending;
+  handlers.install({waitUntil:p=>{pending=p}});await pending;
+  assert.equal(installed,true);
+  handlers.activate({waitUntil:p=>{pending=p}});await pending;
+  assert.equal(claimed,true);
+  assert.equal(deleted,false);
+  assert.equal(entries.has('/'),false,'partial shell must not replace the previous offline page');
+  assert.ok(entries.has('/pdf-vector.js?v=294'),'available shell files are still saved');
 });
