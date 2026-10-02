@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
+  <title>Rybka — ikona powiadomień Łowców Methodowców</title>
+  <g fill="none" stroke="#fff" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M32 45C46 27 71 25 88 43L93 48L88 53C71 72 46 71 32 51L7 68L14 48L7 28Z"/>
+    <path d="M42 33L54 17L65 30M49 66L64 79L70 65"/>
+    <path d="M74 35C66 43 66 55 74 62" stroke-width="4"/>
+  </g>
+  <circle cx="81" cy="43" r="3" fill="#fff"/>
+</svg>

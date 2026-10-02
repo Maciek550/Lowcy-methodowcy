@@ -1,4 +1,4 @@
-const CLIENT_VERSION='292';const CLIENT_VERSION_NAME='V292_LM_NOTIFICATION_BADGE';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='293';const CLIENT_VERSION_NAME='V293_FISH_NOTIFICATION_WORKER_SYNC';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -3593,6 +3593,30 @@ function pushWait(promise,ms,message){
   let timer;
   return Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(message)),ms)})]).finally(()=>clearTimeout(timer));
 }
+function pushWorkerVersion(worker){
+  if(!worker||typeof worker.postMessage!=='function'||typeof MessageChannel==='undefined')return Promise.resolve('');
+  return new Promise(resolve=>{
+    const channel=new MessageChannel();let timer;
+    const finish=version=>{clearTimeout(timer);channel.port1.close();channel.port2.close();resolve(String(version||''))};
+    timer=setTimeout(()=>finish(''),1200);
+    channel.port1.onmessage=event=>{if(event.data?.type==='LOWCY_SW_VERSION')finish(event.data.version)};
+    try{worker.postMessage({type:'LOWCY_SW_VERSION'},[channel.port2])}catch(_){finish('')}
+  });
+}
+async function ensureCurrentPushWorker(reg,version){
+  if(typeof MessageChannel==='undefined'||typeof reg.active?.postMessage!=='function')return reg;
+  const expected=String(version||CLIENT_VERSION);
+  if(await pushWorkerVersion(reg.active)===expected)return reg;
+  setPushFeedback('Aktualizuję ikonę i obsługę alertów…');
+  await pushWait(reg.update(),15000,'Aktualizacja alertów trwa dłużej. Spróbuj ponownie za chwilę.');
+  const deadline=Date.now()+20000;
+  while(Date.now()<deadline){
+    if(reg.waiting)reg.waiting.postMessage({type:'LOWCY_SKIP_WAITING'});
+    if(await pushWorkerVersion(reg.active)===expected)return reg;
+    await new Promise(resolve=>setTimeout(resolve,250));
+  }
+  throw new Error('Obsługa alertów jeszcze się aktualizuje. Otwórz aplikację ponownie i powtórz test.');
+}
 function pushUiLabel(){if(!('Notification'in window))return 'Alerty niedostępne';if(Notification.permission==='denied')return 'Alerty zablokowane';if(Notification.permission==='granted'&&PUSH_SUBSCRIBED)return 'Test alertu';return 'Włącz alerty telefonu'}
 function renderPushStatus(){
   const legacy=q('pushStatus');if(legacy)legacy.innerHTML='';
@@ -3630,6 +3654,7 @@ async function ensurePushSubscription(silent=false,sendTest=false){
     reg=await pushWait(navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'}),15000,'Telefon nie uruchomił obsługi powiadomień w ciągu 15 sekund.');
     if(!reg.active)reg=await pushWait(navigator.serviceWorker.ready,15000,'Aplikacja w telefonie nie zakończyła uruchamiania powiadomień.');
   }
+  if(sendTest)reg=await ensureCurrentPushWorker(reg,cfg.appVersion);
   let sub=await pushWait(reg.pushManager.getSubscription(),8000,'Telefon nie odpowiedział podczas sprawdzania alertów.');
   if(!sub){
     if(!silent)setPushFeedback('Rejestruję alerty w telefonie…');
@@ -3639,6 +3664,7 @@ async function ensurePushSubscription(silent=false,sendTest=false){
   await api('/api/push-subscription',{method:'POST',body:JSON.stringify({subscription:sub.toJSON?sub.toJSON():sub}),timeoutMs:8000});
   PUSH_SUBSCRIBED=true;renderPushStatus();
   if(sendTest){
+    if(typeof reg.getNotifications==='function'){const oldTests=await reg.getNotifications({tag:'PUSH_TEST-'});for(const notification of oldTests)notification.close()}
     if(!silent)setPushFeedback('Wysyłam próbny alert…');
     const t=await api('/api/push-test',{method:'POST',body:'{}',timeoutMs:12000});
     if(!silent)setPushFeedback(t.sent?'Wysłano próbny alert. Sprawdź powiadomienia telefonu.':'Subskrypcja zapisana, ale serwer nie wysłał próbnego alertu. Spróbuj ponownie lub prześlij ten komunikat.',t.sent?'ok':'error');

@@ -25,8 +25,8 @@ const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const GOOGLE_VISION_API_KEY = process.env.GOOGLE_VISION_API_KEY || process.env.OCR_GOOGLE_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.PHOTO_OCR_OPENAI_API_KEY || '';
 const PHOTO_OCR_MODEL = process.env.PHOTO_OCR_OPENAI_MODEL || 'gpt-5.6-sol';
-const APP_VERSION = '292';
-const APP_VERSION_NAME = 'V292_LM_NOTIFICATION_BADGE';
+const APP_VERSION = '293';
+const APP_VERSION_NAME = 'V293_FISH_NOTIFICATION_WORKER_SYNC';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 const PODIUM_TROPHIES = fs.existsSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) ? fs.readFileSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) : null;
 const CARP_REAL = fs.readFileSync(pathModule.join(__dirname, 'carp-real-v116.png'));
@@ -41,6 +41,7 @@ function brandAsset(name, fallback) {
   return fs.existsSync(file)?fs.readFileSync(file):fallback;
 }
 const BRAND_PNG={
+  'notification-fish-v293-96.png':fs.readFileSync(pathModule.join(__dirname,'brand','notification-fish-v293-96.png')),
   'notification-lm-v292-96.png':fs.readFileSync(pathModule.join(__dirname,'brand','notification-lm-v292-96.png')),
   'icon-v217-32.png':brandAsset('icon-v217-32.png',FAVICON_32),
   'icon-v217-64.png':brandAsset('icon-v217-64.png',ICON_64),
@@ -2093,10 +2094,14 @@ self.addEventListener('fetch',event=>{const req=event.request,u=new URL(req.url)
  if(['/app.js','/pdf-vector.js','/communication-ui.js','/password-recovery-ui.js','/accessibility-v234.css','/roster-preview-v235.css','/player-dock-v236.css','/compact-player-v237.css','/desktop-nav-v238.css','/history-lux-v239.css','/history-compact-v241.css','/draw-ui-v240.css','/result-contrast-v242.css','/desktop-draw-v243.css','/players-dark-v283.css','/draw-notice-ui-v240.js'].includes(u.pathname)){event.respondWith((async()=>{const key=u.pathname+u.search,c=await caches.open(SHELL_CACHE);try{const fresh=await fetchWithTimeout(req,9000);if(fresh.ok){await c.put(key,fresh.clone());return fresh}}catch(e){}return(await c.match(key))||Response.error()})());return}
 });
 async function setLowcyBadge(n){try{const count=Math.max(0,Number(n||0));if(self.navigator&&typeof self.navigator.setAppBadge==='function'){if(count)await self.navigator.setAppBadge(count);else if(typeof self.navigator.clearAppBadge==='function')await self.navigator.clearAppBadge()}}catch(e){}}
+self.addEventListener('message', event => {
+  if(event.data&&event.data.type==='LOWCY_SW_VERSION'&&event.ports&&event.ports[0])event.ports[0].postMessage({type:'LOWCY_SW_VERSION',version:'${APP_VERSION}'});
+  if(event.data&&event.data.type==='LOWCY_SKIP_WAITING')event.waitUntil(self.skipWaiting());
+});
 self.addEventListener('push', event => {
   let data={}; try{data=event.data?event.data.json():{}}catch(e){}
   const title=data.title||'Łowcy Methodowcy';
-  const options={body:data.body||'Nowe powiadomienie',icon:'/brand/icon-v217-192.png',badge:'/brand/notification-lm-v292-96.png',data:{url:data.url||'/'},tag:data.type?(data.type+'-'+(data.competitionId||'')):undefined,renotify:true};
+  const options={body:data.body||'Nowe powiadomienie',icon:'/brand/icon-v217-192.png',badge:self.location.origin+'/brand/notification-fish-v293-96.png',data:{url:data.url||'/',workerVersion:'${APP_VERSION}'},tag:data.type?(data.type+'-'+(data.competitionId||'')):undefined,renotify:true};
   event.waitUntil((async()=>{await Promise.all([self.registration.showNotification(title,options),setLowcyBadge(data.badgeCount)]);const list=await clients.matchAll({type:'window',includeUncontrolled:true});for(const c of list){try{c.postMessage({type:'LOWCY_ATTENTION_REFRESH'})}catch(e){}}})());
 });
 self.addEventListener('notificationclick', event => {
