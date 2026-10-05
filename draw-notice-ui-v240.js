@@ -1,17 +1,6 @@
 'use strict';
 /* V240 – special publishing notice. Never invents sector or stand numbers. */
 (function(){
- const playersBlueStyle=document.createElement('style');
- playersBlueStyle.id='playersDesktopBlueHotfixV294';
- playersBlueStyle.textContent='@media(min-width:761px){'
-  +'body #app #playersList .adminPlayersTable tbody tr:nth-child(odd)>td{background:#b7d8ec!important;color:#062b43!important;-webkit-text-fill-color:#062b43!important;border-color:#6f9fbb!important;}'
-  +'body #app #playersList .adminPlayersTable tbody tr:nth-child(even)>td{background:#9fc9e2!important;color:#062b43!important;-webkit-text-fill-color:#062b43!important;border-color:#6f9fbb!important;}'
-  +'body #app #playersList .adminPlayersTable tbody tr:hover>td{background:#cbe5f4!important;}'
-  +'body #app #playersList .adminPlayersTable tbody td>b{color:#062b43!important;-webkit-text-fill-color:#062b43!important;text-shadow:none!important;}'
-  +'body #app #playersList .adminPlayersTable tbody td{color:#062b43!important;-webkit-text-fill-color:#062b43!important;}'
-  +'body #app #playersList .adminPlayersTable .center,body #app #playersList .adminPlayersTable .center>b{color:#062b43!important;-webkit-text-fill-color:#062b43!important;text-shadow:none!important;}'
-  +'}';
- document.head.appendChild(playersBlueStyle);
  let activeUid=0,timer=null,to=null,lastId=0;
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const details=n=>n&&n.data&&typeof n.data==='object'?n.data:{};
