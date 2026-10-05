@@ -36,7 +36,7 @@ jobs:
           node-version: '22'
 
       - name: "Apply V298 source changes"
-        run: python tools/v298_patch.py
+        run: python tools/v298_patch2.py
 
       - name: "Install dependencies"
         run: npm install --ignore-scripts --no-audit --no-fund
