@@ -1,0 +1,46 @@
+name: "V300 Round choice contrast"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/v300-release.yml'
+      - 'tools/v300_round_choice_contrast.py'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-test-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: "Apply V300"
+        run: python tools/v300_round_choice_contrast.py
+      - name: "Syntax check"
+        run: |
+          node --check server.cjs
+          node --check app.js
+          git diff --check
+      - name: "Validate V300 contrast"
+        run: |
+          grep -q "const APP_VERSION = '300';" server.cjs
+          grep -q "V300_ROUND_CHOICE_CONTRAST" server.cjs
+          grep -q "V300_ROUND_CHOICE_CONTRAST" app.js
+          grep -q "color:#ffffff" server.cjs
+          grep -q "color:#d7e7f2" server.cjs
+          grep -q "font-size:20px" server.cjs
+          grep -q "font-size:16px" server.cjs
+          grep -q "accent-color:#2f8cff" server.cjs
+      - name: "Commit V300"
+        run: |
+          git config user.name "lowcy-v300-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add server.cjs app.js
+          git commit -m "V300: improve round choice contrast and readability"
+          git push
