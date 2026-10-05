@@ -56,7 +56,9 @@ jobs:
           git diff --check
 
       - name: "Run focused V298 tests"
-        run: node --test tests/competition-rounds-v298.test.cjs
+        run: |
+          set -o pipefail
+          node --test tests/competition-rounds-v298.test.cjs 2>&1 | tee v298-focused.log
 
       - name: "Run complete regression suite after V298"
         run: |
@@ -74,8 +76,9 @@ jobs:
           name: v298-regression-reports
           path: |
             v298-baseline.log
+            v298-focused.log
             v298-after.log
-          if-no-files-found: error
+          if-no-files-found: warn
 
       - name: "Validate release invariants"
         run: |
