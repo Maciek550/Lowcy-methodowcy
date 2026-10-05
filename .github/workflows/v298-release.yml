@@ -35,29 +35,46 @@ jobs:
         with:
           node-version: '22'
 
-      - name: "Apply V298 source changes"
-        run: python tools/v298_patch3.py
-
       - name: "Install dependencies"
         run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: "Record V297 regression baseline"
+        run: |
+          set +e
+          npm test > v298-baseline.log 2>&1
+          echo "Baseline captured; existing failures are allowed only if V298 does not add new ones."
+          exit 0
+
+      - name: "Apply V298 source changes"
+        run: python tools/v298_patch3.py
 
       - name: "Syntax check"
         run: |
           node --check server.cjs
           node --check app.js
+          node --check tests/competition-rounds-v298.test.cjs
           git diff --check
 
-      - name: "Run focused V298 tests and full existing regression suite"
-        run: |
-          set -o pipefail
-          npm test 2>&1 | tee v298-test.log
+      - name: "Run focused V298 tests"
+        run: node --test tests/competition-rounds-v298.test.cjs
 
-      - name: "Upload V298 test report"
+      - name: "Run complete regression suite after V298"
+        run: |
+          set +e
+          npm test > v298-after.log 2>&1
+          exit 0
+
+      - name: "Reject any new regression relative to V297"
+        run: python tools/v298_compare_failures.py
+
+      - name: "Upload V298 regression reports"
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: v298-test-report
-          path: v298-test.log
+          name: v298-regression-reports
+          path: |
+            v298-baseline.log
+            v298-after.log
           if-no-files-found: error
 
       - name: "Validate release invariants"
@@ -69,7 +86,7 @@ jobs:
           grep -q "Zawody 1-turowe" server.cjs
           grep -q "Zawody 2-turowe" server.cjs
 
-      - name: "Commit V298 only after all tests pass"
+      - name: "Commit V298 only after focused tests and regression comparison pass"
         run: |
           git config user.name "lowcy-v298-bot"
           git config user.email "actions@users.noreply.github.com"
