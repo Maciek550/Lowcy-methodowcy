@@ -48,7 +48,17 @@ jobs:
           git diff --check
 
       - name: "Run focused V298 tests and full existing regression suite"
-        run: npm test
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee v298-test.log
+
+      - name: "Upload V298 test report"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v298-test-report
+          path: v298-test.log
+          if-no-files-found: error
 
       - name: "Validate release invariants"
         run: |
