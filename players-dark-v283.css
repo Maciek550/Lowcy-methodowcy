@@ -486,3 +486,45 @@ body:not(.playerTheme):not(.authMode) #playersList .playerDeleteBtn{
     padding:3px 6px!important;
   }
 }
+
+/* V294 — desktop Zawodnicy: jasny błękit i ciemny tekst dla pełnej czytelności. */
+@media(min-width:761px){
+  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable tbody tr:nth-child(odd)>td{
+    background:linear-gradient(180deg,#e2f1fa 0%,#d5eaf6 100%)!important;
+    color:#0b2533!important;
+    -webkit-text-fill-color:#0b2533!important;
+    border-color:#8fb3c7!important;
+  }
+  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable tbody tr:nth-child(even)>td{
+    background:linear-gradient(180deg,#d2e8f4 0%,#c5dfed 100%)!important;
+    color:#0b2533!important;
+    -webkit-text-fill-color:#0b2533!important;
+    border-color:#86aabd!important;
+  }
+  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable tbody tr:hover>td{
+    background:linear-gradient(180deg,#edf8fd 0%,#dceff8 100%)!important;
+  }
+  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable td,
+  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable td>b{
+    color:#123447!important;
+    -webkit-text-fill-color:#123447!important;
+    text-shadow:none!important;
+  }
+  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable .center,
+  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable .center>b{
+    color:#0b3d55!important;
+    -webkit-text-fill-color:#0b3d55!important;
+    text-shadow:none!important;
+  }
+  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable .playerLastActivity{
+    color:#effff5!important;
+    -webkit-text-fill-color:#effff5!important;
+  }
+  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable .playerManageBtns .secondary,
+  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable .playerManageBtns .warn,
+  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable .playerDeleteBtn{
+    color:#fff!important;
+    -webkit-text-fill-color:#fff!important;
+    text-shadow:0 1px 2px rgba(0,0,0,.38)!important;
+  }
+}
