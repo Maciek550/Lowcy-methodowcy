@@ -48,6 +48,10 @@ jobs:
           echo "Baseline captured; existing failures are allowed only if V298 does not add new ones."
           exit 0
 
+      - name: "Reset test database after baseline"
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c 'DROP SCHEMA public CASCADE; CREATE SCHEMA public;'
+
       - name: "Apply V298 source changes"
         run: python tools/v298_patch3.py
 
