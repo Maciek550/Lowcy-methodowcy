@@ -1,0 +1,46 @@
+name: "V301 Disabled T2 navigation"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/v301-release.yml'
+      - 'tools/v301_player_one_round_disabled_t2.py'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-test-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: "Apply V301"
+        run: python tools/v301_player_one_round_disabled_t2.py
+      - name: "Syntax check"
+        run: |
+          node --check server.cjs
+          node --check app.js
+          git diff --check
+      - name: "Validate V301 behavior"
+        run: |
+          grep -q "const APP_VERSION = '301';" server.cjs
+          grep -q "V301_ONE_ROUND_DISABLED_T2" app.js
+          grep -q "disabledRoundTile" app.js
+          grep -q "NIEDOSTĘPNE" app.js
+          grep -q "Losowanie<br>Tura 2" app.js
+          grep -q "Wyniki<br>Tura 2" app.js
+          grep -q "MAPA T2" app.js
+          grep -q "\['draw2','map2','t2'\].includes(panel)" app.js
+      - name: "Commit V301"
+        run: |
+          git config user.name "lowcy-v301-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add server.cjs app.js
+          git commit -m "V301: keep T2 navigation visible but disabled in one-round competitions"
+          git push
