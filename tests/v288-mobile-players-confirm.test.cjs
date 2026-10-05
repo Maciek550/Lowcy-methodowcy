@@ -22,6 +22,6 @@ test('password recovery confirmations never use the browser native confirm',()=>
 
 test('server exposes V289 so PWA shell cache refreshes',()=>{
   const js=fs.readFileSync(path.join(root,'server.cjs'),'utf8');
-  assert.match(js,/const APP_VERSION = '289';/);
+  assert.match(js,/const APP_VERSION = '298';/);
   assert.match(js,/V289_MOBILE_PLAYERS_SILVER_CONFIRM_SYNC/);
 });

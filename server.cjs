@@ -25,8 +25,8 @@ const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const GOOGLE_VISION_API_KEY = process.env.GOOGLE_VISION_API_KEY || process.env.OCR_GOOGLE_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.PHOTO_OCR_OPENAI_API_KEY || '';
 const PHOTO_OCR_MODEL = process.env.PHOTO_OCR_OPENAI_MODEL || 'gpt-5.6-sol';
-const APP_VERSION = '297';
-const APP_VERSION_NAME = 'V297_PLAYERS_SPECIFICITY_FIX';
+const APP_VERSION = '298';
+const APP_VERSION_NAME = 'V298_ONE_TWO_ROUNDS';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 const PODIUM_TROPHIES = fs.existsSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) ? fs.readFileSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) : null;
 const CARP_REAL = fs.readFileSync(pathModule.join(__dirname, 'carp-real-v116.png'));
@@ -389,6 +389,7 @@ async function initDb() {
       created_at timestamptz not null default now()
     );
     alter table users add column if not exists judge_enabled boolean not null default true;
+    alter table competitions add column if not exists round_count integer not null default 2;
     create table if not exists competition_judges (
       user_id bigint not null references users(id) on delete cascade,
       competition_id bigint not null references competitions(id) on delete cascade,
@@ -1302,6 +1303,7 @@ async function generateDraw(competitionId, round, actor) {
   let comp = await getCompetition(competitionId);
   if (!customSectorLayout(comp)) { await autoSyncBanksForRoster(competitionId); comp = await getCompetition(competitionId); }
   if (!comp) throw new Error('Nie znaleziono zawodów');
+  if (Number(comp.round_count||2)===1 && Number(round)!==1) throw new Error('Zawody 1-turowe mają tylko jedno losowanie.');
   const entries = await getActiveEntries(competitionId);
   if (!entries.length) throw new Error('Brak aktywnych zawodników do losowania');
   const disabledStands = disabledStandsForCompetition(comp);
@@ -1373,6 +1375,7 @@ function randomGram(min, max) {
 async function generateRandomResults(competitionId, round, actor) {
   const comp = await getCompetition(competitionId);
   if (!comp) throw new Error('Nie znaleziono zawodów');
+  if (Number(comp.round_count||2)===1 && Number(round)!==1) throw new Error('Zawody 1-turowe mają tylko jedną turę wyników.');
   const entries = await getActiveEntries(competitionId);
   if (!entries.length) throw new Error('Brak zawodników na liście głównej');
   const client = await pool.connect();
@@ -1400,8 +1403,9 @@ function computeClassification(comp, entries, draws, results) {
   const resBy = new Map();
   for (const r of results) resBy.set(Number(r.user_id) + ':' + Number(r.round), r);
   const roundRows = { 1: [], 2: [] };
+  const roundCount = Number(comp?.round_count||2)===1 ? 1 : 2;
 
-  for (const round of [1,2]) {
+  for (const round of (roundCount===1 ? [1] : [1,2])) {
     const grouped = new Map();
     for (const e of entries) {
       const d = drawBy.get(Number(e.user_id)+':'+round);
@@ -1448,7 +1452,7 @@ function computeClassification(comp, entries, draws, results) {
   const r2 = new Map(roundRows[2].map(r => [r.user_id, r]));
   const general = entries.map(e => {
     const a = r1.get(Number(e.user_id));
-    const b = r2.get(Number(e.user_id));
+    const b = roundCount===2 ? r2.get(Number(e.user_id)) : null;
     return {
       user_id: Number(e.user_id),
       name: e.first_name + ' ' + e.last_name,
@@ -1745,18 +1749,18 @@ async function importZawodyProList(competitionId, rawUrl, actor) {
 
 
 function publishedAchievements(detail, round, userId) {
-  const c=detail.competition, rr=round===1?detail.classification.round1:detail.classification.round2;
+  const c=detail.competition, oneRound=Number(c?.round_count||2)===1, rr=round===1?detail.classification.round1:detail.classification.round2;
   const r=rr.find(x=>Number(x.user_id)===Number(userId)), out=[];
   if((round===1||round===2) && r && r.weight>0 && r.sector!=='-' && r.points>=1 && r.points<=3)
     out.push({key:'T'+round+':'+r.sector+':'+r.points,title:c.title,place:r.points,sector:r.sector,label:String(r.points).replace('.',',')+'. miejsce w sektorze '+r.sector,context:'Tura '+round,weight:r.weight});
-  if((round===1||round===2) && r && r.sector && r.sector!=='-'){
+  if((round===1||round===2) && !(oneRound&&round===1) && r && r.sector && r.sector!=='-'){
     const sectorRows=rr.filter(x=>x.sector===r.sector);
     const lastPlace=Math.max(...sectorRows.map(x=>Number(x.points||0)));
     if(sectorRows.length>1 && Number(r.points)===lastPlace)
       out.push({key:'ENCOURAGEMENT:T'+round+':'+r.sector,kind:'ENCOURAGEMENT',round,title:c.title,label:round===1?'POWODZENIA W 2 TURZE!':'TEN KARP CZEKA NA REWANŻ!',context:round===1?'Nowa tura, nowa szansa!':'Do zobaczenia na kolejnych zawodach!',weight:r.weight});
   }
   // The administrator explicitly publishes the final standings; missing individual weights remain zero.
-  const complete=[1,2].every(t=>(detail.results||[]).some(x=>Number(x.round)===t));
+  const complete=(oneRound?[1]:[1,2]).every(t=>(detail.results||[]).some(x=>Number(x.round)===t));
   const g=detail.classification.general.find(x=>Number(x.user_id)===Number(userId));
   if(round===0 && complete && g && g.total_weight>0 && g.rank>=1 && g.rank<=3)
     out.push({key:'GENERAL:'+g.rank,title:c.title,place:g.rank,label:g.rank+'. miejsce w klasyfikacji generalnej',context:'Klasyfikacja końcowa',weight:g.total_weight});
@@ -2304,6 +2308,7 @@ self.addEventListener('notificationclick', event => {
     if (!limit || limit < 1) return sendJson(res, 400, { ok:false, error:'Podaj liczbę osób / limit miejsc' });
     const fishery = String(b.fishery || '').trim();
     const title = String(b.title || '').trim() || (fishery ? ('Zawody — ' + fishery) : 'Zawody');
+    const roundCount = Number(b.roundCount)===1 ? 1 : 2;
     const mapMode = b.mapMode || 'TWO_OPPOSITE';
     const split = autoBankSplit(limit || 1, mapMode);
     const bank1 = clampInt(b.bank1Count, 0, 300, split.bank1);
@@ -2313,9 +2318,9 @@ self.addEventListener('notificationclick', event => {
     try { presenceReminderNote=presenceReminders.normalizeOrganizerNote(b.presenceReminderNote); }
     catch(e) { return sendJson(res,400,{ok:false,error:e.message}); }
     const { rows } = await pool.query(
-      `insert into competitions(title,fishery,competition_date,meeting_time,limit_places,status,notes,regulations,created_by,map_mode,bank1_count,bank2_count,sectors_count,signup_open,presence_reminder_note)
-       values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) returning *`,
-      [title, fishery, b.competitionDate || null, (/^\d{2}:\d{2}$/.test(String(b.meetingTime||''))?String(b.meetingTime):'06:00'), limit, b.status || 'OPEN', String(b.notes||''), String(b.regulations||''), user.id, mapMode, bank1, bank2, sectors, b.signupOpen !== false, presenceReminderNote]
+      `insert into competitions(title,fishery,competition_date,meeting_time,limit_places,status,notes,regulations,created_by,map_mode,bank1_count,bank2_count,sectors_count,signup_open,presence_reminder_note,round_count)
+       values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) returning *`,
+      [title, fishery, b.competitionDate || null, (/^\d{2}:\d{2}$/.test(String(b.meetingTime||''))?String(b.meetingTime):'06:00'), limit, b.status || 'OPEN', String(b.notes||''), String(b.regulations||''), user.id, mapMode, bank1, bank2, sectors, b.signupOpen !== false, presenceReminderNote, roundCount]
     );
     await notifyAdmins('COMPETITION_CREATE', 'Utworzono zawody', user.first_name + ' ' + user.last_name + ' utworzył zawody: ' + rows[0].title, { competitionId: rows[0].id });
     if(rows[0].status!=='PRIVATE'&&rows[0].status!=='TEST'){
@@ -2984,8 +2989,9 @@ self.addEventListener('notificationclick', event => {
     if(!requireAdmin(user,res))return;
     const compId=Number(m[1]), detail=await buildDetail(compId,user);
     if(!detail)return sendJson(res,404,{ok:false,error:'Nie znaleziono zawodów'});
-    if(![1,2].every(t=>(detail.results||[]).some(r=>Number(r.round)===t)))
-      return sendJson(res,409,{ok:false,error:'Najpierw wpisz i przelicz wyniki T1 oraz T2.'});
+    const requiredRounds=Number(detail.competition?.round_count||2)===1?[1]:[1,2];
+    if(!requiredRounds.every(t=>(detail.results||[]).some(r=>Number(r.round)===t)))
+      return sendJson(res,409,{ok:false,error:requiredRounds.length===1?'Najpierw wpisz i przelicz wyniki.':'Najpierw wpisz i przelicz wyniki T1 oraz T2.'});
     for(const e of detail.activeEntries){
       const g=detail.classification.general.find(r=>Number(r.user_id)===Number(e.user_id));
       await savePublishedAchievements(detail,0,e.user_id);
@@ -8875,7 +8881,7 @@ body:not(.playerTheme):not(.authMode) #btn-players.active .adminPlayersTabStats{
   <div class="card success-line compactUserBar"><div class="adminbar"><div><b id="who"></b><br><span id="role" class="muted small"></span></div><div id="notifCounter" class="ok"></div><div class="right"><span class="appVersionBadge">V${APP_VERSION}</span><div id="pushStatus" class="pushBox hidden"></div></div></div></div>
   <div class="tabs" role="tablist" aria-label="Menu główne"><button id="btn-competitions" role="tab" aria-controls="tab-competitions" aria-selected="false" onclick="showTab('competitions')">Zawody</button><button id="btn-rules" role="tab" aria-controls="tab-rules" aria-selected="false" class="hidden" onclick="showTab('rules')">Regulamin ogólny</button><button id="btn-notifications" role="tab" aria-controls="tab-notifications" aria-selected="false" onclick="showTab('notifications')">Powiadomienia</button><button id="btn-profile" role="tab" aria-controls="tab-profile" aria-selected="false" class="hidden" onclick="showTab('profile')">Mój profil</button><button id="btn-history" role="tab" aria-controls="tab-history" aria-selected="false" class="hidden" onclick="showTab('history')">Historia startów</button><button id="btn-players" role="tab" aria-controls="tab-players" aria-selected="false" class="hidden" onclick="showTab('players')">Zawodnicy</button></div>
   <section id="tab-competitions" role="tabpanel" aria-labelledby="btn-competitions">
-    <details id="adminCreate" class="card hidden adminCreateV93"><summary class="adminCreateToggle">Robimy zawody</summary><div class="adminCreateBody"><h2>Utwórz zawody</h2><p class="small muted">Dane z tego formularza są później widoczne dla zawodnika.</p><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Zbiórka / godzina</label><input id="cMeetingTime" type="time" value="06:00"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div></div><div class="adminTextPair"><div><label>Tryb zawodów</label><select id="cStatus"><option value="OPEN">Zawody otwarte — każdy może się zapisać</option><option value="PRIVATE">Zawody prywatne — na zaproszenie</option><option value="TEST">Zawody testowe — tylko admin</option><option value="CLOSED">Zapisy zakończone — widoczne, bez zapisów</option></select><label>Informacje organizacyjne</label><textarea id="cNotes" placeholder="Parking, miejsce zbiórki, godzina losowania, dodatkowe informacje…"></textarea></div><div><label>Program / regulamin tych zawodów</label><textarea id="cRegulations" class="rulesEditor" placeholder="Np. 06:00 zbiórka, 06:15 losowanie, 07:00–15:00 zawody, ważne zasady tylko dla tego wydarzenia…"></textarea></div></div><div class="adminReminderNote"><label for="cPresenceReminderNote">Krótka treść do dymku potwierdzenia D-2 (opcjonalnie)</label><textarea id="cPresenceReminderNote" maxlength="160" rows="2" placeholder="Np. Zbiórka 6:30. Prosimy o punktualność."></textarea><p class="small muted">Do 160 znaków. Pojawi się w przypomnieniu dwa dni przed zawodami.</p></div><button onclick="createCompetition(event)">Utwórz zawody</button></div></details>
+    <details id="adminCreate" class="card hidden adminCreateV93"><summary class="adminCreateToggle">Robimy zawody</summary><div class="adminCreateBody"><h2>Utwórz zawody</h2><p class="small muted">Dane z tego formularza są później widoczne dla zawodnika.</p><div class="competitionRoundChoice" role="radiogroup" aria-label="Liczba tur"><label class="checkline"><input type="radio" name="cRoundCount" value="1"> <b>Zawody 1-turowe</b></label><label class="checkline"><input type="radio" name="cRoundCount" value="2" checked> <b>Zawody 2-turowe</b></label></div><div class="grid"><div><label>Nazwa zawodów</label><input id="cTitle" value="Method Feeder" placeholder="Method Feeder"></div><div><label>Łowisko</label><input id="cFishery" placeholder="Łowisko Lasomin"></div><div><label>Data zawodów</label><input id="cDate" type="date"></div><div><label>Zbiórka / godzina</label><input id="cMeetingTime" type="time" value="06:00"></div><div><label>Liczba osób / limit listy głównej</label><input id="cLimit" type="number" min="1" placeholder="30"></div></div><div class="adminTextPair"><div><label>Tryb zawodów</label><select id="cStatus"><option value="OPEN">Zawody otwarte — każdy może się zapisać</option><option value="PRIVATE">Zawody prywatne — na zaproszenie</option><option value="TEST">Zawody testowe — tylko admin</option><option value="CLOSED">Zapisy zakończone — widoczne, bez zapisów</option></select><label>Informacje organizacyjne</label><textarea id="cNotes" placeholder="Parking, miejsce zbiórki, godzina losowania, dodatkowe informacje…"></textarea></div><div><label>Program / regulamin tych zawodów</label><textarea id="cRegulations" class="rulesEditor" placeholder="Np. 06:00 zbiórka, 06:15 losowanie, 07:00–15:00 zawody, ważne zasady tylko dla tego wydarzenia…"></textarea></div></div><div class="adminReminderNote"><label for="cPresenceReminderNote">Krótka treść do dymku potwierdzenia D-2 (opcjonalnie)</label><textarea id="cPresenceReminderNote" maxlength="160" rows="2" placeholder="Np. Zbiórka 6:30. Prosimy o punktualność."></textarea><p class="small muted">Do 160 znaków. Pojawi się w przypomnieniu dwa dni przed zawodami.</p></div><button onclick="createCompetition(event)">Utwórz zawody</button></div></details>
     <div class="card"><h2>Lista zawodów</h2><div id="competitionsList"></div></div>
     <div id="competitionDetail" class="hidden"></div>
   </section>

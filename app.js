@@ -1,4 +1,4 @@
-const CLIENT_VERSION='297';const CLIENT_VERSION_NAME='V297_PLAYERS_SPECIFICITY_FIX';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='298';const CLIENT_VERSION_NAME='V298_ONE_TWO_ROUNDS';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -752,7 +752,7 @@ async function loadCompetitions(){
   renderPlayerCompetitionList();refreshPlayerDock();
   if(q('tab-rules')&&!q('tab-rules').classList.contains('hidden'))renderPlayerRules();
 }
-async function createCompetition(ev){if(CREATING_COMPETITION)return;CREATING_COMPETITION=true;const btn=ev?.target;if(btn){btn.disabled=true;btn.textContent='Tworzę...'}try{const limit=q('cLimit').value.trim();if(!limit)throw new Error('Podaj liczbę osób');await api('/api/competitions',{method:'POST',body:JSON.stringify({title:q('cTitle')?.value||'Method Feeder',fishery:q('cFishery').value,competitionDate:q('cDate').value,meetingTime:q('cMeetingTime')?.value||'06:00',limitPlaces:limit,notes:q('cNotes').value,regulations:q('cRegulations')?.value||'',presenceReminderNote:q('cPresenceReminderNote')?.value||'',status:q('cStatus')?.value||'OPEN'})});['cFishery','cDate','cLimit','cNotes','cRegulations','cPresenceReminderNote'].forEach(id=>{const el=q(id);if(el)el.value=''});if(q('cMeetingTime'))q('cMeetingTime').value='06:00';if(q('cTitle'))q('cTitle').value='Method Feeder';await loadCompetitions();await loadNotifications();q('adminCreate').open=false;msg('Utworzono zawody')}catch(e){msg(e.message,'bad')}finally{CREATING_COMPETITION=false;if(btn){btn.disabled=false;btn.textContent='Utwórz zawody'}}}
+async function createCompetition(ev){if(CREATING_COMPETITION)return;CREATING_COMPETITION=true;const btn=ev?.target;if(btn){btn.disabled=true;btn.textContent='Tworzę...'}try{const limit=q('cLimit').value.trim();if(!limit)throw new Error('Podaj liczbę osób');await api('/api/competitions',{method:'POST',body:JSON.stringify({title:q('cTitle')?.value||'Method Feeder',fishery:q('cFishery').value,competitionDate:q('cDate').value,meetingTime:q('cMeetingTime')?.value||'06:00',limitPlaces:limit,notes:q('cNotes').value,regulations:q('cRegulations')?.value||'',presenceReminderNote:q('cPresenceReminderNote')?.value||'',status:q('cStatus')?.value||'OPEN',roundCount:Number(document.querySelector('input[name="cRoundCount"]:checked')?.value||2)})});['cFishery','cDate','cLimit','cNotes','cRegulations','cPresenceReminderNote'].forEach(id=>{const el=q(id);if(el)el.value=''});if(q('cMeetingTime'))q('cMeetingTime').value='06:00';if(q('cTitle'))q('cTitle').value='Method Feeder';await loadCompetitions();await loadNotifications();q('adminCreate').open=false;msg('Utworzono zawody')}catch(e){msg(e.message,'bad')}finally{CREATING_COMPETITION=false;if(btn){btn.disabled=false;btn.textContent='Utwórz zawody'}}}
 let APP_CONFIRM_CLEANUP=null;
 function closeAppConfirmModal(result={confirmed:false,value:''}){
   if(APP_CONFIRM_CLEANUP){const fn=APP_CONFIRM_CLEANUP;APP_CONFIRM_CLEANUP=null;fn(result)}
@@ -1086,18 +1086,18 @@ function renderPlayerMobilePanelContent(d,panel){
   return '';
 }
 function renderPlayerMobileDashboard(d){
-  const p=PLAYER_MOBILE_PANEL,early=playerEarlyListAvailable(d.competition);
+  const p=PLAYER_MOBILE_PANEL,early=playerEarlyListAvailable(d.competition),oneRound=Number(d.competition?.round_count||2)===1;
   const b=(panel,label,cls='')=>'<button type="button" class="'+cls+' '+(p===panel?'active':'')+'" onclick="showPlayerMobilePanel(\''+panel+'\',event)">'+label+'</button>';
   return '<div class="playerMobileDashboard">'
     +'<div class="playerDrawStickySlot"><div class="card playerDrawHeaderCard playerUnifiedNav">'
     +'<div class="playerPrimaryNav">'
-      +b('draw1','Losowanie<br>Tura 1'+playerDrawStar(d,1),'drawTile')
-      +b('draw2','Losowanie<br>Tura 2'+playerDrawStar(d,2),'drawTile')
-      +b('t1','Wyniki<br>Tura 1'+playerResultStar(d,1),'resultTile')
-      +b('t2','Wyniki<br>Tura 2'+playerResultStar(d,2),'resultTile')
+      +b('draw1',(oneRound?'Losowanie':'Losowanie<br>Tura 1')+playerDrawStar(d,1),'drawTile')
+      +(oneRound?'':b('draw2','Losowanie<br>Tura 2'+playerDrawStar(d,2),'drawTile'))
+      +b('t1',(oneRound?'Wyniki':'Wyniki<br>Tura 1')+playerResultStar(d,1),'resultTile')
+      +(oneRound?'':b('t2','Wyniki<br>Tura 2'+playerResultStar(d,2),'resultTile'))
       +'<div class="playerPrimaryStack">'+b('general','GENERAL','resultTile generalTile')+b('stats','STATYSTYKI','resultTile statsTile')+'</div>'
     +'</div>'
-    +'<div class="playerMapNav playerQuickInfoNav '+(early?'withEarlyList':'withoutEarlyList')+'">'+b('info','INFO','infoTile')+b('map1','MAPA T1','mapTile')+b('map2','MAPA T2','mapTile')+(early?b('list','LISTA <span class="playerEarlyListCount">'+(d.activeEntries||[]).length+'</span>','earlyListTile'):'')+'</div>'
+    +'<div class="playerMapNav playerQuickInfoNav '+(early?'withEarlyList':'withoutEarlyList')+'">'+b('info','INFO','infoTile')+b('map1',oneRound?'MAPA':'MAPA T1','mapTile')+(oneRound?'':b('map2','MAPA T2','mapTile'))+(early?b('list','LISTA <span class="playerEarlyListCount">'+(d.activeEntries||[]).length+'</span>','earlyListTile'):'')+'</div>'
     +'</div></div>'
     +'<div id="playerMobilePanelContent">'+renderPlayerMobilePanelContent(d,p)+'</div>'
     +'</div>';
@@ -1128,18 +1128,18 @@ function renderPlayerDesktopPanelContent(d,panel){
   return '';
 }
 function renderPlayerDesktopDashboard(d){
-  const p=PLAYER_MOBILE_PANEL,early=playerEarlyListAvailable(d.competition);
+  const p=PLAYER_MOBILE_PANEL,early=playerEarlyListAvailable(d.competition),oneRound=Number(d.competition?.round_count||2)===1;
   const b=(panel,label,cls='')=>'<button type="button" class="'+cls+' '+(p===panel?'active':'')+'" onclick="showPlayerDesktopPanel(\''+panel+'\',event)">'+label+'</button>';
   return '<div class="playerDesktopDashboardV56 playerDesktopDashboardV55">'
     +'<div class="playerDesktopStickySlot"><div class="card playerDesktopUnifiedNav">'
     +'<div class="playerDesktopPrimaryNav">'
-      +b('draw1','Losowanie<br>Tura 1'+playerDrawStar(d,1),'drawTile')
-      +b('draw2','Losowanie<br>Tura 2'+playerDrawStar(d,2),'drawTile')
-      +b('t1','Wyniki<br>Tura 1'+playerResultStar(d,1),'resultTile')
-      +b('t2','Wyniki<br>Tura 2'+playerResultStar(d,2),'resultTile')
+      +b('draw1',(oneRound?'Losowanie':'Losowanie<br>Tura 1')+playerDrawStar(d,1),'drawTile')
+      +(oneRound?'':b('draw2','Losowanie<br>Tura 2'+playerDrawStar(d,2),'drawTile'))
+      +b('t1',(oneRound?'Wyniki':'Wyniki<br>Tura 1')+playerResultStar(d,1),'resultTile')
+      +(oneRound?'':b('t2','Wyniki<br>Tura 2'+playerResultStar(d,2),'resultTile'))
       +'<div class="playerPrimaryStack">'+b('general','GENERAL','resultTile generalTile')+b('stats','STATYSTYKI','resultTile statsTile')+'</div>'
     +'</div>'
-    +'<div class="playerDesktopSubNav playerDesktopMapsOnly playerQuickInfoNav '+(early?'withEarlyList':'withoutEarlyList')+'">'+b('info','INFO','infoTile')+b('map1','MAPA T1','mapTile')+b('map2','MAPA T2','mapTile')+(early?b('list','LISTA <span class="playerEarlyListCount">'+(d.activeEntries||[]).length+'</span>','earlyListTile'):'')+'</div>'
+    +'<div class="playerDesktopSubNav playerDesktopMapsOnly playerQuickInfoNav '+(early?'withEarlyList':'withoutEarlyList')+'">'+b('info','INFO','infoTile')+b('map1',oneRound?'MAPA':'MAPA T1','mapTile')+(oneRound?'':b('map2','MAPA T2','mapTile'))+(early?b('list','LISTA <span class="playerEarlyListCount">'+(d.activeEntries||[]).length+'</span>','earlyListTile'):'')+'</div>'
     +'</div></div>'
     +'<div id="playerDesktopPanelContent">'+renderPlayerDesktopPanelContent(d,p)+'</div>'
     +'</div>';
@@ -1760,7 +1760,7 @@ function renderDrawChecklist(d){
     '</div><p>Losowanie jest aktywne dopiero przy zgodnej liczbie zawodników i dostępnych stanowisk. Brzegi i numery fizyczne pozostają niezmienione.</p></details>';
 }
 function renderDrawPanel(d){
-  const c=d.competition,x=rosterCounts(d),disabled=disabledStandList(c),addon=disabled.length>0,physical=Math.max(0,Number(c.bank1_count||0)+Number(c.bank2_count||0)),available=physical-disabled.length,hasDraw=(d.draws||[]).length>0;
+  const c=d.competition,oneRound=Number(c.round_count||2)===1,rounds=oneRound?[1]:[1,2],x=rosterCounts(d),disabled=disabledStandList(c),addon=disabled.length>0,physical=Math.max(0,Number(c.bank1_count||0)+Number(c.bank2_count||0)),available=physical-disabled.length,hasDraw=(d.draws||[]).length>0;
   const hasResults=((d.results||[]).length>0)||((d.resultItems||[]).length>0)||((d.classification?.round1||[]).length>0)||((d.classification?.round2||[]).length>0);
   const ready=available>0&&available===x.draw;
   const normalStructureOk=x.stands===x.draw;
@@ -1768,9 +1768,9 @@ function renderDrawPanel(d){
     +renderDrawChecklist(d)
     +renderDisabledStandsTool(d)
     +'<div class="card '+((addon?ready:normalStructureOk)?'success-line':'danger-line')+'"><b>Do losowania: '+x.draw+' zawodników z listy głównej.</b><br><span class="small muted">'+(addon?('Stanowiska fizyczne: '+physical+'. Dostępne po wyłączeniach: '+available+'.'):('Stanowiska w strukturze: '+x.stands+'.'))+' Rezerwa nie jest losowana.</span></div>'
-    +'<div class="grid3"><button type="button" '+(ready?'':'disabled')+' onclick="drawRound('+c.id+',1,event)">Losuj T1</button><button type="button" class="blue" '+(ready?'':'disabled')+' onclick="drawRound('+c.id+',2,event)">Losuj T2</button><button type="button" class="secondary" onclick="publishDraw('+c.id+',event)">Publikuj losowanie</button></div>'
+    +(oneRound?'<div class="grid"><button type="button" '+(ready?'':'disabled')+' onclick="drawRound('+c.id+',1,event)">Losuj stanowiska</button><button type="button" class="secondary" onclick="publishDraw('+c.id+',event)">Publikuj losowanie</button></div>':'<div class="grid3"><button type="button" '+(ready?'':'disabled')+' onclick="drawRound('+c.id+',1,event)">Losuj T1</button><button type="button" class="blue" '+(ready?'':'disabled')+' onclick="drawRound('+c.id+',2,event)">Losuj T2</button><button type="button" class="secondary" onclick="publishDraw('+c.id+',event)">Publikuj losowanie</button></div>')
     +'<details class="adminDeleteDrawTile dangerousOps"><summary>Operacje awaryjne: reset losowania i wyników</summary><button type="button" class="warn adminDeleteDrawBtn" '+((hasDraw||hasResults)?'':'disabled')+' onclick="resetDraw('+c.id+',event)">USUŃ CAŁE LOSOWANIE + WYNIKI</button><div class="small"><b>Uwaga:</b> usuwa jednocześnie losowanie T1/T2 oraz wszystkie wpisane wyniki T1/T2 i klasyfikację. Zostawia listę zawodników, sektory i ustawienia zawodów. Przed resetem powstaje kopia danych.</div>'+renderRecoveryAction(d)+'</details>'
-    +[1,2].map(round=>'<details class="adminDrawPreview" '+(window.__lowcyAdminDrawPreview===round?'open':'')+' ontoggle="window.__lowcyAdminDrawPreview=this.open?'+round+':0"><summary>Mapa i sektory — losowanie T'+round+((d.draws||[]).some(x=>Number(x.round)===round)?' ✓':' · oczekuje')+'</summary>'+renderRoundDrawView(d,round,false)+'</details>').join('')+'<details class="adminDrawPreview adminDrawSummary"><summary>Pełna tabela losowania T1 / T2</summary>'+renderDrawTable(d,true)+'</details></div>';
+    +rounds.map(round=>'<details class="adminDrawPreview" '+(window.__lowcyAdminDrawPreview===round?'open':'')+' ontoggle="window.__lowcyAdminDrawPreview=this.open?'+round+':0"><summary>Mapa i sektory — losowanie T'+round+((d.draws||[]).some(x=>Number(x.round)===round)?' ✓':' · oczekuje')+'</summary>'+renderRoundDrawView(d,round,false)+'</details>').join('')+'<details class="adminDrawPreview adminDrawSummary"><summary>'+(oneRound?'Pełna tabela losowania':'Pełna tabela losowania T1 / T2')+'</summary>'+renderDrawTable(d,true)+'</details></div>';
 }
 async function saveDisabledStands(id,ev){
   const btn=ev?.target;
