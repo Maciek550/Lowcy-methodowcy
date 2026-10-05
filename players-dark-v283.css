@@ -1,139 +1,213 @@
-/* V283 — Zawodnicy / Dark Clean Łowcy Methodowcy.
-   Tylko prezentacja listy zawodników. Logika, wysokości nawigacji i dane pozostają bez zmian. */
+/* V294 — Zawodnicy: spokojny ciemny wariant Łowców.
+   Tylko warstwa wizualna panelu zawodników; logika i dane bez zmian. */
 
+/* ===== WSPÓLNE ===== */
 body:not(.playerTheme):not(.authMode) #tab-players>.card{
-  background:linear-gradient(180deg,#0d2a3a 0%,#081d2a 100%)!important;
-  border:1px solid #315b70!important;
-  color:#f4fbff!important;
-  box-shadow:0 5px 18px #0004!important;
+  background:linear-gradient(180deg,#0d2839 0%,#081c29 100%)!important;
+  border:1px solid #2c566c!important;
+  color:#f2f8fb!important;
+  box-shadow:0 5px 18px rgba(0,0,0,.28)!important;
 }
 body:not(.playerTheme):not(.authMode) #tab-players>.card>h2{
-  color:#f7fbff!important;
-  text-shadow:0 1px 2px #0008!important;
+  color:#f4f8fb!important;
+  text-shadow:none!important;
 }
 
-/* Pasek objaśnień. */
 body:not(.playerTheme):not(.authMode) #playersList .playerAccountTop{
   gap:8px!important;
 }
 body:not(.playerTheme):not(.authMode) #playersList .playerAccountLegend{
-  background:linear-gradient(180deg,#12384a,#0e2d3d)!important;
-  border:1px solid #3d6b80!important;
-  color:#e9f5fb!important;
-  box-shadow:inset 0 1px 0 #ffffff0d!important;
+  background:linear-gradient(180deg,#12364a,#0d2a3b)!important;
+  border:1px solid #355f75!important;
+  color:#e8f1f6!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04)!important;
 }
 body:not(.playerTheme):not(.authMode) #playersList .playerAccountLegend>span{
-  color:#e9f5fb!important;
+  color:#e8f1f6!important;
 }
 body:not(.playerTheme):not(.authMode) #playersList .playerDeleteAllAdminBtn{
-  background:linear-gradient(180deg,#8d2d3c,#6f1f2c)!important;
+  background:linear-gradient(180deg,#8d3543,#702833)!important;
   color:#fff!important;
-  border:1px solid #b55764!important;
-  box-shadow:0 2px 5px #0004!important;
+  border:1px solid #b15a67!important;
 }
 body:not(.playerTheme):not(.authMode) #playersList .playerDeleteAllAdminBtn:disabled{
-  background:#263a45!important;
-  color:#8fa4af!important;
-  border-color:#3c515d!important;
+  background:#1a3443!important;
+  color:#6f8794!important;
+  border-color:#2c4958!important;
   box-shadow:none!important;
-}
-
-/* Desktop — tabela ciemna, pasy delikatne, bez białych pól. */
-body:not(.playerTheme):not(.authMode) #playersList .tablewrap{
-  background:#0b2635!important;
-  border:1px solid #315e74!important;
-  box-shadow:0 3px 12px #0003!important;
-}
-body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable{
-  background:#0b2635!important;
-  color:#f2f8fc!important;
-}
-body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable thead th{
-  background:linear-gradient(180deg,#17455c,#103448)!important;
-  color:#f8fcff!important;
-  border-color:#3e6c82!important;
-  font-weight:1000!important;
-  letter-spacing:.015em!important;
-}
-body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable tbody tr:nth-child(odd){
-  background:#123447!important;
-}
-body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable tbody tr:nth-child(even){
-  background:#0e2b3b!important;
-}
-body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable tbody tr:hover{
-  background:#19455a!important;
-}
-body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable td{
-  background:transparent!important;
-  color:#eef7fb!important;
-  border-color:#315b70!important;
-}
-body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable td>b{
-  color:#fff!important;
-}
-body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable .center{
-  color:#ffe071!important;
-  font-weight:900!important;
-}
-
-/* Aktywność — czytelny chip zamiast jasnej kapsuły. */
-body:not(.playerTheme):not(.authMode) #playersList .playerLastActivity{
-  display:inline-flex!important;
-  align-items:center!important;
-  margin-left:7px!important;
-  padding:3px 7px!important;
-  border-radius:7px!important;
-  background:#173e31!important;
-  border:1px solid #34845c!important;
-  color:#ddf7e7!important;
-  font-size:10.5px!important;
-  line-height:1.1!important;
-  font-weight:850!important;
-  white-space:nowrap!important;
-  box-shadow:inset 0 1px 0 #ffffff0c!important;
-}
-body:not(.playerTheme):not(.authMode) #playersList .playerLastActivityUnknown{
-  background:#40351f!important;
-  border-color:#9b7f39!important;
-  color:#ffe9a3!important;
 }
 
 /* Badge konta. */
 body:not(.playerTheme):not(.authMode) #playersList .playerAccountVerified{
-  background:#109552!important;
-  color:#fff!important;
-  border-color:#59d58d!important;
-  box-shadow:0 0 0 2px #0d2733,0 1px 3px #0005!important;
+  background:#44c98b!important;
+  color:#062b24!important;
+  -webkit-text-fill-color:#062b24!important;
+  border-color:#83e4b9!important;
+  box-shadow:0 0 0 2px #0b2533,0 1px 3px rgba(0,0,0,.35)!important;
+  font-weight:1000!important;
 }
 body:not(.playerTheme):not(.authMode) #playersList .playerAccountAdmin{
-  background:#e0a92b!important;
-  color:#16232b!important;
-  border-color:#ffe080!important;
-  box-shadow:0 0 0 2px #0d2733,0 1px 3px #0004!important;
+  background:#e5b64c!important;
+  color:#18242b!important;
+  -webkit-text-fill-color:#18242b!important;
+  border-color:#ffe08b!important;
 }
 
-/* Przyciski i komunikacja. */
+/* Aktywność — większa, spokojna i bardzo czytelna. */
+body:not(.playerTheme):not(.authMode) #playersList .playerLastActivity{
+  display:inline-flex!important;
+  align-items:center!important;
+  gap:5px!important;
+  width:auto!important;
+  max-width:none!important;
+  min-width:0!important;
+  margin-left:8px!important;
+  padding:4px 9px!important;
+  border-radius:999px!important;
+  background:linear-gradient(180deg,#10483f,#0b3833)!important;
+  border:1px solid #3bbf8b!important;
+  color:#effff8!important;
+  -webkit-text-fill-color:#effff8!important;
+  font-size:12.5px!important;
+  line-height:1.1!important;
+  font-weight:850!important;
+  letter-spacing:.005em!important;
+  white-space:nowrap!important;
+  text-shadow:none!important;
+  opacity:1!important;
+  visibility:visible!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08)!important;
+}
+body:not(.playerTheme):not(.authMode) #playersList .playerLastActivity::before{
+  content:'◷';
+  display:inline-block;
+  color:#68e6b3!important;
+  -webkit-text-fill-color:#68e6b3!important;
+  font-size:14px!important;
+  line-height:1!important;
+  font-weight:1000!important;
+}
+body:not(.playerTheme):not(.authMode) #playersList .playerLastActivityUnknown{
+  background:#443a25!important;
+  border-color:#a38849!important;
+  color:#fff1bd!important;
+  -webkit-text-fill-color:#fff1bd!important;
+}
+
+/* Przyciski. */
 body:not(.playerTheme):not(.authMode) #playersList .playerManageBtns .secondary,
 body:not(.playerTheme):not(.authMode) #playersList .mobilePlayerManageActions .secondary{
-  background:linear-gradient(180deg,#1e648e,#12465f)!important;
+  background:linear-gradient(180deg,#1975a3,#125375)!important;
   color:#fff!important;
-  border:1px solid #4c91b5!important;
-  box-shadow:0 2px 5px #0004!important;
+  -webkit-text-fill-color:#fff!important;
+  border:1px solid #4d9abd!important;
+  box-shadow:0 2px 5px rgba(0,0,0,.25)!important;
+  text-shadow:none!important;
 }
+body:not(.playerTheme):not(.authMode) #playersList .playerManageBtns .warn,
+body:not(.playerTheme):not(.authMode) #playersList .mobilePlayerManageActions .warn,
 body:not(.playerTheme):not(.authMode) #playersList .playerDeleteBtn{
-  background:linear-gradient(180deg,#a23143,#7c2230)!important;
+  background:linear-gradient(180deg,#a63a49,#7c2935)!important;
   color:#fff!important;
-  border:1px solid #c35c6a!important;
-  box-shadow:0 2px 5px #0004!important;
+  -webkit-text-fill-color:#fff!important;
+  border:1px solid #cb6674!important;
+  box-shadow:0 2px 5px rgba(0,0,0,.25)!important;
+  text-shadow:none!important;
 }
 body:not(.playerTheme):not(.authMode) #playersList .playerDirectoryCall,
 body:not(.playerTheme):not(.authMode) #playersList .commPhonePair button{
-  border-color:#57b780!important;
+  border-color:#4ca77a!important;
 }
 
-/* MOBILE — osobny wariant, ta sama paleta, zero białych kart. */
+/* ===== DESKTOP ===== */
+@media(min-width:761px){
+  body:not(.playerTheme):not(.authMode) #playersList .tablewrap{
+    background:#081d2a!important;
+    border:1px solid #2d566b!important;
+    box-shadow:0 3px 12px rgba(0,0,0,.24)!important;
+  }
+  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable{
+    background:#081d2a!important;
+    color:#eff6f9!important;
+  }
+  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable thead th{
+    background:linear-gradient(180deg,#173c52,#102f43)!important;
+    color:#eaf3f8!important;
+    -webkit-text-fill-color:#eaf3f8!important;
+    border-color:#31586d!important;
+    font-weight:950!important;
+    letter-spacing:.012em!important;
+    text-shadow:none!important;
+  }
+
+  /* Delikatne, ciemne pasy — bez efektu „neonu”. */
+  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable tbody tr:nth-child(odd)>td{
+    background:linear-gradient(180deg,#102d40 0%,#0c2839 100%)!important;
+    color:#eef5f8!important;
+    -webkit-text-fill-color:#eef5f8!important;
+    border-color:#284b5e!important;
+  }
+  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable tbody tr:nth-child(even)>td{
+    background:linear-gradient(180deg,#17384c 0%,#123247 100%)!important;
+    color:#eef5f8!important;
+    -webkit-text-fill-color:#eef5f8!important;
+    border-color:#2c5064!important;
+  }
+  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable tbody tr:hover>td{
+    background:linear-gradient(180deg,#1e455b 0%,#173b50 100%)!important;
+  }
+
+  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable td,
+  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable td>b{
+    color:#f1f6f9!important;
+    -webkit-text-fill-color:#f1f6f9!important;
+    text-shadow:none!important;
+  }
+  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable td>b{
+    font-weight:950!important;
+  }
+  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable .center,
+  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable .center>b{
+    color:#f3f7fa!important;
+    -webkit-text-fill-color:#f3f7fa!important;
+    font-weight:950!important;
+  }
+
+  /* Aktywność na desktopie — wyraźniejsza niż dotychczas. */
+  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable .playerLastActivity{
+    font-size:12.5px!important;
+    padding:4px 9px!important;
+    color:#effff8!important;
+    -webkit-text-fill-color:#effff8!important;
+    background:linear-gradient(180deg,#10483f,#0a3531)!important;
+    border-color:#39b986!important;
+  }
+
+  /* Telefon i koperta spokojniejsze niż jaskrawa zieleń. */
+  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable .playerDirectoryCall,
+  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable .commEnvelope{
+    background:linear-gradient(180deg,#24966e,#167152)!important;
+    border-color:#4ab58a!important;
+    color:#f2fff9!important;
+    -webkit-text-fill-color:#f2fff9!important;
+    box-shadow:0 2px 5px rgba(0,0,0,.28)!important;
+  }
+
+  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable .playerManageBtns .secondary,
+  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable .playerManageBtns .warn,
+  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable .playerDeleteBtn{
+    color:#fff!important;
+    -webkit-text-fill-color:#fff!important;
+  }
+}
+
+/* ===== MOBILE =====
+   Zachowujemy zaakceptowany kompaktowy układ i średni szary gunmetal. */
+.activityShort{display:none}
 @media(max-width:760px){
+  body #app #playersList .activityLong{display:none!important}
+  body #app #playersList .activityShort{display:inline!important}
+
   body:not(.playerTheme):not(.authMode) #tab-players>.card{
     padding:7px!important;
     background:linear-gradient(180deg,#0d2a3a,#081d2a)!important;
@@ -147,257 +221,26 @@ body:not(.playerTheme):not(.authMode) #playersList .commPhonePair button{
     font-size:9px!important;
     line-height:1.15!important;
   }
-  body:not(.playerTheme):not(.authMode) #playersList .mobilePlayersList{
+  body #app #playersList .mobilePlayersList{
     display:flex!important;
     flex-direction:column!important;
     gap:5px!important;
   }
-  body:not(.playerTheme):not(.authMode) #playersList .mobilePlayerManageCard{
-    margin:0!important;
-    padding:7px!important;
-    background:linear-gradient(135deg,#14384b,#0d2939)!important;
-    border:1px solid #3a657a!important;
-    border-radius:9px!important;
-    color:#f3f9fc!important;
-    box-shadow:0 2px 7px #0003!important;
-  }
-  body:not(.playerTheme):not(.authMode) #playersList .mobilePlayerManageCard:nth-child(even){
-    background:linear-gradient(135deg,#103244,#0b2534)!important;
-  }
-  body:not(.playerTheme):not(.authMode) #playersList .mobileAdminCardHead{
-    color:#fff!important;
-  }
-  body:not(.playerTheme):not(.authMode) #playersList .mobileLp{
-    background:#1b566e!important;
-    color:#ffe071!important;
-    border:1px solid #4b8197!important;
-    box-shadow:inset 0 1px 0 #ffffff16!important;
-  }
-  body:not(.playerTheme):not(.authMode) #playersList .playerNameLogin{
-    color:#fff!important;
-    font-weight:1000!important;
-  }
-  body:not(.playerTheme):not(.authMode) #playersList .playerNameLogin .playerLastActivity{
-    margin:3px 0 0!important;
-    padding:3px 5px!important;
-    font-size:8.5px!important;
-    max-width:100%!important;
-  }
-  body:not(.playerTheme):not(.authMode) #playersList .mobilePlayerManageMeta{
-    display:flex!important;
-    align-items:center!important;
-    justify-content:space-between!important;
-    gap:5px!important;
-    margin-top:5px!important;
-  }
-  body:not(.playerTheme):not(.authMode) #playersList .mobilePlayerManageMeta>span{
-    min-width:0!important;
-    padding:4px 6px!important;
-    border:1px solid #355d70!important;
-    border-radius:7px!important;
-    background:#0a2230!important;
-    color:#bcd2dd!important;
-    font-size:9.5px!important;
-    white-space:nowrap!important;
-    overflow:hidden!important;
-    text-overflow:ellipsis!important;
-  }
-  body:not(.playerTheme):not(.authMode) #playersList .mobilePlayerManageMeta b{
-    color:#fff!important;
-  }
-  body:not(.playerTheme):not(.authMode) #playersList .mobilePlayerBadges{
-    flex:0 0 auto!important;
-  }
-  body:not(.playerTheme):not(.authMode) #playersList .mobilePlayerManageActions{
-    margin-top:5px!important;
-  }
-}
-
-/* Małe telefony: zachowaj kontrast i zmieść treść, bez poszerzania kart. */
-@media(max-width:380px){
-  body:not(.playerTheme):not(.authMode) #playersList .mobilePlayerManageCard{
-    padding:6px!important;
-  }
-  body:not(.playerTheme):not(.authMode) #playersList .playerNameLogin .playerLastActivity{
-    font-size:8px!important;
-  }
-  body:not(.playerTheme):not(.authMode) #playersList .mobilePlayerManageMeta>span{
-    font-size:9px!important;
-    padding:3px 5px!important;
-  }
-}
-
-
-/* V284 — desktop: srebrne wiersze + naprawa czytelności "Ostatnia aktywność".
-   Mobile zachowuje ciemne karty V283. */
-@media(min-width:761px){
-  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable tbody tr:nth-child(odd)>td{
-    background:linear-gradient(180deg,#d6dde1 0%,#c5cfd5 100%)!important;
-    color:#0b2533!important;
-    -webkit-text-fill-color:#0b2533!important;
-    border-color:#7d929e!important;
-  }
-  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable tbody tr:nth-child(even)>td{
-    background:linear-gradient(180deg,#c5ced4 0%,#b7c2c9 100%)!important;
-    color:#0b2533!important;
-    -webkit-text-fill-color:#0b2533!important;
-    border-color:#748a96!important;
-  }
-  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable tbody tr:hover>td{
-    background:linear-gradient(180deg,#dfe7eb 0%,#cbd7dd 100%)!important;
-  }
-  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable td>b{
-    color:#071f2c!important;
-    -webkit-text-fill-color:#071f2c!important;
-    font-weight:1000!important;
-  }
-  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable .center,
-  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable .center>b{
-    color:#0b3d2c!important;
-    -webkit-text-fill-color:#0b3d2c!important;
-    font-weight:1000!important;
-  }
-}
-
-/* Chip aktywności: tekst ma być zawsze widoczny na desktopie i mobile. */
-body:not(.playerTheme):not(.authMode) #playersList .playerLastActivity{
-  width:auto!important;
-  max-width:none!important;
-  min-width:0!important;
-  color:#eafff1!important;
-  -webkit-text-fill-color:#eafff1!important;
-  opacity:1!important;
-  visibility:visible!important;
-  text-indent:0!important;
-  font-weight:900!important;
-  letter-spacing:0!important;
-  white-space:nowrap!important;
-}
-body:not(.playerTheme):not(.authMode) #playersList .playerLastActivityUnknown{
-  color:#fff0b8!important;
-  -webkit-text-fill-color:#fff0b8!important;
-}
-@media(max-width:760px){
-  body:not(.playerTheme):not(.authMode) #playersList .playerNameLogin .playerLastActivity{
-    width:auto!important;
-    max-width:100%!important;
-    color:#eafff1!important;
-    -webkit-text-fill-color:#eafff1!important;
-  }
-}
-
-
-/* V287 — finalny desktop Zawodnicy: gunmetal Łowcy + pewny kontrast akcji. */
-@media(min-width:761px){
-  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable tbody tr:nth-child(odd)>td{
-    background:linear-gradient(180deg,#6f8089 0%,#62737c 100%)!important;
-    color:#f7fbfd!important;
-    -webkit-text-fill-color:#f7fbfd!important;
-    border-color:#8fa2ab!important;
-  }
-  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable tbody tr:nth-child(even)>td{
-    background:linear-gradient(180deg,#5f7079 0%,#53646d 100%)!important;
-    color:#f3f8fb!important;
-    -webkit-text-fill-color:#f3f8fb!important;
-    border-color:#879ba5!important;
-  }
-  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable tbody tr:hover>td{
-    background:linear-gradient(180deg,#7f919a 0%,#70838c 100%)!important;
-  }
-  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable td>b{
-    color:#ffffff!important;
-    -webkit-text-fill-color:#ffffff!important;
-    text-shadow:0 1px 2px rgba(0,0,0,.50)!important;
-  }
-  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable .center,
-  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable .center>b{
-    color:#ffe27a!important;
-    -webkit-text-fill-color:#ffe27a!important;
-    text-shadow:0 1px 2px rgba(0,0,0,.55)!important;
-  }
-  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable td:nth-child(5){
-    color:#f6fbfd!important;
-    -webkit-text-fill-color:#f6fbfd!important;
-  }
-}
-
-/* Akcje: biały tekst niezależnie od globalnych reguł button. */
-body:not(.playerTheme):not(.authMode) #playersList .playerManageBtns .secondary,
-body:not(.playerTheme):not(.authMode) #playersList .mobilePlayerManageActions .secondary,
-body:not(.playerTheme):not(.authMode) #playersList .playerManageBtns .warn,
-body:not(.playerTheme):not(.authMode) #playersList .mobilePlayerManageActions .warn,
-body:not(.playerTheme):not(.authMode) #playersList .playerDeleteBtn{
-  color:#ffffff!important;
-  -webkit-text-fill-color:#ffffff!important;
-  text-shadow:0 1px 2px rgba(0,0,0,.45)!important;
-}
-body:not(.playerTheme):not(.authMode) #playersList .playerManageBtns .secondary{
-  background:linear-gradient(180deg,#17658a,#0f4a67)!important;
-  border-color:#62a7c4!important;
-}
-body:not(.playerTheme):not(.authMode) #playersList .playerManageBtns .warn,
-body:not(.playerTheme):not(.authMode) #playersList .playerDeleteBtn{
-  background:linear-gradient(180deg,#9b3444,#742631)!important;
-  border-color:#cf7180!important;
-}
-
-
-/* V288 — MOBILE Zawodnicy: srebrny gunmetal zamiast białych kart.
-   Reguła celowo bez zależności od klas body: #playersList istnieje tylko w panelu admina. */
-@media(max-width:760px){
-  #playersList .mobilePlayersList .mobileAdminCard.mobilePlayerManageCard{
-    background:linear-gradient(145deg,#a2adb3 0%,#919fa6 48%,#7f8f97 100%)!important;
-    border:1px solid #c3ccd0!important;
-    color:#082c2b!important;
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.34),0 3px 10px rgba(0,0,0,.30)!important;
-  }
-  #playersList .mobilePlayersList .mobileAdminCard.mobilePlayerManageCard:nth-child(even){
-    background:linear-gradient(145deg,#96a3aa 0%,#87969e 50%,#75868e 100%)!important;
-  }
-  #playersList .mobilePlayersList .mobilePlayerManageCard .mobileAdminCardHead,
-  #playersList .mobilePlayersList .mobilePlayerManageCard .playerNameLogin{
-    color:#073a2e!important;
-    -webkit-text-fill-color:#073a2e!important;
-    text-shadow:0 1px 0 rgba(255,255,255,.28)!important;
-  }
-  #playersList .mobilePlayersList .mobilePlayerManageCard .mobileLp{
-    background:linear-gradient(180deg,#e0e6e8,#cbd4d8)!important;
-    color:#12362f!important;
-    -webkit-text-fill-color:#12362f!important;
-    border-color:#587985!important;
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.7)!important;
-  }
-  #playersList .mobilePlayersList .mobilePlayerManageCard .mobilePlayerManageMeta>span{
-    background:linear-gradient(180deg,#123549,#0b2938)!important;
-    color:#cbdde6!important;
-    -webkit-text-fill-color:#cbdde6!important;
-    border-color:#426878!important;
-  }
-  #playersList .mobilePlayersList .mobilePlayerManageCard .mobilePlayerManageMeta b{
-    color:#ffffff!important;
-    -webkit-text-fill-color:#ffffff!important;
-  }
-  #playersList .mobilePlayersList .mobilePlayerManageCard .playerLastActivity{
-    background:#17633f!important;
-    border-color:#55a876!important;
-    color:#f2fff6!important;
-    -webkit-text-fill-color:#f2fff6!important;
-    text-shadow:none!important;
-  }
-}
-
-
-/* V290 — MOBILE Zawodnicy: średni szary gunmetal zamiast jasnych/białych kart.
-   Wyższa specyficzność celowo nadpisuje starszą regułę inline z V107. */
-@media(max-width:760px){
   body #app #playersList .mobilePlayersList .mobileAdminCard.mobilePlayerManageCard{
+    margin:0!important;
+    padding:6px 7px!important;
     background:linear-gradient(145deg,#929ca1 0%,#818d93 48%,#707f86 100%)!important;
-    border-color:#b6c0c4!important;
+    border:1px solid #b6c0c4!important;
+    border-radius:9px!important;
     color:#082f2b!important;
     box-shadow:inset 0 1px 0 rgba(255,255,255,.24),0 3px 10px rgba(0,0,0,.30)!important;
   }
   body #app #playersList .mobilePlayersList .mobileAdminCard.mobilePlayerManageCard:nth-child(even){
     background:linear-gradient(145deg,#879399 0%,#77868d 50%,#687980 100%)!important;
+  }
+  body #app #playersList .mobilePlayersList .mobilePlayerManageCard .mobileAdminCardHead{
+    gap:5px!important;
+    color:#062f27!important;
   }
   body #app #playersList .mobilePlayersList .mobilePlayerManageCard .mobileAdminCardHead>b,
   body #app #playersList .mobilePlayersList .mobilePlayerManageCard .playerNameLogin{
@@ -405,39 +248,35 @@ body:not(.playerTheme):not(.authMode) #playersList .playerDeleteBtn{
     -webkit-text-fill-color:#062f27!important;
     text-shadow:0 1px 0 rgba(255,255,255,.22)!important;
   }
-}
-
-
-/* V291 — MOBILE Zawodnicy: większa i krótsza aktywność + ciaśniejsza karta. */
-.activityShort{display:none}
-@media(max-width:760px){
-  body #app #playersList .activityLong{display:none!important}
-  body #app #playersList .activityShort{display:inline!important}
-
-  body #app #playersList .mobilePlayersList{
-    gap:5px!important;
-  }
-  body #app #playersList .mobilePlayersList .mobileAdminCard.mobilePlayerManageCard{
-    padding:6px 7px!important;
-    border-radius:9px!important;
-  }
-  body #app #playersList .mobilePlayersList .mobilePlayerManageCard .mobileAdminCardHead{
-    gap:5px!important;
-  }
   body #app #playersList .mobilePlayersList .mobilePlayerManageCard .playerNameLogin{
     font-size:clamp(15px,4vw,17px)!important;
     line-height:1.12!important;
   }
+  body #app #playersList .mobilePlayersList .mobilePlayerManageCard .mobileLp{
+    background:linear-gradient(180deg,#e0e6e8,#cbd4d8)!important;
+    color:#12362f!important;
+    -webkit-text-fill-color:#12362f!important;
+    border-color:#587985!important;
+  }
+
   body #app #playersList .mobilePlayersList .mobilePlayerManageCard .playerLastActivity{
     display:table!important;
     margin:3px 0 0!important;
     padding:3px 6px!important;
     min-height:0!important;
     border-radius:7px!important;
+    background:#17633f!important;
+    border-color:#55a876!important;
+    color:#f2fff6!important;
+    -webkit-text-fill-color:#f2fff6!important;
     font-size:clamp(11.5px,3.05vw,12.5px)!important;
     line-height:1.05!important;
     font-weight:900!important;
     white-space:nowrap!important;
+    text-shadow:none!important;
+  }
+  body #app #playersList .mobilePlayersList .mobilePlayerManageCard .playerLastActivity::before{
+    display:none!important;
   }
 
   body #app #playersList .mobilePlayersList .mobilePlayerManageMeta{
@@ -452,18 +291,26 @@ body:not(.playerTheme):not(.authMode) #playersList .playerDeleteBtn{
     max-width:100%!important;
     min-height:0!important;
     padding:3px 7px!important;
+    border:1px solid #426878!important;
     border-radius:7px!important;
+    background:linear-gradient(180deg,#123549,#0b2938)!important;
+    color:#cbdde6!important;
+    -webkit-text-fill-color:#cbdde6!important;
     font-size:11.5px!important;
     line-height:1.05!important;
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
   }
   body #app #playersList .mobilePlayersList .mobilePlayerManageMeta>span:last-child{
     justify-self:end!important;
   }
   body #app #playersList .mobilePlayersList .mobilePlayerManageMeta b{
+    color:#fff!important;
+    -webkit-text-fill-color:#fff!important;
     font-size:13.5px!important;
     line-height:1!important;
   }
-
   body #app #playersList .mobilePlayersList .mobilePlayerManageActions{
     gap:6px!important;
     margin:0 0 0 34px!important;
@@ -476,6 +323,7 @@ body:not(.playerTheme):not(.authMode) #playersList .playerDeleteBtn{
     line-height:1!important;
   }
 }
+
 @media(max-width:380px){
   body #app #playersList .mobilePlayersList .mobilePlayerManageCard .playerLastActivity{
     font-size:11px!important;
@@ -484,47 +332,5 @@ body:not(.playerTheme):not(.authMode) #playersList .playerDeleteBtn{
   body #app #playersList .mobilePlayersList .mobilePlayerManageMeta>span{
     font-size:11px!important;
     padding:3px 6px!important;
-  }
-}
-
-/* V294 — desktop Zawodnicy: jasny błękit i ciemny tekst dla pełnej czytelności. */
-@media(min-width:761px){
-  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable tbody tr:nth-child(odd)>td{
-    background:linear-gradient(180deg,#e2f1fa 0%,#d5eaf6 100%)!important;
-    color:#0b2533!important;
-    -webkit-text-fill-color:#0b2533!important;
-    border-color:#8fb3c7!important;
-  }
-  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable tbody tr:nth-child(even)>td{
-    background:linear-gradient(180deg,#d2e8f4 0%,#c5dfed 100%)!important;
-    color:#0b2533!important;
-    -webkit-text-fill-color:#0b2533!important;
-    border-color:#86aabd!important;
-  }
-  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable tbody tr:hover>td{
-    background:linear-gradient(180deg,#edf8fd 0%,#dceff8 100%)!important;
-  }
-  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable td,
-  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable td>b{
-    color:#123447!important;
-    -webkit-text-fill-color:#123447!important;
-    text-shadow:none!important;
-  }
-  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable .center,
-  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable .center>b{
-    color:#0b3d55!important;
-    -webkit-text-fill-color:#0b3d55!important;
-    text-shadow:none!important;
-  }
-  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable .playerLastActivity{
-    color:#effff5!important;
-    -webkit-text-fill-color:#effff5!important;
-  }
-  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable .playerManageBtns .secondary,
-  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable .playerManageBtns .warn,
-  body:not(.playerTheme):not(.authMode) #playersList .adminPlayersTable .playerDeleteBtn{
-    color:#fff!important;
-    -webkit-text-fill-color:#fff!important;
-    text-shadow:0 1px 2px rgba(0,0,0,.38)!important;
   }
 }
