@@ -1,4 +1,4 @@
-const CLIENT_VERSION='300';const CLIENT_VERSION_NAME='V300_ROUND_CHOICE_CONTRAST';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='301';const CLIENT_VERSION_NAME='V301_ONE_ROUND_DISABLED_T2';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -1087,17 +1087,17 @@ function renderPlayerMobilePanelContent(d,panel){
 }
 function renderPlayerMobileDashboard(d){
   const p=PLAYER_MOBILE_PANEL,early=playerEarlyListAvailable(d.competition),oneRound=Number(d.competition?.round_count||2)===1;
-  const b=(panel,label,cls='')=>'<button type="button" class="'+cls+' '+(p===panel?'active':'')+'" onclick="showPlayerMobilePanel(\''+panel+'\',event)">'+label+'</button>';
+  const b=(panel,label,cls='',disabled=false)=>'<button type="button" class="'+cls+' '+(disabled?'disabledRoundTile ':'')+(p===panel&&!disabled?'active':'')+'" '+(disabled?'disabled aria-disabled="true" title="Niedostępne w zawodach 1-turowych" style="background:#59656e!important;color:#d6dce0!important;border-color:#7d8991!important;filter:grayscale(1);cursor:not-allowed;opacity:.72"':'onclick="showPlayerMobilePanel(\''+panel+'\',event)"')+'>'+label+(disabled?'<small style="display:block;font-size:9px;line-height:1.1;margin-top:3px;font-weight:800">NIEDOSTĘPNE</small>':'')+'</button>';
   return '<div class="playerMobileDashboard">'
     +'<div class="playerDrawStickySlot"><div class="card playerDrawHeaderCard playerUnifiedNav">'
     +'<div class="playerPrimaryNav">'
-      +b('draw1',(oneRound?'Losowanie':'Losowanie<br>Tura 1')+playerDrawStar(d,1),'drawTile')
-      +(oneRound?'':b('draw2','Losowanie<br>Tura 2'+playerDrawStar(d,2),'drawTile'))
-      +b('t1',(oneRound?'Wyniki':'Wyniki<br>Tura 1')+playerResultStar(d,1),'resultTile')
-      +(oneRound?'':b('t2','Wyniki<br>Tura 2'+playerResultStar(d,2),'resultTile'))
+      +b('draw1','Losowanie<br>Tura 1'+playerDrawStar(d,1),'drawTile')
+      +b('draw2','Losowanie<br>Tura 2','drawTile',oneRound)
+      +b('t1','Wyniki<br>Tura 1'+playerResultStar(d,1),'resultTile')
+      +b('t2','Wyniki<br>Tura 2','resultTile',oneRound)
       +'<div class="playerPrimaryStack">'+b('general','GENERAL','resultTile generalTile')+b('stats','STATYSTYKI','resultTile statsTile')+'</div>'
     +'</div>'
-    +'<div class="playerMapNav playerQuickInfoNav '+(early?'withEarlyList':'withoutEarlyList')+'">'+b('info','INFO','infoTile')+b('map1',oneRound?'MAPA':'MAPA T1','mapTile')+(oneRound?'':b('map2','MAPA T2','mapTile'))+(early?b('list','LISTA <span class="playerEarlyListCount">'+(d.activeEntries||[]).length+'</span>','earlyListTile'):'')+'</div>'
+    +'<div class="playerMapNav playerQuickInfoNav '+(early?'withEarlyList':'withoutEarlyList')+'">'+b('info','INFO','infoTile')+b('map1','MAPA T1','mapTile')+b('map2','MAPA T2','mapTile',oneRound)+(early?b('list','LISTA <span class="playerEarlyListCount">'+(d.activeEntries||[]).length+'</span>','earlyListTile'):'')+'</div>'
     +'</div></div>'
     +'<div id="playerMobilePanelContent">'+renderPlayerMobilePanelContent(d,p)+'</div>'
     +'</div>';
@@ -1129,17 +1129,17 @@ function renderPlayerDesktopPanelContent(d,panel){
 }
 function renderPlayerDesktopDashboard(d){
   const p=PLAYER_MOBILE_PANEL,early=playerEarlyListAvailable(d.competition),oneRound=Number(d.competition?.round_count||2)===1;
-  const b=(panel,label,cls='')=>'<button type="button" class="'+cls+' '+(p===panel?'active':'')+'" onclick="showPlayerDesktopPanel(\''+panel+'\',event)">'+label+'</button>';
+  const b=(panel,label,cls='',disabled=false)=>'<button type="button" class="'+cls+' '+(disabled?'disabledRoundTile ':'')+(p===panel&&!disabled?'active':'')+'" '+(disabled?'disabled aria-disabled="true" title="Niedostępne w zawodach 1-turowych" style="background:#59656e!important;color:#d6dce0!important;border-color:#7d8991!important;filter:grayscale(1);cursor:not-allowed;opacity:.72"':'onclick="showPlayerDesktopPanel(\''+panel+'\',event)"')+'>'+label+(disabled?'<small style="display:block;font-size:9px;line-height:1.1;margin-top:3px;font-weight:800">NIEDOSTĘPNE</small>':'')+'</button>';
   return '<div class="playerDesktopDashboardV56 playerDesktopDashboardV55">'
     +'<div class="playerDesktopStickySlot"><div class="card playerDesktopUnifiedNav">'
     +'<div class="playerDesktopPrimaryNav">'
-      +b('draw1',(oneRound?'Losowanie':'Losowanie<br>Tura 1')+playerDrawStar(d,1),'drawTile')
-      +(oneRound?'':b('draw2','Losowanie<br>Tura 2'+playerDrawStar(d,2),'drawTile'))
-      +b('t1',(oneRound?'Wyniki':'Wyniki<br>Tura 1')+playerResultStar(d,1),'resultTile')
-      +(oneRound?'':b('t2','Wyniki<br>Tura 2'+playerResultStar(d,2),'resultTile'))
+      +b('draw1','Losowanie<br>Tura 1'+playerDrawStar(d,1),'drawTile')
+      +b('draw2','Losowanie<br>Tura 2','drawTile',oneRound)
+      +b('t1','Wyniki<br>Tura 1'+playerResultStar(d,1),'resultTile')
+      +b('t2','Wyniki<br>Tura 2','resultTile',oneRound)
       +'<div class="playerPrimaryStack">'+b('general','GENERAL','resultTile generalTile')+b('stats','STATYSTYKI','resultTile statsTile')+'</div>'
     +'</div>'
-    +'<div class="playerDesktopSubNav playerDesktopMapsOnly playerQuickInfoNav '+(early?'withEarlyList':'withoutEarlyList')+'">'+b('info','INFO','infoTile')+b('map1',oneRound?'MAPA':'MAPA T1','mapTile')+(oneRound?'':b('map2','MAPA T2','mapTile'))+(early?b('list','LISTA <span class="playerEarlyListCount">'+(d.activeEntries||[]).length+'</span>','earlyListTile'):'')+'</div>'
+    +'<div class="playerDesktopSubNav playerDesktopMapsOnly playerQuickInfoNav '+(early?'withEarlyList':'withoutEarlyList')+'">'+b('info','INFO','infoTile')+b('map1','MAPA T1','mapTile')+b('map2','MAPA T2','mapTile',oneRound)+(early?b('list','LISTA <span class="playerEarlyListCount">'+(d.activeEntries||[]).length+'</span>','earlyListTile'):'')+'</div>'
     +'</div></div>'
     +'<div id="playerDesktopPanelContent">'+renderPlayerDesktopPanelContent(d,p)+'</div>'
     +'</div>';
@@ -1189,6 +1189,7 @@ function showPlayerDesktopPanel(panel,ev){
   closePlayerSituationalMap();
   const keepY=APP_NAV_RESTORING?Math.round(window.scrollY||0):null;
   const allowed=['info','draw1','draw2','map1','map2','t1','t2','general','stats','list'];
+  if(Number(CURRENT_DETAIL?.competition?.round_count||2)===1&&['draw2','map2','t2'].includes(panel))return;
   if(panel==='list'&&!playerEarlyListAvailable(CURRENT_DETAIL?.competition))return;
   if(!allowed.includes(panel))return;
   const closing=PLAYER_MOBILE_PANEL===panel;
@@ -1351,6 +1352,7 @@ function showPlayerMobilePanel(panel,ev){
   closePlayerSituationalMap();
   const keepY=APP_NAV_RESTORING?Math.round(window.scrollY||0):null;
   const allowed=['info','draw1','draw2','map1','map2','t1','t2','general','stats','list'];
+  if(Number(CURRENT_DETAIL?.competition?.round_count||2)===1&&['draw2','map2','t2'].includes(panel))return;
   if(panel==='list'&&!playerEarlyListAvailable(CURRENT_DETAIL?.competition))return;
   if(!allowed.includes(panel))return;
   const closing=PLAYER_MOBILE_PANEL===panel;
