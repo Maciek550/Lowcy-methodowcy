@@ -1087,7 +1087,7 @@ function renderPlayerMobilePanelContent(d,panel){
 }
 function renderPlayerMobileDashboard(d){
   const p=PLAYER_MOBILE_PANEL,early=playerEarlyListAvailable(d.competition),oneRound=Number(d.competition?.round_count||2)===1;
-  const b=(panel,label,cls='',disabled=false)=>'<button type="button" class="'+cls+' '+(disabled?'disabledRoundTile ':'')+(p===panel&&!disabled?'active':'')+'" '+(disabled?'disabled aria-disabled="true" title="Niedostępne w zawodach 1-turowych" style="background:#59656e!important;color:#d6dce0!important;border-color:#7d8991!important;filter:grayscale(1);cursor:not-allowed;opacity:.72"':'onclick="showPlayerMobilePanel(\''+panel+'\',event)"')+'>'+label+(disabled?'<small style="display:block;font-size:9px;line-height:1.1;margin-top:3px;font-weight:800">NIEDOSTĘPNE</small>':'')+'</button>';
+  const b=(panel,label,cls='',disabled=false)=>'<button type="button" class="'+cls+' '+(disabled?'disabledRoundTile ':'')+(p===panel&&!disabled?'active':'')+'" '+(disabled?'disabled aria-disabled="true" title="Niedostępne w zawodach 1-turowych" style="background:#59656e!important;color:#d6dce0!important;border-color:#7d8991!important;filter:grayscale(1);cursor:not-allowed;opacity:.72"':'onclick="showPlayerMobilePanel(\''+panel+'\',event)"')+'>'+label+'</button>';
   return '<div class="playerMobileDashboard">'
     +'<div class="playerDrawStickySlot"><div class="card playerDrawHeaderCard playerUnifiedNav">'
     +'<div class="playerPrimaryNav">'
@@ -1129,7 +1129,7 @@ function renderPlayerDesktopPanelContent(d,panel){
 }
 function renderPlayerDesktopDashboard(d){
   const p=PLAYER_MOBILE_PANEL,early=playerEarlyListAvailable(d.competition),oneRound=Number(d.competition?.round_count||2)===1;
-  const b=(panel,label,cls='',disabled=false)=>'<button type="button" class="'+cls+' '+(disabled?'disabledRoundTile ':'')+(p===panel&&!disabled?'active':'')+'" '+(disabled?'disabled aria-disabled="true" title="Niedostępne w zawodach 1-turowych" style="background:#59656e!important;color:#d6dce0!important;border-color:#7d8991!important;filter:grayscale(1);cursor:not-allowed;opacity:.72"':'onclick="showPlayerDesktopPanel(\''+panel+'\',event)"')+'>'+label+(disabled?'<small style="display:block;font-size:9px;line-height:1.1;margin-top:3px;font-weight:800">NIEDOSTĘPNE</small>':'')+'</button>';
+  const b=(panel,label,cls='',disabled=false)=>'<button type="button" class="'+cls+' '+(disabled?'disabledRoundTile ':'')+(p===panel&&!disabled?'active':'')+'" '+(disabled?'disabled aria-disabled="true" title="Niedostępne w zawodach 1-turowych" style="background:#59656e!important;color:#d6dce0!important;border-color:#7d8991!important;filter:grayscale(1);cursor:not-allowed;opacity:.72"':'onclick="showPlayerDesktopPanel(\''+panel+'\',event)"')+'>'+label+'</button>';
   return '<div class="playerDesktopDashboardV56 playerDesktopDashboardV55">'
     +'<div class="playerDesktopStickySlot"><div class="card playerDesktopUnifiedNav">'
     +'<div class="playerDesktopPrimaryNav">'
