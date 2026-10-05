@@ -25,8 +25,8 @@ const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const GOOGLE_VISION_API_KEY = process.env.GOOGLE_VISION_API_KEY || process.env.OCR_GOOGLE_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.PHOTO_OCR_OPENAI_API_KEY || '';
 const PHOTO_OCR_MODEL = process.env.PHOTO_OCR_OPENAI_MODEL || 'gpt-5.6-sol';
-const APP_VERSION = '296';
-const APP_VERSION_NAME = 'V296_PLAYERS_DARK_TABLE';
+const APP_VERSION = '297';
+const APP_VERSION_NAME = 'V297_PLAYERS_SPECIFICITY_FIX';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
 const PODIUM_TROPHIES = fs.existsSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) ? fs.readFileSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) : null;
 const CARP_REAL = fs.readFileSync(pathModule.join(__dirname, 'carp-real-v116.png'));
@@ -1866,7 +1866,7 @@ async function route(req, res) {
   if(path==='/history-compact-v241.css')return send(res,200,fs.readFileSync(pathModule.join(__dirname,'history-compact-v241.css'),'utf8'),{'Content-Type':'text/css; charset=utf-8','Cache-Control':'no-store'});
   if(path==='/result-contrast-v242.css')return send(res,200,fs.readFileSync(pathModule.join(__dirname,'result-contrast-v242.css'),'utf8'),{'Content-Type':'text/css; charset=utf-8','Cache-Control':'no-store'});
   if(path==='/desktop-draw-v243.css')return send(res,200,fs.readFileSync(pathModule.join(__dirname,'desktop-draw-v243.css'),'utf8'),{'Content-Type':'text/css; charset=utf-8','Cache-Control':'no-store'});
-  if(path==='/players-dark-v296.css')return send(res,200,fs.readFileSync(pathModule.join(__dirname,'players-dark-v296.css'),'utf8'),{'Content-Type':'text/css; charset=utf-8','Cache-Control':'no-store'});
+  if(path==='/players-dark-v297.css')return send(res,200,fs.readFileSync(pathModule.join(__dirname,'players-dark-v297.css'),'utf8'),{'Content-Type':'text/css; charset=utf-8','Cache-Control':'no-store'});
   if(path==='/draw-ui-v240.css')return send(res,200,fs.readFileSync(pathModule.join(__dirname,'draw-ui-v240.css'),'utf8'),{'Content-Type':'text/css; charset=utf-8','Cache-Control':'no-store'});
   if(path==='/draw-notice-ui-v240.js')return send(res,200,fs.readFileSync(pathModule.join(__dirname,'draw-notice-ui-v240.js'),'utf8'),{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-store'});
   if (path === '/app.js') return send(res, 200, APP_JS, {'Content-Type':'application/javascript; charset=utf-8', 'Cache-Control':'no-store, no-cache, must-revalidate'});
@@ -2083,7 +2083,7 @@ const HISTORY_COMPACT_CSS='/history-compact-v241.css?v=${APP_VERSION}';
 const DRAW_CSS='/draw-ui-v240.css?v=${APP_VERSION}';
 const RESULT_CONTRAST_CSS='/result-contrast-v242.css?v=${APP_VERSION}';
 const DESKTOP_DRAW_CSS='/desktop-draw-v243.css?v=${APP_VERSION}';
-const PLAYERS_DARK_CSS='/players-dark-v296.css?v=${APP_VERSION}';
+const PLAYERS_DARK_CSS='/players-dark-v297.css?v=${APP_VERSION}';
 const DRAW_JS='/draw-notice-ui-v240.js?v=${APP_VERSION}';
 const SHELL=['/',APP_SHELL_JS,PDF_JS,COMM_JS,RECOVERY_JS,ACCESS_CSS,ROSTER_CSS,DOCK_CSS,COMPACT_CSS,DESKTOP_NAV_CSS,HISTORY_CSS,HISTORY_COMPACT_CSS,DRAW_CSS,RESULT_CONTRAST_CSS,DESKTOP_DRAW_CSS,PLAYERS_DARK_CSS,DRAW_JS];
 async function fetchWithTimeout(req,ms=30000){const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),ms);try{return await fetch(req,{cache:'no-store',signal:ctrl.signal})}finally{clearTimeout(timer)}}
@@ -2099,7 +2099,7 @@ self.addEventListener('activate',event=>event.waitUntil((async()=>{
 })()));
 self.addEventListener('fetch',event=>{const req=event.request,u=new URL(req.url);if(req.method!=='GET'||u.origin!==self.location.origin)return;
  if(req.mode==='navigate'){event.respondWith((async()=>{try{const r=await fetchWithTimeout(req);if(r.ok)return r}catch(e){}return(await(await caches.open(SHELL_CACHE)).match('/'))||(await caches.match('/'))||new Response('Brak połączenia. Otwórz aplikację ponownie po połączeniu z internetem.',{headers:{'Content-Type':'text/plain; charset=utf-8'}})})());return}
- if(['/app.js','/pdf-vector.js','/communication-ui.js','/password-recovery-ui.js','/accessibility-v234.css','/roster-preview-v235.css','/player-dock-v236.css','/compact-player-v237.css','/desktop-nav-v238.css','/history-lux-v239.css','/history-compact-v241.css','/draw-ui-v240.css','/result-contrast-v242.css','/desktop-draw-v243.css','/players-dark-v296.css','/draw-notice-ui-v240.js'].includes(u.pathname)){event.respondWith((async()=>{const key=u.pathname+u.search,c=await caches.open(SHELL_CACHE);try{const fresh=await fetchWithTimeout(req,9000);if(fresh.ok){await c.put(key,fresh.clone());return fresh}}catch(e){}return(await c.match(key))||(await caches.match(key))||Response.error()})());return}
+ if(['/app.js','/pdf-vector.js','/communication-ui.js','/password-recovery-ui.js','/accessibility-v234.css','/roster-preview-v235.css','/player-dock-v236.css','/compact-player-v237.css','/desktop-nav-v238.css','/history-lux-v239.css','/history-compact-v241.css','/draw-ui-v240.css','/result-contrast-v242.css','/desktop-draw-v243.css','/players-dark-v297.css','/draw-notice-ui-v240.js'].includes(u.pathname)){event.respondWith((async()=>{const key=u.pathname+u.search,c=await caches.open(SHELL_CACHE);try{const fresh=await fetchWithTimeout(req,9000);if(fresh.ok){await c.put(key,fresh.clone());return fresh}}catch(e){}return(await c.match(key))||(await caches.match(key))||Response.error()})());return}
 });
 async function setLowcyBadge(n){try{const count=Math.max(0,Number(n||0));if(self.navigator&&typeof self.navigator.setAppBadge==='function'){if(count)await self.navigator.setAppBadge(count);else if(typeof self.navigator.clearAppBadge==='function')await self.navigator.clearAppBadge()}}catch(e){}}
 self.addEventListener('message', event => {
@@ -8851,7 +8851,7 @@ body:not(.playerTheme):not(.authMode) #btn-players.active .adminPlayersTabStats{
 <link rel="stylesheet" href="/draw-ui-v240.css?v=${APP_VERSION}">
 <link rel="stylesheet" href="/result-contrast-v242.css?v=${APP_VERSION}">
 <link rel="stylesheet" href="/desktop-draw-v243.css?v=${APP_VERSION}">
-<link rel="stylesheet" href="/players-dark-v296.css?v=${APP_VERSION}">
+<link rel="stylesheet" href="/players-dark-v297.css?v=${APP_VERSION}">
 </head>
 <body class="authMode">
 <div id="bootGuard"><img src="/icon-192.png" alt=""><b>Łowcy Methodowcy</b><span>Uruchamiam aplikację…</span><button id="bootRetry" class="hidden" type="button" onclick="retryLowcyBoot()">Spróbuj ponownie</button></div>
