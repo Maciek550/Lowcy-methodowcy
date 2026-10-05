@@ -22,81 +22,71 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-
           server = Path('server.cjs')
           s = server.read_text(encoding='utf-8')
           s = s.replace("const APP_VERSION = '295';", "const APP_VERSION = '296';", 1)
           s = s.replace("const APP_VERSION_NAME = 'V295_PLAYERS_DARK_VERSION_SYNC';", "const APP_VERSION_NAME = 'V296_PLAYERS_DARK_TABLE';", 1)
           s = s.replace('players-dark-v295.css', 'players-dark-v296.css')
           server.write_text(s, encoding='utf-8')
-
           app = Path('app.js')
           a = app.read_text(encoding='utf-8')
-          a = a.replace("const CLIENT_VERSION='295';const CLIENT_VERSION_NAME='V295_PLAYERS_DARK_VERSION_SYNC';",
-                        "const CLIENT_VERSION='296';const CLIENT_VERSION_NAME='V296_PLAYERS_DARK_TABLE';", 1)
+          a = a.replace("const CLIENT_VERSION='295';const CLIENT_VERSION_NAME='V295_PLAYERS_DARK_VERSION_SYNC';", "const CLIENT_VERSION='296';const CLIENT_VERSION_NAME='V296_PLAYERS_DARK_TABLE';", 1)
           app.write_text(a, encoding='utf-8')
-
-          src = Path('players-dark-v295.css').read_text(encoding='utf-8')
-          extra = r'''
-
-/* V296 — desktop: faktyczna tabela wewnątrz #playersList, bez zależności od klasy tabeli. */
-@media(min-width:761px){
-  body:not(.playerTheme):not(.authMode) #playersList .tablewrap table{
-    background:#0a2230!important;
-    color:#eef5f8!important;
-  }
-  body:not(.playerTheme):not(.authMode) #playersList .tablewrap table thead th{
-    background:linear-gradient(180deg,#173e54 0%,#102f42 100%)!important;
-    color:#f3f8fb!important;
-    -webkit-text-fill-color:#f3f8fb!important;
-    border-color:#365d70!important;
-    text-shadow:none!important;
-  }
-  body:not(.playerTheme):not(.authMode) #playersList .tablewrap table tbody tr:nth-child(odd) td{
-    background:#102d3d!important;
-    color:#eef5f8!important;
-    -webkit-text-fill-color:#eef5f8!important;
-    border-color:#355667!important;
-  }
-  body:not(.playerTheme):not(.authMode) #playersList .tablewrap table tbody tr:nth-child(even) td{
-    background:#17394b!important;
-    color:#eef5f8!important;
-    -webkit-text-fill-color:#eef5f8!important;
-    border-color:#3b6072!important;
-  }
-  body:not(.playerTheme):not(.authMode) #playersList .tablewrap table tbody tr:hover td{
-    background:#1c4559!important;
-  }
-  body:not(.playerTheme):not(.authMode) #playersList .tablewrap table tbody td>b,
-  body:not(.playerTheme):not(.authMode) #playersList .tablewrap table tbody td .playerNameLogin{
-    color:#f5f9fb!important;
-    -webkit-text-fill-color:#f5f9fb!important;
-    text-shadow:none!important;
-    font-weight:950!important;
-  }
-  body:not(.playerTheme):not(.authMode) #playersList .tablewrap table .playerLastActivity{
-    font-size:13px!important;
-    padding:4px 10px!important;
-    background:linear-gradient(180deg,#0d5948,#094237)!important;
-    border-color:#35b989!important;
-    color:#f3fff9!important;
-    -webkit-text-fill-color:#f3fff9!important;
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 1px 2px rgba(0,0,0,.25)!important;
-  }
-  body:not(.playerTheme):not(.authMode) #playersList .tablewrap table .playerAccountVerified{
-    background:#4bd29b!important;
-    color:#062d25!important;
-    -webkit-text-fill-color:#062d25!important;
-  }
-  body:not(.playerTheme):not(.authMode) #playersList .tablewrap table button,
-  body:not(.playerTheme):not(.authMode) #playersList .tablewrap table .playerLastActivity,
-  body:not(.playerTheme):not(.authMode) #playersList .tablewrap table .playerAccountVerified{
-    opacity:1!important;
-  }
-}
-'''
-          Path('players-dark-v296.css').write_text('/* V296 — nowy asset tabeli Zawodnicy. */\n' + src + extra, encoding='utf-8')
           PY
+          cp players-dark-v295.css players-dark-v296.css
+          cat >> players-dark-v296.css <<'CSS'
+
+          /* V296 — desktop: faktyczna tabela wewnątrz #playersList, bez zależności od klasy tabeli. */
+          @media(min-width:761px){
+            body:not(.playerTheme):not(.authMode) #playersList .tablewrap table{
+              background:#0a2230!important;
+              color:#eef5f8!important;
+            }
+            body:not(.playerTheme):not(.authMode) #playersList .tablewrap table thead th{
+              background:linear-gradient(180deg,#173e54 0%,#102f42 100%)!important;
+              color:#f3f8fb!important;
+              -webkit-text-fill-color:#f3f8fb!important;
+              border-color:#365d70!important;
+              text-shadow:none!important;
+            }
+            body:not(.playerTheme):not(.authMode) #playersList .tablewrap table tbody tr:nth-child(odd) td{
+              background:#102d3d!important;
+              color:#eef5f8!important;
+              -webkit-text-fill-color:#eef5f8!important;
+              border-color:#355667!important;
+            }
+            body:not(.playerTheme):not(.authMode) #playersList .tablewrap table tbody tr:nth-child(even) td{
+              background:#17394b!important;
+              color:#eef5f8!important;
+              -webkit-text-fill-color:#eef5f8!important;
+              border-color:#3b6072!important;
+            }
+            body:not(.playerTheme):not(.authMode) #playersList .tablewrap table tbody tr:hover td{
+              background:#1c4559!important;
+            }
+            body:not(.playerTheme):not(.authMode) #playersList .tablewrap table tbody td>b,
+            body:not(.playerTheme):not(.authMode) #playersList .tablewrap table tbody td .playerNameLogin{
+              color:#f5f9fb!important;
+              -webkit-text-fill-color:#f5f9fb!important;
+              text-shadow:none!important;
+              font-weight:950!important;
+            }
+            body:not(.playerTheme):not(.authMode) #playersList .tablewrap table .playerLastActivity{
+              font-size:13px!important;
+              padding:4px 10px!important;
+              background:linear-gradient(180deg,#0d5948,#094237)!important;
+              border-color:#35b989!important;
+              color:#f3fff9!important;
+              -webkit-text-fill-color:#f3fff9!important;
+              box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 1px 2px rgba(0,0,0,.25)!important;
+            }
+            body:not(.playerTheme):not(.authMode) #playersList .tablewrap table .playerAccountVerified{
+              background:#4bd29b!important;
+              color:#062d25!important;
+              -webkit-text-fill-color:#062d25!important;
+            }
+          }
+          CSS
 
       - name: Validate V296
         shell: bash
