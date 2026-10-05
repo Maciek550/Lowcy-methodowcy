@@ -5,15 +5,20 @@ import runpy
 # Apply the already-reviewed V298 implementation first.
 runpy.run_path('tools/v298_patch2.py', run_name='__main__')
 
-# Fix the generated focused test file: patch2 intentionally used a raw triple-quoted
-# payload and left one literal backslash at the beginning. Remove only that marker.
+# Normalize the generated focused test file.
 focused = Path('tests/competition-rounds-v298.test.cjs')
 if focused.exists():
     t = focused.read_text(encoding='utf-8')
     if t.startswith('\\\n'):
-        focused.write_text(t[2:], encoding='utf-8')
+        t = t[2:]
     elif t.startswith('\\'):
-        focused.write_text(t[1:], encoding='utf-8')
+        t = t[1:]
+    old = "function extractFunction(name,nextName){const start=server.indexOf('function '+name+'('),end=server.indexOf('\\nfunction '+nextName+'(',start);assert.ok(start>=0&&end>start,'cannot extract '+name);return server.slice(start,end)}"
+    new = "function extractFunction(name,nextName){const start=server.indexOf('function '+name+'(');let end=server.indexOf('\\nfunction '+nextName+'(',start);if(end<0)end=server.indexOf('\\nasync function '+nextName+'(',start);assert.ok(start>=0&&end>start,'cannot extract '+name);return server.slice(start,end)}"
+    if old not in t:
+        raise SystemExit('V298 patch3: focused extractor anchor missing')
+    t = t.replace(old, new, 1)
+    focused.write_text(t, encoding='utf-8')
 
 # A few legacy regression tests still pin the application to old release numbers.
 # Synchronize only version assertions; historical feature labels stay untouched.
