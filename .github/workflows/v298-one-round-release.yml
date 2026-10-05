@@ -32,17 +32,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-
       - name: Install dependencies
         run: npm install --ignore-scripts --no-audit --no-fund
-
       - name: Apply V298 source changes
-        run: python tools/v298_patch.py
-
+        run: python tools/v298_patch_fix.py
       - name: Static validation
         shell: bash
         run: |
@@ -56,18 +52,15 @@ jobs:
           grep -q "players-dark-v298.css" server.cjs
           test -f players-dark-v298.css
           git diff --check
-
       - name: Existing regression suite
         run: npm test
-
       - name: Focused V298 one/two round integration
         run: node tests/v298-round-mode.cjs
-
       - name: Commit and release V298 to main only after tests pass
         shell: bash
         run: |
           git config user.name "lowcy-v298-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add server.cjs app.js draw-notice.cjs players-dark-v298.css tests/v298-round-mode.cjs tools/v298_patch.py .github/workflows/v298-one-round-release.yml
+          git add server.cjs app.js draw-notice.cjs players-dark-v298.css tests/v298-round-mode.cjs tools/v298_patch.py tools/v298_patch_fix.py .github/workflows/v298-one-round-release.yml
           git commit -m "V298: add tested one/two round competition modes"
           git push origin HEAD:main
