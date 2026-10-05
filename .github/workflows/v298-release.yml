@@ -5,6 +5,9 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/v298-release.yml'
+      - 'tools/v298_patch2.py'
+      - 'tools/v298_patch3.py'
+      - 'tools/v298_compare_failures.py'
 
 permissions:
   contents: write
