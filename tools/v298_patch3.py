@@ -5,9 +5,18 @@ import runpy
 # Apply the already-reviewed V298 implementation first.
 runpy.run_path('tools/v298_patch2.py', run_name='__main__')
 
-# A few legacy regression tests still pin the application to V253.
-# Keep those tests meaningful by synchronizing only their version assertions
-# with the release under test. Historical feature names (V236/V237/etc.) stay intact.
+# Fix the generated focused test file: patch2 intentionally used a raw triple-quoted
+# payload and left one literal backslash at the beginning. Remove only that marker.
+focused = Path('tests/competition-rounds-v298.test.cjs')
+if focused.exists():
+    t = focused.read_text(encoding='utf-8')
+    if t.startswith('\\\n'):
+        focused.write_text(t[2:], encoding='utf-8')
+    elif t.startswith('\\'):
+        focused.write_text(t[1:], encoding='utf-8')
+
+# A few legacy regression tests still pin the application to old release numbers.
+# Synchronize only version assertions; historical feature labels stay untouched.
 for p in Path('tests').glob('*.test.cjs'):
     text = p.read_text(encoding='utf-8')
     original = text
