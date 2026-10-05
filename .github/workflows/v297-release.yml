@@ -1,0 +1,101 @@
+name: "V297 Players specificity release"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/v297-release.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-v297:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: "Apply V297 source changes"
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          server = Path('server.cjs')
+          s = server.read_text(encoding='utf-8')
+          s = s.replace("const APP_VERSION = '296';", "const APP_VERSION = '297';", 1)
+          s = s.replace("const APP_VERSION_NAME = 'V296_PLAYERS_DARK_TABLE';", "const APP_VERSION_NAME = 'V297_PLAYERS_SPECIFICITY_FIX';", 1)
+          s = s.replace('players-dark-v296.css', 'players-dark-v297.css')
+          server.write_text(s, encoding='utf-8')
+
+          app = Path('app.js')
+          a = app.read_text(encoding='utf-8')
+          a = a.replace("const CLIENT_VERSION='296';const CLIENT_VERSION_NAME='V296_PLAYERS_DARK_TABLE';", "const CLIENT_VERSION='297';const CLIENT_VERSION_NAME='V297_PLAYERS_SPECIFICITY_FIX';", 1)
+          app.write_text(a, encoding='utf-8')
+          PY
+
+          cp players-dark-v296.css players-dark-v297.css
+          cat >> players-dark-v297.css <<'CSS'
+
+          /* V297 — świadomie wyższa specyficzność niż stara reguła V107 w server.cjs.
+             Stary selektor: body #app #playersList .adminPlayersTable tbody td {... !important}
+             Dlatego wcześniejsze V295/V296 przegrywały mimo !important. */
+          @media(min-width:761px){
+            body:not(.playerTheme):not(.authMode) #app #playersList .adminPlayersTable tbody tr:nth-child(odd)>td{
+              background:#102d3d!important;
+              background-image:none!important;
+              color:#eef5f8!important;
+              -webkit-text-fill-color:#eef5f8!important;
+              border-color:#355667!important;
+              text-shadow:none!important;
+            }
+            body:not(.playerTheme):not(.authMode) #app #playersList .adminPlayersTable tbody tr:nth-child(even)>td{
+              background:#17394b!important;
+              background-image:none!important;
+              color:#eef5f8!important;
+              -webkit-text-fill-color:#eef5f8!important;
+              border-color:#3b6072!important;
+              text-shadow:none!important;
+            }
+            body:not(.playerTheme):not(.authMode) #app #playersList .adminPlayersTable tbody tr:hover>td{
+              background:#1c4559!important;
+              background-image:none!important;
+            }
+            body:not(.playerTheme):not(.authMode) #app #playersList .adminPlayersTable tbody td>b,
+            body:not(.playerTheme):not(.authMode) #app #playersList .adminPlayersTable tbody td{
+              color:#f3f8fb!important;
+              -webkit-text-fill-color:#f3f8fb!important;
+              text-shadow:none!important;
+            }
+            body:not(.playerTheme):not(.authMode) #app #playersList .adminPlayersTable .playerLastActivity{
+              background:linear-gradient(180deg,#0d5948,#094237)!important;
+              color:#f5fff9!important;
+              -webkit-text-fill-color:#f5fff9!important;
+              border-color:#35b989!important;
+              font-size:13px!important;
+              font-weight:900!important;
+              padding:4px 10px!important;
+            }
+          }
+          CSS
+
+      - name: "Validate V297"
+        shell: bash
+        run: |
+          grep -q "const APP_VERSION = '297';" server.cjs
+          grep -q "V297_PLAYERS_SPECIFICITY_FIX" server.cjs
+          grep -q "V297_PLAYERS_SPECIFICITY_FIX" app.js
+          grep -q 'players-dark-v297.css' server.cjs
+          grep -q '#app #playersList .adminPlayersTable tbody tr:nth-child(odd)>td' players-dark-v297.css
+          test -f players-dark-v297.css
+          git diff --check
+
+      - name: "Commit V297"
+        shell: bash
+        run: |
+          git config user.name "lowcy-v297-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add server.cjs app.js players-dark-v297.css
+          git commit -m "V297: beat legacy Players table specificity"
+          git push
