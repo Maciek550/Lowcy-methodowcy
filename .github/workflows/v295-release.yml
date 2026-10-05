@@ -1,0 +1,66 @@
+name: V295 release fix
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/v295-release.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-v295:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply V295 source changes
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          server = Path('server.cjs')
+          s = server.read_text(encoding='utf-8')
+          s = s.replace("const APP_VERSION = '294';", "const APP_VERSION = '295';", 1)
+          s = s.replace("const APP_VERSION_NAME = 'V294_PUSH_UPDATE_RECOVERY';", "const APP_VERSION_NAME = 'V295_PLAYERS_DARK_VERSION_SYNC';", 1)
+          s = s.replace('<title>Łowcy Methodowcy — V255</title>', '<title>Łowcy Methodowcy — V${APP_VERSION}</title>', 1)
+          s = s.replace("if(path==='/players-dark-v283.css')return send(res,200,fs.readFileSync(pathModule.join(__dirname,'players-dark-v283.css'),'utf8'),{'Content-Type':'text/css; charset=utf-8','Cache-Control':'no-store'});",
+                        "if(path==='/players-dark-v295.css')return send(res,200,fs.readFileSync(pathModule.join(__dirname,'players-dark-v295.css'),'utf8'),{'Content-Type':'text/css; charset=utf-8','Cache-Control':'no-store'});", 1)
+          s = s.replace("const PLAYERS_DARK_CSS='/players-dark-v283.css?v=${APP_VERSION}';", "const PLAYERS_DARK_CSS='/players-dark-v295.css?v=${APP_VERSION}';", 1)
+          s = s.replace("'/players-dark-v283.css'", "'/players-dark-v295.css'")
+          s = s.replace('<link rel=\"stylesheet\" href=\"/players-dark-v283.css?v=${APP_VERSION}\">', '<link rel=\"stylesheet\" href=\"/players-dark-v295.css?v=${APP_VERSION}\">', 1)
+          server.write_text(s, encoding='utf-8')
+
+          app = Path('app.js')
+          a = app.read_text(encoding='utf-8')
+          a = a.replace("const CLIENT_VERSION='294';const CLIENT_VERSION_NAME='V294_PUSH_UPDATE_RECOVERY';",
+                        "const CLIENT_VERSION='295';const CLIENT_VERSION_NAME='V295_PLAYERS_DARK_VERSION_SYNC';", 1)
+          app.write_text(a, encoding='utf-8')
+
+          src = Path('players-dark-v283.css').read_text(encoding='utf-8')
+          Path('players-dark-v295.css').write_text('/* V295 — osobny arkusz: ciemny, spokojny panel Zawodnicy. */\n' + src, encoding='utf-8')
+          PY
+
+      - name: Validate replacements
+        shell: bash
+        run: |
+          grep -q "const APP_VERSION = '295';" server.cjs
+          grep -q "V295_PLAYERS_DARK_VERSION_SYNC" server.cjs
+          grep -q "V295_PLAYERS_DARK_VERSION_SYNC" app.js
+          grep -q 'Łowcy Methodowcy — V${APP_VERSION}' server.cjs
+          grep -q 'players-dark-v295.css' server.cjs
+          test -f players-dark-v295.css
+          git diff --check
+
+      - name: Commit V295
+        shell: bash
+        run: |
+          git config user.name "lowcy-v295-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add server.cjs app.js players-dark-v295.css
+          git commit -m "V295: new dark Players asset and version sync"
+          git push
