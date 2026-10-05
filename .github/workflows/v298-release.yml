@@ -36,7 +36,7 @@ jobs:
           node-version: '22'
 
       - name: "Apply V298 source changes"
-        run: python tools/v298_patch2.py
+        run: python tools/v298_patch3.py
 
       - name: "Install dependencies"
         run: npm install --ignore-scripts --no-audit --no-fund
@@ -63,6 +63,6 @@ jobs:
         run: |
           git config user.name "lowcy-v298-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add server.cjs app.js tests/competition-rounds-v298.test.cjs
+          git add server.cjs app.js tests/*.test.cjs
           git commit -m "V298: one-round competitions with two-round regression protection"
           git push
