@@ -6,8 +6,7 @@ compatibility_date = "2026-10-08"
 directory = "./public"
 binding = "ASSETS"
 
-# D1 zostanie podpięte po utworzeniu bazy w panelu Cloudflare.
-# [[d1_databases]]
-# binding = "DB"
-# database_name = "matchthis-db"
-# database_id = "WSTAW_ID_BAZY"
+[[d1_databases]]
+binding = "DB"
+database_name = "matchthis-db"
+database_id = "3e36a4dd-530a-4e6e-a819-2b5b3e6539da"
