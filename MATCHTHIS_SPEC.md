@@ -86,12 +86,19 @@ Przy tworzeniu organizator wybiera:
 - losowanie automatyczne + możliwość ręcznego wpisania i korekty
 - system nie może przydzielić tego samego stanowiska dwóm zawodnikom
 - system nie może użyć stanowiska wyłączonego
-- w zawodach 2-turowych oraz w cyklu automat ma pilnować historii sektorów zawodnika
-- SEKTOR SKRAJNY – zasada specjalna: zawodnik nie może drugi raz otrzymać pierwszego sektora ani drugi raz otrzymać ostatniego sektora
-- „pierwszy sektor” oznacza sektor o najniższej pozycji na brzegu, np. A
-- „ostatni sektor” oznacza sektor o najwyższej pozycji na brzegu, np. D przy sektorach A–D
-- w zawodach 2-turowych: jeśli zawodnik miał w T1 sektor A, nie może dostać A w T2; jeśli miał ostatni sektor, nie może dostać ostatniego sektora w T2
-- w cyklu: historia skrajnych sektorów jest liczona przez wszystkie dotychczas rozegrane tury cyklu; po otrzymaniu pierwszego sektora zawodnik nie może dostać go ponownie w kolejnej turze cyklu, analogicznie dla ostatniego sektora
+- „pierwszy sektor” oznacza pierwszy sektor na brzegu, np. A
+- „ostatni sektor” oznacza ostatni sektor na brzegu, np. D przy sektorach A–D
+
+### Zawody 2-turowe – zasada skrajnych sektorów w T2
+- jeżeli zawodnik w T1 trafił do któregokolwiek sektora skrajnego (pierwszego albo ostatniego), to w T2 nie może dostać żadnego sektora skrajnego
+- przykładowo przy sektorach A–D: A w T1 blokuje A i D w T2; D w T1 blokuje A i D w T2
+- taki zawodnik w T2 musi trafić do sektora środkowego
+
+### Cykl – zasada skrajnych sektorów przez cały cykl
+- historia sektorów zawodnika jest sprawdzana przez wszystkie wcześniejsze tury tego samego cyklu
+- jeżeli zawodnik choć raz w cyklu trafił do któregokolwiek sektora skrajnego (pierwszego albo ostatniego), od następnej tury do końca cyklu nie może już otrzymać żadnego sektora skrajnego
+- przykładowo przy sektorach A–D: A w T1 blokuje A i D w T2–T6; D w T3 blokuje A i D w T4–T6
+- skraj jest więc dostępny dla danego zawodnika maksymalnie jeden raz w całym cyklu, niezależnie od tego, czy był to pierwszy czy ostatni sektor
 - sektory środkowe mogą się powtarzać, o ile inne reguły losowania tego nie zabraniają
 - jeśli przy danej konfiguracji nie istnieje poprawne losowanie spełniające ograniczenia, system ma zgłosić konflikt zamiast łamać regułę po cichu
 
