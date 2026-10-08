@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#f36b11" />
+  <title>MatchThis — Panel organizatora</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="#">Match<span>This</span></a>
+      <nav>
+        <a class="active" href="#start">GŁÓWNA</a>
+        <a href="#zawody">ZAWODY</a>
+        <a href="#cykle">CYKLE</a>
+        <a href="#baza">BAZA</a>
+        <a href="#sedziowie">SĘDZIOWIE</a>
+      </nav>
+      <div class="user-pill"><span class="dot"></span> ADMIN</div>
+    </div>
+  </header>
+
+  <main>
+    <section id="start" class="hero">
+      <div class="hero-shade"></div>
+      <div class="wrap hero-content">
+        <div>
+          <div class="eyebrow">MATCHTHIS · PANEL ORGANIZATORA</div>
+          <h1>Zawody. Losowanie. Wagi. Wyniki.<br><span>W jednym miejscu.</span></h1>
+          <p>Nowy system zawodów wędkarskich z czytelną obsługą sektorów, stanowisk, tur i cykli.</p>
+          <div class="hero-actions">
+            <button class="btn primary" data-open-create>+ UTWÓRZ ZAWODY</button>
+            <button class="btn ghost" data-open-cycle>+ UTWÓRZ CYKL</button>
+          </div>
+        </div>
+        <div class="hero-card">
+          <div class="hero-card-title">MATCHTHIS SERIES 2026</div>
+          <div class="hero-card-row"><span>Rozegrane tury</span><b>4 / 6</b></div>
+          <div class="hero-card-row"><span>Uczestnicy</span><b>58</b></div>
+          <div class="hero-card-row"><span>Awans do finału</span><b>TOP 45</b></div>
+          <div class="progress"><span style="width:66%"></span></div>
+          <small>Najbliższa tura: TURA 5 · do zaplanowania</small>
+        </div>
+      </div>
+    </section>
+
+    <section class="wrap quick-grid">
+      <button class="quick-card" data-open-create><span class="icon">🏆</span><strong>NOWE ZAWODY</strong><small>1 tura lub 2 tury</small></button>
+      <button class="quick-card" data-open-cycle><span class="icon">◎</span><strong>NOWY CYKL</strong><small>wiele tur + klasyfikacja</small></button>
+      <button class="quick-card" data-scroll="baza"><span class="icon">👥</span><strong>BAZA ZAWODNIKÓW</strong><small>import i zarządzanie</small></button>
+      <button class="quick-card" data-scroll="sedziowie"><span class="icon">⚖</span><strong>SĘDZIOWIE WAGOWI</strong><small>przypisania i wagi</small></button>
+    </section>
+
+    <section id="zawody" class="wrap section">
+      <div class="section-head">
+        <div><div class="eyebrow dark">ZAWODY</div><h2>Najbliższe wydarzenia</h2></div>
+        <button class="btn small primary" data-open-create>+ NOWE</button>
+      </div>
+      <div class="event-grid">
+        <article class="event-card featured">
+          <div class="event-status orange">PRZYGOTOWANIE</div>
+          <h3>MatchThis Cup — Tura 5</h3>
+          <div class="event-meta"><span>📅 18.10.2026</span><span>📍 Łowisko testowe</span></div>
+          <div class="event-kpis"><div><b>50</b><small>zawodników</small></div><div><b>4</b><small>sektory</small></div><div><b>1</b><small>tura</small></div></div>
+          <div class="event-actions"><button class="btn outline" data-show-config>USTAW SEKTORY</button><button class="btn primary">OTWÓRZ</button></div>
+        </article>
+        <article class="event-card">
+          <div class="event-status green">ZAKOŃCZONE</div>
+          <h3>MatchThis Series — Tura 4</h3>
+          <div class="event-meta"><span>📅 27.09.2026</span><span>📍 Kanał Żerański</span></div>
+          <div class="event-kpis"><div><b>58</b><small>zawodników</small></div><div><b>5</b><small>sektory</small></div><div><b>1</b><small>tura</small></div></div>
+          <div class="event-actions"><button class="btn outline">WYNIKI</button><button class="btn muted">ARCHIWUM</button></div>
+        </article>
+      </div>
+    </section>
+
+    <section id="config" class="config-panel hidden">
+      <div class="wrap">
+        <div class="section-head compact">
+          <div><div class="eyebrow dark">KONFIGURACJA BRZEGU</div><h2>Sektory i stanowiska</h2></div>
+          <button class="close-x" data-hide-config>×</button>
+        </div>
+        <div class="config-controls">
+          <label>Zawodnicy<input id="playersCount" type="number" min="2" value="50"></label>
+          <label>Sektory<input id="sectorCount" type="number" min="2" max="12" value="4"></label>
+          <label>Pierwsze stanowisko<input id="firstPeg" type="number" min="1" value="1"></label>
+          <button class="btn primary" id="autoSectors">AUTOMAT PROPONUJE</button>
+        </div>
+        <div class="shore-label">BRZEG ŁOWISKA →</div>
+        <div id="shore" class="shore"></div>
+        <div id="sectorEditor" class="sector-editor"></div>
+        <div class="hint">Automat proponuje równy podział. Każdą liczbę zawodników i zakres stanowisk możesz zmienić ręcznie.</div>
+      </div>
+    </section>
+
+    <section id="cykle" class="wrap section">
+      <div class="section-head"><div><div class="eyebrow dark">CYKL</div><h2>MatchThis Series 2026</h2></div><div class="cut-pill">FINAŁ: TOP 45</div></div>
+      <div class="rounds">
+        <div class="round done"><b>1</b><span>TURA 1</span><small>zakończona</small></div>
+        <div class="round done"><b>2</b><span>TURA 2</span><small>zakończona</small></div>
+        <div class="round done"><b>3</b><span>TURA 3</span><small>zakończona</small></div>
+        <div class="round done"><b>4</b><span>TURA 4</span><small>zakończona</small></div>
+        <div class="round next"><b>5</b><span>TURA 5</span><small>do zaplanowania</small></div>
+        <div class="round"><b>6</b><span>TURA 6</span><small>do zaplanowania</small></div>
+      </div>
+      <div class="cycle-note"><b>Zasada skrajnych stanowisk:</b> jeśli zawodnik w cyklu wylosował już pierwsze albo ostatnie stanowisko całego brzegu, oba skrajne stanowiska są dla niego zablokowane w kolejnych turach.</div>
+    </section>
+
+    <section id="baza" class="light-section">
+      <div class="wrap split">
+        <div><div class="eyebrow dark">BAZA ZAWODNIKÓW</div><h2>Gotowa na import</h2><p>Organizator dodaje zawodników do bazy, a potem wybiera ich do zawodów lub tur cyklu. Konto USER może istnieć, ale aktywuje je dopiero admin.</p><button class="btn primary">IMPORTUJ BAZĘ</button></div>
+        <div class="mini-table"><div class="tr head"><span>ZAWODNIK</span><span>STATUS</span></div><div class="tr"><span>Przykładowy Zawodnik</span><b>BAZA</b></div><div class="tr"><span>Jan Testowy</span><b class="orange-text">USER WYŁ.</b></div><div class="tr"><span>Adam Przykład</span><b>BAZA</b></div></div>
+      </div>
+    </section>
+
+    <section id="sedziowie" class="wrap section">
+      <div class="section-head"><div><div class="eyebrow dark">SĘDZIOWIE WAGOWI</div><h2>Prosty panel ważenia</h2></div></div>
+      <div class="weigh-card">
+        <div><b>A 07</b><span>Kowalski Jan</span></div>
+        <label>SIATKA 1<input type="number" placeholder="0"></label>
+        <label>SIATKA 2<input type="number" placeholder="opcjonalnie"></label>
+        <div class="sum">SUMA <b>0 g</b></div>
+      </div>
+      <div class="hint">Bez BF. Maksymalnie dwie wagi siatek, a wynik tury to ich suma.</div>
+    </section>
+  </main>
+
+  <div class="modal hidden" id="createModal">
+    <div class="modal-box">
+      <button class="close-x" data-close-modal>×</button>
+      <div class="eyebrow dark">NOWA ROZGRYWKA</div>
+      <h2>Co tworzysz?</h2>
+      <div class="type-grid">
+        <button class="type-card"><b>1 TURA</b><span>Pojedyncze zawody</span></button>
+        <button class="type-card"><b>2 TURY</b><span>Klasyfikacja z dwóch tur</span></button>
+        <button class="type-card cycle"><b>CYKL</b><span>Wiele tur + klasyfikacja cyklu</span></button>
+      </div>
+      <div class="form-grid">
+        <label>Nazwa<input value="MatchThis Cup"></label><label>Data<input type="date"></label><label>Łowisko<input value=""></label><label>Liczba zawodników<input type="number" value="50"></label>
+      </div>
+      <button class="btn primary full" data-close-modal data-show-config>DALEJ — SEKTORY I STANOWISKA</button>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
