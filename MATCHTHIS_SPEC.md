@@ -86,20 +86,21 @@ Przy tworzeniu organizator wybiera:
 - losowanie automatyczne + możliwość ręcznego wpisania i korekty
 - system nie może przydzielić tego samego stanowiska dwóm zawodnikom
 - system nie może użyć stanowiska wyłączonego
-- „pierwszy sektor” oznacza pierwszy sektor na brzegu, np. A
-- „ostatni sektor” oznacza ostatni sektor na brzegu, np. D przy sektorach A–D
+- „pierwsze stanowisko skrajne” oznacza pierwsze dostępne stanowisko na całym brzegu
+- „ostatnie stanowisko skrajne” oznacza ostatnie dostępne stanowisko na całym brzegu
+- skrajność dotyczy STANOWISKA, nie sektora
 
-### Zawody 2-turowe – zasada skrajnych sektorów w T2
-- jeżeli zawodnik w T1 trafił do któregokolwiek sektora skrajnego (pierwszego albo ostatniego), to w T2 nie może dostać żadnego sektora skrajnego
-- przykładowo przy sektorach A–D: A w T1 blokuje A i D w T2; D w T1 blokuje A i D w T2
-- taki zawodnik w T2 musi trafić do sektora środkowego
+### Zawody 2-turowe – zasada skrajnych stanowisk w T2
+- jeżeli zawodnik w T1 trafił na którekolwiek stanowisko skrajne całego brzegu (pierwsze albo ostatnie), to w T2 nie może dostać żadnego stanowiska skrajnego
+- przykładowo przy stanowiskach 1–50: stanowisko 1 w T1 blokuje stanowiska 1 i 50 w T2; stanowisko 50 w T1 również blokuje 1 i 50 w T2
+- sektor, w którym znajduje się zawodnik, nie ma znaczenia dla tej reguły
 
-### Cykl – zasada skrajnych sektorów przez cały cykl
-- historia sektorów zawodnika jest sprawdzana przez wszystkie wcześniejsze tury tego samego cyklu
-- jeżeli zawodnik choć raz w cyklu trafił do któregokolwiek sektora skrajnego (pierwszego albo ostatniego), od następnej tury do końca cyklu nie może już otrzymać żadnego sektora skrajnego
-- przykładowo przy sektorach A–D: A w T1 blokuje A i D w T2–T6; D w T3 blokuje A i D w T4–T6
-- skraj jest więc dostępny dla danego zawodnika maksymalnie jeden raz w całym cyklu, niezależnie od tego, czy był to pierwszy czy ostatni sektor
-- sektory środkowe mogą się powtarzać, o ile inne reguły losowania tego nie zabraniają
+### Cykl – zasada skrajnych stanowisk przez cały cykl
+- historia stanowisk zawodnika jest sprawdzana przez wszystkie wcześniejsze tury tego samego cyklu
+- jeżeli zawodnik choć raz w cyklu trafił na którekolwiek skrajne stanowisko całego brzegu (pierwsze albo ostatnie), od następnej tury do końca cyklu nie może już otrzymać żadnego skrajnego stanowiska
+- przykładowo przy stanowiskach 1–50: stanowisko 1 w T1 blokuje stanowiska 1 i 50 w T2–T6; stanowisko 50 w T3 blokuje stanowiska 1 i 50 w T4–T6
+- skrajne stanowisko jest więc dostępne dla danego zawodnika maksymalnie jeden raz w całym cyklu, niezależnie od tego, czy było to pierwsze czy ostatnie stanowisko brzegu
+- pozostałe stanowiska mogą się powtarzać, o ile inne reguły losowania tego nie zabraniają
 - jeśli przy danej konfiguracji nie istnieje poprawne losowanie spełniające ograniczenia, system ma zgłosić konflikt zamiast łamać regułę po cichu
 
 ## Ważenie i wyniki
