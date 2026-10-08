@@ -1,0 +1,13 @@
+name = "matchthis"
+main = "src/index.js"
+compatibility_date = "2026-10-08"
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+# D1 zostanie podpięte po utworzeniu bazy w panelu Cloudflare.
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "matchthis-db"
+# database_id = "WSTAW_ID_BAZY"
