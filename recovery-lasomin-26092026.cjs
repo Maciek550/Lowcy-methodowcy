@@ -100,7 +100,8 @@ async function main() {
       console.log('LASOMIN_RECOVERY_ALREADY_DONE');
       return;
     }
-    if (String(comp.competition_date).slice(0,10)!=='2026-09-26' || comp.status!=='TEST') throw new Error('Safety check: ID 1 is not TEST 2026-09-26');
+    const compDate = comp.competition_date instanceof Date ? comp.competition_date.toISOString().slice(0,10) : String(comp.competition_date).slice(0,10);
+    if (compDate!=='2026-09-26' || comp.status!=='TEST') throw new Error(`Safety check: ID 1 is not TEST 2026-09-26 (${compDate}/${comp.status})`);
     if (Number(comp.entries)||Number(comp.draws)||Number(comp.results)) throw new Error(`Safety check: competition not empty ${comp.entries}/${comp.draws}/${comp.results}`);
 
     const layout = [
