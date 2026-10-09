@@ -2,19 +2,23 @@ const http=require('http');
 const fs=require('fs');
 const path=require('path');
 const os=require('os');
-const crypto=require('crypto');
 const {spawn}=require('child_process');
 const {buildSnapshot}=require('./backup-lib.cjs');
 
 const PORT=Number(process.env.PORT||3000);
 const TOKEN=String(process.env.BACKUP_TOKEN||'');
 let busy=false;
-function auth(req){const h=String(req.headers.authorization||'');return TOKEN&&h===`Bearer ${TOKEN}`;}
+function auth(req){
+  const h=String(req.headers.authorization||'');
+  if(TOKEN&&h===`Bearer ${TOKEN}`)return true;
+  try{const u=new URL(req.url,'http://local');return TOKEN&&u.searchParams.get('token')===TOKEN}catch(_){return false}
+}
 function run(cmd,args,cwd){return new Promise((resolve,reject)=>{const p=spawn(cmd,args,{cwd,stdio:['ignore','ignore','pipe']});let err='';p.stderr.on('data',d=>err+=d);p.on('error',reject);p.on('close',code=>code===0?resolve():reject(new Error(`${cmd} exit ${code}: ${err}`)));});}
 
 http.createServer(async(req,res)=>{
-  if(req.url==='/health'){res.writeHead(200,{'content-type':'application/json'});return res.end(JSON.stringify({ok:true}));}
-  if(req.url!=='/backup'){res.writeHead(404);return res.end('not found');}
+  let pathname='';try{pathname=new URL(req.url,'http://local').pathname}catch(_){}
+  if(pathname==='/health'){res.writeHead(200,{'content-type':'application/json'});return res.end(JSON.stringify({ok:true}));}
+  if(pathname!=='/backup'){res.writeHead(404);return res.end('not found');}
   if(!auth(req)){res.writeHead(401);return res.end('unauthorized');}
   if(busy){res.writeHead(409);return res.end('busy');}
   busy=true;
@@ -32,7 +36,7 @@ http.createServer(async(req,res)=>{
       'Commit: '+(snapshot.git_commit||'brak'),
       'Format bazy: '+snapshot.format,
       'Sekrety środowiskowe (DATABASE_URL, JWT_SECRET, klucze API) NIE są dołączane.',
-      'Przy odtwarzaniu: uruchom kod aplikacji raz, aby utworzyć schemat, a następnie node database/restore-db.cjs database/lowcy-db-backup.json',
+      'Przy odtwarzaniu: uruchom kod aplikacji raz, aby utworzyła schemat, a następnie node database/restore-db.cjs database/lowcy-db-backup.json',
       ''
     ].join('\n'));
     const appTar=path.join(tmp,'application.tar.gz');
