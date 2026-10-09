@@ -1,0 +1,11 @@
+const fs=require('fs');
+const path=require('path');
+const crypto=require('crypto');
+const dir=process.env.BACKUP_DIR||'/backups';
+const files=fs.readdirSync(dir).filter(x=>/^lowcy-db-.*\.json\.gz$/.test(x)).sort();
+if(!files.length)throw new Error('Brak plików backupu');
+const file=files[files.length-1];
+const buf=fs.readFileSync(path.join(dir,file));
+const b64=buf.toString('base64');
+console.log('LOWCY_BACKUP_EXPORT_META='+JSON.stringify({file,size:buf.length,base64:b64.length,sha256:crypto.createHash('sha256').update(buf).digest('hex')}));
+console.log('LOWCY_BACKUP_EXPORT_DATA='+b64);
