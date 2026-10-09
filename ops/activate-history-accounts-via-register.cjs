@@ -16,7 +16,7 @@ async function hist(id){return (await pool.query(`select c.id,e.status,(select c
  const prepCorr=[]; for(const [name,p0] of corrections){const phone=clean(p0),m=find(name);if(m.length!==1)throw new Error(name+': rekordów '+m.length);const u=m[0];const clash=all.find(x=>!x.archived_at&&String(x.phone)===phone&&Number(x.id)!==Number(u.id));if(clash)throw new Error(name+': telefon zajęty');prepCorr.push({u,name,phone,h:await hist(u.id)})}
  const prep=[]; for(const [name,p0] of specs){const phone=clean(p0),m=find(name);if(m.length!==1)throw new Error(name+': rekordów '+m.length);const u=m[0];const h=await hist(u.id);if(!h.length)throw new Error(name+': brak historii');prep.push({u,name,phone,h})}
  console.log('REGISTER_BATCH_PRECHECK_OK '+JSON.stringify({corrections:prepCorr.map(x=>({id:Number(x.u.id),name:x.name,phone:'***'+x.phone.slice(-3)})),accounts:prep.map(x=>({id:Number(x.u.id),name:x.name,phone:'***'+x.phone.slice(-3),starts:x.h.length}))}));
- for(const x of prepCorr){await pool.query(`update users set contact_phone=$1 where id=$2`,[x.phone,x.u.id]);if(JSON.stringify(await hist(x.u.id))!==JSON.stringify(x.h))throw new Error(x.name+': historia zmieniona przy korekcie')}
+ for(const x of prepCorr){await pool.query(`update users set phone=$1,contact_phone=$1 where id=$2`,[x.phone,x.u.id]);if(JSON.stringify(await hist(x.u.id))!==JSON.stringify(x.h))throw new Error(x.name+': historia zmieniona przy korekcie')}
  for(const x of prep){
   const owner=(await pool.query(`select id from users where phone=$1 and archived_at is null and id<>$2`,[x.phone,x.u.id])).rows[0];if(owner)throw new Error(x.name+': telefon zajęty');
   if(String(x.u.phone)!==x.phone||x.u.account_source!=='SELF'){
