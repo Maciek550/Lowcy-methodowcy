@@ -26,6 +26,7 @@ function mapAccounts(rows,accounts){
   const id=Number(r.userId||list[0].id);
   if(!list.some(a=>Number(a.id)===id))throw Error('Nieprawidłowe ID dla '+r.name);
   if(!Number.isSafeInteger(id))throw Error('Niepoprawny identyfikator');
+  if(chosen.has(k) && chosen.get(k)!==id)throw Error('Sprzeczne ID tego samego zawodnika: '+r.name);
   chosen.set(k,id);
  }
  return rows.map(r=>({...r,userId:chosen.get(key(r.name))}));
