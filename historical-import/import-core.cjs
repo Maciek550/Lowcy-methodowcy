@@ -76,6 +76,12 @@ async function saveApprovedDraft(pool,raw,actorId,expectedAccountDigest){
   const users=(await client.query('SELECT id,first_name,last_name,phone,created_at,archived_at,role,last_login_at FROM users FOR UPDATE')).rows;
   const plan=accountPlan(draft.rows,users);
   if(expectedAccountDigest&&crypto.createHash('sha256').update(JSON.stringify(plan)).digest('hex')!==expectedAccountDigest)throw Error('Konta zmieniły się od podglądu; sprawdź powiązania ponownie');
+  const sameDate = (await client.query('SELECT id FROM competitions WHERE competition_date=$1',[draft.date])).rows;
+  for(const event of sameDate){
+   const oldRows=(await client.query('SELECT r.user_id,r.round,r.weight,r.big_fish,d.stand,d.sector FROM results r JOIN draws d ON d.competition_id=r.competition_id AND d.user_id=r.user_id AND d.round=r.round WHERE r.competition_id=$1',[event.id])).rows;
+   if(oldRows.length!==draft.rows.length)continue;
+   if(draft.rows.every(r=>{const p=plan.find(p=>key(p.name)===key(r.name));return p.userId&&oldRows.some(o=>Number(o.user_id)===p.userId&&Number(o.round)===r.round&&Number(o.weight)===r.weight&&Number(o.big_fish)===r.bigFish&&Number(o.stand)===r.stand&&o.sector===r.sector)}))throw Error('Te wyniki są już zapisane w zawodach #'+event.id);
+  }
   for(const p of plan){
    if(p.status==='CONFLICT')throw Error('Wymagane ręczne wskazanie ID dla '+p.name);
    if(p.status==='NEW'){

@@ -11,7 +11,7 @@ test('PostgreSQL: full import, unchanged credentials, history merge, duplicate a
   let ready=false;for(let i=0;i<100;i++){try{if((await req('/health')).ok){ready=true;break}}catch{}if(child.exitCode!==null)throw Error(output.join(''));await new Promise(r=>setTimeout(r,150))}assert.ok(ready,output.join(''));
   const auth=await req('/api/setup-admin',{setupCode:'local-test-only',phone:'501000099',password:'isolated-test',firstName:'Test',lastName:'Admin'});assert.equal(auth.status,200,JSON.stringify(auth));
   const token=auth.token;
-  const reg=await req('/api/register',{phone:'501000098',password:'isolated-test',firstName:'Testowy',lastName:'Zawodnik1'});assert.equal(reg.status,200);
+  const reg=await req('/api/register',{phone:'501000098',password:'isolated-test',firstName:'Testowy',lastName:'Zawodnik1',pzwClub:'Test'});assert.equal(reg.status,200,JSON.stringify(reg));
   const original=(await db.query('SELECT * FROM users WHERE id=$1',[reg.user.id])).rows[0];
   const tech=(await db.query("INSERT INTO users(phone,password_hash,first_name,last_name,role,account_source) VALUES('IMPORT-test','unchanged','Testowy','Zawodnik1','PLAYER','EXTERNAL') RETURNING id")).rows[0].id;
   const old=(await db.query("INSERT INTO competitions(title,competition_date,status) VALUES('Old history','2026-01-01','CLOSED') RETURNING id")).rows[0].id;

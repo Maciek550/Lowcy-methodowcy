@@ -13,6 +13,12 @@ Dotychczasowy import listy startowej z zawody.pro pozostaje bez zmian.
 7. Historia zawodnika łączona dopiero po weryfikacji i z zachowaniem danych logowania.
 8. Przed wdrożeniem: testy parserów, klasyfikacji sektorowej, konfliktów ID, wielokrotnego importu i rollbacku.
 
-## Stan
+## V302
 
-To specyfikacja nowego modułu, nie ukończony importer. Moduł `import-preview.cjs` na tej gałęzi zapewnia wyłącznie wstępne dopasowanie kont, bez zapisu do bazy. Produkcja Railway nie została zmieniona.
+- Osobny panel administratora: zawody.pro, pełny tekstowy PDF z tabelami sektorowymi, CSV.
+- Edytowalna tabela, powiązania kont, ponowna walidacja i podpisany podgląd ważny 15 minut.
+- Cyrylica i polskie znaki zachowane. Konto z telefonem ma pierwszeństwo; techniczne konto bez logowania może przekazać historię i zostać zarchiwizowane. Dwa rzeczywiste konta wymagają wyboru ID. Nakładająca się historia blokuje scalanie.
+- Nowi zawodnicy dostają wpis historyczny EXTERNAL z losowym niedostępnym hasłem; istniejące dane logowania nie są zmieniane.
+- Zapis transakcyjny, blokada powtórek, źródłowe punkty sektorowe, suma NET + BF równa wadze całkowitej, dziennik importu.
+- PDF skanowany bez tekstu nie jest obsługiwany; importer zgłasza brak kompletnej tabeli zamiast zgadywać wyniki.
+- Testy repozytorium używają wyłącznie sztucznych danych. Test integracyjny uruchamiać tylko na oddzielnej bazie: `DATABASE_URL=... node --test historical-import/integration.cjs`.
