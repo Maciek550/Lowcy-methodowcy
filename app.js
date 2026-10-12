@@ -742,15 +742,29 @@ function renderAdminCompetitionList(arr){
 async function openHistoricalImport(){
  const title=prompt('IMPORT ZAWODÓW — nazwa zawodów');if(!title)return;
  const date=prompt('Data zawodów RRRR-MM-DD');if(!date)return;
- const raw=prompt('Wklej wyniki w JSON: {rows:[{name,sector,stand,round,weight,bigFish,userId}]}');if(!raw)return;
+ const tableText=prompt('Wklej tabelę CSV (separator ;) z nagłówkiem: Zawodnik;Sektor;Stanowisko;Waga;BF;Tura. Waga i BF w gramach.');if(!tableText)return;
  try{
-  const parsed=JSON.parse(raw);
-  const draft={...parsed,title,date};
-  const p=await api('/api/admin/historical-import/preview',{method:'POST',body:JSON.stringify(draft)});
-  const summary=(p.matches||[]).map(x=>x.name+': '+x.status+(x.userId?' ID '+x.userId:'')).join('\\n');
-  if(!confirm('Podgląd importu: '+p.draft.rows.length+' wyników.\\n'+summary+'\\n\\nZapisz wyniki?'))return;
-  const d=await api('/api/admin/historical-import/confirm',{method:'POST',body:JSON.stringify({...draft,confirm:true})});
-  msg('Zaimportowano zawody #'+d.result.competitionId);await loadCompetitions();
+  const preview=await api('/api/admin/historical-import/preview',{method:'POST',body:JSON.stringify({title,date,tableText})});
+  const draft=preview.draft;
+  const matches=preview.matches||[];
+  const unresolved=matches.filter(x=>x.status!=='MATCHED');
+  if(unresolved.length)throw Error('Najpierw rozwiąż brakujące konta lub duplikaty: '+unresolved.map(x=>x.name+' ('+x.status+')').join(', '));
+  const ambiguous=matches.filter(x=>(x.mergeFromIds||[]).length);
+  for(const m of ambiguous){
+   const options=[m.userId,...m.mergeFromIds].map(String);
+   const chosen=prompt('Kilka kont: '+m.name+'. Wybierz ID z listy: '+options.join(', '),String(m.userId));
+   if(!chosen)return;
+   if(!options.includes(chosen.trim()))throw Error('Nieprawidłowe ID dla '+m.name);
+   draft.rows.filter(r=>r.name===m.name).forEach(r=>r.userId=Number(chosen));
+  }
+  const edited=prompt('PODGLĄD I EDYCJA — sprawdź wszystkie dane. Możesz zmienić JSON przed zapisem.',JSON.stringify(draft,null,2));
+  if(!edited)return;
+  const approved=JSON.parse(edited);
+  const verified=await api('/api/admin/historical-import/preview',{method:'POST',body:JSON.stringify(approved)});
+  if(!confirm('Zatwierdzasz zapis '+verified.draft.rows.length+' wyników dla '+verified.draft.title+' ('+verified.draft.date+')? Operacja tworzy nowe zawody i nie nadpisuje istniejących.'))return;
+  const result=await api('/api/admin/historical-import/confirm',{method:'POST',body:JSON.stringify({...verified.draft,confirm:true})});
+  msg('Zaimportowano zawody #'+result.result.competitionId);
+  await loadCompetitions();
  }catch(e){msg('Import przerwany: '+e.message,'bad')}
 }
 async function loadCompetitions(){
