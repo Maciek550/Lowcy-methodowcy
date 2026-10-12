@@ -7,3 +7,5 @@ test('ambiguous identity requires admin confirmation',()=>assert.throws(()=>mapA
 test('confirmed ID selects existing account',()=>assert.equal(mapAccounts([{...base.rows[0],userId:2}],[{id:1,first_name:'Jan',last_name:'Kowalski',phone:'ZPRO-1'},{id:2,first_name:'Jan',last_name:'Kowalski',phone:'501123456'}])[0].userId,2));
 test('do not create unknown account',()=>assert.throws(()=>mapAccounts(base.rows,[]),/Brak konta/));
 test('rollback on missing user',async()=>{let log=[];const pool={connect:async()=>({query:async(sql)=>{log.push(sql);if(sql.startsWith('SELECT id,first_name'))return {rows:[]};return {rows:[]}},release(){}})};await assert.rejects(saveApprovedDraft(pool,base,1),/Brak konta/);assert.equal(log.at(-1),'ROLLBACK')});
+
+test('reject conflicting user IDs between rounds',()=>assert.throws(()=>mapAccounts([{...base.rows[0],userId:1},{...base.rows[0],round:2,userId:2}],[{id:1,first_name:'Jan',last_name:'Kowalski',phone:'501123456'},{id:2,first_name:'Jan',last_name:'Kowalski',phone:'ZPRO-2'}]),/Sprzeczne ID/));
