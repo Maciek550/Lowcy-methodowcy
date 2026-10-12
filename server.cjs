@@ -2504,7 +2504,7 @@ self.addEventListener('notificationclick', event => {
       const cryptoImport = require('crypto');
       const issuedAt = Date.now();
       const digest = cryptoImport.createHash('sha256').update(JSON.stringify(draft)).digest('hex');
-      const secret = process.env.JWT_SECRET || process.env.SESSION_SECRET;
+      const secret = JWT_SECRET;
       if(!secret) throw Error('Brak klucza podpisu podglądu importu');
       const payload = String(user.id)+':'+issuedAt+':'+digest;
       const previewToken = issuedAt+'.'+cryptoImport.createHmac('sha256',secret).update(payload).digest('hex');
@@ -2519,7 +2519,7 @@ self.addEventListener('notificationclick', event => {
       const cryptoImport = require('crypto');
       const { validateDraft, saveApprovedDraft } = require('./historical-import/import-core.cjs');
       const draft = validateDraft(b);
-      const secret = process.env.JWT_SECRET || process.env.SESSION_SECRET;
+      const secret = JWT_SECRET;
       if(!secret) throw Error('Brak klucza podpisu podglądu importu');
       const token = String(b.previewToken||'').split('.');
       const issuedAt = Number(token[0]);
