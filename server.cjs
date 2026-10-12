@@ -2496,7 +2496,7 @@ self.addEventListener('notificationclick', event => {
     try {
       const { validateDraft, mapAccounts } = require('./historical-import/import-core.cjs');
       const b = await readBody(req);
-      const draft = validateDraft(b);
+      const draft = b.tableText ? require('./historical-import/parse-table.cjs').parseDelimitedResults(b.tableText,b) : validateDraft(b);
       const accounts = (await pool.query('select id,first_name,last_name,phone,created_at from users')).rows;
       let matches = [];
       const { matchPlayers } = require('./import-preview.cjs');
