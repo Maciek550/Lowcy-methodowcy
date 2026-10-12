@@ -32,6 +32,7 @@ test('PostgreSQL: full import, unchanged credentials, history merge, duplicate a
   for(const g of source.general){const actual=detail.classification.general.find(x=>x.name===g.name);assert.ok(actual,g.name);assert.equal(actual.rank,g.rank,g.name);assert.equal(actual.total_weight,g.weight,g.name);assert.equal(actual.sum_points,g.points,g.name)}
   const totals=await db.query('SELECT r.user_id,r.round,r.weight,r.big_fish,sum(i.weight)::int total,max(case when i.kind=\'BF\' then i.weight else 0 end)::int bf FROM results r LEFT JOIN result_items i ON i.competition_id=r.competition_id AND i.user_id=r.user_id AND i.round=r.round WHERE r.competition_id=$1 GROUP BY r.id',[id]);for(const r of totals.rows){assert.equal(r.total||0,r.weight);assert.equal(r.bf||0,r.big_fish)}
   const after=await counts();assert.equal((await req('/api/admin/historical-import/confirm',payload,token)).status,409);assert.deepEqual(await counts(),after);
+  await db.query('UPDATE competitions SET historical_source=NULL,historical_fingerprint=NULL WHERE id=$1',[id]);
   // A fresh preview from the PDF-equivalent data cannot duplicate the same event under another title.
   const duplicate=await req('/api/admin/historical-import/preview',{...source,title:'Alternative title',sourceId:''},token);
   assert.equal((await req('/api/admin/historical-import/confirm',{...duplicate.draft,previewToken:duplicate.previewToken,accountDigest:duplicate.accountDigest,confirm:true},token)).status,409);assert.deepEqual(await counts(),after);

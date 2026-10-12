@@ -1493,6 +1493,7 @@ function computeClassification(comp, entries, draws, results) {
 
 async function refreshResultAggregate(client, competitionId, userId, round) {
   const db = client || pool;
+  await db.query('UPDATE results SET historical_points=NULL WHERE competition_id=$1 AND round=$2 AND historical_points IS NOT NULL', [competitionId, round]);
   const q = await db.query(`
     select coalesce(sum(weight),0)::int as total_weight,
            coalesce(max(weight) filter (where kind='BF'),0)::int as biggest_fish

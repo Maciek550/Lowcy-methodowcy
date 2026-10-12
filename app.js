@@ -735,9 +735,8 @@ function renderAdminCompetitionList(arr){
   let desktop='<div class="competitionDesktopList tablewrap"><table><thead><tr><th>Zawody</th><th>Data</th><th>Stan zapisów</th><th>Status</th><th>Akcja</th></tr></thead><tbody>';
   desktop+=arr.map(c=>{const mine=playerCompetitionMine(c);const closed=c.status!=='OPEN'||c.signup_open===false;const main=Number(c.active_count||0), reserve=Number(c.reserve_count||0), limit=Number(c.limit_places||0);const stat='<b>'+main+'</b>'+(limit?' / '+limit:'')+(reserve?' + rezerwa '+reserve:'');return '<tr class="'+(mine?'mine':'')+'"><td><b>'+esc(c.title)+'</b><br><span class="muted small">'+esc(c.fishery||'')+'</span></td><td class="nowrap">'+fmtDate(c.competition_date)+'<br><span class="small muted">Zbiórka '+esc(meetingTimeText(c))+'</span></td><td class="nowrap">'+stat+'</td><td><span class="pill">'+(playerCompetitionPast(c)?'ZAWODY ZAKOŃCZONE':statusName(c.status))+'</span></td><td>'+competitionActionHtml(c,admin,mine,closed,false)+'</td></tr>'}).join('');
   desktop+='</tbody></table></div>';
-  desktop='<div style="padding:8px"><button type="button" onclick="openHistoricalImport()">IMPORT WYNIKÓW</button></div>'+desktop;
   const mobile='<div class="competitionMobileList">'+arr.map(c=>renderCompetitionMobileCard(c,admin)).join('')+'</div>';
-  return desktop+'<div class="competitionMobileList"><button type="button" onclick="openHistoricalImport()">IMPORT WYNIKÓW</button></div>'+mobile;
+  return desktop+mobile;
 }
 async function loadCompetitions(){
   if(ME?.role==='JUDGE')return judgeLoadCompetitions();
@@ -746,7 +745,7 @@ async function loadCompetitions(){
     ADMIN_COMPETITIONS_CACHE=arr;
     const current=arr.filter(c=>!playerCompetitionPast(c)),archived=arr.filter(playerCompetitionPast);
     const archiveOpen=q('adminCompetitionArchive')?.open;
-    q('competitionsList').innerHTML=(current.length?renderAdminCompetitionList(current):'<p class="muted">Brak bieżących zawodów.</p>')+'<details id="adminCompetitionArchive" class="adminCompetitionArchive" '+(archiveOpen?'open':'')+'><summary><b>ARCHIWUM</b><span>'+archived.length+' zakończonych zawodów</span></summary><div class="adminArchiveBody"><p class="small muted">Zakończone zawody — panele i wyniki pozostają dostępne.</p>'+(archived.length?renderAdminCompetitionList(archived):'<p class="muted">Archiwum jest puste.</p>')+'</div></details>';return;
+    q('competitionsList').innerHTML='<div style="padding:8px"><button type="button" onclick="openHistoricalImport()">IMPORT WYNIKÓW</button></div>'+(current.length?renderAdminCompetitionList(current):'<p class="muted">Brak bieżących zawodów.</p>')+'<details id="adminCompetitionArchive" class="adminCompetitionArchive" '+(archiveOpen?'open':'')+'><summary><b>ARCHIWUM</b><span>'+archived.length+' zakończonych zawodów</span></summary><div class="adminArchiveBody"><p class="small muted">Zakończone zawody — panele i wyniki pozostają dostępne.</p>'+(archived.length?renderAdminCompetitionList(archived):'<p class="muted">Archiwum jest puste.</p>')+'</div></details>';return;
   }
   PLAYER_COMPETITIONS_CACHE=arr;
   await refreshPlayerAttention(false);
