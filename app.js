@@ -762,7 +762,7 @@ async function openHistoricalImport(){
   const approved=JSON.parse(edited);
   const verified=await api('/api/admin/historical-import/preview',{method:'POST',body:JSON.stringify(approved)});
   if(!confirm('Zatwierdzasz zapis '+verified.draft.rows.length+' wyników dla '+verified.draft.title+' ('+verified.draft.date+')? Operacja tworzy nowe zawody i nie nadpisuje istniejących.'))return;
-  const result=await api('/api/admin/historical-import/confirm',{method:'POST',body:JSON.stringify({...verified.draft,confirm:true})});
+  const result=await api('/api/admin/historical-import/confirm',{method:'POST',body:JSON.stringify({...verified.draft,previewToken:verified.previewToken,confirm:true})});
   msg('Zaimportowano zawody #'+result.result.competitionId);
   await loadCompetitions();
  }catch(e){msg('Import przerwany: '+e.message,'bad')}
