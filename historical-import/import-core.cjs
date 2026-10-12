@@ -11,7 +11,7 @@ function validateDraft(d){
   const nk=key(name)+':'+round,sk=round+':'+stand;
   if(seen.has(nk)||stands.has(sk))throw Error('Powtórzony zawodnik lub stanowisko w turze '+round);
   seen.add(nk);stands.add(sk);
-  return {name,sector,round,stand,weight,bigFish};
+  return {name,sector,round,stand,weight,bigFish,userId:r.userId||null};
  });
  return {title:d.title.trim(),fishery:String(d.fishery||'').trim(),date:d.date,sourceId:String(d.sourceId||''),rows};
 }
@@ -22,8 +22,9 @@ function mapAccounts(rows,accounts){
  for(const r of rows){
   const k=key(r.name),list=(groups.get(k)||[]).slice().sort((a,b)=>Number(realPhone(b.phone))-Number(realPhone(a.phone))||(Date.parse(a.created_at)||0)-(Date.parse(b.created_at)||0)||Number(a.id)-Number(b.id));
   if(!list.length)throw Error('Brak konta dla '+r.name+'; wymagana weryfikacja administratora');
-  if(list.length>1)throw Error('Niejednoznaczne konto dla '+r.name+' ('+list.length+' kont). Wymagane ręczne potwierdzenie ID, bez automatycznego scalania.');
-  const id=Number(list[0].id);
+  if(list.length>1 && !r.userId)throw Error('Wymagane ręczne wskazanie ID dla '+r.name);
+  const id=Number(r.userId||list[0].id);
+  if(!list.some(a=>Number(a.id)===id))throw Error('Nieprawidłowe ID dla '+r.name);
   if(!Number.isSafeInteger(id))throw Error('Niepoprawny identyfikator');
   chosen.set(k,id);
  }
