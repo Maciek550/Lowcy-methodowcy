@@ -735,8 +735,23 @@ function renderAdminCompetitionList(arr){
   let desktop='<div class="competitionDesktopList tablewrap"><table><thead><tr><th>Zawody</th><th>Data</th><th>Stan zapisów</th><th>Status</th><th>Akcja</th></tr></thead><tbody>';
   desktop+=arr.map(c=>{const mine=playerCompetitionMine(c);const closed=c.status!=='OPEN'||c.signup_open===false;const main=Number(c.active_count||0), reserve=Number(c.reserve_count||0), limit=Number(c.limit_places||0);const stat='<b>'+main+'</b>'+(limit?' / '+limit:'')+(reserve?' + rezerwa '+reserve:'');return '<tr class="'+(mine?'mine':'')+'"><td><b>'+esc(c.title)+'</b><br><span class="muted small">'+esc(c.fishery||'')+'</span></td><td class="nowrap">'+fmtDate(c.competition_date)+'<br><span class="small muted">Zbiórka '+esc(meetingTimeText(c))+'</span></td><td class="nowrap">'+stat+'</td><td><span class="pill">'+(playerCompetitionPast(c)?'ZAWODY ZAKOŃCZONE':statusName(c.status))+'</span></td><td>'+competitionActionHtml(c,admin,mine,closed,false)+'</td></tr>'}).join('');
   desktop+='</tbody></table></div>';
+  desktop='<div style="padding:8px"><button type="button" onclick="openHistoricalImport()">IMPORT ZAWODÓW (JSON)</button></div>'+desktop;
   const mobile='<div class="competitionMobileList">'+arr.map(c=>renderCompetitionMobileCard(c,admin)).join('')+'</div>';
   return desktop+mobile;
+}
+async function openHistoricalImport(){
+ const title=prompt('IMPORT ZAWODÓW — nazwa zawodów');if(!title)return;
+ const date=prompt('Data zawodów RRRR-MM-DD');if(!date)return;
+ const raw=prompt('Wklej wyniki w JSON: {rows:[{name,sector,stand,round,weight,bigFish,userId}]}');if(!raw)return;
+ try{
+  const parsed=JSON.parse(raw);
+  const draft={...parsed,title,date};
+  const p=await api('/api/admin/historical-import/preview',{method:'POST',body:JSON.stringify(draft)});
+  const summary=(p.matches||[]).map(x=>x.name+': '+x.status+(x.userId?' ID '+x.userId:'')).join('\\n');
+  if(!confirm('Podgląd importu: '+p.draft.rows.length+' wyników.\\n'+summary+'\\n\\nZapisz wyniki?'))return;
+  const d=await api('/api/admin/historical-import/confirm',{method:'POST',body:JSON.stringify({...draft,confirm:true})});
+  msg('Zaimportowano zawody #'+d.result.competitionId);await loadCompetitions();
+ }catch(e){msg('Import przerwany: '+e.message,'bad')}
 }
 async function loadCompetitions(){
   if(ME?.role==='JUDGE')return judgeLoadCompetitions();
