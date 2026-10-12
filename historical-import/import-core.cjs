@@ -48,7 +48,7 @@ async function saveApprovedDraft(pool,raw,actorId){
    await client.query('INSERT INTO entries(competition_id,user_id,status) VALUES($1,$2,$3) ON CONFLICT(competition_id,user_id) DO NOTHING',[c.id,r.userId,'ACTIVE']);
    await client.query('INSERT INTO draws(competition_id,user_id,round,stand,sector) VALUES($1,$2,$3,$4,$5)',[c.id,r.userId,r.round,r.stand,r.sector]);
    await client.query('INSERT INTO results(competition_id,user_id,round,weight,big_fish) VALUES($1,$2,$3,$4,$5)',[c.id,r.userId,r.round,r.weight,r.bigFish]);
-   if(r.weight>0)await client.query("INSERT INTO result_items(competition_id,user_id,round,kind,weight) VALUES($1,$2,$3,'NET',$4)",[c.id,r.userId,r.round,r.weight]);
+   if(r.weight>r.bigFish)await client.query("INSERT INTO result_items(competition_id,user_id,round,kind,weight) VALUES($1,$2,$3,'NET',$4)",[c.id,r.userId,r.round,r.weight-r.bigFish]);
    if(r.bigFish>0)await client.query("INSERT INTO result_items(competition_id,user_id,round,kind,weight) VALUES($1,$2,$3,'BF',$4)",[c.id,r.userId,r.round,r.bigFish]);
   }
   await client.query('COMMIT');
