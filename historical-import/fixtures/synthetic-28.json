@@ -1,0 +1,739 @@
+{
+  "title": "Test syntetyczny 28 osób 15.06.2030",
+  "fishery": "Testowe łowisko",
+  "date": "2030-06-15",
+  "sourceId": "test:28",
+  "roundCount": 2,
+  "rows": [
+    {
+      "name": "Testowy Zawodnik1",
+      "sector": "C",
+      "round": 1,
+      "stand": 21,
+      "weight": 47000,
+      "bigFish": 0,
+      "points": 1,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik1",
+      "sector": "B",
+      "round": 2,
+      "stand": 26,
+      "weight": 50560,
+      "bigFish": 0,
+      "points": 1,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik2",
+      "sector": "D",
+      "round": 1,
+      "stand": 16,
+      "weight": 16580,
+      "bigFish": 0,
+      "points": 1,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik2",
+      "sector": "A",
+      "round": 2,
+      "stand": 27,
+      "weight": 35500,
+      "bigFish": 14660,
+      "points": 1,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik3",
+      "sector": "C",
+      "round": 1,
+      "stand": 8,
+      "weight": 22520,
+      "bigFish": 0,
+      "points": 2,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik3",
+      "sector": "C",
+      "round": 2,
+      "stand": 10,
+      "weight": 87000,
+      "bigFish": 0,
+      "points": 1,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik4",
+      "sector": "B",
+      "round": 1,
+      "stand": 6,
+      "weight": 22320,
+      "bigFish": 0,
+      "points": 3,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik4",
+      "sector": "D",
+      "round": 2,
+      "stand": 15,
+      "weight": 41200,
+      "bigFish": 0,
+      "points": 1,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik5",
+      "sector": "D",
+      "round": 1,
+      "stand": 17,
+      "weight": 7060,
+      "bigFish": 0,
+      "points": 2,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik5",
+      "sector": "A",
+      "round": 2,
+      "stand": 29,
+      "weight": 30340,
+      "bigFish": 0,
+      "points": 2,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik6",
+      "sector": "B",
+      "round": 1,
+      "stand": 24,
+      "weight": 28500,
+      "bigFish": 14700,
+      "points": 2,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik6",
+      "sector": "D",
+      "round": 2,
+      "stand": 18,
+      "weight": 31540,
+      "bigFish": 0,
+      "points": 3,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik7",
+      "sector": "C",
+      "round": 1,
+      "stand": 20,
+      "weight": 17200,
+      "bigFish": 0,
+      "points": 3,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik7",
+      "sector": "B",
+      "round": 2,
+      "stand": 24,
+      "weight": 42320,
+      "bigFish": 0,
+      "points": 2,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik8",
+      "sector": "A",
+      "round": 1,
+      "stand": 29,
+      "weight": 19260,
+      "bigFish": 0,
+      "points": 3,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik8",
+      "sector": "C",
+      "round": 2,
+      "stand": 21,
+      "weight": 51320,
+      "bigFish": 0,
+      "points": 3,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik9",
+      "sector": "B",
+      "round": 1,
+      "stand": 26,
+      "weight": 31180,
+      "bigFish": 18640,
+      "points": 1,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik9",
+      "sector": "C",
+      "round": 2,
+      "stand": 22,
+      "weight": 33700,
+      "bigFish": 0,
+      "points": 5,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik10",
+      "sector": "B",
+      "round": 1,
+      "stand": 5,
+      "weight": 21320,
+      "bigFish": 0,
+      "points": 4,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik10",
+      "sector": "D",
+      "round": 2,
+      "stand": 12,
+      "weight": 34200,
+      "bigFish": 0,
+      "points": 2,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik11",
+      "sector": "A",
+      "round": 1,
+      "stand": 1,
+      "weight": 21440,
+      "bigFish": 0,
+      "points": 2,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik11",
+      "sector": "D",
+      "round": 2,
+      "stand": 14,
+      "weight": 25000,
+      "bigFish": 0,
+      "points": 4,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik12",
+      "sector": "D",
+      "round": 1,
+      "stand": 15,
+      "weight": 6980,
+      "bigFish": 0,
+      "points": 3,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik12",
+      "sector": "A",
+      "round": 2,
+      "stand": 3,
+      "weight": 26620,
+      "bigFish": 0,
+      "points": 3,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik13",
+      "sector": "A",
+      "round": 1,
+      "stand": 4,
+      "weight": 40120,
+      "bigFish": 0,
+      "points": 1,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik13",
+      "sector": "C",
+      "round": 2,
+      "stand": 8,
+      "weight": 31300,
+      "bigFish": 0,
+      "points": 6,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik14",
+      "sector": "B",
+      "round": 1,
+      "stand": 7,
+      "weight": 4720,
+      "bigFish": 0,
+      "points": 7,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik14",
+      "sector": "C",
+      "round": 2,
+      "stand": 11,
+      "weight": 52200,
+      "bigFish": 0,
+      "points": 2,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik15",
+      "sector": "C",
+      "round": 1,
+      "stand": 22,
+      "weight": 10200,
+      "bigFish": 0,
+      "points": 5,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik15",
+      "sector": "B",
+      "round": 2,
+      "stand": 25,
+      "weight": 25840,
+      "bigFish": 0,
+      "points": 4,
+      "userId": null
+    },
+    {
+      "name": "Тестовый Участник",
+      "sector": "D",
+      "round": 1,
+      "stand": 14,
+      "weight": 5320,
+      "bigFish": 0,
+      "points": 4,
+      "userId": null
+    },
+    {
+      "name": "Тестовый Участник",
+      "sector": "B",
+      "round": 2,
+      "stand": 7,
+      "weight": 23820,
+      "bigFish": 0,
+      "points": 5,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik17",
+      "sector": "B",
+      "round": 1,
+      "stand": 25,
+      "weight": 7000,
+      "bigFish": 0,
+      "points": 6,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik17",
+      "sector": "C",
+      "round": 2,
+      "stand": 20,
+      "weight": 39540,
+      "bigFish": 0,
+      "points": 4,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik18",
+      "sector": "C",
+      "round": 1,
+      "stand": 11,
+      "weight": 9700,
+      "bigFish": 0,
+      "points": 6,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik18",
+      "sector": "A",
+      "round": 2,
+      "stand": 1,
+      "weight": 26360,
+      "bigFish": 0,
+      "points": 4,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik19",
+      "sector": "D",
+      "round": 1,
+      "stand": 12,
+      "weight": 0,
+      "bigFish": 0,
+      "points": 7,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik19",
+      "sector": "B",
+      "round": 2,
+      "stand": 5,
+      "weight": 32000,
+      "bigFish": 0,
+      "points": 3,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik20",
+      "sector": "B",
+      "round": 1,
+      "stand": 23,
+      "weight": 9260,
+      "bigFish": 0,
+      "points": 5,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik20",
+      "sector": "D",
+      "round": 2,
+      "stand": 16,
+      "weight": 22680,
+      "bigFish": 0,
+      "points": 5,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik21",
+      "sector": "C",
+      "round": 1,
+      "stand": 10,
+      "weight": 16600,
+      "bigFish": 0,
+      "points": 4,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik21",
+      "sector": "A",
+      "round": 2,
+      "stand": 4,
+      "weight": 12160,
+      "bigFish": 0,
+      "points": 6,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik22",
+      "sector": "A",
+      "round": 1,
+      "stand": 3,
+      "weight": 10080,
+      "bigFish": 0,
+      "points": 4,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik22",
+      "sector": "D",
+      "round": 2,
+      "stand": 13,
+      "weight": 18220,
+      "bigFish": 0,
+      "points": 6,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik23",
+      "sector": "D",
+      "round": 1,
+      "stand": 19,
+      "weight": 4980,
+      "bigFish": 0,
+      "points": 5,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik23",
+      "sector": "B",
+      "round": 2,
+      "stand": 23,
+      "weight": 17240,
+      "bigFish": 0,
+      "points": 6,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik24",
+      "sector": "A",
+      "round": 1,
+      "stand": 2,
+      "weight": 2180,
+      "bigFish": 0,
+      "points": 5,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik24",
+      "sector": "C",
+      "round": 2,
+      "stand": 9,
+      "weight": 24120,
+      "bigFish": 0,
+      "points": 7,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik25",
+      "sector": "D",
+      "round": 1,
+      "stand": 13,
+      "weight": 0,
+      "bigFish": 0,
+      "points": 7,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik25",
+      "sector": "A",
+      "round": 2,
+      "stand": 2,
+      "weight": 12460,
+      "bigFish": 0,
+      "points": 5,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik26",
+      "sector": "A",
+      "round": 1,
+      "stand": 28,
+      "weight": 0,
+      "bigFish": 0,
+      "points": 7,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik26",
+      "sector": "D",
+      "round": 2,
+      "stand": 19,
+      "weight": 16840,
+      "bigFish": 0,
+      "points": 7,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik27",
+      "sector": "A",
+      "round": 1,
+      "stand": 27,
+      "weight": 2060,
+      "bigFish": 0,
+      "points": 6,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik27",
+      "sector": "D",
+      "round": 2,
+      "stand": 17,
+      "weight": 12400,
+      "bigFish": 0,
+      "points": 8,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik28",
+      "sector": "C",
+      "round": 1,
+      "stand": 9,
+      "weight": 0,
+      "bigFish": 0,
+      "points": 7,
+      "userId": null
+    },
+    {
+      "name": "Testowy Zawodnik28",
+      "sector": "B",
+      "round": 2,
+      "stand": 6,
+      "weight": 4640,
+      "bigFish": 0,
+      "points": 7,
+      "userId": null
+    }
+  ],
+  "general": [
+    {
+      "name": "Testowy Zawodnik1",
+      "rank": 1,
+      "points": 2,
+      "weight": 97560
+    },
+    {
+      "name": "Testowy Zawodnik2",
+      "rank": 2,
+      "points": 2,
+      "weight": 52080
+    },
+    {
+      "name": "Testowy Zawodnik3",
+      "rank": 3,
+      "points": 3,
+      "weight": 109520
+    },
+    {
+      "name": "Testowy Zawodnik4",
+      "rank": 4,
+      "points": 4,
+      "weight": 63520
+    },
+    {
+      "name": "Testowy Zawodnik5",
+      "rank": 5,
+      "points": 4,
+      "weight": 37400
+    },
+    {
+      "name": "Testowy Zawodnik6",
+      "rank": 6,
+      "points": 5,
+      "weight": 60040
+    },
+    {
+      "name": "Testowy Zawodnik7",
+      "rank": 7,
+      "points": 5,
+      "weight": 59520
+    },
+    {
+      "name": "Testowy Zawodnik8",
+      "rank": 8,
+      "points": 6,
+      "weight": 70580
+    },
+    {
+      "name": "Testowy Zawodnik9",
+      "rank": 9,
+      "points": 6,
+      "weight": 64880
+    },
+    {
+      "name": "Testowy Zawodnik10",
+      "rank": 10,
+      "points": 6,
+      "weight": 55520
+    },
+    {
+      "name": "Testowy Zawodnik11",
+      "rank": 11,
+      "points": 6,
+      "weight": 46440
+    },
+    {
+      "name": "Testowy Zawodnik12",
+      "rank": 12,
+      "points": 6,
+      "weight": 33600
+    },
+    {
+      "name": "Testowy Zawodnik13",
+      "rank": 13,
+      "points": 7,
+      "weight": 71420
+    },
+    {
+      "name": "Testowy Zawodnik14",
+      "rank": 14,
+      "points": 9,
+      "weight": 56920
+    },
+    {
+      "name": "Testowy Zawodnik15",
+      "rank": 15,
+      "points": 9,
+      "weight": 36040
+    },
+    {
+      "name": "Тестовый Участник",
+      "rank": 16,
+      "points": 9,
+      "weight": 29140
+    },
+    {
+      "name": "Testowy Zawodnik17",
+      "rank": 17,
+      "points": 10,
+      "weight": 46540
+    },
+    {
+      "name": "Testowy Zawodnik18",
+      "rank": 18,
+      "points": 10,
+      "weight": 36060
+    },
+    {
+      "name": "Testowy Zawodnik19",
+      "rank": 19,
+      "points": 10,
+      "weight": 32000
+    },
+    {
+      "name": "Testowy Zawodnik20",
+      "rank": 20,
+      "points": 10,
+      "weight": 31940
+    },
+    {
+      "name": "Testowy Zawodnik21",
+      "rank": 21,
+      "points": 10,
+      "weight": 28760
+    },
+    {
+      "name": "Testowy Zawodnik22",
+      "rank": 22,
+      "points": 10,
+      "weight": 28300
+    },
+    {
+      "name": "Testowy Zawodnik23",
+      "rank": 23,
+      "points": 11,
+      "weight": 22220
+    },
+    {
+      "name": "Testowy Zawodnik24",
+      "rank": 24,
+      "points": 12,
+      "weight": 26300
+    },
+    {
+      "name": "Testowy Zawodnik25",
+      "rank": 25,
+      "points": 12,
+      "weight": 12460
+    },
+    {
+      "name": "Testowy Zawodnik26",
+      "rank": 26,
+      "points": 14,
+      "weight": 16840
+    },
+    {
+      "name": "Testowy Zawodnik27",
+      "rank": 27,
+      "points": 14,
+      "weight": 14460
+    },
+    {
+      "name": "Testowy Zawodnik28",
+      "rank": 28,
+      "points": 14,
+      "weight": 4640
+    }
+  ]
+}

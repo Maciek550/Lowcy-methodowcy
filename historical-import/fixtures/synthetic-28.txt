@@ -1,0 +1,98 @@
+Test syntetyczny 28 osób 15.06.2030
+Tury uwzględnione w klasyfikacji: 1, 2
+Klasyfikacja Ogólna
+1 Testowy Zawodnik1 2 97560 0 1 47000 1 50560
+2 Testowy Zawodnik2 2 52080 14660 1 16580 1 35500
+3 Testowy Zawodnik3 3 109520 0 2 22520 1 87000
+4 Testowy Zawodnik4 4 63520 0 3 22320 1 41200
+5 Testowy Zawodnik5 4 37400 0 2 7060 2 30340
+6 Testowy Zawodnik6 5 60040 14700 2 28500 3 31540
+7 Testowy Zawodnik7 5 59520 0 3 17200 2 42320
+8 Testowy Zawodnik8 6 70580 0 3 19260 3 51320
+9 Testowy Zawodnik9 6 64880 18640 1 31180 5 33700
+10 Testowy Zawodnik10 6 55520 0 4 21320 2 34200
+11 Testowy Zawodnik11 6 46440 0 2 21440 4 25000
+12 Testowy Zawodnik12 6 33600 0 3 6980 3 26620
+13 Testowy Zawodnik13 7 71420 0 1 40120 6 31300
+14 Testowy Zawodnik14 9 56920 0 7 4720 2 52200
+15 Testowy Zawodnik15 9 36040 0 5 10200 4 25840
+16 Тестовый Участник 9 29140 0 4 5320 5 23820
+17 Testowy Zawodnik17 10 46540 0 6 7000 4 39540
+18 Testowy Zawodnik18 10 36060 0 6 9700 4 26360
+19 Testowy Zawodnik19 10 32000 0 7 0 3 32000
+20 Testowy Zawodnik20 10 31940 0 5 9260 5 22680
+21 Testowy Zawodnik21 10 28760 0 4 16600 6 12160
+22 Testowy Zawodnik22 10 28300 0 4 10080 6 18220
+23 Testowy Zawodnik23 11 22220 0 5 4980 6 17240
+24 Testowy Zawodnik24 12 26300 0 5 2180 7 24120
+25 Testowy Zawodnik25 12 12460 0 7 0 5 12460
+26 Testowy Zawodnik26 14 16840 0 7 0 7 16840
+27 Testowy Zawodnik27 14 14460 0 6 2060 8 12400
+28 Testowy Zawodnik28 14 4640 0 7 0 7 4640
+Wyniki Sektorowe wg Tur
+Tura 1
+SEKTOR: A
+1 Testowy Zawodnik13 4 40120 0 1
+2 Testowy Zawodnik11 1 21440 0 2
+3 Testowy Zawodnik8 29 19260 0 3
+4 Testowy Zawodnik22 3 10080 0 4
+5 Testowy Zawodnik24 2 2180 0 5
+6 Testowy Zawodnik27 27 2060 0 6
+7 Testowy Zawodnik26 28 0 0 7
+SEKTOR: B
+1 Testowy Zawodnik9 26 31180 18640 1
+2 Testowy Zawodnik6 24 28500 14700 2
+3 Testowy Zawodnik4 6 22320 0 3
+4 Testowy Zawodnik10 5 21320 0 4
+5 Testowy Zawodnik20 23 9260 0 5
+6 Testowy Zawodnik17 25 7000 0 6
+7 Testowy Zawodnik14 7 4720 0 7
+SEKTOR: C
+1 Testowy Zawodnik1 21 47000 0 1
+2 Testowy Zawodnik3 8 22520 0 2
+3 Testowy Zawodnik7 20 17200 0 3
+4 Testowy Zawodnik21 10 16600 0 4
+5 Testowy Zawodnik15 22 10200 0 5
+6 Testowy Zawodnik18 11 9700 0 6
+7 Testowy Zawodnik28 9 0 0 7
+SEKTOR: D
+1 Testowy Zawodnik2 16 16580 0 1
+2 Testowy Zawodnik5 17 7060 0 2
+3 Testowy Zawodnik12 15 6980 0 3
+4 Тестовый Участник 14 5320 0 4
+5 Testowy Zawodnik23 19 4980 0 5
+7 Testowy Zawodnik19 12 0 0 7
+7 Testowy Zawodnik25 13 0 0 7
+Tura 2
+SEKTOR: A
+1 Testowy Zawodnik2 27 35500 14660 1
+2 Testowy Zawodnik5 29 30340 0 2
+3 Testowy Zawodnik12 3 26620 0 3
+4 Testowy Zawodnik18 1 26360 0 4
+5 Testowy Zawodnik25 2 12460 0 5
+6 Testowy Zawodnik21 4 12160 0 6
+SEKTOR: B
+1 Testowy Zawodnik1 26 50560 0 1
+2 Testowy Zawodnik7 24 42320 0 2
+3 Testowy Zawodnik19 5 32000 0 3
+4 Testowy Zawodnik15 25 25840 0 4
+5 Тестовый Участник 7 23820 0 5
+6 Testowy Zawodnik23 23 17240 0 6
+7 Testowy Zawodnik28 6 4640 0 7
+SEKTOR: C
+1 Testowy Zawodnik3 10 87000 0 1
+2 Testowy Zawodnik14 11 52200 0 2
+3 Testowy Zawodnik8 21 51320 0 3
+4 Testowy Zawodnik17 20 39540 0 4
+5 Testowy Zawodnik9 22 33700 0 5
+6 Testowy Zawodnik13 8 31300 0 6
+7 Testowy Zawodnik24 9 24120 0 7
+SEKTOR: D
+1 Testowy Zawodnik4 15 41200 0 1
+2 Testowy Zawodnik10 12 34200 0 2
+3 Testowy Zawodnik6 18 31540 0 3
+4 Testowy Zawodnik11 14 25000 0 4
+5 Testowy Zawodnik20 16 22680 0 5
+6 Testowy Zawodnik22 13 18220 0 6
+7 Testowy Zawodnik26 19 16840 0 7
+8 Testowy Zawodnik27 17 12400 0 8

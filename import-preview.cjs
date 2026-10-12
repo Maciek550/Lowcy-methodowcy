@@ -1,6 +1,6 @@
 'use strict';
 // Import preview only. No DB writes. Used to identify accounts before approval.
-function key(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ł/g,'l').replace(/Ł/g,'L').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim()}
+function key(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ł/g,'l').replace(/Ł/g,'L').toLowerCase().replace(/[^\p{L}\p{N} ]/gu,' ').replace(/\s+/g,' ').trim()}
 function realPhone(p){let s=String(p||'').trim();return !/^(ZPRO|IMPORT|MANUAL)-/i.test(s)&&/^(?:48)?[0-9]{9}$/.test(s.replace(/\D/g,''))}
 function matchPlayers(players,accounts){
  if(!Array.isArray(players)||!Array.isArray(accounts))throw Error('Nieprawidłowe dane');

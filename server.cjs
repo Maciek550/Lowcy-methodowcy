@@ -25,9 +25,9 @@ const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const GOOGLE_VISION_API_KEY = process.env.GOOGLE_VISION_API_KEY || process.env.OCR_GOOGLE_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.PHOTO_OCR_OPENAI_API_KEY || '';
 const PHOTO_OCR_MODEL = process.env.PHOTO_OCR_OPENAI_MODEL || 'gpt-5.6-sol';
-const APP_VERSION = '301';
-const APP_VERSION_NAME = 'V301_ONE_ROUND_DISABLED_T2';
-const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8');
+const APP_VERSION = '302';
+const APP_VERSION_NAME = 'V302_HISTORICAL_IMPORT';
+const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8') + '\n' + fs.readFileSync(pathModule.join(__dirname, 'historical-import/ui.js'), 'utf8');
 const PODIUM_TROPHIES = fs.existsSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) ? fs.readFileSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) : null;
 const CARP_REAL = fs.readFileSync(pathModule.join(__dirname, 'carp-real-v116.png'));
 const ICON_192 = fs.readFileSync(pathModule.join(__dirname, 'icon-192.png'));
@@ -517,6 +517,18 @@ async function initDb() {
       big_fish integer not null default 0,
       updated_at timestamptz not null default now(),
       unique(competition_id, user_id, round)
+    );
+    alter table competitions add column if not exists historical_source text;
+    alter table competitions add column if not exists historical_fingerprint text;
+    create unique index if not exists competitions_historical_source_unique on competitions(historical_source) where historical_source is not null;
+    create unique index if not exists competitions_historical_fingerprint_unique on competitions(historical_fingerprint) where historical_fingerprint is not null;
+    alter table results add column if not exists historical_points numeric;
+    create table if not exists historical_import_audit (
+      id bigserial primary key,
+      competition_id bigint references competitions(id) on delete set null,
+      actor_id bigint references users(id),
+      payload jsonb not null,
+      created_at timestamptz not null default now()
     );
     create table if not exists result_items (
       id bigserial primary key,
@@ -1421,7 +1433,8 @@ function computeClassification(comp, entries, draws, results) {
         weight: Number(r.weight || 0),
         big_fish: Number(r.big_fish || 0),
         sector_place: null,
-        points: null
+        points: null,
+        historical_points: r.historical_points
       };
       if (!grouped.has(row.sector)) grouped.set(row.sector, []);
       grouped.get(row.sector).push(row);
@@ -1445,6 +1458,7 @@ function computeClassification(comp, entries, draws, results) {
       }
       rows.filter(r => r.weight <= 0).forEach(r => { r.sector_place = zeroSectorSize; r.points = zeroSectorSize; });
     }
+    for(const rows of grouped.values())for(const row of rows)if(row.historical_points!=null){row.points=Number(row.historical_points);row.sector_place=row.points;}
     roundRows[round] = Array.from(grouped.values()).flat().sort((a,b)=>(a.points-b.points) || (b.weight-a.weight) || String(a.sector).localeCompare(String(b.sector),'pl') || (a.stand||9999)-(b.stand||9999) || a.name.localeCompare(b.name,'pl'));
   }
 
@@ -2494,21 +2508,20 @@ self.addEventListener('notificationclick', event => {
   if (path === '/api/admin/historical-import/preview' && method === 'POST') {
     if (!requireAdmin(user, res)) return;
     try {
-      const { validateDraft, mapAccounts } = require('./historical-import/import-core.cjs');
+      const { validateDraft, accountPlan } = require('./historical-import/import-core.cjs');
       const b = await readBody(req);
-      const draft = b.tableText ? require('./historical-import/parse-table.cjs').parseDelimitedResults(b.tableText,b) : validateDraft(b);
-      const accounts = (await pool.query('select id,first_name,last_name,phone,created_at from users')).rows;
-      let matches = [];
-      const { matchPlayers } = require('./import-preview.cjs');
-      matches = matchPlayers(draft.rows.filter((r,i,a)=>a.findIndex(x=>x.name===r.name)===i).map(r=>({fullName:r.name})),accounts);
+      const draft = b.sourceUrl ? await require('./historical-import/source.cjs').fromUrl(b.sourceUrl) : b.pdfBase64 ? await require('./historical-import/source.cjs').fromPdf(b.pdfBase64,b) : b.tableText ? require('./historical-import/parse-table.cjs').parseDelimitedResults(b.tableText,b) : validateDraft(b);
+      const accounts = (await pool.query('select id,first_name,last_name,phone,created_at,role,last_login_at,archived_at from users')).rows;
+      const matches = accountPlan(draft.rows,accounts);
       const cryptoImport = require('crypto');
+      const accountDigest = cryptoImport.createHash('sha256').update(JSON.stringify(matches)).digest('hex');
       const issuedAt = Date.now();
       const digest = cryptoImport.createHash('sha256').update(JSON.stringify(draft)).digest('hex');
       const secret = JWT_SECRET;
       if(!secret) throw Error('Brak klucza podpisu podglądu importu');
-      const payload = String(user.id)+':'+issuedAt+':'+digest;
+      const payload = String(user.id)+':'+issuedAt+':'+digest+':'+accountDigest;
       const previewToken = issuedAt+'.'+cryptoImport.createHmac('sha256',secret).update(payload).digest('hex');
-      return sendJson(res,200,{ok:true,draft,matches,requiresConfirmation:true,previewToken});
+      return sendJson(res,200,{ok:true,draft,matches,requiresConfirmation:true,accountDigest,previewToken});
     } catch(e) { return sendJson(res,400,{ok:false,error:e.message}); }
   }
   if (path === '/api/admin/historical-import/confirm' && method === 'POST') {
@@ -2525,9 +2538,9 @@ self.addEventListener('notificationclick', event => {
       const issuedAt = Number(token[0]);
       if(token.length!==2||!Number.isSafeInteger(issuedAt)||issuedAt>Date.now()||Date.now()-issuedAt>15*60*1000)throw Error('Podgląd wygasł; ponów weryfikację');
       const digest = cryptoImport.createHash('sha256').update(JSON.stringify(draft)).digest('hex');
-      const expected = cryptoImport.createHmac('sha256',secret).update(String(user.id)+':'+issuedAt+':'+digest).digest('hex');
+      const expected = cryptoImport.createHmac('sha256',secret).update(String(user.id)+':'+issuedAt+':'+digest+':'+String(b.accountDigest||'')).digest('hex');
       if(!/^[0-9a-f]{64}$/.test(token[1])||!cryptoImport.timingSafeEqual(Buffer.from(token[1],'hex'),Buffer.from(expected,'hex')))throw Error('Dane zmienione po podglądzie; zweryfikuj ponownie');
-      const result = await saveApprovedDraft(pool,draft,user.id);
+      const result = await saveApprovedDraft(pool,draft,user.id,b.accountDigest);
       return sendJson(res,200,{ok:true,result});
     } catch(e) { return sendJson(res,409,{ok:false,error:e.message}); }
   }

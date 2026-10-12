@@ -1,12 +1,14 @@
 {
   "scripts": {
     "start": "node server.cjs",
-    "test": "node --test tests/*.test.cjs",
+    "test": "node --test tests/*.test.cjs historical-import/*.test.cjs",
     "check": "node --check server.cjs && node --check app.js && npm test"
   },
   "dependencies": {
     "bcryptjs": "latest",
+    "cheerio": "1.1.2",
     "jsonwebtoken": "latest",
+    "pdfjs-dist": "4.10.38",
     "pg": "latest",
     "web-push": "latest"
   }

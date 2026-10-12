@@ -1,4 +1,4 @@
-const CLIENT_VERSION='301';const CLIENT_VERSION_NAME='V301_ONE_ROUND_DISABLED_T2';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='302';const CLIENT_VERSION_NAME='V302_HISTORICAL_IMPORT';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -735,37 +735,9 @@ function renderAdminCompetitionList(arr){
   let desktop='<div class="competitionDesktopList tablewrap"><table><thead><tr><th>Zawody</th><th>Data</th><th>Stan zapisów</th><th>Status</th><th>Akcja</th></tr></thead><tbody>';
   desktop+=arr.map(c=>{const mine=playerCompetitionMine(c);const closed=c.status!=='OPEN'||c.signup_open===false;const main=Number(c.active_count||0), reserve=Number(c.reserve_count||0), limit=Number(c.limit_places||0);const stat='<b>'+main+'</b>'+(limit?' / '+limit:'')+(reserve?' + rezerwa '+reserve:'');return '<tr class="'+(mine?'mine':'')+'"><td><b>'+esc(c.title)+'</b><br><span class="muted small">'+esc(c.fishery||'')+'</span></td><td class="nowrap">'+fmtDate(c.competition_date)+'<br><span class="small muted">Zbiórka '+esc(meetingTimeText(c))+'</span></td><td class="nowrap">'+stat+'</td><td><span class="pill">'+(playerCompetitionPast(c)?'ZAWODY ZAKOŃCZONE':statusName(c.status))+'</span></td><td>'+competitionActionHtml(c,admin,mine,closed,false)+'</td></tr>'}).join('');
   desktop+='</tbody></table></div>';
-  desktop='<div style="padding:8px"><button type="button" onclick="openHistoricalImport()">IMPORT ZAWODÓW (CSV)</button></div>'+desktop;
+  desktop='<div style="padding:8px"><button type="button" onclick="openHistoricalImport()">IMPORT WYNIKÓW</button></div>'+desktop;
   const mobile='<div class="competitionMobileList">'+arr.map(c=>renderCompetitionMobileCard(c,admin)).join('')+'</div>';
-  return desktop+'<div class="competitionMobileList"><button type="button" onclick="openHistoricalImport()">IMPORT ZAWODÓW (CSV)</button></div>'+mobile;
-}
-async function openHistoricalImport(){
- const title=prompt('IMPORT ZAWODÓW — nazwa zawodów');if(!title)return;
- const date=prompt('Data zawodów RRRR-MM-DD');if(!date)return;
- const tableText=prompt('Wklej tabelę CSV (separator ;) z nagłówkiem: Zawodnik;Sektor;Stanowisko;Waga;BF;Tura. Waga i BF w gramach.');if(!tableText)return;
- try{
-  const preview=await api('/api/admin/historical-import/preview',{method:'POST',body:JSON.stringify({title,date,tableText})});
-  const draft=preview.draft;
-  const matches=preview.matches||[];
-  const unresolved=matches.filter(x=>x.status!=='MATCHED');
-  if(unresolved.length)throw Error('Najpierw rozwiąż brakujące konta lub duplikaty: '+unresolved.map(x=>x.name+' ('+x.status+')').join(', '));
-  const ambiguous=matches.filter(x=>(x.mergeFromIds||[]).length);
-  for(const m of ambiguous){
-   const options=[m.userId,...m.mergeFromIds].map(String);
-   const chosen=prompt('Kilka kont: '+m.name+'. Wybierz ID z listy: '+options.join(', '),String(m.userId));
-   if(!chosen)return;
-   if(!options.includes(chosen.trim()))throw Error('Nieprawidłowe ID dla '+m.name);
-   draft.rows.filter(r=>r.name===m.name).forEach(r=>r.userId=Number(chosen));
-  }
-  const edited=prompt('PODGLĄD I EDYCJA — sprawdź wszystkie dane. Możesz zmienić JSON przed zapisem.',JSON.stringify(draft,null,2));
-  if(!edited)return;
-  const approved=JSON.parse(edited);
-  const verified=await api('/api/admin/historical-import/preview',{method:'POST',body:JSON.stringify(approved)});
-  if(!confirm('Zatwierdzasz zapis '+verified.draft.rows.length+' wyników dla '+verified.draft.title+' ('+verified.draft.date+')? Operacja tworzy nowe zawody i nie nadpisuje istniejących.'))return;
-  const result=await api('/api/admin/historical-import/confirm',{method:'POST',body:JSON.stringify({...verified.draft,previewToken:verified.previewToken,confirm:true})});
-  msg('Zaimportowano zawody #'+result.result.competitionId);
-  await loadCompetitions();
- }catch(e){msg('Import przerwany: '+e.message,'bad')}
+  return desktop+'<div class="competitionMobileList"><button type="button" onclick="openHistoricalImport()">IMPORT WYNIKÓW</button></div>'+mobile;
 }
 async function loadCompetitions(){
   if(ME?.role==='JUDGE')return judgeLoadCompetitions();
