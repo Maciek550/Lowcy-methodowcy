@@ -2501,7 +2501,14 @@ self.addEventListener('notificationclick', event => {
       let matches = [];
       const { matchPlayers } = require('./import-preview.cjs');
       matches = matchPlayers(draft.rows.filter((r,i,a)=>a.findIndex(x=>x.name===r.name)===i).map(r=>({fullName:r.name})),accounts);
-      return sendJson(res,200,{ok:true,draft,matches,requiresConfirmation:true});
+      const cryptoImport = require('crypto');
+      const issuedAt = Date.now();
+      const digest = cryptoImport.createHash('sha256').update(JSON.stringify(draft)).digest('hex');
+      const secret = process.env.JWT_SECRET || process.env.SESSION_SECRET;
+      if(!secret) throw Error('Brak klucza podpisu podglądu importu');
+      const payload = String(user.id)+':'+issuedAt+':'+digest;
+      const previewToken = issuedAt+'.'+cryptoImport.createHmac('sha256',secret).update(payload).digest('hex');
+      return sendJson(res,200,{ok:true,draft,matches,requiresConfirmation:true,previewToken});
     } catch(e) { return sendJson(res,400,{ok:false,error:e.message}); }
   }
   if (path === '/api/admin/historical-import/confirm' && method === 'POST') {
@@ -2509,8 +2516,18 @@ self.addEventListener('notificationclick', event => {
     try {
       const b = await readBody(req);
       if(b.confirm !== true) return sendJson(res,400,{ok:false,error:'Wymagane jawne potwierdzenie administratora'});
-      const { saveApprovedDraft } = require('./historical-import/import-core.cjs');
-      const result = await saveApprovedDraft(pool,b,user.id);
+      const cryptoImport = require('crypto');
+      const { validateDraft, saveApprovedDraft } = require('./historical-import/import-core.cjs');
+      const draft = validateDraft(b);
+      const secret = process.env.JWT_SECRET || process.env.SESSION_SECRET;
+      if(!secret) throw Error('Brak klucza podpisu podglądu importu');
+      const token = String(b.previewToken||'').split('.');
+      const issuedAt = Number(token[0]);
+      if(token.length!==2||!Number.isSafeInteger(issuedAt)||issuedAt>Date.now()||Date.now()-issuedAt>15*60*1000)throw Error('Podgląd wygasł; ponów weryfikację');
+      const digest = cryptoImport.createHash('sha256').update(JSON.stringify(draft)).digest('hex');
+      const expected = cryptoImport.createHmac('sha256',secret).update(String(user.id)+':'+issuedAt+':'+digest).digest('hex');
+      if(!/^[0-9a-f]{64}$/.test(token[1])||!cryptoImport.timingSafeEqual(Buffer.from(token[1],'hex'),Buffer.from(expected,'hex')))throw Error('Dane zmienione po podglądzie; zweryfikuj ponownie');
+      const result = await saveApprovedDraft(pool,draft,user.id);
       return sendJson(res,200,{ok:true,result});
     } catch(e) { return sendJson(res,409,{ok:false,error:e.message}); }
   }
