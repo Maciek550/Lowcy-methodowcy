@@ -22,6 +22,7 @@ function mapAccounts(rows,accounts){
  for(const r of rows){
   const k=key(r.name),list=(groups.get(k)||[]).slice().sort((a,b)=>Number(realPhone(b.phone))-Number(realPhone(a.phone))||(Date.parse(a.created_at)||0)-(Date.parse(b.created_at)||0)||Number(a.id)-Number(b.id));
   if(!list.length)throw Error('Brak konta dla '+r.name+'; wymagana weryfikacja administratora');
+  if(list.length>1)throw Error('Niejednoznaczne konto dla '+r.name+' ('+list.length+' kont). Wymagane ręczne potwierdzenie ID, bez automatycznego scalania.');
   const id=Number(list[0].id);
   if(!Number.isSafeInteger(id))throw Error('Niepoprawny identyfikator');
   chosen.set(k,id);
