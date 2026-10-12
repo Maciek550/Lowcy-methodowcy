@@ -2491,6 +2491,30 @@ self.addEventListener('notificationclick', event => {
     await autoSyncBanksForRoster(compId);
     return sendJson(res, 200, { ok:true, added });
   }
+  if (path === '/api/admin/historical-import/preview' && method === 'POST') {
+    if (!requireAdmin(user, res)) return;
+    try {
+      const { validateDraft, mapAccounts } = require('./historical-import/import-core.cjs');
+      const b = await readBody(req);
+      const draft = validateDraft(b);
+      const accounts = (await pool.query('select id,first_name,last_name,phone,created_at from users')).rows;
+      let matches = [];
+      const { matchPlayers } = require('./import-preview.cjs');
+      matches = matchPlayers(draft.rows.filter((r,i,a)=>a.findIndex(x=>x.name===r.name)===i).map(r=>({fullName:r.name})),accounts);
+      return sendJson(res,200,{ok:true,draft,matches,requiresConfirmation:true});
+    } catch(e) { return sendJson(res,400,{ok:false,error:e.message}); }
+  }
+  if (path === '/api/admin/historical-import/confirm' && method === 'POST') {
+    if (!requireAdmin(user, res)) return;
+    try {
+      const b = await readBody(req);
+      if(b.confirm !== true) return sendJson(res,400,{ok:false,error:'Wymagane jawne potwierdzenie administratora'});
+      const { saveApprovedDraft } = require('./historical-import/import-core.cjs');
+      const result = await saveApprovedDraft(pool,b,user.id);
+      return sendJson(res,200,{ok:true,result});
+    } catch(e) { return sendJson(res,409,{ok:false,error:e.message}); }
+  }
+
   m = path.match(/^\/api\/admin\/competitions\/(\d+)\/import-zawody-pro$/);
   if (m && method === 'POST') {
     if (!requireAdmin(user, res)) return;
