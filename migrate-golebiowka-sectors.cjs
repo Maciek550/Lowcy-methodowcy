@@ -112,7 +112,10 @@ async function main() {
             ) AS all_results_linked
           FROM competitions c
           WHERE COALESCE(c.round_count,2)=2
-            AND translate(lower(COALESCE(c.fishery,'')), 'łęó', 'leo') LIKE '%golebiowka%'
+            AND (
+              translate(lower(COALESCE(c.fishery,'')), 'łęó', 'leo') LIKE '%golebiowka%'
+              OR translate(lower(COALESCE(c.title,'')), 'łęó', 'leo') LIKE '%golebiowka%'
+            )
         )
         SELECT * FROM checks
         WHERE active_count=17
@@ -142,7 +145,8 @@ async function main() {
                WHERE d.competition_id=c.id AND d.round=2 GROUP BY d.sector
              ) x) AS layout2
           FROM competitions c
-          WHERE translate(lower(COALESCE(c.fishery,'')), 'łęó', 'leo') LIKE '%golebiowka%'
+          WHERE COALESCE(c.round_count,2)=2
+            AND (SELECT count(*) FROM entries e WHERE e.competition_id=c.id AND e.status='ACTIVE')=17
           ORDER BY c.id
         `);
         console.log('Gołębiówka result recalculation diagnostics=' + JSON.stringify(diagnostics.rows));
