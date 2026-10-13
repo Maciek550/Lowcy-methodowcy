@@ -1,4 +1,4 @@
-const CLIENT_VERSION='305';const CLIENT_VERSION_NAME='V305_ALL_HISTORY_STARTS';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='306';const CLIENT_VERSION_NAME='V306_HISTORY_DATE_SORT';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -509,6 +509,16 @@ function setPlayerHistoryYear(year){
 function renderPlayerHistory(rows){
   const box=q('playerHistoryContent');if(!box)return;
   rows=Array.isArray(rows)?rows:[];
+  const historyDateValue=value=>{
+    if(value instanceof Date)return value.getTime();
+    const raw=String(value||'').trim();
+    let m=raw.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})/);
+    if(m)return Date.UTC(Number(m[3]),Number(m[2])-1,Number(m[1]));
+    m=raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if(m)return Date.UTC(Number(m[1]),Number(m[2])-1,Number(m[3]));
+    const parsed=Date.parse(raw);return Number.isFinite(parsed)?parsed:0;
+  };
+  rows.sort((a,b)=>historyDateValue(b.competition_date)-historyDateValue(a.competition_date)||Number(b.competition_id||0)-Number(a.competition_id||0));
   if(!rows.length){box.innerHTML='<div class="card playerHistoryCard"><h2>Historia startów</h2><p class="muted">Brak zakończonych zawodów z zapisanymi wynikami.</p></div>';return}
   const years=[...new Set(rows.map(r=>String(r.competition_date||'').slice(0,4)).filter(y=>/^\d{4}$/.test(y)))].sort((a,b)=>b.localeCompare(a));
   if(years.length===1||(PLAYER_HISTORY_YEAR!=='all'&&!years.includes(PLAYER_HISTORY_YEAR)))PLAYER_HISTORY_YEAR='all';
