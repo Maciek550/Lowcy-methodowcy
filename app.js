@@ -1,4 +1,4 @@
-const CLIENT_VERSION='306';const CLIENT_VERSION_NAME='V306_HISTORY_DATE_SORT';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='307';const CLIENT_VERSION_NAME='V307_DRAW_SECTOR_MAP';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -1009,7 +1009,7 @@ function renderPlayerOwnSummary(d){
   return '<div class="playerOwnSummaryWrap"><div class="playerOwnSummaryHeading">MOJE STANOWISKA</div><div class="playerOwnSummaryGrid">'+one(1)+one(2)+'</div></div>';
 }
 function renderPlayerSectorStand(n,c,byStand,cramped){
-  const sec=sectorForStandClient(n,c),off=isDisabledStand(c,n),x=byStand[Number(n)],mine=x&&Number(x.draw.user_id)===Number(ME.id),name=off?'WYŁ.':(x?x.name.trim():'—');
+  const x=byStand[Number(n)],sec=String(x?.draw?.sector||'').trim()||sectorForStandClient(n,c),off=isDisabledStand(c,n),mine=x&&Number(x.draw.user_id)===Number(ME.id),name=off?'WYŁ.':(x?x.name.trim():'—');
   return '<div class="playerSectorStand '+sectorColorClass(sec,c)+(mine?' minePlayerSectorStand':'')+(off?' disabledStand':'')+'"><b class="playerSectorStandNo">'+n+'</b><span class="playerSectorStandName">'+esc(off?'WYŁ.':playerInitialSurname(name))+'</span>'+(mine?'<small class="playerSectorMineBadge">TY</small>':'')+'</div>';
 }
 function renderPlayerSectorBank(label,arr,c,byStand){
@@ -1018,7 +1018,7 @@ function renderPlayerSectorBank(label,arr,c,byStand){
   return '<div class="playerSectorBank"><div class="playerSectorBankTitle">≋ '+esc(label)+' <span>('+activeCount+' os.)</span></div><div class="playerSectorStandGrid cols'+Math.min(4,Math.max(1,arr.length))+'">'+arr.map(n=>renderPlayerSectorStand(n,c,byStand,cramped)).join('')+'</div></div>';
 }
 function renderPlayerSectorAccordion(d,round,allOpen=false){
-  const c=d.competition,layout=sectorLayoutClient(c),byStand=roundDrawStandMap(d,round),mine=(d.draws||[]).find(v=>Number(v.round)===Number(round)&&Number(v.user_id)===Number(ME.id)),mineSector=mine?String(mine.sector||''):'';
+  const c=roundMapCompetitionClient(d.competition,d,round),layout=sectorLayoutClient(c),byStand=roundDrawStandMap(d,round),mine=(d.draws||[]).find(v=>Number(v.round)===Number(round)&&Number(v.user_id)===Number(ME.id)),mineSector=mine?String(mine.sector||''):'';
   if(!Object.keys(byStand).length)return '<div class="card"><p class="muted">Brak losowania T'+round+'.</p></div>';
   return '<div class="playerSectorAccordionList">'+layout.map((sec,idx)=>{const letter=String(sec.letter||''),open=(allOpen||idx===0||letter===mineSector),total=activeSectorSize(sec,c);let inner='';if(c.map_mode==='ONE_BANK')inner+=renderPlayerSectorBank('JEDEN BRZEG',sec.bottom,c,byStand);else if(c.map_mode==='TWO_ALONG'){if(sec.top?.length)inner+=renderPlayerSectorBank('BRZEG 2',sec.top,c,byStand);if(sec.bottom?.length)inner+=renderPlayerSectorBank('BRZEG 1',sec.bottom,c,byStand)}else{if(sec.top?.length)inner+=renderPlayerSectorBank('BRZEG GÓRNY',sec.top,c,byStand);if(sec.bottom?.length)inner+=renderPlayerSectorBank('BRZEG DOLNY',sec.bottom,c,byStand)}return '<section class="playerSectorAccordion '+sectorColorClass(letter,c)+' '+(open?'open':'collapsed')+'"><button type="button" class="playerSectorAccordionHead" onclick="togglePlayerSectorAccordion(this,event)"><span class="playerSectorCircle">'+esc(letter)+'</span><b>SEKTOR '+esc(letter)+'</b><span class="playerSectorCount">'+total+' os.</span><span class="playerSectorChevron">⌃</span></button><div class="playerSectorAccordionBody">'+inner+'</div></section>'}).join('')+'</div>';
 }
