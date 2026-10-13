@@ -1442,9 +1442,10 @@ function computeClassification(comp, entries, draws, results) {
     const sectorGroupSizes = Array.from(grouped.values()).map(a => a.length);
     const zeroRule = String(comp?.zero_score_rule || 'MIN').toUpperCase() === 'MAX' ? 'MAX' : 'MIN';
     const zeroSectorSize = sectorGroupSizes.length
-      ? Math.max(1, zeroRule === 'MAX' ? Math.max(...sectorGroupSizes) : Math.min(...sectorGroupSizes))
+      ? Math.max(1, Math.min(...sectorGroupSizes))
       : 1;
     for (const rows of grouped.values()) {
+      const zeroPlace = zeroRule === 'MAX' ? rows.length : zeroSectorSize;
       const positives = rows.filter(r => r.weight > 0).sort((a,b)=>b.weight-a.weight || a.name.localeCompare(b.name, 'pl'));
       for(let start=0;start<positives.length;){
         let end=start+1;
@@ -1456,7 +1457,7 @@ function computeClassification(comp, entries, draws, results) {
         }
         start=end;
       }
-      rows.filter(r => r.weight <= 0).forEach(r => { r.sector_place = zeroSectorSize; r.points = zeroSectorSize; });
+      rows.filter(r => r.weight <= 0).forEach(r => { r.sector_place = zeroPlace; r.points = zeroPlace; });
     }
     for(const rows of grouped.values())for(const row of rows)if(row.historical_points!=null){row.points=Number(row.historical_points);row.sector_place=row.points;}
     roundRows[round] = Array.from(grouped.values()).flat().sort((a,b)=>(a.points-b.points) || (b.weight-a.weight) || String(a.sector).localeCompare(String(b.sector),'pl') || (a.stand||9999)-(b.stand||9999) || a.name.localeCompare(b.name,'pl'));
