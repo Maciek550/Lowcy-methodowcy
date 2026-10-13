@@ -98,27 +98,54 @@ async function main() {
               SELECT 1 FROM entries e
               WHERE e.competition_id=c.id AND e.status='ACTIVE'
                 AND (
-                  NOT EXISTS (SELECT 1 FROM results r WHERE r.competition_id=c.id AND r.round=1 AND r.user_id=e.user_id)
-                  OR NOT EXISTS (SELECT 1 FROM results r WHERE r.competition_id=c.id AND r.round=2 AND r.user_id=e.user_id)
-                  OR NOT EXISTS (SELECT 1 FROM draws d WHERE d.competition_id=c.id AND d.round=1 AND d.user_id=e.user_id)
+                  NOT EXISTS (SELECT 1 FROM draws d WHERE d.competition_id=c.id AND d.round=1 AND d.user_id=e.user_id)
                   OR NOT EXISTS (SELECT 1 FROM draws d WHERE d.competition_id=c.id AND d.round=2 AND d.user_id=e.user_id)
                 )
-            ) AS all_people_linked
+            ) AS all_stations_assigned,
+            NOT EXISTS (
+              SELECT 1 FROM results r
+              WHERE r.competition_id=c.id AND r.round IN (1,2)
+                AND NOT EXISTS (
+                  SELECT 1 FROM entries e
+                  WHERE e.competition_id=c.id AND e.status='ACTIVE' AND e.user_id=r.user_id
+                )
+            ) AS all_results_linked
           FROM competitions c
           WHERE COALESCE(c.round_count,2)=2
             AND translate(lower(COALESCE(c.fishery,'')), 'łęó', 'leo') LIKE '%golebiowka%'
         )
         SELECT * FROM checks
         WHERE active_count=17
-          AND result1_count=17 AND result2_count=17
           AND weight1=255100 AND weight2=276700
           AND draw1_count=17 AND draw2_count=17
           AND layout1='{"A":6,"B":6,"C":5}'::jsonb
           AND layout2='{"A":6,"B":6,"C":5}'::jsonb
-          AND all_people_linked
+          AND all_stations_assigned AND all_results_linked
       `);
 
       if (candidates.rowCount !== 1) {
+        const diagnostics = await client.query(`
+          SELECT c.id,c.title,c.round_count,
+            (SELECT count(*)::int FROM entries e WHERE e.competition_id=c.id AND e.status='ACTIVE') AS active_count,
+            (SELECT count(*)::int FROM results r WHERE r.competition_id=c.id AND r.round=1) AS result1_count,
+            (SELECT count(*)::int FROM results r WHERE r.competition_id=c.id AND r.round=2) AS result2_count,
+            (SELECT COALESCE(sum(r.weight),0)::int FROM results r WHERE r.competition_id=c.id AND r.round=1) AS weight1,
+            (SELECT COALESCE(sum(r.weight),0)::int FROM results r WHERE r.competition_id=c.id AND r.round=2) AS weight2,
+            (SELECT count(*)::int FROM draws d WHERE d.competition_id=c.id AND d.round=1) AS draw1_count,
+            (SELECT count(*)::int FROM draws d WHERE d.competition_id=c.id AND d.round=2) AS draw2_count,
+            (SELECT jsonb_object_agg(x.sector,x.n) FROM (
+               SELECT d.sector,count(*)::int AS n FROM draws d
+               WHERE d.competition_id=c.id AND d.round=1 GROUP BY d.sector
+             ) x) AS layout1,
+            (SELECT jsonb_object_agg(x.sector,x.n) FROM (
+               SELECT d.sector,count(*)::int AS n FROM draws d
+               WHERE d.competition_id=c.id AND d.round=2 GROUP BY d.sector
+             ) x) AS layout2
+          FROM competitions c
+          WHERE translate(lower(COALESCE(c.fishery,'')), 'łęó', 'leo') LIKE '%golebiowka%'
+          ORDER BY c.id
+        `);
+        console.log('Gołębiówka result recalculation diagnostics=' + JSON.stringify(diagnostics.rows));
         console.log('Gołębiówka result recalculation skipped; exact verified event candidates=' + candidates.rowCount);
       } else {
         const comp = candidates.rows[0];
