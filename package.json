@@ -1,8 +1,8 @@
 {
   "scripts": {
-    "start": "node server.cjs",
+    "start": "node migrate-golebiowka-sectors.cjs && node server.cjs",
     "test": "node --test tests/*.test.cjs historical-import/*.test.cjs",
-    "check": "node --check server.cjs && node --check app.js && npm test"
+    "check": "node --check server.cjs && node --check app.js && node --check migrate-golebiowka-sectors.cjs && npm test"
   },
   "dependencies": {
     "bcryptjs": "latest",
