@@ -9,7 +9,8 @@ const pool = new Pool({
 
 const migrations = {
   along: '20261013_golebiowka_two_along',
-  results: '20261013_golebiowka_results_alignment'
+  results: '20261013_golebiowka_results_alignment',
+  classification: '20261013_golebiowka_weight_classification'
 };
 
 async function alreadyApplied(client, id) {
@@ -67,6 +68,86 @@ async function main() {
       console.log('Gołębiówka map aligned with results (A: 1-5, B: 6-11, C: 12-16); competitions updated=' + result.rowCount);
     }
 
+    if (!(await alreadyApplied(client, migrations.classification))) {
+      const candidates = await client.query(`
+        WITH checks AS (
+          SELECT c.id, c.title,
+            (SELECT count(*)::int FROM entries e
+             WHERE e.competition_id=c.id AND e.status='ACTIVE') AS active_count,
+            (SELECT count(*)::int FROM results r
+             WHERE r.competition_id=c.id AND r.round=1) AS result1_count,
+            (SELECT count(*)::int FROM results r
+             WHERE r.competition_id=c.id AND r.round=2) AS result2_count,
+            (SELECT COALESCE(sum(r.weight),0)::int FROM results r
+             WHERE r.competition_id=c.id AND r.round=1) AS weight1,
+            (SELECT COALESCE(sum(r.weight),0)::int FROM results r
+             WHERE r.competition_id=c.id AND r.round=2) AS weight2,
+            (SELECT count(*)::int FROM draws d
+             WHERE d.competition_id=c.id AND d.round=1) AS draw1_count,
+            (SELECT count(*)::int FROM draws d
+             WHERE d.competition_id=c.id AND d.round=2) AS draw2_count,
+            (SELECT jsonb_object_agg(x.sector,x.n) FROM (
+               SELECT d.sector,count(*)::int AS n FROM draws d
+               WHERE d.competition_id=c.id AND d.round=1 GROUP BY d.sector
+             ) x) AS layout1,
+            (SELECT jsonb_object_agg(x.sector,x.n) FROM (
+               SELECT d.sector,count(*)::int AS n FROM draws d
+               WHERE d.competition_id=c.id AND d.round=2 GROUP BY d.sector
+             ) x) AS layout2,
+            NOT EXISTS (
+              SELECT 1 FROM entries e
+              WHERE e.competition_id=c.id AND e.status='ACTIVE'
+                AND (
+                  NOT EXISTS (SELECT 1 FROM results r WHERE r.competition_id=c.id AND r.round=1 AND r.user_id=e.user_id)
+                  OR NOT EXISTS (SELECT 1 FROM results r WHERE r.competition_id=c.id AND r.round=2 AND r.user_id=e.user_id)
+                  OR NOT EXISTS (SELECT 1 FROM draws d WHERE d.competition_id=c.id AND d.round=1 AND d.user_id=e.user_id)
+                  OR NOT EXISTS (SELECT 1 FROM draws d WHERE d.competition_id=c.id AND d.round=2 AND d.user_id=e.user_id)
+                )
+            ) AS all_people_linked
+          FROM competitions c
+          WHERE COALESCE(c.round_count,2)=2
+            AND translate(lower(COALESCE(c.fishery,'')), 'łęó', 'leo') LIKE '%golebiowka%'
+        )
+        SELECT * FROM checks
+        WHERE active_count=17
+          AND result1_count=17 AND result2_count=17
+          AND weight1=255100 AND weight2=276700
+          AND draw1_count=17 AND draw2_count=17
+          AND layout1='{"A":6,"B":6,"C":5}'::jsonb
+          AND layout2='{"A":6,"B":6,"C":5}'::jsonb
+          AND all_people_linked
+      `);
+
+      if (candidates.rowCount !== 1) {
+        console.log('Gołębiówka result recalculation skipped; exact verified event candidates=' + candidates.rowCount);
+      } else {
+        const comp = candidates.rows[0];
+        const old = await client.query(`
+          SELECT user_id,round,weight,big_fish,historical_points
+          FROM results WHERE competition_id=$1 AND round IN (1,2)
+          ORDER BY round,user_id
+        `, [comp.id]);
+        await client.query(`
+          INSERT INTO historical_import_audit(competition_id,actor_id,payload)
+          VALUES($1,NULL,$2::jsonb)
+        `, [comp.id, JSON.stringify({
+          migration: migrations.classification,
+          title: comp.title,
+          resultRowsBefore: old.rows
+        })]);
+        const cleared = await client.query(`
+          UPDATE results SET historical_points=NULL
+          WHERE competition_id=$1 AND round IN (1,2)
+            AND historical_points IS NOT NULL
+        `, [comp.id]);
+        await client.query(`
+          UPDATE competitions SET zero_score_rule='MAX' WHERE id=$1
+        `, [comp.id]);
+        await markApplied(client, migrations.classification);
+        console.log('Gołębiówka classification recalculated from verified weights; competition=' + comp.id + ', imported points cleared=' + cleared.rowCount + ', weights and draws preserved.');
+      }
+    }
+
     await client.query('COMMIT');
   } catch (error) {
     await client.query('ROLLBACK').catch(() => {});
@@ -82,3 +163,4 @@ main()
     process.exitCode = 1;
   })
   .finally(() => pool.end());
+
