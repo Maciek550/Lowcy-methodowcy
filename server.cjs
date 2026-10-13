@@ -1707,19 +1707,37 @@ async function ensureCompetitionPlayer(competitionId, person, mode='IMPORT', pre
   const lastName = normalizePersonName(person.lastName || p.lastName);
   const pzwClub = String(person.pzwClub || '').trim();
   let phone = normalizePhone(person.phone || '');
-  if (!phone) phone = `${mode}-` + crypto.createHash('sha1').update(nameKey(full) + '|' + pzwClub).digest('hex').slice(0, 18);
-  let passwordHash = null;
-  if (person.password) passwordHash = await bcrypt.hash(String(person.password), 10);
-  else passwordHash = await bcrypt.hash(crypto.randomBytes(16).toString('hex'), 10);
+  const syntheticPhone=/^(?:ZPRO|IMPORT|MANUAL)-[a-f0-9]{10,}$/i;
+  const matching=await pool.query(`
+    select id,first_name,last_name,phone,pzw_club,account_source,last_login_at
+    from users
+    where archived_at is null
+      and lower(trim(first_name))=lower(trim($1))
+      and lower(trim(last_name))=lower(trim($2))
+    order by case when phone ~ '^(ZPRO|IMPORT|MANUAL)-[a-f0-9]{10,}$' then 1 else 0 end,
+             case when last_login_at is null then 1 else 0 end,id
+  `,[firstName,lastName]);
+  let userRow=matching.rows.find(u=>!syntheticPhone.test(String(u.phone||'')))||null;
+  let uid;
+  if(userRow){
+    uid=Number(userRow.id);
+    phone=String(userRow.phone||phone);
+  }else{
+    if (!phone) phone = `${mode}-` + crypto.createHash('sha1').update(nameKey(full) + '|' + pzwClub).digest('hex').slice(0, 18);
+    let passwordHash = null;
+    if (person.password) passwordHash = await bcrypt.hash(String(person.password), 10);
+    else passwordHash = await bcrypt.hash(crypto.randomBytes(16).toString('hex'), 10);
+    const accountSource = ['ZPRO','IMPORT'].includes(String(mode||'').toUpperCase()) ? 'EXTERNAL' : String(mode||'').toUpperCase()==='MANUAL' ? 'ADMIN' : 'SELF';
+    const inserted=await pool.query(`
+      insert into users(phone,password_hash,first_name,last_name,pzw_club,role,account_source)
+      values($1,$2,$3,$4,$5,'PLAYER',$6)
+      on conflict(phone) do update set first_name=excluded.first_name, last_name=excluded.last_name, pzw_club=excluded.pzw_club, archived_at=null
+      returning id, first_name, last_name, phone, pzw_club, account_source, last_login_at
+    `, [phone, passwordHash, firstName, lastName, pzwClub, accountSource]);
+    userRow=inserted.rows[0];
+    uid=Number(userRow.id);
+  }
   const wantedStatus = await nextRosterStatus(competitionId, preferredStatus);
-  const accountSource = ['ZPRO','IMPORT'].includes(String(mode||'').toUpperCase()) ? 'EXTERNAL' : String(mode||'').toUpperCase()==='MANUAL' ? 'ADMIN' : 'SELF';
-  const { rows } = await pool.query(`
-    insert into users(phone,password_hash,first_name,last_name,pzw_club,role,account_source)
-    values($1,$2,$3,$4,$5,'PLAYER',$6)
-    on conflict(phone) do update set first_name=excluded.first_name, last_name=excluded.last_name, pzw_club=excluded.pzw_club, archived_at=null
-    returning id, first_name, last_name, phone, pzw_club, account_source, last_login_at
-  `, [phone, passwordHash, firstName, lastName, pzwClub, accountSource]);
-  const uid = rows[0].id;
   await pool.query(`
     insert into entries(competition_id,user_id,status,joined_at,cancelled_at)
     values($1,$2,$3,now(),null)
@@ -1729,8 +1747,9 @@ async function ensureCompetitionPlayer(competitionId, person, mode='IMPORT', pre
       cancelled_at = null
     returning id
   `, [competitionId, uid, wantedStatus]);
-  return { status: 'added', entryStatus:wantedStatus, user: rows[0], fullName: firstName + ' ' + lastName };
+  return { status: 'added', entryStatus:wantedStatus, user:userRow, fullName: firstName + ' ' + lastName };
 }
+
 async function importZawodyProList(competitionId, rawUrl, actor) {
   const comp = await getCompetition(competitionId);
   if (!comp) throw new Error('Nie znaleziono zawodów');
@@ -1818,23 +1837,57 @@ async function buildDetail(competitionId, user) {
 }
 
 async function buildPlayerStartHistory(userId) {
-  const q = await pool.query(`
-    select c.id
+  const current=await pool.query('select id,first_name,last_name,phone from users where id=$1 and archived_at is null',[userId]);
+  const me=current.rows[0];
+  if(!me)return [];
+  const matches=await pool.query(`
+    select id,phone,last_login_at,account_source
+    from users
+    where archived_at is null
+      and lower(trim(first_name))=lower(trim($1))
+      and lower(trim(last_name))=lower(trim($2))
+  `,[me.first_name,me.last_name]);
+  const syntheticPhone=/^(?:ZPRO|IMPORT|MANUAL)-[a-f0-9]{10,}$/i;
+  const identities=matches.rows.sort((a,b)=>{
+    const aSynthetic=syntheticPhone.test(String(a.phone||''))?1:0,bSynthetic=syntheticPhone.test(String(b.phone||''))?1:0;
+    if(aSynthetic!==bSynthetic)return aSynthetic-bSynthetic;
+    if(Number(a.id)===Number(userId))return -1;
+    if(Number(b.id)===Number(userId))return 1;
+    const aLogin=a.last_login_at?0:1,bLogin=b.last_login_at?0:1;
+    return aLogin-bLogin||Number(a.id)-Number(b.id);
+  });
+  const identityIds=identities.map(x=>Number(x.id));
+  if(!identityIds.includes(Number(userId)))identityIds.unshift(Number(userId));
+  const q=await pool.query(`
+    select c.id,array_agg(distinct e.user_id) as user_ids
     from competitions c
-    join entries e on e.competition_id=c.id and e.user_id=$1 and e.status='ACTIVE'
+    join entries e on e.competition_id=c.id and e.user_id=any($1::bigint[]) and e.status='ACTIVE'
     where c.status<>'TEST' and c.competition_date is not null
-      and c.competition_date <= current_date
-      and (select count(distinct r.round) from results r where r.competition_id=c.id and r.user_id=$1) = 2
-    order by c.competition_date desc, c.id desc
-  `, [userId]);
+      and c.competition_date<=current_date
+      and (select count(distinct r.round) from results r where r.competition_id=c.id and r.user_id=any($1::bigint[]))=2
+    group by c.id order by c.id desc
+  `,[identityIds]);
   const history=[];
-  for (const row of q.rows) {
-    const d=await buildDetail(Number(row.id), {id:userId});
+  for(const row of q.rows){
+    const eventUserIds=(row.user_ids||[]).map(Number);
+    const viewId=identityIds.find(id=>eventUserIds.includes(id))||Number(userId);
+    const d=await buildDetail(Number(row.id),{id:viewId});
     if(!d)continue;
-    const r1=(d.classification.round1||[]).find(r=>Number(r.user_id)===Number(userId));
-    const r2=(d.classification.round2||[]).find(r=>Number(r.user_id)===Number(userId));
-    const g=(d.classification.general||[]).find(r=>Number(r.user_id)===Number(userId));
-    if(!r1||!r2||!g)continue;
+    const pick=(rows)=>{
+      for(const identity of identityIds){
+        const found=(rows||[]).find(r=>Number(r.user_id)===identity);
+        if(found)return found;
+      }
+      return null;
+    };
+    const r1=pick(d.classification.round1),r2=pick(d.classification.round2);
+    if(!r1||!r2)continue;
+    const fullIdentity=identityIds.find(id=>
+      (d.classification.round1||[]).some(r=>Number(r.user_id)===id)&&
+      (d.classification.round2||[]).some(r=>Number(r.user_id)===id)
+    );
+    const g=(d.classification.general||[]).find(r=>Number(r.user_id)===Number(fullIdentity))||
+      pick(d.classification.general);
     const s1=(d.classification.round1||[]).filter(r=>String(r.sector)===String(r1.sector)).length;
     const s2=(d.classification.round2||[]).filter(r=>String(r.sector)===String(r2.sector)).length;
     history.push({
@@ -1854,12 +1907,13 @@ async function buildPlayerStartHistory(userId) {
       t2_big_fish:Number(r2.big_fish||0),
       t2_stand:r2.stand==null?null:Number(r2.stand),
       t2_sector:String(r2.sector||''),
-      general_rank:Number(g.rank||0),
+      general_rank:Number(g?.rank||0),
       general_count:Number((d.classification.general||[]).length||0),
-      total_weight:Number(g.total_weight||0),
-      biggest_fish:Number(g.biggest_fish||Math.max(Number(r1.big_fish||0),Number(r2.big_fish||0)))
+      total_weight:Number(g?.total_weight||Number(r1.weight||0)+Number(r2.weight||0)),
+      biggest_fish:Number(g?.biggest_fish||Math.max(Number(r1.big_fish||0),Number(r2.big_fish||0)))
     });
   }
+  history.sort((a,b)=>String(b.competition_date||'').localeCompare(String(a.competition_date||''))||b.competition_id-a.competition_id);
   return history;
 }
 
