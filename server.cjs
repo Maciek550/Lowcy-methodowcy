@@ -25,8 +25,8 @@ const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const GOOGLE_VISION_API_KEY = process.env.GOOGLE_VISION_API_KEY || process.env.OCR_GOOGLE_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.PHOTO_OCR_OPENAI_API_KEY || '';
 const PHOTO_OCR_MODEL = process.env.PHOTO_OCR_OPENAI_MODEL || 'gpt-5.6-sol';
-const APP_VERSION = '304';
-const APP_VERSION_NAME = 'V304_HISTORY_IDENTITY_REPAIR';
+const APP_VERSION = '305';
+const APP_VERSION_NAME = 'V305_ALL_HISTORY_STARTS';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8') + '\n' + fs.readFileSync(pathModule.join(__dirname, 'historical-import/ui.js'), 'utf8');
 const PODIUM_TROPHIES = fs.existsSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) ? fs.readFileSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) : null;
 const CARP_REAL = fs.readFileSync(pathModule.join(__dirname, 'carp-real-v116.png'));
@@ -1882,7 +1882,7 @@ async function buildPlayerStartHistory(userId) {
     join results r on r.competition_id=c.id and r.user_id=any($1::bigint[])
     where c.status<>'TEST' and c.competition_date is not null
       and c.competition_date<=current_date
-      and (select count(distinct rr.round) from results rr where rr.competition_id=c.id and rr.user_id=any($1::bigint[]))=2
+      and (select count(distinct rr.round) from results rr where rr.competition_id=c.id and rr.user_id=any($1::bigint[]))=case when coalesce(c.round_count,2)=1 then 1 else 2 end
     group by c.id order by c.id desc
   `,[identityIds]);
   const history=[];
@@ -1899,36 +1899,38 @@ async function buildPlayerStartHistory(userId) {
       return null;
     };
     const r1=pick(d.classification.round1),r2=pick(d.classification.round2);
-    if(!r1||!r2)continue;
+    const roundCount=Number(d.competition.round_count)===1?1:2;
+    if(!r1||(roundCount===2&&!r2))continue;
     const fullIdentity=identityIds.find(id=>
       (d.classification.round1||[]).some(r=>Number(r.user_id)===id)&&
-      (d.classification.round2||[]).some(r=>Number(r.user_id)===id)
+      (roundCount===1||(d.classification.round2||[]).some(r=>Number(r.user_id)===id))
     );
     const g=(d.classification.general||[]).find(r=>Number(r.user_id)===Number(fullIdentity))||
       pick(d.classification.general);
     const s1=(d.classification.round1||[]).filter(r=>String(r.sector)===String(r1.sector)).length;
-    const s2=(d.classification.round2||[]).filter(r=>String(r.sector)===String(r2.sector)).length;
+    const s2=r2?(d.classification.round2||[]).filter(r=>String(r.sector)===String(r2.sector)).length:0;
     history.push({
       competition_id:Number(d.competition.id),
       title:d.competition.title||'',
       fishery:d.competition.fishery||'',
       competition_date:d.competition.competition_date||null,
+      round_count:roundCount,
       t1_place:Number(r1.points||r1.sector_place||0),
       t1_sector_size:Number(s1||0),
       t1_weight:Number(r1.weight||0),
       t1_big_fish:Number(r1.big_fish||0),
       t1_stand:r1.stand==null?null:Number(r1.stand),
       t1_sector:String(r1.sector||''),
-      t2_place:Number(r2.points||r2.sector_place||0),
+      t2_place:Number(r2?.points||r2?.sector_place||0),
       t2_sector_size:Number(s2||0),
-      t2_weight:Number(r2.weight||0),
-      t2_big_fish:Number(r2.big_fish||0),
-      t2_stand:r2.stand==null?null:Number(r2.stand),
-      t2_sector:String(r2.sector||''),
+      t2_weight:Number(r2?.weight||0),
+      t2_big_fish:Number(r2?.big_fish||0),
+      t2_stand:r2?.stand==null?null:Number(r2.stand),
+      t2_sector:String(r2?.sector||''),
       general_rank:Number(g?.rank||0),
       general_count:Number((d.classification.general||[]).length||0),
-      total_weight:Number(g?.total_weight||Number(r1.weight||0)+Number(r2.weight||0)),
-      biggest_fish:Number(g?.biggest_fish||Math.max(Number(r1.big_fish||0),Number(r2.big_fish||0)))
+      total_weight:Number(g?.total_weight||Number(r1.weight||0)+Number(r2?.weight||0)),
+      biggest_fish:Number(g?.biggest_fish||Math.max(Number(r1.big_fish||0),Number(r2?.big_fish||0)))
     });
   }
   history.sort((a,b)=>String(b.competition_date||'').localeCompare(String(a.competition_date||''))||b.competition_id-a.competition_id);
