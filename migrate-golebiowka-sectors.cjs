@@ -10,7 +10,7 @@ const pool = new Pool({
 const migrations = {
   along: '20261013_golebiowka_two_along',
   results: '20261013_golebiowka_results_alignment',
-  classification: '20261013_golebiowka_weight_classification'
+  classification: '20261013_wapnica_weight_classification'
 };
 
 async function alreadyApplied(client, id) {
@@ -70,8 +70,51 @@ async function main() {
 
     if (!(await alreadyApplied(client, migrations.classification))) {
       const candidates = await client.query(`
-        WITH checks AS (
+        WITH expected(user_name,round,stand,sector,weight) AS (VALUES
+          ('Radek Jastrzębski',1,1,'A',13890),
+          ('Paweł Grzegorczyk',1,5,'A',9240),
+          ('Henryk Lipski',1,3,'A',6100),
+          ('Maciek Fabisiak',1,6,'A',6870),
+          ('Krzysztof Krupiński',1,2,'A',0),
+          ('Michał Fabisiak',1,4,'A',0),
+          ('Piotr Muranowicz',1,10,'B',67490),
+          ('Marcin Czarnocki',1,8,'B',49160),
+          ('Robert Fabisiak',1,9,'B',18540),
+          ('Przemek Warmijak',1,12,'B',15120),
+          ('Karol Szostak',1,7,'B',13070),
+          ('Jurij Marynets',1,11,'B',8260),
+          ('Rafał Siporski',1,17,'C',21400),
+          ('Dariusz Dolato',1,18,'C',5630),
+          ('Mariusz Sudrowicz',1,16,'C',0),
+          ('Piotr Machalski',1,14,'C',20330),
+          ('Semen Sztyper',1,15,'C',0),
+          ('Karol Szostak',2,6,'A',19130),
+          ('Piotr Muranowicz',2,4,'A',16860),
+          ('Marcin Czarnocki',2,5,'A',11150),
+          ('Robert Fabisiak',2,3,'A',4030),
+          ('Jurij Marynets',2,1,'A',11050),
+          ('Przemek Warmijak',2,2,'A',0),
+          ('Maciek Fabisiak',2,12,'B',82380),
+          ('Henryk Lipski',2,11,'B',28070),
+          ('Radek Jastrzębski',2,7,'B',8070),
+          ('Krzysztof Krupiński',2,8,'B',24570),
+          ('Paweł Grzegorczyk',2,9,'B',13720),
+          ('Michał Fabisiak',2,10,'B',6060),
+          ('Rafał Siporski',2,18,'C',36590),
+          ('Mariusz Sudrowicz',2,15,'C',0),
+          ('Piotr Machalski',2,16,'C',0),
+          ('Dariusz Dolato',2,14,'C',15020),
+          ('Semen Sztyper',2,17,'C',0)
+        ), checks AS (
           SELECT c.id, c.title,
+            (SELECT count(*)::int FROM expected x
+             JOIN entries e ON e.competition_id=c.id AND e.status='ACTIVE'
+             JOIN users u ON u.id=e.user_id
+             JOIN draws d ON d.competition_id=c.id AND d.user_id=e.user_id AND d.round=x.round
+             JOIN results r ON r.competition_id=c.id AND r.user_id=e.user_id AND r.round=x.round
+             WHERE concat(u.first_name,' ',u.last_name)=x.user_name
+               AND d.stand=x.stand AND d.sector=x.sector AND r.weight=x.weight
+            ) AS screenshot_match_count,
             (SELECT count(*)::int FROM entries e
              WHERE e.competition_id=c.id AND e.status='ACTIVE') AS active_count,
             (SELECT count(*)::int FROM results r
@@ -113,12 +156,14 @@ async function main() {
           FROM competitions c
           WHERE COALESCE(c.round_count,2)=2
             AND (
-              translate(lower(COALESCE(c.fishery,'')), 'łęó', 'leo') LIKE '%golebiowka%'
-              OR translate(lower(COALESCE(c.title,'')), 'łęó', 'leo') LIKE '%golebiowka%'
+              c.id = 6
+              AND upper(COALESCE(c.title,'')) LIKE 'WAPNICA%'
             )
         )
         SELECT * FROM checks
         WHERE active_count=17
+          AND screenshot_match_count=34
+          AND result1_count=17 AND result2_count=17
           AND weight1=255100 AND weight2=276700
           AND draw1_count=17 AND draw2_count=17
           AND layout1='{"A":6,"B":6,"C":5}'::jsonb
@@ -146,11 +191,13 @@ async function main() {
              ) x) AS layout2
           FROM competitions c
           WHERE COALESCE(c.round_count,2)=2
+            AND c.id=6
+            AND upper(COALESCE(c.title,'')) LIKE 'WAPNICA%'
             AND (SELECT count(*) FROM entries e WHERE e.competition_id=c.id AND e.status='ACTIVE')=17
           ORDER BY c.id
         `);
-        console.log('Gołębiówka result recalculation diagnostics=' + JSON.stringify(diagnostics.rows));
-        console.log('Gołębiówka result recalculation skipped; exact verified event candidates=' + candidates.rowCount);
+        console.log('Wapnica result recalculation diagnostics=' + JSON.stringify(diagnostics.rows));
+        console.log('Wapnica result recalculation skipped; exact verified event candidates=' + candidates.rowCount);
       } else {
         const comp = candidates.rows[0];
         const old = await client.query(`
@@ -175,7 +222,7 @@ async function main() {
           UPDATE competitions SET zero_score_rule='MAX' WHERE id=$1
         `, [comp.id]);
         await markApplied(client, migrations.classification);
-        console.log('Gołębiówka classification recalculated from verified weights; competition=' + comp.id + ', imported points cleared=' + cleared.rowCount + ', weights and draws preserved.');
+        console.log('Wapnica classification recalculated from verified weights; competition=' + comp.id + ', imported points cleared=' + cleared.rowCount + ', weights and draws preserved.');
       }
     }
 
@@ -190,7 +237,7 @@ async function main() {
 
 main()
   .catch(error => {
-    console.error('Gołębiówka sector layout migration failed:', error);
+    console.error('Competition result migration failed:', error);
     process.exitCode = 1;
   })
   .finally(() => pool.end());
