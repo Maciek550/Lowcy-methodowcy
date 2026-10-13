@@ -25,8 +25,8 @@ const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const GOOGLE_VISION_API_KEY = process.env.GOOGLE_VISION_API_KEY || process.env.OCR_GOOGLE_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.PHOTO_OCR_OPENAI_API_KEY || '';
 const PHOTO_OCR_MODEL = process.env.PHOTO_OCR_OPENAI_MODEL || 'gpt-5.6-sol';
-const APP_VERSION = '303';
-const APP_VERSION_NAME = 'V303_HISTORY_ROUND_COUNT';
+const APP_VERSION = '304';
+const APP_VERSION_NAME = 'V304_HISTORY_IDENTITY_REPAIR';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8') + '\n' + fs.readFileSync(pathModule.join(__dirname, 'historical-import/ui.js'), 'utf8');
 const PODIUM_TROPHIES = fs.existsSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) ? fs.readFileSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) : null;
 const CARP_REAL = fs.readFileSync(pathModule.join(__dirname, 'carp-real-v116.png'));
@@ -1826,7 +1826,25 @@ async function buildDetail(competitionId, user) {
   const draws = (await pool.query('select * from draws where competition_id=$1 order by round, stand', [competitionId])).rows;
   const results = (await pool.query('select * from results where competition_id=$1 order by round, user_id', [competitionId])).rows;
   const resultItems = (await pool.query('select * from result_items where competition_id=$1 order by round, user_id, created_at, id', [competitionId])).rows;
-  const classification = computeClassification(comp, active, draws, results);
+  let classification = computeClassification(comp, active, draws, results);
+  const historyIds=Array.isArray(user.historyIdentityIds)?new Set(user.historyIdentityIds.map(Number)):null;
+  if(historyIds?.size){
+    const historyPrimaryId=Number(user.historyPrimaryId||user.id);
+    const identityEntries=entriesAll.rows.filter(e=>historyIds.has(Number(e.user_id)));
+    const personEntry=identityEntries.find(e=>Number(e.user_id)===historyPrimaryId)||identityEntries[0];
+    if(personEntry){
+      const historyRounds=[...new Set(results.filter(r=>historyIds.has(Number(r.user_id))).map(r=>Number(r.round)))];
+      const historyEntries=active.filter(e=>!historyIds.has(Number(e.user_id)))
+        .concat({...personEntry,user_id:historyPrimaryId,status:'ACTIVE'});
+      const historyDraws=draws.filter(d=>!historyIds.has(Number(d.user_id)))
+        .concat(historyRounds.map(round=>draws.find(d=>historyIds.has(Number(d.user_id))&&Number(d.round)===round))
+          .filter(Boolean).map(d=>({...d,user_id:historyPrimaryId})));
+      const historyResults=results.filter(r=>!historyIds.has(Number(r.user_id)))
+        .concat(historyRounds.map(round=>results.find(r=>historyIds.has(Number(r.user_id))&&Number(r.round)===round))
+          .filter(Boolean).map(r=>({...r,user_id:historyPrimaryId})));
+      classification=computeClassification(comp,historyEntries,historyDraws,historyResults);
+    }
+  }
   const myEntry = entriesAll.rows.find(e => Number(e.user_id) === Number(user.id)) || null;
   if(user.role!=='ADMIN'&&comp.status==='PRIVATE'){
     const inv=await pool.query('select status from competition_invitations where competition_id=$1 and user_id=$2',[competitionId,user.id]);
@@ -1843,7 +1861,7 @@ async function buildPlayerStartHistory(userId) {
   const matches=await pool.query(`
     select id,phone,last_login_at,account_source
     from users
-    where archived_at is null
+    where role='PLAYER'
       and lower(trim(first_name))=lower(trim($1))
       and lower(trim(last_name))=lower(trim($2))
   `,[me.first_name,me.last_name]);
@@ -1859,19 +1877,19 @@ async function buildPlayerStartHistory(userId) {
   const identityIds=identities.map(x=>Number(x.id));
   if(!identityIds.includes(Number(userId)))identityIds.unshift(Number(userId));
   const q=await pool.query(`
-    select c.id,array_agg(distinct e.user_id) as user_ids
+    select c.id,array_agg(distinct r.user_id) as user_ids
     from competitions c
-    join entries e on e.competition_id=c.id and e.user_id=any($1::bigint[]) and e.status='ACTIVE'
+    join results r on r.competition_id=c.id and r.user_id=any($1::bigint[])
     where c.status<>'TEST' and c.competition_date is not null
       and c.competition_date<=current_date
-      and (select count(distinct r.round) from results r where r.competition_id=c.id and r.user_id=any($1::bigint[]))=2
+      and (select count(distinct rr.round) from results rr where rr.competition_id=c.id and rr.user_id=any($1::bigint[]))=2
     group by c.id order by c.id desc
   `,[identityIds]);
   const history=[];
   for(const row of q.rows){
     const eventUserIds=(row.user_ids||[]).map(Number);
     const viewId=identityIds.find(id=>eventUserIds.includes(id))||Number(userId);
-    const d=await buildDetail(Number(row.id),{id:viewId});
+    const d=await buildDetail(Number(row.id),{id:viewId,historyIdentityIds:identityIds,historyPrimaryId:viewId});
     if(!d)continue;
     const pick=(rows)=>{
       for(const identity of identityIds){
