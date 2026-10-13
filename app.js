@@ -1,4 +1,4 @@
-const CLIENT_VERSION='304';const CLIENT_VERSION_NAME='V304_HISTORY_IDENTITY_REPAIR';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
+const CLIENT_VERSION='305';const CLIENT_VERSION_NAME='V305_ALL_HISTORY_STARTS';window.__LOWCY_APP_JS_170=1;try{fetch('/__probe_js_v170',{cache:'no-store'}).catch(()=>{})}catch(_){};console.log('CLIENT_V170_FOTO_FB_WINNERS_FINISH_LOADED');try{document.title='Łowcy Methodowcy — V'+CLIENT_VERSION}catch(_){}
 const STORE={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let ACHIEVEMENT_POLL=null, ACHIEVEMENT_BUSY=false, ACHIEVEMENT_TIMEOUT=null, ACHIEVEMENT_ACK=null;
 const ACHIEVEMENT_SESSION_SEEN=new Set();
@@ -503,21 +503,22 @@ function setPlayerHistoryYear(year){
   document.querySelectorAll('#playerHistoryContent .historySeasonBtn').forEach(btn=>{
     const active=btn.dataset.year===PLAYER_HISTORY_YEAR;btn.classList.toggle('active',active);btn.setAttribute('aria-pressed',String(active));
   });
-  const visible=[...document.querySelectorAll('#playerHistoryContent .historyStartCard:not(.hidden)')].length*2,
+  const visible=[...document.querySelectorAll('#playerHistoryContent .historyStartCard:not(.hidden)')].length,
     out=q('historySeasonCount');if(out)out.textContent='Widoczne starty: '+visible;
 }
 function renderPlayerHistory(rows){
   const box=q('playerHistoryContent');if(!box)return;
   rows=Array.isArray(rows)?rows:[];
-  if(!rows.length){box.innerHTML='<div class="card playerHistoryCard"><h2>Historia startów</h2><p class="muted">Brak zakończonych startów z pełnymi wynikami T1 i T2.</p></div>';return}
+  if(!rows.length){box.innerHTML='<div class="card playerHistoryCard"><h2>Historia startów</h2><p class="muted">Brak zakończonych zawodów z zapisanymi wynikami.</p></div>';return}
   const years=[...new Set(rows.map(r=>String(r.competition_date||'').slice(0,4)).filter(y=>/^\d{4}$/.test(y)))].sort((a,b)=>b.localeCompare(a));
   if(years.length===1||(PLAYER_HISTORY_YEAR!=='all'&&!years.includes(PLAYER_HISTORY_YEAR)))PLAYER_HISTORY_YEAR='all';
-  const starts=rows.length*2,podiums=rows.filter(r=>Number(r.general_rank)>0&&Number(r.general_rank)<=3).length;
+  const starts=rows.length,podiums=rows.filter(r=>Number(r.general_rank)>0&&Number(r.general_rank)<=3).length;
   const best=Math.min(...rows.map(r=>Number(r.general_rank||9999)).filter(Number.isFinite));
   const total=rows.reduce((s,r)=>s+Number(r.total_weight||0),0);
   const biggest=Math.max(0,...rows.map(r=>Number(r.biggest_fish||0)));
   const stat=(label,value,cls='')=>'<div class="historyStat '+cls+'"><small>'+esc(label)+'</small><strong>'+value+'</strong></div>';
   const round=(r,n)=>{
+    if(n===2&&Number(r.round_count)===1)return '';
     const place=placeText(r['t'+n+'_place']),size=Number(r['t'+n+'_sector_size']||0),
       stand=r['t'+n+'_stand'],sector=r['t'+n+'_sector']||'—',
       weight=Number(r['t'+n+'_weight']||0),bf=Number(r['t'+n+'_big_fish']||0);
@@ -544,7 +545,7 @@ function renderPlayerHistory(rows){
     +'<button type="button" class="historySeasonBtn '+(PLAYER_HISTORY_YEAR==='all'?'active':'')+'" data-year="all" aria-pressed="'+(PLAYER_HISTORY_YEAR==='all')+'" onclick="setPlayerHistoryYear(\'all\')">WSZYSTKIE</button>'
     +(years.length===1?'<span class="historySingleYear" aria-label="Sezon '+years[0]+'">'+years[0]+'</span>':
       years.map(y=>'<button type="button" class="historySeasonBtn '+(PLAYER_HISTORY_YEAR===y?'active':'')+'" data-year="'+y+'" aria-pressed="'+(PLAYER_HISTORY_YEAR===y)+'" onclick="setPlayerHistoryYear(\''+y+'\')">'+y+'</button>').join(''))
-    +'<span id="historySeasonCount">Widoczne starty: '+rows.filter(r=>PLAYER_HISTORY_YEAR==='all'||String(r.competition_date||'').slice(0,4)===PLAYER_HISTORY_YEAR).length*2+'</span></div>';
+    +'<span id="historySeasonCount">Widoczne starty: '+rows.filter(r=>PLAYER_HISTORY_YEAR==='all'||String(r.competition_date||'').slice(0,4)===PLAYER_HISTORY_YEAR).length+'</span></div>';
   box.innerHTML='<section class="playerHistoryDashboard">'
     +'<div class="historyHero"><div class="historyHeroHead"><div><h2>Historia startów</h2><p>Twoje wyniki i statystyki zawodów.</p></div></div>'
     +'<div class="historyStats">'+stat('STARTY',starts)+stat('PODIUM',podiums,'podium')+stat('NAJLEPSZE',best<9999?best:'—','best')
