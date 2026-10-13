@@ -25,8 +25,8 @@ const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@carp.local';
 const GOOGLE_VISION_API_KEY = process.env.GOOGLE_VISION_API_KEY || process.env.OCR_GOOGLE_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.PHOTO_OCR_OPENAI_API_KEY || '';
 const PHOTO_OCR_MODEL = process.env.PHOTO_OCR_OPENAI_MODEL || 'gpt-5.6-sol';
-const APP_VERSION = '305';
-const APP_VERSION_NAME = 'V305_ALL_HISTORY_STARTS';
+const APP_VERSION = '306';
+const APP_VERSION_NAME = 'V306_HISTORY_DATE_SORT';
 const APP_JS = fs.readFileSync(pathModule.join(__dirname, 'app.js'), 'utf8') + '\n' + fs.readFileSync(pathModule.join(__dirname, 'historical-import/ui.js'), 'utf8');
 const PODIUM_TROPHIES = fs.existsSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) ? fs.readFileSync(pathModule.join(__dirname,'podium-trophies-v206.jpg')) : null;
 const CARP_REAL = fs.readFileSync(pathModule.join(__dirname, 'carp-real-v116.png'));
@@ -1933,7 +1933,16 @@ async function buildPlayerStartHistory(userId) {
       biggest_fish:Number(g?.biggest_fish||Math.max(Number(r1.big_fish||0),Number(r2?.big_fish||0)))
     });
   }
-  history.sort((a,b)=>String(b.competition_date||'').localeCompare(String(a.competition_date||''))||b.competition_id-a.competition_id);
+  const historyDateValue=value=>{
+    if(value instanceof Date)return value.getTime();
+    const raw=String(value||'').trim();
+    let m=raw.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})/);
+    if(m)return Date.UTC(Number(m[3]),Number(m[2])-1,Number(m[1]));
+    m=raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if(m)return Date.UTC(Number(m[1]),Number(m[2])-1,Number(m[3]));
+    const parsed=Date.parse(raw);return Number.isFinite(parsed)?parsed:0;
+  };
+  history.sort((a,b)=>historyDateValue(b.competition_date)-historyDateValue(a.competition_date)||Number(b.competition_id)-Number(a.competition_id));
   return history;
 }
 
