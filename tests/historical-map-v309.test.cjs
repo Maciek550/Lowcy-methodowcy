@@ -23,3 +23,12 @@ test('approved import persists exact banks and T1 sectors, with limit 27',async(
  assert.equal(insert.args[7],27);assert.equal(insert.args[10],'TWO_ALONG');assert.equal(insert.args[11],14);assert.equal(insert.args[12],13);assert.equal(insert.args[13],4);
  assert.deepEqual(JSON.parse(insert.args[14]).map(s=>s.stands.length),[7,7,7,6]);
 });
+test('Lasomin corrected 14+13 split keeps complete A/B below and C/D above in both rounds',()=>{
+ for(const round of [1,2]){
+  const c=ctx.roundMapCompetitionClient({historical_source:'zpro',bank1_count:14,bank2_count:13,map_mode:'TWO_ALONG'},{draws:rows().map(r=>({...r,round}))},round);
+  const layout=ctx.customSectorLayoutClient(c);
+  assert.equal(layout.filter(s=>s.bottom.length).map(s=>s.letter).join(','),'A,B');
+  assert.equal(layout.filter(s=>s.top.length).map(s=>s.letter).join(','),'C,D');
+  assert.equal(layout.find(s=>s.letter==='C').top.join(','),'15,16,17,18,19,20,21');
+ }
+});

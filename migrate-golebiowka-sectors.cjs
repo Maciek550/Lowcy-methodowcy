@@ -226,6 +226,30 @@ async function main() {
       }
     }
 
+    const lasominMapMigration='20261014_lasomin_0704_banks_14_13';
+    if (!(await alreadyApplied(client,lasominMapMigration))) {
+      const match=await client.query(`SELECT * FROM competitions
+        WHERE id=5 AND competition_date='2026-07-04'
+          AND upper(title) LIKE 'LASOMIN%' AND COALESCE(round_count,2)=2
+        FOR UPDATE`);
+      if(match.rowCount===1){
+        const comp=match.rows[0];
+        const drawRows=(await client.query('SELECT round,stand,sector FROM draws WHERE competition_id=$1 ORDER BY round,stand FOR UPDATE',[comp.id])).rows;
+        const expected=n=>n<=7?'A':n<=14?'B':n<=21?'C':'D';
+        const verified=drawRows.length===54&&[1,2].every(round=>{
+          const rows=drawRows.filter(r=>Number(r.round)===round);
+          return rows.length===27&&new Set(rows.map(r=>Number(r.stand))).size===27&&rows.every(r=>Number.isInteger(Number(r.stand))&&Number(r.stand)>=1&&Number(r.stand)<=27&&r.sector===expected(Number(r.stand)));
+        });
+        if(verified){
+          const layout=['A','B','C','D'].map(name=>({name,stands:drawRows.filter(r=>Number(r.round)===1&&r.sector===name).map(r=>Number(r.stand))}));
+          await client.query('INSERT INTO historical_import_audit(competition_id,actor_id,payload) VALUES($1,NULL,$2::jsonb)',[comp.id,JSON.stringify({migration:lasominMapMigration,before:{map_mode:comp.map_mode,bank1_count:comp.bank1_count,bank2_count:comp.bank2_count,sectors_count:comp.sectors_count,sector_layout:comp.sector_layout},after:{map_mode:'TWO_ALONG',bank1_count:14,bank2_count:13,sector_layout:layout}})]);
+          const updated=await client.query("UPDATE competitions SET map_mode='TWO_ALONG',bank1_count=14,bank2_count=13,sectors_count=4,sector_layout=$2::jsonb WHERE id=$1 RETURNING id,map_mode,bank1_count,bank2_count,sector_layout",[comp.id,JSON.stringify(layout)]);
+          await markApplied(client,lasominMapMigration);
+          console.log('V310_LASOMIN_BANKS_VERIFIED '+JSON.stringify(updated.rows[0]));
+        }else console.log('V310_LASOMIN_BANKS_SKIPPED: draws do not match verified 1-27 sectors in both rounds');
+      }else console.log('V310_LASOMIN_BANKS_SKIPPED: exact event not found');
+    }
+
     await client.query('COMMIT');
   } catch (error) {
     await client.query('ROLLBACK').catch(() => {});
