@@ -32,3 +32,11 @@ test('Lasomin corrected 14+13 split keeps complete A/B below and C/D above in bo
   assert.equal(layout.find(s=>s.letter==='C').top.join(','),'15,16,17,18,19,20,21');
  }
 });
+test('July Golebiowka preserves A1-7 B11-16 with all six B anglers on bank 2',()=>{
+ const draws=[...Array.from({length:7},(_,i)=>({round:1,stand:i+1,sector:'A'})),...Array.from({length:6},(_,i)=>({round:1,stand:i+11,sector:'B'}))];
+ const c=ctx.roundMapCompetitionClient({historical_source:'zpro',bank1_count:10,bank2_count:6,map_mode:'TWO_ALONG'},{draws},1);
+ const layout=ctx.customSectorLayoutClient(c);
+ assert.equal(layout[0].bottom.join(','),'1,2,3,4,5,6,7');assert.equal(layout[0].top.length,0);
+ assert.equal(layout[1].top.join(','),'11,12,13,14,15,16');assert.equal(layout[1].bottom.length,0);
+ assert.equal(layout.reduce((n,s)=>n+s.size,0),13);
+});

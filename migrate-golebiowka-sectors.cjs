@@ -250,6 +250,26 @@ async function main() {
       }else console.log('V310_LASOMIN_BANKS_SKIPPED: exact event not found');
     }
 
+    const julyMapMigration='20261014_golebiowka_0718_separate_banks';
+    if (!(await alreadyApplied(client,julyMapMigration))) {
+      const match=await client.query(`SELECT * FROM competitions
+        WHERE competition_date='2026-07-18' AND round_count=1
+          AND translate(lower(COALESCE(fishery,'')), 'łęó', 'leo') LIKE '%golebiowka%'
+        FOR UPDATE`);
+      if(match.rowCount===1){
+        const comp=match.rows[0];
+        const drawRows=(await client.query('SELECT round,stand,sector FROM draws WHERE competition_id=$1 ORDER BY round,stand FOR UPDATE',[comp.id])).rows;
+        const expected=new Map([...Array.from({length:7},(_,i)=>[i+1,'A']),...Array.from({length:6},(_,i)=>[i+11,'B'])]);
+        const verified=drawRows.length===13&&new Set(drawRows.map(r=>Number(r.stand))).size===13&&drawRows.every(r=>Number(r.round)===1&&expected.get(Number(r.stand))===r.sector);
+        if(verified){
+          await client.query('INSERT INTO historical_import_audit(competition_id,actor_id,payload) VALUES($1,NULL,$2::jsonb)',[comp.id,JSON.stringify({migration:julyMapMigration,before:{map_mode:comp.map_mode,bank1_count:comp.bank1_count,bank2_count:comp.bank2_count,sectors_count:comp.sectors_count,sector_layout:comp.sector_layout},after:{map_mode:'TWO_ALONG',bank1_count:10,bank2_count:6,sectors_count:2}})]);
+          const updated=await client.query("UPDATE competitions SET map_mode='TWO_ALONG',bank1_count=10,bank2_count=6,sectors_count=2,sector_layout=NULL WHERE id=$1 RETURNING id,map_mode,bank1_count,bank2_count",[comp.id]);
+          await markApplied(client,julyMapMigration);
+          console.log('V311_GOLEBIOWKA_JULY_BANKS_VERIFIED '+JSON.stringify(updated.rows[0]));
+        }else console.log('V311_GOLEBIOWKA_JULY_SKIPPED: draw does not match A1-7 B11-16');
+      }else console.log('V311_GOLEBIOWKA_JULY_SKIPPED: exact event not uniquely found');
+    }
+
     await client.query('COMMIT');
   } catch (error) {
     await client.query('ROLLBACK').catch(() => {});
