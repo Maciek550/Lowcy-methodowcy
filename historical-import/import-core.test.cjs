@@ -1,5 +1,5 @@
 'use strict';const {test}=require('node:test');const assert=require('node:assert/strict');const {validateDraft,mapAccounts,saveApprovedDraft}=require('./import-core.cjs');
-const base={title:'Test',date:'2026-07-18',rows:[{name:'Jan Kowalski',sector:'A',stand:1,weight:1200}]};
+const base={mapMode:'ONE_BANK',title:'Test',date:'2026-07-18',rows:[{name:'Jan Kowalski',sector:'A',stand:1,weight:1200}]};
 test('valid draft',()=>assert.equal(validateDraft(base).rows[0].weight,1200));
 test('reject duplicate',()=>assert.throws(()=>validateDraft({...base,rows:[base.rows[0],base.rows[0]]}),/Powtórzony/));
 test('reject negative',()=>assert.throws(()=>validateDraft({...base,rows:[{...base.rows[0],weight:-1}]}),/Niepoprawny/));

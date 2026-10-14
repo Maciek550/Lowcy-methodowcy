@@ -28,7 +28,12 @@ function validateDraft(d){
   const sorted=[...general].sort((a,b)=>a.points-b.points||b.weight-a.weight);
   sorted.forEach((g,i)=>{if(g.rank!==i+1&&!(i>0&&g.points===sorted[i-1].points&&g.weight===sorted[i-1].weight&&g.rank===sorted[i-1].rank))throw Error('Niepoprawne miejsce w klasyfikacji: '+g.name)});
  }
- return {title,fishery,date:d.date,sourceId:String(d.sourceId||'').slice(0,200),roundCount,rows,general};
+ const mapMode=String(d.mapMode||'');
+ if(mapMode&&!['ONE_BANK','TWO_ALONG','TWO_OPPOSITE'].includes(mapMode))throw Error('Niepoprawny układ sektorów');
+ const maxStand=Math.max(...rows.map(r=>r.stand));
+ const bank1Count=mapMode==='ONE_BANK'?maxStand:Number(d.bank1Count??Math.ceil(maxStand/2));
+ if(!Number.isInteger(bank1Count)||bank1Count<1||bank1Count>maxStand||(mapMode&&mapMode!=='ONE_BANK'&&bank1Count>=maxStand))throw Error('Sprawdź ostatnie stanowisko pierwszego brzegu');
+ return {mapMode,bank1Count,title,fishery,date:d.date,sourceId:String(d.sourceId||'').slice(0,200),roundCount,rows,general};
 }
 function accountPlan(rows,accounts){
  const groups=new Map();
@@ -64,7 +69,9 @@ async function mergeTechnical(client,from,to){
  await client.query('UPDATE users SET archived_at=now() WHERE id=$1',[from]);
 }
 async function saveApprovedDraft(pool,raw,actorId,expectedAccountDigest){
- const draft=validateDraft(raw),client=await pool.connect();
+ const draft=validateDraft(raw);
+ if(!draft.mapMode)throw Error('Wybierz układ sektorów przed zapisaniem importu');
+ const client=await pool.connect();
  try{
   await client.query('BEGIN');
   // Serialize import/merge operations, including different sources pointing at the same event.
@@ -92,7 +99,10 @@ async function saveApprovedDraft(pool,raw,actorId,expectedAccountDigest){
    for(const id of p.mergeFromIds)await mergeTechnical(client,id,p.userId);
   }
   const rows=draft.rows.map(r=>({...r,userId:plan.find(p=>key(p.name)===key(r.name)).userId}));
-  const c=(await client.query('INSERT INTO competitions(title,fishery,competition_date,status,round_count,created_by,notes,signup_open,limit_places,historical_source,historical_fingerprint) VALUES($1,$2,$3,$4,$5,$6,$7,false,$8,$9,$10) RETURNING id',[draft.title,draft.fishery,draft.date,'CLOSED',draft.roundCount,actorId,'Import historyczny: '+source,plan.length,source,fingerprint])).rows[0];
+  const firstRound=rows.filter(r=>r.round===1),maxStand=Math.max(...rows.map(r=>r.stand));
+  const layout=[...new Set(firstRound.map(r=>r.sector))].sort().map(name=>({name,stands:firstRound.filter(r=>r.sector===name).map(r=>r.stand).sort((a,b)=>a-b)}));
+  const savedLayout=firstRound.length===maxStand?JSON.stringify(layout):null;
+  const c=(await client.query('INSERT INTO competitions(title,fishery,competition_date,status,round_count,created_by,notes,signup_open,limit_places,historical_source,historical_fingerprint,map_mode,bank1_count,bank2_count,sectors_count,sector_layout) VALUES($1,$2,$3,$4,$5,$6,$7,false,$8,$9,$10,$11,$12,$13,$14,$15::jsonb) RETURNING id',[draft.title,draft.fishery,draft.date,'CLOSED',draft.roundCount,actorId,'Import historyczny: '+source,plan.length,source,fingerprint,draft.mapMode,draft.bank1Count,Math.max(...rows.map(r=>r.stand))-draft.bank1Count,layout.length,savedLayout])).rows[0];
   for(const r of rows){
    await client.query('INSERT INTO entries(competition_id,user_id,status) VALUES($1,$2,$3) ON CONFLICT(competition_id,user_id) DO NOTHING',[c.id,r.userId,'ACTIVE']);
    await client.query('INSERT INTO draws(competition_id,user_id,round,stand,sector) VALUES($1,$2,$3,$4,$5)',[c.id,r.userId,r.round,r.stand,r.sector]);

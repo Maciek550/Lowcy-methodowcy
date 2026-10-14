@@ -25,9 +25,11 @@ function openHistoricalImport(){
  function render(preview){
   draft=preview.draft;verified=null;btn('save').disabled=true;
   f('preview').hidden=false;f('actions').hidden=false;
-  f('preview').innerHTML=`<label style="width:min(650px,95%)">Nazwa zawodów<input data-meta="title" value="${esc(draft.title)}"></label><label>Data<input type="date" data-meta="date" value="${esc(draft.date)}"></label><label>Łowisko<input data-meta="fishery" value="${esc(draft.fishery)}"></label><p><b>${preview.matches.length} zawodników · ${draft.roundCount} tury · ${draft.rows.length} wyników</b></p><div style="overflow:auto;max-height:42vh"><table><thead><tr><th>Zawodnik</th><th>Tura</th><th>Sektor</th><th>Stan.</th><th>Waga (g)</th><th>BF (g)</th><th>Pkt</th></tr></thead><tbody>${draft.rows.map((r,i)=>'<tr data-row="'+i+'">'+['name','round','sector','stand','weight','bigFish','points'].map(k=>'<td><input aria-label="'+esc(k+' '+r.name+' T'+r.round)+'" data-col="'+k+'" value="'+esc(r[k]??'')+'" '+(['name','sector'].includes(k)?'':'type="number" min="0" step="'+(k==='points'?'0.5':'1')+'"')+'></td>').join('')+'</tr>').join('')}</tbody></table></div><h3>Powiązanie z kontami i historią</h3><div data-matches></div>`;
+  f('preview').innerHTML=`<label style="width:min(650px,95%)">Nazwa zawodów<input data-meta="title" value="${esc(draft.title)}"></label><label>Data<input type="date" data-meta="date" value="${esc(draft.date)}"></label><label>Łowisko<input data-meta="fishery" value="${esc(draft.fishery)}"></label><p><b>${preview.matches.length} zawodników · ${draft.roundCount} tury · ${draft.rows.length} wyników</b></p><h3>Sektory i stanowiska</h3><label>Układ sektorów<select data-meta="mapMode"><option value="">Wybierz układ…</option><option value="ONE_BANK">Jeden brzeg</option><option value="TWO_OPPOSITE">Dwa brzegi naprzeciwko</option><option value="TWO_ALONG">Dwa brzegi — sektory wzdłuż brzegów</option></select></label><label>Ostatni numer stanowiska na brzegu 1<input data-meta="bank1Count" type="number" min="1" value="${draft.bank1Count}"></label><p>Liczba zawodników i stanowiska są odczytywane z wyników. Zachowujemy oryginalną numerację. Sprawdź podział brzegów oraz sektory każdej tury.</p><div data-map-summary></div><div style="overflow:auto;max-height:42vh"><table><thead><tr><th>Zawodnik</th><th>Tura</th><th>Sektor</th><th>Stan.</th><th>Waga (g)</th><th>BF (g)</th><th>Pkt</th></tr></thead><tbody>${draft.rows.map((r,i)=>'<tr data-row="'+i+'">'+['name','round','sector','stand','weight','bigFish','points'].map(k=>'<td><input aria-label="'+esc(k+' '+r.name+' T'+r.round)+'" data-col="'+k+'" value="'+esc(r[k]??'')+'" '+(['name','sector'].includes(k)?'':'type="number" min="0" step="'+(k==='points'?'0.5':'1')+'"')+'></td>').join('')+'</tr>').join('')}</tbody></table></div><h3>Powiązanie z kontami i historią</h3><div data-matches></div>`;
   renderMatches(preview.matches);
-  f('preview').oninput=invalidate;
+  dialog.querySelector('[data-meta="mapMode"]').value=draft.mapMode||'';
+  f('preview').oninput=()=>{invalidate();renderMapSummary()};
+  renderMapSummary();
   status('Odczytano wyniki. Sprawdź tabelę oraz konta poniżej.');
  }
  function renderMatches(matches){
@@ -35,8 +37,23 @@ function openHistoricalImport(){
   holder.innerHTML=matches.map((m,i)=>'<div style="padding:7px;border-bottom:1px solid #ccd8cf"><b>'+esc(m.name)+'</b> — '+(m.status==='NEW'?'nowy wpis historyczny (bez hasła do logowania)':m.status==='CONFLICT'?'wybierz właściwe konto':'konto #'+m.userId)+(m.mergeFromIds.length?' · historia z kont #'+m.mergeFromIds.join(', #')+' zostanie przeniesiona':'')+(m.candidates.length>1?'<select data-match="'+i+'"><option value="">'+(m.status==='CONFLICT'?'Wybierz konto':'Automatycznie: #'+m.userId)+'</option>'+m.candidates.map(c=>'<option value="'+c.id+'">#'+c.id+' · '+esc(c.phone)+'</option>').join('')+'</select>':'')+'</div>').join('');
   holder.querySelectorAll('select').forEach(select=>{select.onchange=()=>{const name=matches[Number(select.dataset.match)].name;draft.rows.filter(r=>r.name===name).forEach(r=>r.userId=select.value?Number(select.value):null);invalidate()}});
  }
+ function renderMapSummary(){
+  collect();
+  const mode=draft.mapMode,max=Math.max(...draft.rows.map(r=>Number(r.stand)||0));
+  const split=mode==='ONE_BANK'?max:Number(draft.bank1Count);
+  const field=dialog.querySelector('[data-meta="bank1Count"]');field.hidden=mode==='ONE_BANK';
+  let html='';
+  for(let round=1;round<=draft.roundCount;round++){
+   const rows=draft.rows.filter(r=>Number(r.round)===round),groups=new Map();
+   for(const r of rows){const k=String(r.sector).toUpperCase();if(!groups.has(k))groups.set(k,[]);groups.get(k).push(Number(r.stand))}
+   html+='<h3>Tura '+round+' — '+rows.length+' zawodników / '+new Set(rows.map(r=>Number(r.stand))).size+' zajętych stanowisk</h3>';
+   html+='<p>Brzeg 1: '+rows.filter(r=>Number(r.stand)<=split).length+' · Brzeg 2: '+rows.filter(r=>Number(r.stand)>split).length+'</p>';
+   html+='<ul>'+[...groups].sort().map(([name,stands])=>'<li><b>Sektor '+esc(name)+' — '+stands.length+' osób:</b> '+esc(stands.sort((a,b)=>a-b).join(', '))+'</li>').join('')+'</ul>';
+  }
+  dialog.querySelector('[data-map-summary]').innerHTML=html;
+ }
  function collect(){
-  for(const k of ['title','date','fishery'])draft[k]=dialog.querySelector('[data-meta="'+k+'"]').value;
+  for(const k of ['title','date','fishery','mapMode','bank1Count'])draft[k]=dialog.querySelector('[data-meta="'+k+'"]').value;
   dialog.querySelectorAll('[data-row]').forEach(tr=>{const r=draft.rows[Number(tr.dataset.row)];tr.querySelectorAll('[data-col]').forEach(input=>{r[input.dataset.col]=input.value})});
   return draft;
  }
@@ -51,7 +68,7 @@ function openHistoricalImport(){
  };
  btn('verify').onclick=async()=>{
   lock(true);status('Sprawdzam kompletność i konta…');
-  try{const result=await api('/api/admin/historical-import/preview',{method:'POST',body:JSON.stringify(collect())});renderMatches(result.matches);if(result.matches.some(m=>m.status==='CONFLICT'))throw Error('Wybierz konto dla każdego konfliktu i sprawdź ponownie.');verified=result;status('Dane sprawdzone: '+result.matches.length+' zawodników, '+result.draft.rows.length+' wyników. Możesz zatwierdzić zapis.');}
+  try{if(!collect().mapMode)throw Error('Wybierz układ sektorów.');const result=await api('/api/admin/historical-import/preview',{method:'POST',body:JSON.stringify(collect())});renderMatches(result.matches);if(result.matches.some(m=>m.status==='CONFLICT'))throw Error('Wybierz konto dla każdego konfliktu i sprawdź ponownie.');verified=result;status('Dane sprawdzone: '+result.matches.length+' zawodników, '+result.draft.rows.length+' wyników. Możesz zatwierdzić zapis.');}
   catch(e){verified=null;status(e.message,true)}finally{lock(false)}
  };
  btn('save').onclick=async()=>{
