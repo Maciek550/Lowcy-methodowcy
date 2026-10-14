@@ -1951,10 +1951,26 @@ function renderHistoricalRoundBank(c,byStand,which){
  return '<div class="sectorFlexRow roundDrawRow" style="min-width:'+mapMinWidth(c)+'px">'+cells+'</div>';
 }
 function renderHistoricalRoundMap(c,byStand,round){
+ const sections=(Array.isArray(c.sector_layout)?c.sector_layout:[]).map(x=>({name:String(x.name||''),stands:(x.stands||[]).map(Number).filter(Number.isFinite).sort((a,b)=>a-b)})).filter(x=>x.stands.length);
+ const count=sections.length;
+ // Historical maps use the actual draw positions, never generated empty stands.
+ // For two sectors: one sector on each opposite bank.
+ // For three sectors: one sector on bank 1 and two on bank 2.
+ const bank1=count===2||count===3?sections.slice(0,1):sections.filter(x=>x.stands.some(n=>n<=Number(c.bank1_count||0)));
+ const bank2=count===2||count===3?sections.slice(1):sections.filter(x=>!bank1.includes(x));
+ const renderBank=(items,label)=>{
+  if(!items.length)return '';
+  const total=items.reduce((n,x)=>n+x.stands.length,0);
+  const cells=items.map(sec=>'<div class="sectorGroup" style="flex:'+sec.stands.length+' 0 0;grid-template-columns:repeat('+sec.stands.length+',minmax(50px,1fr))">'+sec.stands.map(n=>renderRoundDrawCell(n,c,byStand)).join('')+'</div>').join('');
+  const bands=items.map(sec=>'<div class="sectorBlock '+sectorColorClass(sec.name,c)+'" style="flex:'+sec.stands.length+' 0 0"><div class="sectorWord">SEKTOR</div><div class="sectorLetter">'+esc(sec.name)+'</div><div class="sectorPeople">'+sec.stands.length+' stanowisk</div></div>').join('');
+  const minw=Math.max(320,total*56);
+  return '<div class="bankLabel">'+label+'</div><div class="sectorFlexRow roundDrawRow" style="min-width:'+minw+'px">'+cells+'</div><div class="sectorFlexRow sectorBand clean" style="min-width:'+minw+'px">'+bands+'</div>';
+ };
  let html='<div class="sectorMap roundDrawMap"><div class="roundMapHeading">MAPA ŁOWISKA — TURA '+round+'</div>';
- if(c.bank2_count)html+='<div class="bankLabel">BRZEG 2</div>'+renderHistoricalRoundBank(c,byStand,'top')+renderOppositeSectorBandForBank(c,'top')+'<div class="water fisheryWater" style="min-width:'+mapMinWidth(c)+'px">'+esc(c.fishery||'Łowisko')+'</div>';
- html+=renderOppositeSectorBandForBank(c,'bottom')+renderHistoricalRoundBank(c,byStand,'bottom')+'<div class="bankLabel">'+(c.map_mode==='ONE_BANK'?'JEDEN BRZEG':'BRZEG 1')+'</div>';
- return html+renderSectorRanges(c)+'</div>';
+ html+=renderBank(bank2,'BRZEG 2');
+ if(bank2.length)html+='<div class="water fisheryWater">'+esc(c.fishery||'Łowisko')+'</div>';
+ html+=renderBank(bank1,bank2.length?'BRZEG 1':'JEDEN BRZEG');
+ return html+'</div>';
 }
 function renderRoundDrawMap(d,round){const c=roundMapCompetitionClient(d.competition,d,round),byStand=roundDrawStandMap(d,round),has=Object.keys(byStand).length;if(!has)return '<p class="muted">Brak losowania T'+round+'.</p>';if(c.__historicalDrawOnly)return renderHistoricalRoundMap(c,byStand,round);const commonW=Math.max(680,mapMinWidth(c)),alongW=Math.max(640,Math.max(Number(c.bank1_count||0),Number(c.bank2_count||0))*60);let html='<div class="sectorMap roundDrawMap"><div class="roundMapHeading">MAPA ŁOWISKA — TURA '+round+'</div>';if(c.map_mode==='ONE_BANK'){html+='<div class="bankLabel">JEDEN BRZEG</div>'+renderRoundOneBank(c,byStand)+renderSectorBand(c)}else if(c.map_mode==='TWO_ALONG'){html+='<div class="bankLabel">BRZEG 2</div>'+renderRoundAlongBank(c,'top',byStand)+renderAlongSectorBand(c,'top')+'<div class="water fisheryWater" style="min-width:'+alongW+'px">'+esc(c.fishery||'Łowisko')+'</div>'+renderAlongSectorBand(c,'bottom')+renderRoundAlongBank(c,'bottom',byStand)+'<div class="bankLabel bankLabelBottom">BRZEG 1</div>'}else{const fixed=disabledStandList(c).length>0;if(fixed)html+='<div class="bankLabel">BRZEG GÓRNY</div>'+renderFixedRoundOppositeBank(c,'top',byStand)+renderOppositeSectorBandForBank(c,'top')+'<div class="water fisheryWater" style="min-width:'+commonW+'px">'+esc(c.fishery||'Łowisko')+'</div>'+renderOppositeSectorBandForBank(c,'bottom')+renderFixedRoundOppositeBank(c,'bottom',byStand)+'<div class="bankLabel bankLabelBottom">BRZEG DOLNY</div>';else html+='<div class="bankLabel">BRZEG GÓRNY</div>'+renderRoundBankGroup(c,'top',byStand)+renderSectorBand(c)+'<div class="water fisheryWater" style="min-width:'+commonW+'px">'+esc(c.fishery||'Łowisko')+'</div>'+renderSectorBand(c)+renderRoundBankGroup(c,'bottom',byStand)+'<div class="bankLabel bankLabelBottom">BRZEG DOLNY</div>'}html+=renderSectorRanges(c)+'</div>';return html}
 function drawRowsBySector(d,round){const entryByUser={};for(const e of (d.activeEntries||[]))entryByUser[Number(e.user_id)]=e;const box={};for(const dr of (d.draws||[])){if(Number(dr.round)!==Number(round))continue;const sec=String(dr.sector||'—'),e=entryByUser[Number(dr.user_id)]||{};(box[sec]=box[sec]||[]).push({user_id:dr.user_id,stand:Number(dr.stand),sector:sec,name:(e.first_name||'')+' '+(e.last_name||''),pzw_club:e.pzw_club||''})}return Object.keys(box).sort((a,b)=>a.localeCompare(b,'pl')).map(sec=>({sector:sec,rows:box[sec].sort((a,b)=>a.stand-b.stand)}))}
