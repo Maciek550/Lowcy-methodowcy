@@ -65,7 +65,7 @@ test('V241: single and multiple-season selectors still work, empty input has cle
  assert.ok(multi.includes('data-year="2026"'));
  assert.ok(multi.includes('data-year="2025"'));
  assert.doesNotMatch(multi,/historySingleYear/);
- assert.match(fixture([]),/Brak zakończonych startów/);
+ assert.match(fixture([]),/Brak zakończonych zawodów z zapisanymi wynikami/);
 });
 test('V241: long event names and station labels escaped without breaking the layout',()=>{
  const html=fixture([{...sample,title:'Open <Special> "CUP"',fishery:'Nad Długą Rzeką & Stawem',t1_stand:'<9>'}]);
@@ -87,7 +87,9 @@ test('V241: only history gets a new stylesheet; old V239 and draw V240 remain, o
  assert.match(server,/const HISTORY_COMPACT_CSS='\/history-compact-v241\.css\?v=\$\{APP_VERSION\}'/);
  assert.match(server,/<link rel="stylesheet" href="\/history-compact-v241\.css\?v=\$\{APP_VERSION\}">/);
  assert.match(server,/DESKTOP_NAV_CSS,HISTORY_CSS,HISTORY_COMPACT_CSS,DRAW_CSS/);
- assert.match(server,/const APP_VERSION = '298'/);
- assert.match(app,/const CLIENT_VERSION='298'/);
- assert.match(server,/class="headerVersion">V253/);
+ const sv=server.match(/const APP_VERSION = '(\d+)'/);
+ const cv=app.match(/const CLIENT_VERSION='(\d+)'/);
+ assert.ok(sv&&cv);
+ assert.equal(sv[1],cv[1]);
+ assert.match(server,/class="headerVersion">V\$\{APP_VERSION\}/);
 });
