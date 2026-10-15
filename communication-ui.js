@@ -61,7 +61,7 @@ function showPopup(n){
 }
 window.lowcyCommPopup=function(notifs){
   if(ME?.role!=='PLAYER'||popupId)return;
-  const arr=(notifs||[]).filter(n=>!n.read_at&&!n.popup_seen_at&&!shown.has(Number(n.id))&&((n.type==='ADMIN_MESSAGE'&&hasPopup(n))||n.type==='PRESENCE_REMINDER_2D'||n.type==='COMPETITION_INVITATION'));
+  const arr=(notifs||[]).filter(n=>!n.popup_seen_at&&!shown.has(Number(n.id))&&((n.type==='ADMIN_MESSAGE'&&hasPopup(n))||n.type==='PRESENCE_REMINDER_2D'||n.type==='COMPETITION_INVITATION'));
   const first=arr[0];if(first)showPopup(first);
 };
 window.lowcyCommEnvelope=function(userId,compId,name){
