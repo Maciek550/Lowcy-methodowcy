@@ -2212,7 +2212,7 @@ self.addEventListener('message', event => {
 self.addEventListener('push', event => {
   let data={}; try{data=event.data?event.data.json():{}}catch(e){}
   const title=data.title||'Łowcy Methodowcy';
-  const options={body:data.body||'Nowe powiadomienie',icon:'/brand/icon-v217-192.png',badge:self.location.origin+'/brand/notification-fish-v293-96.png',data:{url:data.url||'/',workerVersion:'${APP_VERSION}'},tag:data.type?(data.type+'-'+(data.competitionId||'')):undefined,renotify:true};
+  const options={body:data.body||'Nowe powiadomienie',icon:'/brand/icon-v217-192.png',badge:self.location.origin+'/brand/notification-fish-v293-96.png',data:{url:data.url||'/',workerVersion:'${APP_VERSION}'},tag:data.type&&data.type!=='ADMIN_MESSAGE'?(data.type+'-'+(data.competitionId||'')):undefined,renotify:true};
   event.waitUntil((async()=>{await Promise.all([self.registration.showNotification(title,options),setLowcyBadge(data.badgeCount)]);const list=await clients.matchAll({type:'window',includeUncontrolled:true});for(const c of list){try{c.postMessage({type:'LOWCY_ATTENTION_REFRESH'})}catch(e){}}})());
 });
 self.addEventListener('notificationclick', event => {
