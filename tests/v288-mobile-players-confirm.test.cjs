@@ -23,10 +23,10 @@ test('password recovery confirmations never use the browser native confirm',()=>
 test('server and client use the same current version for PWA cache refresh',()=>{
   const server=fs.readFileSync(path.join(root,'server.cjs'),'utf8');
   const client=fs.readFileSync(path.join(root,'app.js'),'utf8');
-  const serverVersion=server.match(/const APP_VERSION = '(\\d+)';/);
-  const clientVersion=client.match(/const CLIENT_VERSION='(\\d+)';/);
+  const serverVersion=server.match(/const APP_VERSION = '(\d+)';/);
+  const clientVersion=client.match(/const CLIENT_VERSION='(\d+)';/);
   assert.ok(serverVersion,'server version must be declared');
   assert.ok(clientVersion,'client version must be declared');
   assert.equal(serverVersion[1],clientVersion[1]);
-  assert.match(server,/lowcy-shell-v\\$\\{APP_VERSION\\}/);
+  assert.match(server,/lowcy-shell-v\$\{APP_VERSION\}/);
 });
