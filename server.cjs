@@ -1718,7 +1718,17 @@ async function ensureCompetitionPlayer(competitionId, person, mode='IMPORT', pre
     order by case when phone ~ '^(ZPRO|IMPORT|MANUAL)-[a-f0-9]{10,}$' then 1 else 0 end,
              case when last_login_at is null then 1 else 0 end,id
   `,[firstName,lastName]);
-  let userRow=matching.rows.find(u=>!syntheticPhone.test(String(u.phone||'')))||null;
+  const realPhoneRows=matching.rows.filter(u=>!syntheticPhone.test(String(u.phone||'')));
+  const exactPhoneRow=phone ? matching.rows.find(u=>String(u.phone||'')===phone) : null;
+  // Never infer identity from a name shared by multiple real accounts.
+  // Imports without a phone may match a single account only if unambiguous.
+  if (phone && realPhoneRows.length && !exactPhoneRow) {
+    return { status:'skipped', reason:'Konflikt tożsamości: to samo imię i nazwisko, ale inny telefon. Wymagana weryfikacja administratora.', fullName:full };
+  }
+  if (!phone && realPhoneRows.length > 1) {
+    return { status:'skipped', reason:'Niejednoznaczne imię i nazwisko: wiele kont z różnymi telefonami. Wymagana weryfikacja administratora.', fullName:full };
+  }
+  let userRow=exactPhoneRow || (!phone && realPhoneRows.length===1 ? realPhoneRows[0] : null);
   let uid;
   if(userRow){
     uid=Number(userRow.id);
