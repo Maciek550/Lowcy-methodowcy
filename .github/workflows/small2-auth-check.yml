@@ -1,0 +1,21 @@
+name: SMALL2 non-disclosing SSH credential presence
+on:
+  push:
+    branches: [small2-preflight-v311-20261104]
+    paths: ['.github/workflows/small2-auth-check.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      SMALL2_SSH_KEY_PRESENT: ${{ secrets.SMALL2_SSH_KEY != '' }}
+      SMALL2_SSH_PRIVATE_KEY_PRESENT: ${{ secrets.SMALL2_SSH_PRIVATE_KEY != '' }}
+      SMALL_SSH_KEY_PRESENT: ${{ secrets.SMALL_SSH_KEY != '' }}
+    steps:
+      - name: Print booleans only, never credentials
+        run: |
+          echo "SMALL2_SSH_KEY_PRESENT=$SMALL2_SSH_KEY_PRESENT"
+          echo "SMALL2_SSH_PRIVATE_KEY_PRESENT=$SMALL2_SSH_PRIVATE_KEY_PRESENT"
+          echo "SMALL_SSH_KEY_PRESENT=$SMALL_SSH_KEY_PRESENT"
