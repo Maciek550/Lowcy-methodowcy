@@ -35,14 +35,14 @@ jobs:
           test "$(ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256 | awk '{print $2}')" = 'SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8'
           export SSHPASS="$SSH_PASSWORD"
           {
+            printf "DB_PASSWORD_B64='"
             printf '%s' "$DB_PASSWORD" | base64 -w0
-            printf '\n'
+            printf "'\\n"
             cat <<'EOSSH'
           set -euo pipefail
-          IFS= read -r secret64
-          PGPASSWORD="$(printf '%s' "$secret64" | base64 -d)"
+          PGPASSWORD="$(printf '%s' "$DB_PASSWORD_B64" | base64 -d)"
           export PGPASSWORD
-          unset secret64
+          unset DB_PASSWORD_B64
           trap 'unset PGPASSWORD' EXIT
           export PGCONNECT_TIMEOUT=8
           export PGOPTIONS='-c default_transaction_read_only=on'
