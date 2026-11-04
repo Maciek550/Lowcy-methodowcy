@@ -68,3 +68,5 @@ jobs:
           } | sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no \
             -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes \
             -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15 lowcymethodowcy@s3.small.pl 'bash -s'
+
+# Retry read-only inspection after SMALL2_DB_PASSWORD was saved by owner.
