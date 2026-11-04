@@ -45,11 +45,20 @@ if [ "$current" != 'php' ]; then
   exit 2
 fi
 test -d "$root/public_html"
-# Empty public_html was inspected and archived before conversion.
-if find "$root/public_html" -mindepth 1 -print -quit | grep -q .; then
-  echo 'SMALL2_CUTOVER_BLOCKED: PHP public_html is no longer empty.'
+# One existing 7.7 KB PHP landing page was found. Switch only if its
+# exact bytes are preserved in the prior off-site-of-domain backup.
+if [ "$(find "$root/public_html" -mindepth 1 | awk 'END{print NR+0}')" != '1' ]; then
+  echo 'SMALL2_CUTOVER_BLOCKED: unexpected PHP public_html contents.'
   exit 2
 fi
+test -f "$root/public_html/index.html"
+archived="$(tar -xOf "$stage/php-before-conversion.tar.gz" public_html/index.html | sha256sum | awk '{print $1}')"
+current="$(sha256sum "$root/public_html/index.html" | awk '{print $1}')"
+if [ -z "$archived" ] || [ "$archived" != "$current" ]; then
+  echo 'SMALL2_CUTOVER_BLOCKED: PHP landing page differs from original backup.'
+  exit 2
+fi
+echo 'SMALL2_PHP_LANDING_PAGE_BACKUP_SHA256_MATCH'
 test -f "$root/logs/error.log" || true
 # Record current domain tree and WWW configuration outside the domain.
 devil www list > "$stage/www-before-cutover.txt"
