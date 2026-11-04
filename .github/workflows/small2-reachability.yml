@@ -1,0 +1,34 @@
+name: SMALL2 reachability check (no credentials)
+on:
+  push:
+    branches: [small2-preflight-v311-20261104]
+    paths: ['.github/workflows/small2-reachability.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: DNS, TCP SSH and HTTP without authentication
+        shell: bash
+        run: |
+          set +e
+          for host in s3.small.pl pgsql3.small.pl panel3.small.pl lowcymethodowcy.smallhost.pl; do
+            echo "===== DNS $host"
+            getent ahostsv4 "$host" | head -2
+            echo "DNS_EXIT=${PIPESTATUS[0]}"
+          done
+          echo "===== SSH port 22"
+          timeout 8 bash -c 'cat < /dev/null > /dev/tcp/s3.small.pl/22'
+          echo "SSH_CONNECT_EXIT=$?"
+          echo "===== SMALL2 public response /health"
+          curl --silent --show-error --location --max-time 15 --output /tmp/lowcy-small2-response --write-out 'SMALL2_HTTP_STATUS=%{http_code} REMOTE_IP=%{remote_ip}\n' https://lowcymethodowcy.smallhost.pl/health
+          echo "HEALTH_CURL_EXIT=$?"
+          head -c 250 /tmp/lowcy-small2-response 2>/dev/null || true
+          echo
+          echo "===== SMALL2 public response /api/version"
+          curl --silent --show-error --location --max-time 15 --output /tmp/lowcy-small2-version --write-out 'SMALL2_VERSION_STATUS=%{http_code}\n' https://lowcymethodowcy.smallhost.pl/api/version
+          echo "VERSION_CURL_EXIT=$?"
+          head -c 250 /tmp/lowcy-small2-version 2>/dev/null || true
+          echo
