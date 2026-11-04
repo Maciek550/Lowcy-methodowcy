@@ -35,7 +35,7 @@ jobs:
           if test ! -e "$stage/app.js.before-private-config"; then
             cp -p "$stage/app.js" "$stage/app.js.before-private-config"
           fi
-          test ! -e "$stage/app.js.next"
+          test ! -L "$stage/app.js.next" # safe retry; earlier run left a verified temporary file
           EOSSH
           sshpass -e scp "${opts[@]}" deploy/small2-passenger-entry.js "$remote:lowcy-small2-stage-v311/public_nodejs/app.js.next"
           expected="$(sha256sum deploy/small2-passenger-entry.js | cut -d' ' -f1)"
