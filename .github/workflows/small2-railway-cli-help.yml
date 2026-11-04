@@ -1,0 +1,24 @@
+name: SMALL2 Railway volume download CLI dry help
+on:
+  push:
+    branches: [small2-preflight-v311-20261104]
+    paths: ['.github/workflows/small2-railway-cli-help.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  help:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Confirm volume file commands without Railway authentication
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install -g @railway/cli
+          railway --version
+          railway volume files --help
+          railway volume files list --help
+          railway volume files download --help
