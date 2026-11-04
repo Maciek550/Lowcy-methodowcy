@@ -1,0 +1,33 @@
+name: SMALL2 discover existing Łowcy data backups safely
+on:
+  push:
+    branches: [small2-preflight-v311-20261104]
+    paths: ['.github/workflows/small2-find-data-backups.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    env:
+      SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+    steps:
+      - name: Read only backup file metadata, never content
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get -qq update && sudo apt-get -qq install -y sshpass
+          mkdir -p "$HOME/.ssh"
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test "$(ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256 | awk '{print $2}')" = 'SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8'
+          export SSHPASS="$SSH_PASSWORD"
+          sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no \
+            -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes \
+            -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15 lowcymethodowcy@s3.small.pl 'bash -s' <<'EOSSH'
+          set -euo pipefail
+          echo '=== EXISTING DATA BACKUP FILES ON SMALL2 (NAMES AND SIZES ONLY) ==='
+          find "$HOME" -type f \( -name '*.json.gz' -o -name '*lowcy*backup*.json' -o -name '*.dump' -o -name '*lowcy*.tar.gz' -o -name '*lowcy*.zip' \) \
+            ! -path '*/node_modules/*' ! -path '*/.git/*' 2>/dev/null | head -50 | while IFS= read -r file; do
+              echo "FILE=${file#"$HOME"/} SIZE_BYTES=$(wc -c < "$file" | tr -d ' ')"
+            done
+          EOSSH
