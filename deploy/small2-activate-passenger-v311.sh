@@ -12,7 +12,8 @@ rollback() {
   code=$?
   if [ "$state" = 'removed_php' ] || [ "$state" = 'nodejs_active' ]; then
     echo "SMALL2_CUTOVER_FAILED: attempting PHP configuration restore."
-    if [ "$state" = 'nodejs_active' ]; then devil www del "$domain" >> "$logs" 2>&1 || true; fi
+    existing="$(devil www list | awk -v d="$domain" '$1==d {print $2}')"
+    if [ -n "$existing" ]; then devil www del "$domain" >> "$logs" 2>&1 || true; fi
     if devil www add "$domain" php >> "$logs" 2>&1; then
       echo "SMALL2_PHP_ROLLBACK_DONE"
     else
