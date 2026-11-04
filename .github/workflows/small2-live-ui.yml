@@ -1,0 +1,35 @@
+name: SMALL2 V311 live browser UI Chromium and Firefox
+on:
+  push:
+    branches: [small2-preflight-v311-20261104]
+    paths: ['.github/workflows/small2-live-ui.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browsers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install ephemeral test-only browsers and dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium firefox
+      - name: Click login visibility toggle, verify layout and JS console
+        shell: bash
+        run: |
+          set -euo pipefail
+          node deploy/small2-live-browser-smoke.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: small2-v311-live-ui-screenshots
+          path: small2-*.png
+          if-no-files-found: ignore
+          retention-days: 14
