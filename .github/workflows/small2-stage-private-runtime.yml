@@ -44,8 +44,9 @@ jobs:
           sshpass -e ssh "${opts[@]}" "$remote" 'bash -s' <<'EOSSH'
           set -euo pipefail
           stage="$HOME/lowcy-small2-stage-v311/public_nodejs"
-          node --check "$stage/app.js.next"
-          mv "$stage/app.js.next" "$stage/app.js"
+          mv "$stage/app.js.next" "$stage/app.js.cjs"
+          node --check "$stage/app.js.cjs"
+          mv "$stage/app.js.cjs" "$stage/app.js"
           test -f "$stage/app.js.before-private-config"
           echo 'SMALL2_PASSENGER_PRIVATE_CONFIG_ADAPTER_STAGED_OK'
           EOSSH
