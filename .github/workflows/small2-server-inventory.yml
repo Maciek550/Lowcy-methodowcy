@@ -45,6 +45,10 @@ jobs:
           git -C "$src" status --short | head -40
           echo '=== DOMAIN DIRS ==='
           find "$HOME/domains" -mindepth 1 -maxdepth 2 -type d 2>/dev/null | sort | head -70
+          echo '=== ACTUAL PHP PUBLIC_HTML ENTRIES (NAMES, SIZE, TYPES ONLY) ==='
+          find "$HOME/domains/lowcymethodowcy.smallhost.pl/public_html" -mindepth 1 -maxdepth 2 -exec ls -ld {} \; 2>/dev/null | head -50
+          echo '=== WEB DOMAIN CURRENT TYPE ==='
+          devil www list
           echo '=== CONFIG FILE PRESENCE (NO VALUES) ==='
           for f in "$src/.env" "$src/.env.production" "$HOME/.bash_profile" "$HOME/.pgpass"; do
             if test -f "$f"; then echo "$(basename "$f"): PRESENT"; else echo "$(basename "$f"): ABSENT"; fi
