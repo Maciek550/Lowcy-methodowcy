@@ -1,0 +1,69 @@
+name: SMALL2 V311 isolated site staging (no database)
+on:
+  push:
+    branches: [small2-preflight-v311-20261104]
+    paths: ['.github/workflows/small2-stage-v311.yml']
+  workflow_dispatch:
+permissions: { contents: read }
+jobs:
+  stage:
+    runs-on: ubuntu-latest
+    env:
+      SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Confirm source version and SSH host
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq "const APP_VERSION = '311';" server.cjs
+          node --check deploy/small2-passenger-entry.js
+          sudo apt-get -qq update && sudo apt-get -qq install -y sshpass
+          mkdir -p "$HOME/.ssh"
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test "$(ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256 | awk '{print $2}')" = 'SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8'
+      - name: Make isolated staging directory, archive empty PHP site and current WWW config
+        shell: bash
+        run: |
+          set -euo pipefail
+          export SSHPASS="$SSH_PASSWORD"
+          sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no \
+            -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes \
+            -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15 lowcymethodowcy@s3.small.pl 'bash -s' <<'EOSSH'
+          set -euo pipefail
+          src="$HOME/lowcy-small2-20261023"
+          stage="$HOME/lowcy-small2-stage-v311"
+          domain="$HOME/domains/lowcymethodowcy.smallhost.pl"
+          test -d "$src/.git"
+          test "$(git -C "$src" rev-parse HEAD)" = 'e5b35f311d8c0d98cd8498044e5d538bf9c2b2f2'
+          test -z "$(git -C "$src" status --porcelain)"
+          test -d "$domain/public_html"
+          if test ! -d "$stage"; then
+            mkdir -p "$stage/public_nodejs/public"
+            chmod 700 "$stage"
+          fi
+          if test ! -f "$stage/php-before-conversion.tar.gz"; then
+            tar -czf "$stage/php-before-conversion.tar.gz" -C "$domain" public_html
+          fi
+          if test ! -f "$stage/www-before.txt"; then
+            devil www list > "$stage/www-before.txt"
+          fi
+          test ! -e "$stage/public_nodejs/app.js"
+          echo 'SMALL2_STAGE_READY: separate dir, original app git is clean, PHP backup created.'
+          EOSSH
+      - name: Copy Passenger adapter into separate staging path only
+        shell: bash
+        run: |
+          set -euo pipefail
+          export SSHPASS="$SSH_PASSWORD"
+          sshpass -e scp -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no \
+            -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes \
+            -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15 \
+            deploy/small2-passenger-entry.js lowcymethodowcy@s3.small.pl:lowcy-small2-stage-v311/public_nodejs/app.js
+          expected="$(sha256sum deploy/small2-passenger-entry.js | awk '{print $1}')"
+          actual="$(sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no \
+            -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes \
+            -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15 lowcymethodowcy@s3.small.pl \
+            'sha256sum "$HOME/lowcy-small2-stage-v311/public_nodejs/app.js" | cut -d" " -f1')"
+          test "$actual" = "$expected"
+          echo 'SMALL2_STAGE_UPLOAD_OK SHA256_MATCH'
