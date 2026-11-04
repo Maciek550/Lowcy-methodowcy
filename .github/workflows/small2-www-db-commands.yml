@@ -1,0 +1,38 @@
+name: SMALL2 WWW and PostgreSQL commands inspection
+on:
+  push:
+    branches: [small2-preflight-v311-20261104]
+    paths: ['.github/workflows/small2-www-db-commands.yml']
+  workflow_dispatch:
+permissions: { contents: read }
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    env:
+      SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+    steps:
+      - name: Authenticated read-only inspection
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get -qq update && sudo apt-get -qq install -y sshpass
+          mkdir -p "$HOME/.ssh"
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test "$(ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256 | awk '{print $2}')" = 'SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8'
+          export SSHPASS="$SSH_PASSWORD"
+          sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no \
+            -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes \
+            -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15 lowcymethodowcy@s3.small.pl 'bash -s' <<'EOSSH'
+          set +e
+          echo '=== HELP WWW ==='
+          devil www help 2>&1 | head -100
+          echo '=== HELP WWW ADD ==='
+          devil www add help 2>&1 | head -55
+          echo '=== HELP PGSQL ==='
+          devil pgsql help 2>&1 | head -80
+          echo '=== PUBLIC_HTML ONLY FILENAMES ==='
+          find "$HOME/domains/lowcymethodowcy.smallhost.pl/public_html" -maxdepth 2 -mindepth 1 -printf '%P %y %s bytes\n' 2>/dev/null | head -60
+          echo '=== EXISTING DB ACCESS NO PASSWORD (READ ONLY) ==='
+          timeout 8 env PGCONNECT_TIMEOUT=6 psql -w -h pgsql3.small.pl -U p1828_lowcy_kop -d p1828_lowcy_kop -Atc 'SELECT current_database(), count(*) FROM pg_catalog.pg_tables WHERE schemaname=\x27public\x27' 2>&1 | sed -E 's/(password|Password):[^ ]+/***REDACTED***/g' | head -10
+          echo "PSQL_EXIT=${PIPESTATUS[0]}"
+          EOSSH
