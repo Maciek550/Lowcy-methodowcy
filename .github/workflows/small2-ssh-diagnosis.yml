@@ -1,0 +1,52 @@
+name: SMALL2 SSH authenticated read-only diagnosis
+on:
+  push:
+    branches: [small2-preflight-v311-20261104]
+    paths: ['.github/workflows/small2-ssh-diagnosis.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  small2-ssh:
+    runs-on: ubuntu-latest
+    env:
+      SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+    steps:
+      - name: Check whether dedicated SMALL2 SSH password is available
+        id: credential
+        shell: bash
+        run: |
+          if [ -z "$SSH_PASSWORD" ]; then
+            echo "SMALL2_SSH_PASSWORD is not configured; safe stop; no server changes."
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "SMALL2_SSH_PASSWORD is configured (value not displayed)."
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Install temporary SSH client dependency
+        if: steps.credential.outputs.available == 'true'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq sshpass
+      - name: Verify official SMALL.PL server host key
+        if: steps.credential.outputs.available == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.ssh"
+          chmod 700 "$HOME/.ssh"
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > "$HOME/.ssh/known_hosts" 2>/dev/null
+          fingerprint=$(ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256 | awk '{print $2}')
+          test "$fingerprint" = 'SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8'
+          chmod 600 "$HOME/.ssh/known_hosts"
+          echo "Server ED25519 fingerprint matched the official SMALL.PL list."
+      - name: Read-only server inventory; no deploy, no migrations, no secrets printed
+        if: steps.credential.outputs.available == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          export SSHPASS="$SSH_PASSWORD"
+          sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no \
+            -o PreferredAuthentications=password -o NumberOfPasswordPrompts=1 \
+            -o ConnectTimeout=10 lowcymethodowcy@s3.small.pl \
+            'printf "SMALL2_AUTH_OK\n"; id -un; pwd; node -v 2>&1; npm -v 2>&1; if [ -d "$HOME/lowcy-small2-20261023" ]; then echo "LOWCY_SOURCE_DIR_EXISTS"; else echo "LOWCY_SOURCE_DIR_MISSING"; fi; if [ -d "$HOME/domains/lowcymethodowcy.smallhost.pl/public_nodejs" ]; then echo "NODE_WWW_DIR_EXISTS"; else echo "NODE_WWW_DIR_MISSING"; fi; command -v devil || true'
