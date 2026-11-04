@@ -4,13 +4,15 @@ on:
     branches: [small2-preflight-v311-20261104]
     paths: ['.github/workflows/small2-firstboot-diagnosis.yml']
   workflow_dispatch:
-permissions: {contents: read}
+permissions:
+  contents: read
 jobs:
   diagnose:
     runs-on: ubuntu-latest
-    env: {SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}}
+    env:
+      SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
     steps:
-      - name: Inspect only nonsecret boot error categories
+      - name: Inspect sanitized first-boot error categories
         shell: bash
         run: |
           set -euo pipefail
@@ -23,25 +25,15 @@ jobs:
             -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 \
             -o ConnectTimeout=15 lowcymethodowcy@s3.small.pl 'bash -s' <<'EOSSH'
           set -euo pipefail
-          echo "=== NONSECRET LOG DIAGNOSIS ==="
+          echo "=== FIRSTBOOT ERROR CATEGORIES ==="
           logfile="$HOME/lowcy-small2-stage-v311/first_boot_20261104.log"
           if test -r "$logfile"; then
-            python3 - "$logfile" <<'PY'
-          import sys,re
-          lines=open(sys.argv[1],encoding='utf-8',errors='replace').read().splitlines()
-          print('LOG_LINES='+str(len(lines)))
-          safe=re.compile(r'^(?:DB_WAIT|START_FAILED|CARP_MOBILE|LOWCY_|REQ_ERR|Error:|TypeError:|ReferenceError:|SyntaxError:|\s*code:|\s*detail:|\s*hint:|\s*at [A-Za-z_])')
-          for ln in lines[-50:]:
-              if safe.search(ln):
-                  ln=re.sub(r'postgres(?:ql)?://[^\s]+','[DATABASE_URL_REDACTED]',ln)
-                  ln=re.sub(r'password[^\s,;}]+','password[REDACTED]',ln,flags=re.I)
-                  print(ln[:280])
-          PY
+            wc -l "$logfile"
+            grep -E '^(DB_WAIT|START_FAILED|CARP_MOBILE|LOWCY_|REQ_ERR|Error:|TypeError:|ReferenceError:|SyntaxError:|[[:space:]]+code:)' "$logfile" | sed -E 's#postgres(ql)?://[^[:space:]]+#[URL_REDACTED]#g' | tail -35 || true
           else
-            echo 'LOG_NOT_FOUND'
+            echo "BOOT_LOG_NOT_FOUND"
           fi
-          echo "=== EXPECTED PRIVATE CONFIG PERMISSIONS ==="
-          stat -f '%Sp %N' "$HOME/.config/lowcy-small2/runtime.json" 2>/dev/null || true
-          echo "=== PUBLIC SCHEMA TABLE COUNT (NO DB PASSWORD) ==="
-          if test -f "$HOME/lowcy-small2-20261023/.small2-start-approved"; then echo 'START_APPROVED_MARKER_PRESENT'; else echo 'START_APPROVED_MARKER_ABSENT'; fi
+          echo "=== BOOT PERMISSIONS AND MARKER ==="
+          stat -f '%Sp' "$HOME/.config/lowcy-small2/runtime.json" 2>/dev/null || true
+          if test -f "$HOME/lowcy-small2-20261023/.small2-start-approved"; then echo 'START_MARKER_PRESENT'; else echo 'START_MARKER_ABSENT'; fi
           EOSSH
