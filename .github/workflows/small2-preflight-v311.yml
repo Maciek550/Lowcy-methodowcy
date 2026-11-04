@@ -1,0 +1,28 @@
+name: SMALL2 V311 isolated preflight
+on:
+  push:
+    branches:
+      - small2-preflight-v311-20261104
+    paths:
+      - '.github/workflows/small2-preflight-v311.yml'
+      - 'tools/small2-preflight-v311.cjs'
+      - 'tests/small2-preflight-v311.test.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  safety:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Source syntax
+        run: |
+          node --check server.cjs
+          node --check app.js
+          node --check migrate-golebiowka-sectors.cjs
+          node --check tools/small2-preflight-v311.cjs
+      - name: SMALL2 database target regression tests (no network)
+        run: node --test tests/small2-preflight-v311.test.cjs
