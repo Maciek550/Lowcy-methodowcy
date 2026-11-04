@@ -2,7 +2,9 @@ name: SMALL2 V311 deploy Passenger on dedicated domain
 on:
   push:
     branches: [small2-preflight-v311-20261104]
-    paths: ['.github/workflows/small2-activate-passenger.yml']
+    paths:
+      - '.github/workflows/small2-activate-passenger.yml'
+      - 'deploy/small2-activate-passenger-v311.sh'
   workflow_dispatch:
 permissions:
   contents: read
