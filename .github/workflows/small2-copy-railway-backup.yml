@@ -1,0 +1,76 @@
+name: SMALL2 V311 secure Railway backup copy (read-only)
+on:
+  push:
+    branches: [small2-preflight-v311-20261104]
+    paths: ['.github/workflows/small2-copy-railway-backup.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  copy-verified-snapshot:
+    runs-on: ubuntu-latest
+    env:
+      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+      SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+      SNAPSHOT_NAME: lowcy-db-2026-11-04T02-17-09-144Z.json.gz
+      VOLUME_ID: 9247c5e9-fc58-43a2-b44d-64ffbc6be428
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Fail closed if either credential is not present
+        shell: bash
+        run: |
+          test -n "$SSH_PASSWORD" || { echo 'BLOCK: missing SMALL2 SSH password'; exit 1; }
+          test -n "$RAILWAY_API_TOKEN" || { echo 'BLOCK: missing RAILWAY_API_TOKEN secret; source untouched'; exit 1; }
+      - name: Install CLI, read-only list and download from dedicated backup volume
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          npm install -g @railway/cli
+          cd "$RUNNER_TEMP"
+          railway link --project a1cb25a7-9ef3-4ee5-af9e-efafecf527ed \
+            --environment 193be84b-d9f4-49bf-8a75-f432c8dda992 \
+            --service d24be1aa-b0d0-45cb-aee0-e867add813e0 --json > link.json
+          railway volume files --volume "$VOLUME_ID" list / --json > volume-list.json
+          grep -Fq "$SNAPSHOT_NAME" volume-list.json
+          railway volume files --volume "$VOLUME_ID" download "/$SNAPSHOT_NAME" "$RUNNER_TEMP/lowcy-source.json.gz" --json > download-receipt.json
+          test -s "$RUNNER_TEMP/lowcy-source.json.gz"
+          gzip -t "$RUNNER_TEMP/lowcy-source.json.gz"
+          node <<'NODE'
+          const fs=require('node:fs'),zlib=require('node:zlib');
+          const p=process.env.RUNNER_TEMP+'/lowcy-source.json.gz';
+          const s=JSON.parse(zlib.gunzipSync(fs.readFileSync(p)).toString('utf8'));
+          if(s.format!=='LOWCY_METHODOWCY_DB_BACKUP_V1')throw Error('UNSUPPORTED_BACKUP_FORMAT');
+          const expect={users:73,competitions:7,entries:157,draws:285,results:285,result_items:278};
+          for(const [table,n] of Object.entries(expect)){
+            if(s.database?.counts?.[table]!==n || s.data?.[table]?.length!==n)throw Error('COUNTS_MISMATCH_'+table);
+          }
+          if(!s.created_at || !s.created_at.startsWith('2026-11-04T02:17:09'))throw Error('UNEXPECTED_SNAPSHOT_DATE');
+          const required=['app_migrations','historical_import_audit','password_reset_requests'];
+          for(const name of required){if(!Array.isArray(s.data?.[name]))throw Error('BACKUP_MISSING_'+name);}
+          console.log('RAILWAY_SOURCE_SNAPSHOT_VERIFIED '+JSON.stringify({created_at:s.created_at,counts:expect,tableCount:s.database.tables}));
+          NODE
+          sha256sum "$RUNNER_TEMP/lowcy-source.json.gz" | awk '{print "RAILWAY_BACKUP_SHA256="$1}'
+      - name: Securely copy unchanged snapshot to private SMALL2 staging only
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get -qq update && sudo apt-get -qq install -y sshpass
+          mkdir -p "$HOME/.ssh"
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test "$(ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256 | awk '{print $2}')" = 'SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8'
+          export SSHPASS="$SSH_PASSWORD"
+          remote=lowcymethodowcy@s3.small.pl
+          opts=(-o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15)
+          sshpass -e ssh "${opts[@]}" "$remote" \
+            'test -d "$HOME/lowcy-small2-stage-v311" && test ! -e "$HOME/lowcy-small2-stage-v311/railway-source-20261104.json.gz"'
+          sshpass -e scp "${opts[@]}" "$RUNNER_TEMP/lowcy-source.json.gz" \
+            "$remote:lowcy-small2-stage-v311/railway-source-20261104.json.gz"
+          localhash="$(sha256sum "$RUNNER_TEMP/lowcy-source.json.gz" | awk '{print $1}')"
+          remotehash="$(sshpass -e ssh "${opts[@]}" "$remote" \
+            'chmod 600 "$HOME/lowcy-small2-stage-v311/railway-source-20261104.json.gz" && sha256sum "$HOME/lowcy-small2-stage-v311/railway-source-20261104.json.gz" | awk "{print \\$1}"')"
+          test "$localhash" = "$remotehash"
+          echo 'SMALL2_RAILWAY_SNAPSHOT_COPIED_HASH_VERIFIED_NO_DATABASE_RESTORE'
