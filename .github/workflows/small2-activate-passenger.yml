@@ -1,0 +1,55 @@
+name: SMALL2 V311 deploy Passenger on dedicated domain
+on:
+  push:
+    branches: [small2-preflight-v311-20261104]
+    paths: ['.github/workflows/small2-activate-passenger.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  activate:
+    runs-on: ubuntu-latest
+    env:
+      SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check cutover script and SSH host identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SSH_PASSWORD"
+          bash -n deploy/small2-activate-passenger-v311.sh
+          sudo apt-get -qq update && sudo apt-get -qq install -y sshpass
+          mkdir -p "$HOME/.ssh"
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test "$(ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256 | awk '{print $2}')" = 'SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8'
+      - name: Enable Node.js only on isolated SMALL2 website, preserve PHP rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          export SSHPASS="$SSH_PASSWORD"
+          sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no \
+            -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes \
+            -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15 lowcymethodowcy@s3.small.pl 'bash -s' \
+            < deploy/small2-activate-passenger-v311.sh
+      - name: Validate external V311 application endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          domain='https://lowcymethodowcy.smallhost.pl'
+          status=0
+          for i in $(seq 1 40); do
+            if curl -fsS --max-time 12 "$domain/health" -o /tmp/lowcy-small2-health.json; then
+              if node -e 'let j=require("/tmp/lowcy-small2-health.json");process.exit(j.ok && j.version==="V311_GOLEBIOWKA_JULY_BANKS"?0:1)' ; then
+                status=1
+                break
+              fi
+            fi
+            sleep 3
+          done
+          test "$status" = 1
+          curl -fsS --max-time 15 "$domain/api/version" -o /tmp/lowcy-small2-version.json
+          node -e 'let j=require("/tmp/lowcy-small2-version.json");if(j.appVersion!=="311")process.exit(1)'
+          curl -fsS --max-time 15 "$domain/" -o /tmp/lowcy-small2-home.html
+          grep -q 'app.js?v=311' /tmp/lowcy-small2-home.html
+          echo 'SMALL2_V311_PUBLIC_HEALTH_AND_VERSION_AND_HTML_OK'
