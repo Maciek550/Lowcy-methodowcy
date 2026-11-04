@@ -1,0 +1,49 @@
+name: SMALL2 V311 independent release ZIP
+on:
+  push:
+    branches: [small2-preflight-v311-20261104]
+    paths: ['.github/workflows/small2-package.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check base source version and adapter
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq "const APP_VERSION = '311';" server.cjs
+          grep -Fq "const APP_VERSION_NAME = 'V311_GOLEBIOWKA_JULY_BANKS';" server.cjs
+          node --check server.cjs
+          node --check app.js
+          node --check deploy/small2-passenger-entry.js
+          node --check tools/small2-preflight-v311.cjs
+          node --test tests/small2-preflight-v311.test.cjs
+      - name: Package independent source and Passenger entry without modifying the app
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/lowcy-small2-v311/application /tmp/lowcy-small2-v311/public_nodejs
+          tar --exclude=.git --exclude=node_modules --exclude='*.zip' -cf - . | tar -xf - -C /tmp/lowcy-small2-v311/application
+          cp deploy/small2-passenger-entry.js /tmp/lowcy-small2-v311/public_nodejs/app.js
+          printf 'SOURCE_COMMIT=%s\nSMALL2_BRANCH=%s\nVERSION=V311\n' "$(git rev-parse HEAD)" "$(git branch --show-current)" > /tmp/lowcy-small2-v311/RELEASE.txt
+          cd /tmp
+          zip -q -r "${GITHUB_WORKSPACE}/Lowcy_V311_SMALL2_bezpieczna_paczka.zip" lowcy-small2-v311
+          cd "${GITHUB_WORKSPACE}"
+          sha256sum Lowcy_V311_SMALL2_bezpieczna_paczka.zip | tee Lowcy_V311_SMALL2_SHA256.txt
+          unzip -l Lowcy_V311_SMALL2_bezpieczna_paczka.zip | grep 'public_nodejs/app.js'
+          unzip -l Lowcy_V311_SMALL2_bezpieczna_paczka.zip | grep 'application/server.cjs'
+          unzip -l Lowcy_V311_SMALL2_bezpieczna_paczka.zip | grep 'application/app.js'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Lowcy-V311-SMALL2-safe-package
+          path: |
+            Lowcy_V311_SMALL2_bezpieczna_paczka.zip
+            Lowcy_V311_SMALL2_SHA256.txt
+          retention-days: 30
