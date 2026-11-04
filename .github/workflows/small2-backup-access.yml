@@ -1,0 +1,29 @@
+name: SMALL2 safe source-backup connection discovery
+on:
+  push:
+    branches: [small2-preflight-v311-20261104]
+    paths: ['.github/workflows/small2-backup-access.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+      RAILWAY_DATABASE_URL: ${{ secrets.RAILWAY_DATABASE_URL }}
+      LOWCY_DB_BACKUP: ${{ secrets.LOWCY_DB_BACKUP }}
+      RAILWAY_CLI_TOKEN: ${{ secrets.RAILWAY_CLI_TOKEN }}
+    steps:
+      - name: Check optional connections without values or outbound calls
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in RAILWAY_TOKEN RAILWAY_API_TOKEN RAILWAY_DATABASE_URL LOWCY_DB_BACKUP RAILWAY_CLI_TOKEN; do
+            if [ -n "${!name:-}" ]; then
+              echo "$name=present"
+            else
+              echo "$name=absent"
+            fi
+          done
