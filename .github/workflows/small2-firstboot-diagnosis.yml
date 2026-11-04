@@ -1,0 +1,47 @@
+name: SMALL2 V311 first-boot failure diagnosis
+on:
+  push:
+    branches: [small2-preflight-v311-20261104]
+    paths: ['.github/workflows/small2-firstboot-diagnosis.yml']
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    env: {SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}}
+    steps:
+      - name: Inspect only nonsecret boot error categories
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get -qq update && sudo apt-get -qq install -y sshpass
+          mkdir -p "$HOME/.ssh"
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test "$(ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256 | awk '{print $2}')" = 'SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8'
+          export SSHPASS="$SSH_PASSWORD"
+          sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no \
+            -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 \
+            -o ConnectTimeout=15 lowcymethodowcy@s3.small.pl 'bash -s' <<'EOSSH'
+          set -euo pipefail
+          echo "=== NONSECRET LOG DIAGNOSIS ==="
+          logfile="$HOME/lowcy-small2-stage-v311/first_boot_20261104.log"
+          if test -r "$logfile"; then
+            python3 - "$logfile" <<'PY'
+          import sys,re
+          lines=open(sys.argv[1],encoding='utf-8',errors='replace').read().splitlines()
+          print('LOG_LINES='+str(len(lines)))
+          safe=re.compile(r'^(?:DB_WAIT|START_FAILED|CARP_MOBILE|LOWCY_|REQ_ERR|Error:|TypeError:|ReferenceError:|SyntaxError:|\s*code:|\s*detail:|\s*hint:|\s*at [A-Za-z_])')
+          for ln in lines[-50:]:
+              if safe.search(ln):
+                  ln=re.sub(r'postgres(?:ql)?://[^\s]+','[DATABASE_URL_REDACTED]',ln)
+                  ln=re.sub(r'password[^\s,;}]+','password[REDACTED]',ln,flags=re.I)
+                  print(ln[:280])
+          PY
+          else
+            echo 'LOG_NOT_FOUND'
+          fi
+          echo "=== EXPECTED PRIVATE CONFIG PERMISSIONS ==="
+          stat -f '%Sp %N' "$HOME/.config/lowcy-small2/runtime.json" 2>/dev/null || true
+          echo "=== PUBLIC SCHEMA TABLE COUNT (NO DB PASSWORD) ==="
+          if test -f "$HOME/lowcy-small2-20261023/.small2-start-approved"; then echo 'START_APPROVED_MARKER_PRESENT'; else echo 'START_APPROVED_MARKER_ABSENT'; fi
+          EOSSH
