@@ -47,7 +47,7 @@ jobs:
           set -euo pipefail
           export SSHPASS="$SSH_PASSWORD"
           sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no \
-            -o PreferredAuthentications=password -o NumberOfPasswordPrompts=1 \
+            -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 \
             -o ConnectTimeout=10 lowcymethodowcy@s3.small.pl \
             'printf "SMALL2_AUTH_OK\n"; id -un; pwd; node -v 2>&1; npm -v 2>&1; if [ -d "$HOME/lowcy-small2-20261023" ]; then echo "LOWCY_SOURCE_DIR_EXISTS"; else echo "LOWCY_SOURCE_DIR_MISSING"; fi; if [ -d "$HOME/domains/lowcymethodowcy.smallhost.pl/public_nodejs" ]; then echo "NODE_WWW_DIR_EXISTS"; else echo "NODE_WWW_DIR_MISSING"; fi; command -v devil || true'
 
