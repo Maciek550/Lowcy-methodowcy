@@ -1,0 +1,70 @@
+name: SMALL2 live PostgreSQL read-only inspection
+on:
+  push:
+    branches: [small2-preflight-v311-20261104]
+    paths: ['.github/workflows/small2-db-readonly.yml']
+  workflow_dispatch:
+permissions: { contents: read }
+jobs:
+  db:
+    runs-on: ubuntu-latest
+    env:
+      SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+      DB_PASSWORD: ${{ secrets.SMALL2_DB_PASSWORD }}
+    steps:
+      - name: Check SSH and PostgreSQL secrets without printing values
+        id: credentials
+        shell: bash
+        run: |
+          if [ -z "$SSH_PASSWORD" ]; then echo 'BLOCK: SSH secret missing'; exit 1; fi
+          if [ -z "$DB_PASSWORD" ]; then
+            echo 'BLOCK: SMALL2_DB_PASSWORD is missing; database untouched.'
+            echo 'ready=false' >> "$GITHUB_OUTPUT"
+          else
+            echo 'READY: both secrets are present (values hidden).'
+            echo 'ready=true' >> "$GITHUB_OUTPUT"
+          fi
+      - name: Safe SSH with pinned host identity
+        if: steps.credentials.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get -qq update && sudo apt-get -qq install -y sshpass
+          mkdir -p "$HOME/.ssh"
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test "$(ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256 | awk '{print $2}')" = 'SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8'
+          export SSHPASS="$SSH_PASSWORD"
+          {
+            printf '%s' "$DB_PASSWORD" | base64 -w0
+            printf '\n'
+            cat <<'EOSSH'
+          set -euo pipefail
+          IFS= read -r secret64
+          PGPASSWORD="$(printf '%s' "$secret64" | base64 -d)"
+          export PGPASSWORD
+          unset secret64
+          trap 'unset PGPASSWORD' EXIT
+          export PGCONNECT_TIMEOUT=8
+          export PGOPTIONS='-c default_transaction_read_only=on'
+          host='pgsql3.small.pl'
+          db='p1828_lowcy_kop'
+          echo '=== READ-ONLY TARGET CONNECTION ==='
+          psql -w -X -v ON_ERROR_STOP=1 -h "$host" -p 5432 -U "$db" -d "$db" -Atc \
+            "SELECT 'DATABASE='||current_database()||',USER='||current_user||',READONLY='||current_setting('default_transaction_read_only');"
+          echo '=== SCHEMA TABLES ==='
+          psql -w -X -v ON_ERROR_STOP=1 -h "$host" -U "$db" -d "$db" -Atc \
+            "SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE' ORDER BY table_name;"
+          echo '=== IMPORTANT TABLE COUNTS ==='
+          for table in users competitions entries draws results app_migrations historical_import_audit result_items; do
+            present=$(psql -w -X -v ON_ERROR_STOP=1 -h "$host" -U "$db" -d "$db" -Atc "SELECT to_regclass('public.$table') IS NOT NULL;")
+            if [ "$present" = t ]; then
+              n=$(psql -w -X -v ON_ERROR_STOP=1 -h "$host" -U "$db" -d "$db" -Atc "SELECT count(*) FROM public.$table;")
+              echo "$table=$n"
+            else
+              echo "$table=ABSENT"
+            fi
+          done
+          EOSSH
+          } | sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no \
+            -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes \
+            -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15 lowcymethodowcy@s3.small.pl 'bash -s'
