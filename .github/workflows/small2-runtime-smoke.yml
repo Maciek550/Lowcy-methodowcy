@@ -1,0 +1,80 @@
+name: SMALL2 V311 - isolated full app runtime smoke
+on:
+  push:
+    branches: [small2-preflight-v311-20261104]
+    paths:
+      - '.github/workflows/small2-runtime-smoke.yml'
+      - 'deploy/small2-passenger-entry.js'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  local-postgres-smoke:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: lowcy_test
+          POSTGRES_PASSWORD: ci_only_password
+          POSTGRES_DB: lowcy_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U lowcy_test -d lowcy_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://lowcy_test:ci_only_password@127.0.0.1:5432/lowcy_test
+      JWT_SECRET: not_a_real_secret_local_ci_only_2026
+      PORT: 3311
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: JS syntax and dependency installation
+        run: |
+          node --check server.cjs
+          node --check app.js
+          node --check deploy/small2-passenger-entry.js
+          npm ci
+      - name: Boot clean application and inspect endpoints using disposable database
+        shell: bash
+        run: |
+          set -euo pipefail
+          node server.cjs > /tmp/lowcy-ci-server.log 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true' EXIT
+          for i in $(seq 1 45); do
+            if curl -fsS http://127.0.0.1:3311/health > /tmp/lowcy-ci-health.json; then break; fi
+            if ! kill -0 "$pid" 2>/dev/null; then cat /tmp/lowcy-ci-server.log; exit 1; fi
+            sleep 2
+          done
+          node -e 'const d=require("/tmp/lowcy-ci-health.json"); if(!d.ok || !d.version.includes("311"))process.exit(1)'
+          curl -fsS http://127.0.0.1:3311/api/version | node -e 'let s=""; process.stdin.on("data",x=>s+=x).on("end",()=>{let d=JSON.parse(s);if(d.appVersion!=="311")process.exit(1)})'
+          curl -fsS http://127.0.0.1:3311/ > /tmp/lowcy-ci-home.html
+          grep -q 'app.js?v=311' /tmp/lowcy-ci-home.html
+          curl -fsS http://127.0.0.1:3311/app.js > /tmp/lowcy-ci-frontend.js
+          test -s /tmp/lowcy-ci-frontend.js
+          kill "$pid"
+          wait "$pid" || true
+          trap - EXIT
+      - name: Run existing schema migration ONLY against disposable test database
+        run: node migrate-golebiowka-sectors.cjs
+      - name: Verify restart after migrations and basic endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          node server.cjs > /tmp/lowcy-ci-restart.log 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true' EXIT
+          for i in $(seq 1 45); do
+            if curl -fsS http://127.0.0.1:3311/health > /tmp/lowcy-ci-restart.json; then break; fi
+            if ! kill -0 "$pid" 2>/dev/null; then cat /tmp/lowcy-ci-restart.log; exit 1; fi
+            sleep 2
+          done
+          node -e 'const d=require("/tmp/lowcy-ci-restart.json"); if(!d.ok || d.version!=="V311_GOLEBIOWKA_JULY_BANKS")process.exit(1)'
+          echo 'SUCCESS: boot, API, frontend, isolated PG migrations, restart'
