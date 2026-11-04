@@ -8,7 +8,20 @@ const path = require('node:path');
 
 const source = '/usr/home/lowcymethodowcy/lowcy-small2-20261023';
 const readinessFile = path.join(source, '.small2-start-approved');
-const db = process.env.DATABASE_URL;
+const runtimeFile = '/usr/home/lowcymethodowcy/.config/lowcy-small2/runtime.json';
+const allowedRuntimeKeys = Object.freeze(['DATABASE_URL', 'JWT_SECRET', 'ADMIN_SETUP_CODE', 'VAPID_PUBLIC_KEY', 'VAPID_PRIVATE_KEY', 'VAPID_SUBJECT']);
+function loadRuntimeConfig() {
+  if (!fs.existsSync(runtimeFile)) throw new Error('Brak prywatnej konfiguracji runtime SMALL2.');
+  const st = fs.statSync(runtimeFile);
+  if (!st.isFile() || (st.mode & 0o077)) throw new Error('Niebezpieczne uprawnienia konfiguracji SMALL2.');
+  const parsed = JSON.parse(fs.readFileSync(runtimeFile, 'utf8'));
+  for (const key of allowedRuntimeKeys) {
+    if (Object.prototype.hasOwnProperty.call(parsed, key)) {
+      if (typeof parsed[key] !== 'string') throw new Error('Nieprawidłowy typ ustawienia ' + key);
+      process.env[key] = parsed[key];
+    }
+  }
+}
 
 function fail(reason) {
   console.error('LOWCY_SMALL2_START_BLOCKED: ' + reason);
@@ -26,6 +39,8 @@ try {
   if (!fs.existsSync(readinessFile)) {
     throw new Error('Brak znacznika zatwierdzenia docelowej bazy; nie uruchamiam aplikacji.');
   }
+  loadRuntimeConfig();
+  const db = process.env.DATABASE_URL;
   if (!db) throw new Error('Nie ustawiono DATABASE_URL.');
   const u = new URL(db);
   if (!['postgres:', 'postgresql:'].includes(u.protocol)
