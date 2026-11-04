@@ -1,0 +1,69 @@
+name: SMALL2 V311 verified schema and Passenger startup approval
+on:
+  push:
+    branches: [small2-preflight-v311-20261104]
+    paths: ['.github/workflows/small2-approve-schema.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+    steps:
+      - name: Verify isolated PostgreSQL schema and back up, set startup marker
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get -qq update && sudo apt-get -qq install -y sshpass
+          mkdir -p "$HOME/.ssh"
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test "$(ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256 | awk '{print $2}')" = 'SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8'
+          export SSHPASS="$SSH_PASSWORD"
+          sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no \
+            -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes \
+            -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15 lowcymethodowcy@s3.small.pl 'bash -s' <<'EOSSH'
+          set -euo pipefail
+          sourceDir="$HOME/lowcy-small2-20261023"
+          config="$HOME/.config/lowcy-small2/runtime.json"
+          backup="$HOME/lowcy-small2-stage-v311/lowcy_kop_before_init_20261104.dump"
+          test -f "$backup"
+          test -s "$backup"
+          test -f "$config"
+          test "$(git -C "$sourceDir" rev-parse HEAD)" = 'e5b35f311d8c0d98cd8498044e5d538bf9c2b2f2'
+          cd "$sourceDir"
+          node <<'NODE'
+          'use strict';
+          const fs=require('node:fs');
+          const {Client}=require('pg');
+          const cfgFile='/usr/home/lowcymethodowcy/.config/lowcy-small2/runtime.json';
+          const cfg=JSON.parse(fs.readFileSync(cfgFile,'utf8'));
+          const u=new URL(cfg.DATABASE_URL);
+          if(u.hostname!=='pgsql3.small.pl'||u.pathname!=='/p1828_lowcy_kop'||u.username!=='p1828_lowcy_kop')throw Error('WRONG_TARGET');
+          if(!cfg.JWT_SECRET||cfg.JWT_SECRET.length<24)throw Error('MISSING_JWT_SECRET');
+          const cli=new Client({connectionString:cfg.DATABASE_URL,ssl:false});
+          (async()=>{
+            await cli.connect();
+            try {
+              await cli.query('BEGIN READ ONLY');
+              const ident=await cli.query('select current_database() as db');
+              if(ident.rows[0].db!=='p1828_lowcy_kop')throw Error('WRONG_DATABASE');
+              const required=['users','competitions','entries','draws','results'];
+              for(const table of required){
+                const r=await cli.query('SELECT to_regclass($1) AS tbl',['public.'+table]);
+                if(!r.rows[0].tbl)throw Error('MISSING_TABLE_'+table);
+                const c=await cli.query('SELECT count(*)::int AS n FROM public.'+table);
+                console.log(table+'='+c.rows[0].n);
+                if(c.rows[0].n!==0)throw Error('NONEMPTY_TARGET_'+table);
+              }
+              const extra=await cli.query('SELECT count(*)::int AS n FROM pg_catalog.pg_tables WHERE schemaname=\'public\'');
+              console.log('SMALL2_PUBLIC_SCHEMA_TABLES='+extra.rows[0].n);
+              await cli.query('ROLLBACK');
+            } finally {await cli.end();}
+            const marker='/usr/home/lowcymethodowcy/lowcy-small2-20261023/.small2-start-approved';
+            fs.writeFileSync(marker,'V311 source '+ 'e5b35f311d8c0d98cd8498044e5d538bf9c2b2f2'+ '\n',{mode:0o600,flag:'wx'});
+            console.log('SMALL2_PASSENGER_START_APPROVED_VERIFIED_EMPTY_SCHEMA');
+          })().catch(e=>{console.error('SMALL2_APPROVAL_BLOCKED_'+e.message);process.exitCode=1;});
+          NODE
+          EOSSH
