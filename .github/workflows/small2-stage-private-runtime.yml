@@ -1,0 +1,51 @@
+name: SMALL2 V311 stage private-config Passenger adapter
+on:
+  push:
+    branches: [small2-preflight-v311-20261104]
+    paths: ['.github/workflows/small2-stage-private-runtime.yml']
+  workflow_dispatch:
+permissions: { contents: read }
+jobs:
+  adapter:
+    runs-on: ubuntu-latest
+    env:
+      SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup pinned SSH
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check deploy/small2-passenger-entry.js
+          sudo apt-get -qq update && sudo apt-get -qq install -y sshpass
+          mkdir -p "$HOME/.ssh"
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test "$(ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256 | awk '{print $2}')" = 'SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8'
+      - name: Backup old adapter and stage updated version, without changing WWW
+        shell: bash
+        run: |
+          set -euo pipefail
+          export SSHPASS="$SSH_PASSWORD"
+          remote='lowcymethodowcy@s3.small.pl'
+          opts=(-o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15)
+          sshpass -e ssh "${opts[@]}" "$remote" 'bash -s' <<'EOSSH'
+          set -euo pipefail
+          stage="$HOME/lowcy-small2-stage-v311/public_nodejs"
+          test -f "$stage/app.js"
+          if test ! -e "$stage/app.js.before-private-config"; then
+            cp -p "$stage/app.js" "$stage/app.js.before-private-config"
+          fi
+          test ! -e "$stage/app.js.next"
+          EOSSH
+          sshpass -e scp "${opts[@]}" deploy/small2-passenger-entry.js "$remote:lowcy-small2-stage-v311/public_nodejs/app.js.next"
+          expected="$(sha256sum deploy/small2-passenger-entry.js | cut -d' ' -f1)"
+          actual="$(sshpass -e ssh "${opts[@]}" "$remote" 'sha256sum "$HOME/lowcy-small2-stage-v311/public_nodejs/app.js.next" | cut -d" " -f1')"
+          test "$actual" = "$expected"
+          sshpass -e ssh "${opts[@]}" "$remote" 'bash -s' <<'EOSSH'
+          set -euo pipefail
+          stage="$HOME/lowcy-small2-stage-v311/public_nodejs"
+          node --check "$stage/app.js.next"
+          mv "$stage/app.js.next" "$stage/app.js"
+          test -f "$stage/app.js.before-private-config"
+          echo 'SMALL2_PASSENGER_PRIVATE_CONFIG_ADAPTER_STAGED_OK'
+          EOSSH
