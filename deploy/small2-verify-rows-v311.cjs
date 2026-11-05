@@ -27,6 +27,17 @@ function sortedRows(rows){return rows.map(r=>JSON.stringify(canonical(r))).sort(
  const localSettings=sortedRows(actual.data.app_settings||[]);
  const savedSettings=sortedRows(before.data.app_settings||[]);
  if(localSettings.length!==2||JSON.stringify(localSettings)!==JSON.stringify(savedSettings))throw Error('LOCAL_VAPID_SETTINGS_NOT_PRESERVED');
+ if(contentMismatch.includes('competitions')){
+   const destById=new Map((actual.data.competitions||[]).map(r=>[String(r.id),r]));
+   const diffs=[];
+   for(const row of source.data.competitions){
+     const d=destById.get(String(row.id));
+     if(!d){diffs.push({id:row.id,missing:true});continue}
+     const changed=Object.keys(row).filter(k=>JSON.stringify(canonical(row[k]))!==JSON.stringify(canonical(d[k]))).map(k=>({field:k,kind:source.columns.competitions.find(c=>c.name===k)?.udt_name||'unknown'}));
+     if(changed.length)diffs.push({id:row.id,changed});
+   }
+   console.log('SMALL2_COMPETITION_DIFFERING_COLUMNS '+JSON.stringify(diffs));
+ }
  console.log('SMALL2_FULL_CONTENT_COMPARISON '+JSON.stringify({sourceTables:Object.keys(source.data).length,checkedTables:Object.keys(source.data).length-1,missing,contentMismatch,localVapidPreserved:true}));
  if(missing.length||contentMismatch.length)process.exitCode=1;
  else console.log('SMALL2_ALL_18_IMPORTED_TABLES_BYTE_LOGICALLY_EQUAL_TO_RAILWAY_SNAPSHOT');
