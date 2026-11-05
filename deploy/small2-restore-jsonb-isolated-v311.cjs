@@ -44,6 +44,8 @@ const {Client}=require(path.join(root,'node_modules','pg'));
    const code=errs.find(x=>/^\s*code: /.test(x))||'code: unreported';
    console.error('SMALL2_JSONB_RESTORE_STOPPED '+headline.slice(0,220));
    console.error('SMALL2_SQLSTATE '+code.trim().slice(0,60));
+   const category=(r.stderr||'').split('\\n').slice(0,5).map(x=>x.replace(/postgres(ql)?:\\/\\/[^\\s]+/g,'[DATABASE_URL_REDACTED]').slice(0,160));
+   console.error('SMALL2_RESTORE_RUNTIME_ERROR_HEAD '+JSON.stringify(category));
    process.exitCode=1;return;
  }
  if(!r.stdout.includes('LOWCY_RESTORE_OK'))throw Error('MISSING_TRANSACTION_COMMIT_CONFIRMATION');
