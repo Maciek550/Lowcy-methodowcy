@@ -1,0 +1,42 @@
+name: SMALL2 V311 data equality and restart persistence
+on:
+  push:
+    branches: [small2-preflight-v311-20261104]
+    paths: ['.github/workflows/small2-postimport-verify.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compare all imported rows, restart SMALL2 only, verify again
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check deploy/small2-verify-rows-v311.cjs
+          sudo apt-get -qq update && sudo apt-get -qq install -y sshpass
+          mkdir -p "$HOME/.ssh"
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test "$(ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256 | awk '{print $2}')" = 'SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8'
+          export SSHPASS="$SSH_PASSWORD"
+          opts=(-o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15)
+          remote='lowcymethodowcy@s3.small.pl'
+          sshpass -e ssh "${opts[@]}" "$remote" 'cd "$HOME/lowcy-small2-20261023" && node -' < deploy/small2-verify-rows-v311.cjs
+          echo 'SMALL2_PRE_RESTART_CONTENT_CHECK_PASSED'
+          sshpass -e ssh "${opts[@]}" "$remote" 'devil www restart lowcymethodowcy.smallhost.pl'
+          ready=0
+          for i in $(seq 1 40); do
+            if curl -fsS --max-time 10 https://lowcymethodowcy.smallhost.pl/health -o /tmp/lowcy-health.json 2>/dev/null; then
+              if node -e 'let x=require("/tmp/lowcy-health.json");process.exit(x.ok&&x.version==="V311_GOLEBIOWKA_JULY_BANKS"?0:1)'; then ready=1;break;fi
+            fi
+            sleep 3
+          done
+          test "$ready" = 1
+          curl -fsS --max-time 15 https://lowcymethodowcy.smallhost.pl/api/version -o /tmp/lowcy-version.json
+          node -e 'let x=require("/tmp/lowcy-version.json");process.exit(x.appVersion==="311"?0:1)'
+          sshpass -e ssh "${opts[@]}" "$remote" 'cd "$HOME/lowcy-small2-20261023" && node -' < deploy/small2-verify-rows-v311.cjs
+          echo 'SMALL2_V311_RESTART_AND_POST_RESTART_DATA_INTEGRITY_OK'
