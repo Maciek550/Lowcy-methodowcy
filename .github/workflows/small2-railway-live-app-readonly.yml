@@ -47,6 +47,10 @@ jobs:
           railway ssh keys --workspace "$WS_ID" add --key "$HOME/.ssh/id_ed25519.pub" --name "lowcy-safe-read-${GITHUB_RUN_ID}" >/tmp/ssh-register.log 2>&1
           registered=1
           echo 'RAILWAY_TEMP_KEY_REGISTERED'
+          # Railway does not publish stable SSH relay host keys; trust on first use for
+          # a non-sensitive read-only probe only (no credentials or user data returned).
+          printf 'Host ssh.railway.com\\n  StrictHostKeyChecking accept-new\\n  UserKnownHostsFile ~/.ssh/known_hosts\\n  BatchMode yes\\n' > "$HOME/.ssh/config"
+          chmod 600 "$HOME/.ssh/config"
           timeout 30 railway ssh --project "$PROJECT_ID" --environment "$ENV_ID" --service "$APP_SERVICE" \
             --identity-file "$HOME/.ssh/id_ed25519" -- 'pwd; node -v; if test -r backup-lib.cjs; then echo BACKUP_LIB_READABLE; else echo BACKUP_LIB_NOT_IN_CWD; fi; if test -r /app/backup-lib.cjs; then echo APP_BACKUP_LIB_READABLE; fi'
           echo 'RAILWAY_LIVE_APP_READ_ONLY_SSH_OK'
