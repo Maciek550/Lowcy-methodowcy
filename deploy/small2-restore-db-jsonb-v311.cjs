@@ -38,7 +38,7 @@ function decode(v){
         const vals=[];const groups=[];
         for(const row of part){
           const marks=[];
-          for(const col of useCols){const kind=(snapshot.columns?.[table]||[]).find(x=>x.name===col)?.udt_name;const v=decode(row[col]);vals.push((kind==='json'||kind==='jsonb')&&v!==null?JSON.stringify(v):v);marks.push('
+          for(const col of useCols){const kind=(snapshot.columns?.[table]||[]).find(x=>x.name===col)?.udt_name;const v=decode(row[col]);vals.push((kind==='json'||kind==='jsonb')&&v!==null?JSON.stringify(v):v);marks.push(String.fromCharCode(36)+vals.length);}
           groups.push('('+marks.join(',')+')');
         }
         await c.query(`insert into public.${qi(table)} (${useCols.map(qi).join(',')}) values ${groups.join(',')}`,vals);
