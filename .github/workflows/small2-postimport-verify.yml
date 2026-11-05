@@ -2,7 +2,9 @@ name: SMALL2 V311 data equality and restart persistence
 on:
   push:
     branches: [small2-preflight-v311-20261104]
-    paths: ['.github/workflows/small2-postimport-verify.yml']
+    paths:
+      - '.github/workflows/small2-postimport-verify.yml'
+      - 'deploy/small2-verify-rows-v311.cjs'
   workflow_dispatch:
 permissions:
   contents: read
