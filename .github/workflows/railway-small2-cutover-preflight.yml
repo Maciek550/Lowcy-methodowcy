@@ -1,0 +1,53 @@
+name: Preflight Railway to SMALL2 S1 PWA redirect bridge
+on:
+  push:
+    branches: [small2-preflight-v311-20261104]
+    paths: ['.github/workflows/railway-small2-cutover-preflight.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test old-domain migration HTML, worker, health and safe blocked writes
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check deploy/railway-to-small2-s1-migration.cjs
+          PORT=32137 node deploy/railway-to-small2-s1-migration.cjs > /tmp/migration-bridge.log 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true' EXIT
+          for i in $(seq 1 15); do
+            if curl -fsS --max-time 2 'http://127.0.0.1:32137/health' -o /tmp/migration-health.json; then break;fi
+            sleep 1
+          done
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const h=JSON.parse(fs.readFileSync('/tmp/migration-health.json','utf8'));
+          if(!h.ok||h.migration!=='SMALL2-S1'||h.target!=='https://lowcymethodowcy.smallhost.pl/')throw Error('HEALTH_OR_TARGET');
+          console.log('MIGRATION_HEALTH_OK');
+          NODE
+          curl -fsS --max-time 5 'http://127.0.0.1:32137/' -o /tmp/migration-index.html
+          grep -q 'serviceWorker.register' /tmp/migration-index.html
+          grep -q 'location.replace(target)' /tmp/migration-index.html
+          grep -q 'Łowcy Methodowcy działają na SMALL2' /tmp/migration-index.html
+          echo MIGRATION_OLD_PWA_BOOTSTRAP_HTML_OK
+          curl -fsS --max-time 5 'http://127.0.0.1:32137/sw.js?migrate=S1' -o /tmp/migration-sw.js
+          node --check /tmp/migration-sw.js
+          grep -q 'self.skipWaiting' /tmp/migration-sw.js
+          grep -q 'self.clients.claim' /tmp/migration-sw.js
+          grep -q 'Response.redirect(DEST,302)' /tmp/migration-sw.js
+          echo MIGRATION_SERVICE_WORKER_SYNTAX_AND_REDIRECT_OK
+          headers="$(curl -sS -D - -o /dev/null --max-time 5 'http://127.0.0.1:32137/some/old/path')"
+          echo "$headers" | grep -q '302 Found'
+          echo "$headers" | grep -qi 'location: https://lowcymethodowcy.smallhost.pl/'
+          echo MIGRATION_OTHER_GET_REDIRECT_OK
+          status="$(curl -s -o /tmp/migration-post.json -w '%{http_code}' -X POST -d '{}' --max-time 5 'http://127.0.0.1:32137/api/login')"
+          test "$status" = '410'
+          grep -q 'SMALL2' /tmp/migration-post.json
+          echo MIGRATION_OLD_API_WRITES_DISABLED_OK
