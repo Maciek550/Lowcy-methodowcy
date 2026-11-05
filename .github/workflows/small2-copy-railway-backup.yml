@@ -74,3 +74,5 @@ jobs:
             'chmod 600 "$HOME/lowcy-small2-stage-v311/railway-source-20261104.json.gz" && sha256sum "$HOME/lowcy-small2-stage-v311/railway-source-20261104.json.gz" | cut -d" " -f1')"
           test "$localhash" = "$remotehash"
           echo 'SMALL2_RAILWAY_SNAPSHOT_COPIED_HASH_VERIFIED_NO_DATABASE_RESTORE'
+
+# Authorized retry after the owner stored a replacement scoped Railway API token.
