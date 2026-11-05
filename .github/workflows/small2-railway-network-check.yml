@@ -1,0 +1,36 @@
+name: SMALL2 to Railway SSH relay network check
+on:
+  push:
+    branches: [small2-preflight-v311-20261104]
+    paths: ['.github/workflows/small2-railway-network-check.yml']
+  workflow_dispatch:
+permissions: { contents: read }
+jobs:
+  network:
+    runs-on: ubuntu-latest
+    env:
+      SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+    steps:
+      - name: Compare GitHub and SMALL2 outbound Railway SSH connectivity, no credentials to Railway
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SSH_PASSWORD"
+          sudo apt-get -qq update && sudo apt-get -qq install -y sshpass
+          mkdir -p "$HOME/.ssh"
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test "$(ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256 | awk '{print $2}')" = 'SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8'
+          echo '=== GitHub -> Railway SSH 22 (TCP only) ==='
+          if timeout 9 bash -c 'cat </dev/null >/dev/tcp/ssh.railway.com/22'; then echo 'GITHUB_RAILWAY_TCP22_OK';else echo 'GITHUB_RAILWAY_TCP22_FAIL';fi
+          echo '=== SMALL2 -> Railway SSH 22 (TCP only) ==='
+          export SSHPASS="$SSH_PASSWORD"
+          sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no \
+            -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes \
+            -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15 lowcymethodowcy@s3.small.pl 'bash -s' <<'EOSSH'
+          set -euo pipefail
+          if timeout 9 bash -c 'cat </dev/null >/dev/tcp/ssh.railway.com/22'; then
+            echo 'SMALL2_RAILWAY_TCP22_OK'
+          else
+            echo 'SMALL2_RAILWAY_TCP22_FAIL'
+          fi
+          EOSSH
