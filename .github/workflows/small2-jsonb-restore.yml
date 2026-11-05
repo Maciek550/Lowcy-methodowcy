@@ -2,7 +2,9 @@ name: SMALL2 V311 transactional JSONB-safe restore
 on:
   push:
     branches: [small2-preflight-v311-20261104]
-    paths: ['.github/workflows/small2-jsonb-restore.yml']
+    paths:
+      - '.github/workflows/small2-jsonb-restore.yml'
+      - 'deploy/small2-restore-jsonb-isolated-v311.cjs'
   workflow_dispatch:
 permissions:
   contents: read
