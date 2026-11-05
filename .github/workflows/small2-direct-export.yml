@@ -1,0 +1,44 @@
+name: SMALL2 V311 encrypted readonly export
+on:
+  push:
+    branches: [small2-preflight-v311-20261104]
+    paths: ['.github/workflows/small2-direct-export.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    env:
+      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+      SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Prepare trusted SSH and checked export code
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n deploy/small2-direct-encrypted-transfer.sh
+          node --check deploy/small2-source-export-encrypted-v311.cjs
+          node --check deploy/small2-decrypt-snapshot-v311.cjs
+          test -n "$RAILWAY_API_TOKEN" && test -n "$SSH_PASSWORD"
+          sudo apt-get -qq update
+          sudo apt-get -qq install -y sshpass
+          npm install -g @railway/cli >/dev/null 2>&1
+          mkdir -p "$HOME/.ssh"
+          chmod 700 "$HOME/.ssh"
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test "$(ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256 | awk '{print $2}')" = 'SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8'
+          cat > "$HOME/.ssh/config" <<'CONF'
+          Host ssh.railway.com
+            StrictHostKeyChecking accept-new
+            UserKnownHostsFile ~/.ssh/known_hosts
+            BatchMode yes
+          CONF
+          chmod 600 "$HOME/.ssh/config"
+      - name: Encrypt on Railway before transfer; validate on SMALL2 without importing
+        shell: bash
+        run: bash deploy/small2-direct-encrypted-transfer.sh
