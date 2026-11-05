@@ -1,0 +1,33 @@
+name: SMALL2 Railway scoped volume read-only CLI probe
+on:
+  push:
+    branches: [small2-preflight-v311-20261104]
+    paths: ['.github/workflows/small2-volume-cli-probe.yml']
+  workflow_dispatch:
+permissions: { contents: read }
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    env:
+      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+    steps:
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: List backup volume without railway link (no changes)
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$RAILWAY_API_TOKEN"
+          npm install -g @railway/cli >/dev/null 2>&1
+          cd "$RUNNER_TEMP"
+          echo '--- CLI volume read without account-level link ---'
+          set +e
+          timeout 24 railway volume files --volume 9247c5e9-fc58-43a2-b44d-64ffbc6be428 list / --json > /tmp/volume-read.json 2>/tmp/volume-read.err
+          result=$?
+          set -e
+          echo "CLI_VOLUME_LIST_EXIT=$result"
+          if test "$result" -eq 0; then
+            node -e 'let x=JSON.parse(require("fs").readFileSync("/tmp/volume-read.json","utf8"));console.log("CLI_VOLUME_LIST_TYPE="+(Array.isArray(x)?"array":typeof x));console.log("SNAPSHOT_20261104_PRESENT="+JSON.stringify(x).includes("lowcy-db-2026-11-04T02-17-09-144Z.json.gz"));'
+          else
+            grep -E '(Unauthorized|not linked|No linked|Project|workspace|select|error|Error|invalid|Could not|Please)' /tmp/volume-read.err | head -10 || true
+          fi
