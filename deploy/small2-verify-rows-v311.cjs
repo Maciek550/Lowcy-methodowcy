@@ -21,9 +21,23 @@ function sortedRows(rows){return rows.map(r=>JSON.stringify(canonical(r))).sort(
  for(const [table,rows] of Object.entries(source.data)){
    if(table==='app_settings')continue;
    if(!Array.isArray(actual.data?.[table])){missing.push(table);continue}
-   const a=sortedRows(rows),b=sortedRows(actual.data[table]);
+   const cleanDate=(r)=>{const copy={...r};delete copy.competition_date;return copy};
+   const a=sortedRows(table==='competitions'?rows.map(cleanDate):rows);
+   const b=sortedRows(table==='competitions'?actual.data[table].map(cleanDate):actual.data[table]);
    if(a.length!==b.length||a.some((x,i)=>x!==b[i]))contentMismatch.push(table);
  }
+ const pg=require(path.join(root,'node_modules','pg'));
+ const db=new pg.Client({connectionString:cfg.DATABASE_URL});
+ await db.connect();
+ try{
+   await db.query('BEGIN READ ONLY');
+   const dbDates=(await db.query('SELECT id,competition_date::text AS calendar_date FROM competitions')).rows;
+   const sourceDates=new Map(source.data.competitions.map(r=>[String(r.id),r.competition_date===null?null:String(r.competition_date).slice(0,10)]));
+   const wrongDates=dbDates.filter(r=>sourceDates.get(String(r.id))!==r.calendar_date);
+   if(dbDates.length!==sourceDates.size||wrongDates.length)throw Error('COMPETITION_CALENDAR_DATES_MISMATCH count='+wrongDates.length);
+   await db.query('ROLLBACK');
+   console.log('SMALL2_ALL_COMPETITION_DATES_MATCH_AS_POSTGRESQL_DATE');
+ }finally{await db.end()}
  const localSettings=sortedRows(actual.data.app_settings||[]);
  const savedSettings=sortedRows(before.data.app_settings||[]);
  if(localSettings.length!==2||JSON.stringify(localSettings)!==JSON.stringify(savedSettings))throw Error('LOCAL_VAPID_SETTINGS_NOT_PRESERVED');
