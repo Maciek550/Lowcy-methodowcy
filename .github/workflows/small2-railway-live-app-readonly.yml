@@ -49,7 +49,12 @@ jobs:
           echo 'RAILWAY_TEMP_KEY_REGISTERED'
           # Railway does not publish stable SSH relay host keys; trust on first use for
           # a non-sensitive read-only probe only (no credentials or user data returned).
-          printf 'Host ssh.railway.com\\n  StrictHostKeyChecking accept-new\\n  UserKnownHostsFile ~/.ssh/known_hosts\\n  BatchMode yes\\n' > "$HOME/.ssh/config"
+          cat > "$HOME/.ssh/config" <<'SSHCONF'
+          Host ssh.railway.com
+            StrictHostKeyChecking accept-new
+            UserKnownHostsFile ~/.ssh/known_hosts
+            BatchMode yes
+          SSHCONF
           chmod 600 "$HOME/.ssh/config"
           timeout 30 railway ssh --project "$PROJECT_ID" --environment "$ENV_ID" --service "$APP_SERVICE" \
             --identity-file "$HOME/.ssh/id_ed25519" -- 'pwd; node -v; if test -r backup-lib.cjs; then echo BACKUP_LIB_READABLE; else echo BACKUP_LIB_NOT_IN_CWD; fi; if test -r /app/backup-lib.cjs; then echo APP_BACKUP_LIB_READABLE; fi'
