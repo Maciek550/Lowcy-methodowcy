@@ -1,0 +1,58 @@
+name: SMALL2 encrypted full V311 recovery archive transfer
+on:
+  push:
+    branches: [small2-preflight-v311-20261104]
+    paths:
+      - '.github/workflows/small2-encrypted-recovery-download.yml'
+      - 'deploy/small2-encrypt-recovery-archive.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    env:
+      SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify encrypted archive source and pinned SMALL2 host
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check deploy/small2-encrypt-recovery-archive.cjs
+          test -n "$SSH_PASSWORD"
+          sudo apt-get -qq update
+          sudo apt-get -qq install -y sshpass
+          mkdir -p "$HOME/.ssh"
+          chmod 700 "$HOME/.ssh"
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test "$(ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256 | awk '{print $2}')" = 'SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8'
+      - name: Encrypt complete source ZIP ON SMALL2 and transfer ONLY ciphertext
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          export SSHPASS="$SSH_PASSWORD"
+          sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no \
+            -o PreferredAuthentications=keyboard-interactive,password \
+            -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15 \
+            lowcymethodowcy@s3.small.pl 'node -' < deploy/small2-encrypt-recovery-archive.cjs \
+            > "$RUNNER_TEMP/lowcy-v311-recovery.encrypted"
+          node <<'NODE'
+          const fs=require('node:fs');
+          const b=fs.readFileSync(process.env.RUNNER_TEMP+'/lowcy-v311-recovery.encrypted');
+          const i=b.indexOf(10);
+          if(i<10||i>10000)throw Error('MISSING_ENCRYPTION_HEADER');
+          const h=JSON.parse(b.subarray(0,i).toString('utf8'));
+          if(h.format!=='LOWCY_SMALL2_ENCRYPTED_ARCHIVE_V1'||h.encryptedLength!==b.length-i-1)throw Error('ARCHIVE_TRUNCATED');
+          if(h.encryptedLength<10000000)throw Error('ARCHIVE_TOO_SMALL');
+          console.log('SMALL2_ENCRYPTED_COMPLETE_RECOVERY_READY bytes='+b.length);
+          NODE
+          cp "$RUNNER_TEMP/lowcy-v311-recovery.encrypted" "$GITHUB_WORKSPACE/Lowcy_V311_SMALL2_recovery_20261105.encrypted"
+          sha256sum "$GITHUB_WORKSPACE/Lowcy_V311_SMALL2_recovery_20261105.encrypted" | cut -d' ' -f1 | sed 's/^/ENCRYPTED_TRANSFER_SHA256=/'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Lowcy-V311-SMALL2-recovery-encrypted
+          path: Lowcy_V311_SMALL2_recovery_20261105.encrypted
+          if-no-files-found: error
+          retention-days: 14
