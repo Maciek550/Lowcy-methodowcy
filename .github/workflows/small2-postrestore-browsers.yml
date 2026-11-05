@@ -1,0 +1,35 @@
+name: SMALL2 V311 final browsers after full data restore
+on:
+  push:
+    branches: [small2-preflight-v311-20261104]
+    paths: ['.github/workflows/small2-postrestore-browsers.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browsers for live verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium firefox
+      - name: Verify live V311 restored UI with actual clicks and console checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          node deploy/small2-live-browser-smoke.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: small2-v311-after-restore-ui
+          path: small2-*.png
+          if-no-files-found: ignore
+          retention-days: 14
