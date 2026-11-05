@@ -22,7 +22,7 @@ jobs:
           cd "$RUNNER_TEMP"
           echo '--- CLI volume read without account-level link ---'
           set +e
-          timeout 24 railway volume files --volume 9247c5e9-fc58-43a2-b44d-64ffbc6be428 list / --json > /tmp/volume-read.json 2>/tmp/volume-read.err
+          timeout 24 railway volume --project a1cb25a7-9ef3-4ee5-af9e-efafecf527ed --environment 193be84b-d9f4-49bf-8a75-f432c8dda992 files --volume 9247c5e9-fc58-43a2-b44d-64ffbc6be428 list / --json > /tmp/volume-read.json 2>/tmp/volume-read.err
           result=$?
           set -e
           echo "CLI_VOLUME_LIST_EXIT=$result"
