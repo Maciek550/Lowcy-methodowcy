@@ -1,0 +1,104 @@
+name: SMALL2 label S1 only (preserve V311 code and Railway production)
+on:
+  push:
+    branches: [small2-preflight-v311-20261104]
+    paths: ['.github/workflows/small2-s1-deploy.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  deploy-and-test:
+    runs-on: ubuntu-latest
+    env:
+      SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate scripts and prepare Chromium Firefox for real UI tests before changing server
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SSH_PASSWORD"
+          node --check deploy/small2-version-s1-apply.cjs
+          node --check deploy/small2-version-s1-rollback.cjs
+          node --check deploy/small2-s1-db-check.cjs
+          node --check deploy/small2-s1-browser-smoke.mjs
+          npm ci
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium firefox
+          sudo apt-get -qq update
+          sudo apt-get -qq install -y sshpass
+          mkdir -p "$HOME/.ssh"
+          chmod 700 "$HOME/.ssh"
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test "$(ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256 | awk '{print $2}')" = 'SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8'
+          echo SMALL2_S1_BROWSER_DEPENDENCIES_AND_SOURCE_SYNTAX_READY
+      - name: Check V311 database baseline then patch exactly two SMALL2 files and restart only SMALL2
+        shell: bash
+        run: |
+          set -euo pipefail
+          export SSHPASS="$SSH_PASSWORD"
+          opts=(-o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15)
+          remote=lowcymethodowcy@s3.small.pl
+          sshpass -e ssh "${opts[@]}" "$remote" 'cd "$HOME/lowcy-small2-20261023" && node -' < deploy/small2-s1-db-check.cjs
+          sshpass -e ssh "${opts[@]}" "$remote" 'cd "$HOME/lowcy-small2-20261023" && node -' < deploy/small2-version-s1-apply.cjs
+          sshpass -e ssh "${opts[@]}" "$remote" 'devil www restart lowcymethodowcy.smallhost.pl'
+          echo SMALL2_S1_ONLY_RESTART_ISSUED
+      - name: Check new running S1 version consistency and PWA cache after restart
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const origin='https://lowcymethodowcy.smallhost.pl';
+          (async()=>{
+            let valid=false;
+            for(let i=0;i<45;i++){
+              try{
+                const h=await (await fetch(origin+'/health',{signal:AbortSignal.timeout(9000),cache:'no-store'})).json();
+                const v=await (await fetch(origin+'/api/version',{signal:AbortSignal.timeout(9000),cache:'no-store'})).json();
+                if(h.ok&&h.version==='S1'&&v.ok&&v.version==='S1'&&v.appVersion==='S1'){valid=true;break}
+              }catch(_){}
+              await new Promise(resolve=>setTimeout(resolve,2000));
+            }
+            if(!valid)throw Error('LIVE_HEALTH_OR_VERSION_NOT_S1');
+            const html=await (await fetch(origin+'/',{signal:AbortSignal.timeout(15000),cache:'no-store'})).text();
+            if(!html.includes('<title>Łowcy Methodowcy — S1</title>')||!html.includes('class="headerVersion">S1</span>')||!html.includes('class="appVersionBadge">S1</span>'))throw Error('S1_MISSING_FROM_HTML_TITLE_OR_HEADER');
+            const js=await (await fetch(origin+'/app.js?v=S1',{signal:AbortSignal.timeout(15000),cache:'no-store'})).text();
+            if(!js.includes("const CLIENT_VERSION='S1'")||!js.includes("const CLIENT_VERSION_NAME='S1'"))throw Error('CLIENT_VERSION_NOT_S1');
+            const worker=await (await fetch(origin+'/sw.js?v=S1',{signal:AbortSignal.timeout(15000),cache:'no-store'})).text();
+            if(!worker.includes('lowcy-shell-vS1'))throw Error('S1_PWA_CACHE_NOT_UPDATED');
+            console.log('SMALL2_S1_LIVE_HEALTH_API_HTML_HEADER_CLIENT_AND_PWA_VALIDATED');
+          })().catch(e=>{console.error(e.message);process.exitCode=1});
+          NODE
+      - name: Run actual clicks with Chromium Firefox desktop and mobile on SMALL2
+        shell: bash
+        run: |
+          set -euo pipefail
+          node deploy/small2-s1-browser-smoke.mjs
+      - name: Validate restored SMALL2 user data unchanged after update
+        shell: bash
+        run: |
+          set -euo pipefail
+          export SSHPASS="$SSH_PASSWORD"
+          sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15 lowcymethodowcy@s3.small.pl 'cd "$HOME/lowcy-small2-20261023" && node -' < deploy/small2-s1-db-check.cjs
+          echo SMALL2_S1_DATA_UNCHANGED
+      - name: Restore original V311 presentation if a step failed
+        if: failure()
+        shell: bash
+        run: |
+          set -euo pipefail
+          export SSHPASS="$SSH_PASSWORD"
+          opts=(-o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15)
+          remote=lowcymethodowcy@s3.small.pl
+          sshpass -e ssh "${opts[@]}" "$remote" 'cd "$HOME/lowcy-small2-20261023" && node -' < deploy/small2-version-s1-rollback.cjs
+          sshpass -e ssh "${opts[@]}" "$remote" 'devil www restart lowcymethodowcy.smallhost.pl'
+          echo SMALL2_S1_FAILSAFE_ROLLBACK_DONE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: small2-s1-ui
+          path: small2-s1-*.png
+          if-no-files-found: ignore
+          retention-days: 14
