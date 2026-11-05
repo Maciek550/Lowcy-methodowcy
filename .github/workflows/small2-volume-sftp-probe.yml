@@ -1,0 +1,58 @@
+name: SMALL2 Railway SFTP temporary-key read-only volume probe
+on:
+  push:
+    branches: [small2-preflight-v311-20261104]
+    paths: ['.github/workflows/small2-volume-sftp-probe.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+      WS_ID: c1179069-8e59-44d8-aae9-1dd3f188d881
+      PROJECT_ID: a1cb25a7-9ef3-4ee5-af9e-efafecf527ed
+      ENV_ID: 193be84b-d9f4-49bf-8a75-f432c8dda992
+      VOLUME_ID: 9247c5e9-fc58-43a2-b44d-64ffbc6be428
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Register one temporary workspace SSH key, test backup listing, remove key
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          test -n "$RAILWAY_API_TOKEN"
+          npm install -g @railway/cli >/dev/null 2>&1
+          mkdir -p "$HOME/.ssh"
+          ssh-keygen -q -t ed25519 -N '' -f "$HOME/.ssh/id_ed25519" -C "lowcy-small2-temp-${GITHUB_RUN_ID}"
+          fingerprint="$(ssh-keygen -lf "$HOME/.ssh/id_ed25519.pub" -E sha256 | awk '{print $2}')"
+          registered=0
+          cleanup(){
+            rc=$?
+            trap - EXIT
+            if [ "$registered" = 1 ]; then
+              if railway ssh keys --workspace "$WS_ID" remove "$fingerprint" >/tmp/lowcy-ssh-clean.log 2>&1; then
+                echo 'RAILWAY_TEMP_SSH_KEY_REMOVED'
+              else
+                echo 'WARNING: RAILWAY_TEMP_SSH_KEY_REMOVAL_FAILED (private key discarded after runner exits)'
+                cat /tmp/lowcy-ssh-clean.log | head -4
+                rc=1
+              fi
+            fi
+            exit "$rc"
+          }
+          trap cleanup EXIT
+          railway ssh keys --workspace "$WS_ID" add --key "$HOME/.ssh/id_ed25519.pub" --name "lowcy-small2-temp-${GITHUB_RUN_ID}" > /tmp/lowcy-ssh-register.log 2>&1
+          registered=1
+          echo 'RAILWAY_TEMP_SSH_KEY_REGISTERED'
+          cd "$RUNNER_TEMP"
+          railway volume --project "$PROJECT_ID" --environment "$ENV_ID" files --volume "$VOLUME_ID" list / --json > backup-list.json
+          node <<'NODE'
+          const fs=require('node:fs');
+          const s=fs.readFileSync('backup-list.json','utf8');
+          if(!s.includes('lowcy-db-2026-11-04T02-17-09-144Z.json.gz')) throw Error('SOURCE_BACKUP_NOT_FOUND');
+          console.log('RAILWAY_BACKUP_20261104_PRESENT_AND_ACCESSIBLE_READONLY');
+          NODE
