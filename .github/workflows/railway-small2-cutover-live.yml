@@ -1,0 +1,29 @@
+name: LIVE railway-to-SMALL2 S1 cutover smoke test
+on:
+  push:
+    branches: [small2-preflight-v311-20261104]
+    paths: ['.github/workflows/railway-small2-cutover-live.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  migration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install live browsers
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check deploy/railway-small2-cutover-live-test.mjs
+          npm ci
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium firefox
+      - name: Verify live Railway PWA migration and Small S1 in Chromium Firefox desktop mobile
+        shell: bash
+        run: |
+          set -euo pipefail
+          node deploy/railway-small2-cutover-live-test.mjs
