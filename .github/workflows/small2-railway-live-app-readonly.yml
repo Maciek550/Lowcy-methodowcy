@@ -1,0 +1,52 @@
+name: SMALL2 read-only Railway app shell backup feasibility
+on:
+  push:
+    branches: [small2-preflight-v311-20261104]
+    paths: ['.github/workflows/small2-railway-live-app-readonly.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    env:
+      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+      WS_ID: c1179069-8e59-44d8-aae9-1dd3f188d881
+      PROJECT_ID: a1cb25a7-9ef3-4ee5-af9e-efafecf527ed
+      ENV_ID: 193be84b-d9f4-49bf-8a75-f432c8dda992
+      APP_SERVICE: b45540b3-3201-4991-bd11-987cd1c68963
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Authenticated read-only inspection of running source application
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          test -n "$RAILWAY_API_TOKEN"
+          npm install -g @railway/cli >/dev/null 2>&1
+          mkdir -p "$HOME/.ssh"
+          ssh-keygen -q -t ed25519 -N '' -f "$HOME/.ssh/id_ed25519" -C "lowcy-safe-read-${GITHUB_RUN_ID}"
+          fingerprint="$(ssh-keygen -lf "$HOME/.ssh/id_ed25519.pub" -E sha256 | awk '{print $2}')"
+          registered=0
+          cleanup(){
+            rc=$?
+            trap - EXIT
+            if [ "$registered" = 1 ]; then
+              if railway ssh keys --workspace "$WS_ID" remove "$fingerprint" > /tmp/key-cleanup.log 2>&1; then
+                echo 'RAILWAY_TEMP_SSH_KEY_REMOVED'
+              else
+                echo 'WARNING: temporary key deregistration failed'
+                rc=1
+              fi
+            fi
+            exit "$rc"
+          }
+          trap cleanup EXIT
+          railway ssh keys --workspace "$WS_ID" add --key "$HOME/.ssh/id_ed25519.pub" --name "lowcy-safe-read-${GITHUB_RUN_ID}" >/tmp/ssh-register.log 2>&1
+          registered=1
+          echo 'RAILWAY_TEMP_KEY_REGISTERED'
+          timeout 30 railway ssh --project "$PROJECT_ID" --environment "$ENV_ID" --service "$APP_SERVICE" \
+            --identity-file "$HOME/.ssh/id_ed25519" -- 'pwd; node -v; if test -r backup-lib.cjs; then echo BACKUP_LIB_READABLE; else echo BACKUP_LIB_NOT_IN_CWD; fi; if test -r /app/backup-lib.cjs; then echo APP_BACKUP_LIB_READABLE; fi'
+          echo 'RAILWAY_LIVE_APP_READ_ONLY_SSH_OK'
