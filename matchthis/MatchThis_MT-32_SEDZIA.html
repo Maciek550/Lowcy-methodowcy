@@ -1094,6 +1094,26 @@ function norm(s){return String(s).trim().normalize('NFKC').toLowerCase().replace
 function uid(){return 'mt-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8)}
 function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(db));}
 try{const fresh=localStorage.getItem(STORAGE_KEY);const loaded=JSON.parse(fresh||localStorage.getItem(MT31_STORAGE_KEY)||localStorage.getItem(MT30_STORAGE_KEY)||localStorage.getItem(MT29_STORAGE_KEY)||localStorage.getItem(MT28_STORAGE_KEY)||localStorage.getItem(MT27_STORAGE_KEY)||localStorage.getItem(MT26_STORAGE_KEY)||localStorage.getItem(MT25_STORAGE_KEY)||localStorage.getItem(MT24_STORAGE_KEY)||localStorage.getItem(MT23_STORAGE_KEY)||localStorage.getItem(MT22_STORAGE_KEY)||localStorage.getItem(MT21_STORAGE_KEY)||localStorage.getItem(MT20_STORAGE_KEY)||localStorage.getItem(MT19_STORAGE_KEY)||localStorage.getItem(R14_STORAGE_KEY)||localStorage.getItem(PREVIOUS_STORAGE_KEY)||localStorage.getItem(R12_STORAGE_KEY)||localStorage.getItem(R11_STORAGE_KEY)||localStorage.getItem(R10_STORAGE_KEY)||localStorage.getItem(R9_STORAGE_KEY)||localStorage.getItem(R8_STORAGE_KEY)||localStorage.getItem(R7_STORAGE_KEY)||localStorage.getItem(R6_STORAGE_KEY)||localStorage.getItem(OLDER_STORAGE_KEY)||localStorage.getItem(OLDEST_STORAGE_KEY)||localStorage.getItem(ANCIENT_STORAGE_KEY)||localStorage.getItem(LEGACY_STORAGE_KEY)||'null');if(loaded&&Array.isArray(loaded.cycles)&&Array.isArray(loaded.events)){db={...loaded,players:Array.isArray(loaded.players)?loaded.players:[]};}else{db=JSON.parse(JSON.stringify(MATCHTHIS_ARCHIVE_2026.data));save();}}catch(e){console.warn('Nie można odczytać danych; start w trybie bez zapisu',e);db=JSON.parse(JSON.stringify(MATCHTHIS_ARCHIVE_2026.data));}
+function applyVerifiedFifthTourSectorImport(){
+ const expectedCycle=(MATCHTHIS_ARCHIVE_2026.data.cycles||[]).find(c=>c.id==='mt2026-mega-match-this-cup-cycle');
+ const existingCycle=(db.cycles||[]).find(c=>c.id==='mt2026-mega-match-this-cup-cycle');
+ const expectedTour=(expectedCycle?.tours||[]).find(t=>t.date==='2026-10-10');
+ const currentTour=(existingCycle?.tours||[]).find(t=>t.date==='2026-10-10');
+ if(!expectedTour||!currentTour)return 0;
+ const byId=new Map(expectedTour.results.map(r=>[r.competitorId,r]));
+ let changed=0;
+ for(const r of currentTour.results||[]){
+  if(r.absent)continue;
+  const official=byId.get(r.competitorId);
+  if(!official||!official.sector||!Number.isInteger(official.peg))continue;
+  if(r.weightG!==official.weightG||Number(r.officialPlace)!==Number(official.officialPlace))continue;
+  if(r.sector===null||r.sector===undefined||r.sector===''||r.sector==='—'){r.sector=official.sector;changed++}
+  if(r.peg===null||r.peg===undefined||r.peg===''){r.peg=official.peg;changed++}
+ }
+ if(changed)save();
+ return changed;
+}
+try{applyVerifiedFifthTourSectorImport()}catch(e){console.warn('MT-32: nie można zapisać przypisań 5. tury',e)}
 function alertMsg(msg,good=false){const box=document.getElementById('flash');box.textContent=msg;box.className='flash'+(good?' good':'');setTimeout(()=>box.classList.add('hide'),4500);}
 function mergeDatabase(source){
  if(!source || !Array.isArray(source.cycles)||!Array.isArray(source.events))throw new Error('Brak prawidłowej struktury archiwum');
