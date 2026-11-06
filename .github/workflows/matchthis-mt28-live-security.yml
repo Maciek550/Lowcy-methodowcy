@@ -43,7 +43,7 @@ jobs:
                    !(await page.locator('[aria-label="Wersja MT-28"]').count()))throw Error(name+' wrong version display');
                 if(await page.locator('#roleMode').count())throw Error(name+' viewer can select role');
                 if((await page.locator('body').getAttribute('data-role'))!=='viewer')throw Error(name+' wrong body role');
-                const db=await page.evaluate(()=>JSON.parse(localStorage.getItem('matchthis-preview-MT-28')));
+                const db=await page.evaluate(()=>window.eval('db'));
                 if(!db||!Array.isArray(db.events)||db.events.length<3)throw Error(name+' archive absent');
                 const allRounds=db.events.flatMap(e=>e.rounds||[]);
                 const sensas=db.events.find(e=>/SENSAS/i.test(e.name));
@@ -68,9 +68,10 @@ jobs:
                 const unauth=await context.request.get(url+'admin/',{maxRedirects:0,timeout:30000});
                 if(unauth.status()!==401)throw Error(name+' exposed admin '+unauth.status());
                 await page.screenshot({path:'/tmp/MT28_LIVE_'+name+'_'+width+'.png',fullPage:false});
-                const previous=await page.evaluate(()=>localStorage.getItem('matchthis-preview-MT-28'));
+                const previous=await page.evaluate(()=>({rows:window.eval('db').events.length,stored:localStorage.getItem('matchthis-preview-MT-28')}));
                 await page.reload({waitUntil:'domcontentloaded'});
-                if(previous!==await page.evaluate(()=>localStorage.getItem('matchthis-preview-MT-28')))throw Error(name+' data changed on reload');
+                const after=await page.evaluate(()=>({rows:window.eval('db').events.length,stored:localStorage.getItem('matchthis-preview-MT-28')}));
+                if(JSON.stringify(previous)!==JSON.stringify(after))throw Error(name+' archive changed on reload');
                 if(errors.length)throw Error(name+' browser errors '+errors.join(' | '));
                 console.log('MATCHTHIS_MT28_LIVE_OK browser='+name+' width='+width+' sectorD=11 role=viewer adminHTTP401 localStorage=stable errors=0');
                 count++;
