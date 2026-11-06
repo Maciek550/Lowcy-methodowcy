@@ -1,0 +1,68 @@
+name: MatchThis MT29 admin login hotfix (isolated vhost)
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt29-authfix.yml']
+permissions: {contents: read}
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    env:
+      SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate PHP login and trusted SSH connection
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SSH_PASSWORD"
+          php -l matchthis/mt29-login.php
+          grep -Fq "mt-admin" matchthis/mt29-login.php
+          grep -Fq "mt-sedzia" matchthis/mt29-login.php
+          echo "LOGIN_SHA=$(sha256sum matchthis/mt29-login.php | awk '{print $1}')" >> "$GITHUB_ENV"
+          echo "VIEWER_SHA=$(sha256sum matchthis/MatchThis_MT-29_OGLADACZ.html | awk '{print $1}')" >> "$GITHUB_ENV"
+          sudo apt-get -qq update && sudo apt-get -qq install -y sshpass
+          mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test "$(ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256 | awk '{print $2}')" = 'SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8'
+      - name: Scoped login.php backup and deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          export SSHPASS="$SSH_PASSWORD"
+          o=(-o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15)
+          remote=lowcymethodowcy@s3.small.pl
+          sshpass -e ssh "${o[@]}" "$remote" "VIEWER_SHA='$VIEWER_SHA' bash -s" <<'EOSSH'
+          set -euo pipefail
+          p="$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html"
+          test -f "$HOME/matchthis-independent/MT29-OWNED"
+          test -f "$p/index.html" && test ! -L "$p/index.html"
+          test "$(sha256sum "$p/index.html" | awk '{print $1}')" = "$VIEWER_SHA"
+          test -f "$p/login.php" && test ! -L "$p/login.php"
+          mkdir -p "$HOME/matchthis-independent/mt-29"
+          cp -p "$p/login.php" "$HOME/matchthis-independent/mt-29/mt29_login_before_hash_fix.php"
+          echo MT29_ADMIN_AUTH_FIX_PRECHECK
+          EOSSH
+          sshpass -e scp "${o[@]}" matchthis/mt29-login.php "$remote:matchthis-independent/mt-29/mt29-login-fixed.next"
+          sshpass -e ssh "${o[@]}" "$remote" "LOGIN_SHA='$LOGIN_SHA' bash -s" <<'EOSSH'
+          set -euo pipefail
+          private="$HOME/matchthis-independent/mt-29"
+          web="$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html"
+          test "$(sha256sum "$private/mt29-login-fixed.next" | awk '{print $1}')" = "$LOGIN_SHA"
+          php -l "$private/mt29-login-fixed.next"
+          cp "$private/mt29-login-fixed.next" "$web/login.php.next"
+          mv "$web/login.php.next" "$web/login.php"
+          chmod 644 "$web/login.php"
+          test "$(sha256sum "$web/login.php" | awk '{print $1}')" = "$LOGIN_SHA"
+          echo MATCHTHIS_MT29_ADMIN_LOGIN_HASH_UPDATED
+          EOSSH
+      - name: Live HTTPS sanity test
+        shell: bash
+        run: |
+          set -euo pipefail
+          url=https://matchthis.lowcymethodowcy.smallhost.pl
+          curl -fsSL --max-time 25 "$url/" -o /tmp/mt29-home.html
+          test "$(sha256sum /tmp/mt29-home.html | awk '{print $1}')" = "$VIEWER_SHA"
+          s="$(curl -sS -o /tmp/authbad -w '%{http_code}' -X POST -d 'username=mt-admin&password=wrong' "$url/login.php")"
+          test "$s" = 303
+          echo MT29_AUTH_FIX_LIVE_HTTP_OK
