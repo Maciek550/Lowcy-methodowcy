@@ -1,0 +1,100 @@
+name: MatchThis MT25 LIVE compact sector UI cross-browser
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt25-live-smoke.yml']
+  workflow_dispatch:
+permissions: { contents: read }
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Chromium and Firefox
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt25-live && cd /tmp/mt25-live
+          npm init -y >/dev/null
+          npm install --silent playwright
+          npx playwright install --with-deps chromium firefox
+      - name: Test real HTTPS MT25 sector D, menus, viewer, persistence, JPG and vector PDF
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/mt25-live
+          node --input-type=module <<'JAVASCRIPT'
+          import {chromium,firefox} from 'playwright';
+          import {readFile} from 'node:fs/promises';
+          const url='https://matchthis.lowcymethodowcy.smallhost.pl/';
+          let count=0;
+          for(const [name,engine] of [['Chromium',chromium],['Firefox',firefox]]){
+            const browser=await engine.launch({headless:true});
+            try{
+              for(const width of [390,768,1366]){
+                const context=await browser.newContext({viewport:{width,height:768},acceptDownloads:true});
+                const page=await context.newPage();const errors=[];
+                page.on('pageerror',e=>errors.push('JS '+e.message));
+                page.on('console',m=>{if(m.type()==='error')errors.push('CONSOLE '+m.text())});
+                const response=await page.goto(url,{waitUntil:'domcontentloaded',timeout:50000});
+                if(response.status()!==200)throw Error(name+' HTTP '+response.status());
+                if(await page.title()!=='MatchThis MT-25')throw Error(name+' wrong title');
+                if(!(await page.locator('#appversion').innerText()).includes('MT-25'))throw Error(name+' wrong version bar');
+                if(!await page.locator('.site-sticky').count())throw Error(name+' no sticky');
+                const db=await page.evaluate(()=>JSON.parse(localStorage.getItem('matchthis-preview-MT-25')));
+                if(db.players.length!==132 || db.cycles.length!==1 || db.events.length!==3)throw Error(name+' missing archive data');
+                await page.locator('#nav [data-view="events"]').click();
+                await page.locator('#main [data-open]').filter({hasText:'FINAŁ MEGA MATCH THIS CUP 2026'}).first().click();
+                await page.locator('[data-round="1"]').click();
+                await page.locator('[data-sector-filter="D"]').click();
+                const state=await page.locator('.results-state').innerText();
+                if(!state.includes('Finał')||!state.includes('2. tura')||!state.includes('Sektor D'))throw Error(name+' status not visible '+state);
+                const rows=await page.locator('.sector-result tbody tr').count();
+                if(rows!==11)throw Error(name+' expected 11 sector D rows, got '+rows);
+                const g=await page.evaluate(()=>{
+                  const q=s=>{const x=document.querySelector(s).getBoundingClientRect();return {top:Math.round(x.top),bottom:Math.round(x.bottom)}};
+                  return {heading:q('.detail-heading'),nav:q('.results-navigation'),table:q('.sector-result'),last:q('.sector-result tbody tr:last-child'),docW:document.documentElement.scrollWidth,viewW:document.documentElement.clientWidth};
+                });
+                if(g.docW>g.viewW+2)throw Error(name+' horizontal page overflow '+JSON.stringify(g));
+                if(width===1366 && g.last.bottom>768)throw Error(name+' full sector still below fold '+JSON.stringify(g));
+                await page.locator('.sector-exports summary').click();
+                if(!await page.locator('[data-pdf-sector="D"]').isVisible())throw Error(name+' sector PDF hidden');
+                if(name==='Chromium'&&width===1366){
+                  const d=page.waitForEvent('download',{timeout:25000});
+                  await page.locator('[data-pdf-sector="D"]').click();
+                  const pdf=await d, bytes=await readFile(await pdf.path());
+                  if(bytes.toString('ascii',0,5)!=='%PDF-'||bytes.includes(Buffer.from('/Subtype /Image')))throw Error('Vector PDF regression');
+                  console.log('VECTOR_PDF_LIVE_OK bytes='+bytes.length);
+                }
+                await page.locator('.admin-tools-menu summary').click();
+                if(!await page.locator('.admin-menu-actions [data-result-mode="edit"]').isVisible())throw Error(name+' admin edit missing');
+                await page.locator('#roleMode').selectOption('viewer');
+                if(await page.locator('.admin-tools-menu').count())throw Error(name+' viewer admin tools visible');
+                if(!await page.locator('.sector-exports summary').isVisible())throw Error(name+' viewer missing PDF');
+                await page.locator('[data-result-mode="photo"]').click();
+                if(name==='Chromium'&&width===1366){
+                  const d=page.waitForEvent('download',{timeout:25000});
+                  await page.locator('[data-action="downloadFbPhoto"]').click();
+                  const jpg=await d,bytes=await readFile(await jpg.path());
+                  if(bytes[0]!==255 || bytes[1]!==216 || bytes.length<10000)throw Error('JPG regression');
+                  console.log('FOTO_FB_JPG_LIVE_OK bytes='+bytes.length);
+                }
+                await page.screenshot({path:'/tmp/MT25_LIVE_'+name+'_'+width+'.png',fullPage:false});
+                const before=await page.evaluate(()=>localStorage.getItem('matchthis-preview-MT-25'));
+                await page.reload({waitUntil:'domcontentloaded'});
+                if((await page.evaluate(()=>localStorage.getItem('matchthis-preview-MT-25')))!==before)throw Error(name+' refresh lost local data');
+                if(errors.length)throw Error(name+' browser errors '+errors.slice(0,3).join('; '));
+                console.log('LIVE_MT25_OK browser='+name+' width='+width+' sectorD=11 lastRow='+g.last.bottom+' pageOverflow=0 errors=0');
+                count++;
+                await context.close();
+              }
+            }finally{await browser.close()}
+          }
+          if(count!==6)throw Error('Not all six cross-browser scenarios passed');
+          JAVASCRIPT
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: matchthis-mt25-live-visual-proof
+          path: /tmp/MT25_LIVE_*.png
+          if-no-files-found: ignore
+          retention-days: 7
