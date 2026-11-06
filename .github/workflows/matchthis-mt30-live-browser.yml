@@ -8,6 +8,7 @@ jobs:
   browser:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - name: Install Playwright browsers
         shell: bash
         run: |
@@ -23,6 +24,7 @@ jobs:
           cd /tmp/mt30-browser
           node --input-type=module <<'JS'
           import {chromium,firefox} from 'playwright';
+          import {readFile} from 'node:fs/promises';
           const url='https://matchthis.lowcymethodowcy.smallhost.pl/';
           let tests=0;
           for(const [name,browserType] of [['Chromium',chromium],['Firefox',firefox]]){
@@ -77,4 +79,26 @@ jobs:
            } finally {await browser.close();}
           }
           if(tests!==6)throw Error('Missing test coverage '+tests);
+          // Admin interface fixture: server-authenticated PHP view is checked as separate HTML.
+          // Clicking WIDOK must open the exact live public view, leaving the admin page in place.
+          const adminHtml=await readFile(process.env.GITHUB_WORKSPACE+'/matchthis/MatchThis_MT-30.html','utf8');
+          const ab=await chromium.launch({headless:true});
+          try {
+            const ac=await ab.newContext({viewport:{width:1366,height:820}});
+            const ap=await ac.newPage();
+            await ap.route('**/panel.php',route=>route.fulfill({status:200,contentType:'text/html; charset=utf-8',body:adminHtml}));
+            await ap.goto(url+'panel.php',{waitUntil:'domcontentloaded'});
+            const tile=ap.locator('#nav .mt-public-view');
+            if(!await tile.isVisible())throw Error('Admin WIDOK tile missing');
+            const next=ap.waitForEvent('popup');
+            await tile.click();
+            const publicPage=await next;
+            await publicPage.waitForLoadState('domcontentloaded');
+            if(publicPage.url()!==url)throw Error('WIDOK opened wrong URL '+publicPage.url());
+            if((await publicPage.locator('body').getAttribute('data-role'))!=='viewer')throw Error('WIDOK did not show public page');
+            if(ap.url()!==url+'panel.php')throw Error('Admin page did not remain open');
+            console.log('PASS_ADMIN_WIDOK_OPENS_PUBLIC_PAGE_WITHOUT_LOGOUT');
+            await ac.close();
+          } finally {await ab.close();}
+
           JS
