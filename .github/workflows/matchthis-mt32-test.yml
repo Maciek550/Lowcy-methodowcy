@@ -1,0 +1,106 @@
+name: MatchThis MT32 — 5th tour official sector restoration regression
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt32-test.yml']
+permissions: {contents: read}
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare Chromium and Firefox
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt32-browser && cd /tmp/mt32-browser
+          npm init -y >/dev/null
+          npm install --silent playwright
+          npx playwright install --with-deps chromium firefox
+      - name: Check 36 source results, browser migration, 3 authentic sector photos and PDF
+        run: |
+          set -euo pipefail
+          cd /tmp/mt32-browser
+          node --input-type=module <<'JS'
+          import {chromium,firefox} from 'playwright';
+          import {readFile} from 'node:fs/promises';
+          const root=process.env.GITHUB_WORKSPACE+'/matchthis/';
+          const admin=await readFile(root+'MatchThis_MT-32.html','utf8');
+          const judge=await readFile(root+'MatchThis_MT-32_SEDZIA.html','utf8');
+          const viewer=await readFile(root+'MatchThis_MT-32_OGLADACZ.html','utf8');
+          const previous=await readFile(root+'MatchThis_MT-31.html','utf8');
+          const extract=source=>JSON.parse(source.split('const MATCHTHIS_ARCHIVE_2026=')[1].split(';\nconst MATCHTHIS_STANDALONE_2026=')[0]);
+          const current=extract(admin),old=extract(previous),oldData=old.data;
+          for(const [name,html] of [['admin',admin],['viewer',viewer],['judge',judge]]){
+            for(const expected of ['<title>MatchThis MT-32</title>','data-version="MT-32"','aria-label="Wersja MT-32">MT-32',"const APP_VERSION='MT-32'"]){
+              if(!html.includes(expected))throw Error('VERSION '+name+' '+expected);
+            }
+            const data=extract(html);
+            const cycle=data.data.cycles.find(x=>x.id==='mt2026-mega-match-this-cup-cycle');
+            const tour=cycle.tours.find(x=>x.date==='2026-10-10');
+            const rows=tour.results.filter(x=>!x.absent);
+            if(rows.length!==36)throw Error('ROWS '+name+' '+rows.length);
+            for(const sec of ['A','B','C']){
+              const sr=rows.filter(x=>x.sector===sec);
+              if(sr.length!==12)throw Error('SECTORS '+name+' '+sec+' '+sr.length);
+            }
+            const pegs=rows.map(r=>r.peg).sort((a,b)=>a-b);
+            if(pegs.some((x,i)=>x!==i+1))throw Error('PEGS '+name);
+            const legacy=oldData.cycles.find(x=>x.id===cycle.id).tours.find(x=>x.date===tour.date);
+            for(const row of rows){
+              const prev=legacy.results.find(x=>x.competitorId===row.competitorId);
+              if(!prev||prev.weightG!==row.weightG||prev.officialPlace!==row.officialPlace)throw Error('ORIGINAL WEIGHT OR PLACE CHANGED '+name+' '+row.competitorName);
+            }
+            console.log('PASS_MT32_SOURCE '+name+' 36 rows 3x12 pegs 1-36 weights and places unchanged');
+          }
+          const base='https://matchthis.lowcymethodowcy.smallhost.pl/';
+          let passes=0;
+          for(const [name,engine] of [['Chromium',chromium],['Firefox',firefox]]){
+            const browser=await engine.launch({headless:true});
+            try{
+              for(const width of [390,1366]){
+                const context=await browser.newContext({viewport:{width,height:850},acceptDownloads:true});
+                await context.addInitScript(data=>localStorage.setItem('matchthis-preview-MT-31',JSON.stringify(data)),oldData);
+                const page=await context.newPage(),errs=[];
+                page.on('pageerror',e=>errs.push(e.message));
+                await page.route(base+'panel.php',r=>r.fulfill({status:200,contentType:'text/html; charset=utf-8',body:admin}));
+                await page.goto(base+'panel.php',{waitUntil:'domcontentloaded'});
+                await page.locator('#nav [data-view="photoHub"]').click();
+                await page.locator('#fbEntity').selectOption('mt2026-mega-match-this-cup-cycle');
+                await page.locator('#fbRound').selectOption('4');
+                if(await page.locator('#fbSector option').count()!==3)throw Error('MT32 sector options '+name+' '+width);
+                for(const sector of ['A','B','C']){
+                  await page.locator('#fbSector').selectOption(sector);
+                  const got=await page.evaluate(()=>{const o=fbSectorResults();const rows=o.ranked.filter(x=>x.sector===o.sector);return {count:rows.length,sector:o.sector,pegs:rows.map(x=>x.peg).sort((a,b)=>a-b),weights:rows.map(x=>x.weightG)}});
+                  if(got.count!==12||got.sector!==sector)throw Error('MT32 sector view '+name+' '+width+' '+JSON.stringify(got));
+                  const expectedStart={A:1,B:13,C:25}[sector];
+                  if(got.pegs.some((p,i)=>p!==expectedStart+i))throw Error('MT32 peg range '+name+' '+sector);
+                }
+                const migrated=await page.evaluate(()=>JSON.parse(localStorage.getItem('matchthis-preview-MT-32')));
+                if(migrated.cycles.find(c=>c.id==='mt2026-mega-match-this-cup-cycle').tours[4].results.filter(r=>!r.absent&&!!r.sector).length!==36)throw Error('MT31 storage migration failed');
+                if(name==='Chromium'&&width===1366){
+                  const job=page.waitForEvent('download');
+                  await page.locator('[data-action="downloadFbPhoto"]').click();
+                  const file=await job;
+                  const buf=await readFile(await file.path());
+                  if(buf[0]!==255||buf[1]!==216||buf.length<10000)throw Error('JPG invalid');
+                  console.log('PASS_MT32_JPG_BYTES '+buf.length);
+                  const pdfjob=page.waitForEvent('download');
+                  await page.locator('[data-action="downloadHubPdf"]').click();
+                  const pdfFile=await pdfjob;
+                  const pdf=await readFile(await pdfFile.path());
+                  if(pdf.subarray(0,4).toString()!=='%PDF')throw Error('PDF invalid');
+                  console.log('PASS_MT32_VECTOR_PDF_BYTES '+pdf.length);
+                }
+                await page.locator('#fbRound').selectOption('2');
+                if(await page.locator('#fbCanvas').count()!==0||!((await page.locator('.notice').innerText()).includes('Brak danych')))throw Error('Third tour warning lost');
+                await page.locator('#fbRound').selectOption('0');
+                if(await page.locator('#fbSector option').count()!==6)throw Error('First tour sectors changed');
+                if(errs.length)throw Error('JS '+errs.join('; '));
+                console.log('PASS_MT32_BROWSER '+name+' width='+width+' 5th_round_3_sectors=1 migrated=1 no_console_errors=1');
+                passes++;
+                await context.close();
+              }
+            }finally{await browser.close()}
+          }
+          if(passes!==4)throw Error('Coverage failed '+passes);
+          JS
