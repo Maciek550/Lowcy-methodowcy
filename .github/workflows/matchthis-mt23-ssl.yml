@@ -1,0 +1,48 @@
+name: MatchThis dedicated HTTPS certificate only
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt23-ssl.yml']
+  workflow_dispatch:
+permissions: { contents: read }
+jobs:
+  ssl:
+    runs-on: ubuntu-latest
+    env:
+      SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+    steps:
+      - name: Check isolated domain, issue its own certificate, validate it
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SSH_PASSWORD"
+          sudo apt-get -qq update && sudo apt-get -qq install -y sshpass
+          mkdir -p "$HOME/.ssh"
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test "$(ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256 | awk '{print $2}')" = 'SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8'
+          curl --fail --silent --show-error --location --max-time 20 http://matchthis.lowcymethodowcy.smallhost.pl/ -o /tmp/matchthis.html
+          grep -Fq '<title>MatchThis MT-23</title>' /tmp/matchthis.html
+          export SSHPASS="$SSH_PASSWORD"
+          sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15 lowcymethodowcy@s3.small.pl 'bash -s' <<'EOSSH'
+          set -euo pipefail
+          d=matchthis.lowcymethodowcy.smallhost.pl
+          test -f "$HOME/matchthis-independent/MT23-OWNED"
+          devil www list | grep -F "$d"
+          test -f "$HOME/domains/$d/public_html/index.html"
+          echo '=== EXISTING SSL DETAILS (NO CREDENTIALS) ==='
+          devil ssl www list || true
+          echo '=== REQUEST MATCHTHIS-ONLY SSL ==='
+          devil ssl www add 128.204.223.38 le le "$d"
+          echo '=== SSL AFTER ==='
+          devil ssl www list || true
+          EOSSH
+          for attempt in 1 2 3 4 5 6; do
+            if curl --fail --silent --show-error --location --max-time 20 https://matchthis.lowcymethodowcy.smallhost.pl/ -o /tmp/matchthis-secure &&
+               grep -Fq '<title>MatchThis MT-23</title>' /tmp/matchthis-secure; then
+              echo MATCHTHIS_DEDICATED_HTTPS_TLS_AND_CONTENT_OK
+              exit 0
+            fi
+            sleep 5
+          done
+          echo MATCHTHIS_HTTPS_VALIDATION_FAILED
+          exit 8
