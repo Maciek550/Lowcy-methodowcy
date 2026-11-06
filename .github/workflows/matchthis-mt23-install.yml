@@ -39,7 +39,12 @@ jobs:
           devil pgsql list
           test -d "$HOME/domains/lowcymethodowcy.smallhost.pl"
           if devil www list | grep -F 'matchthis.lowcymethodowcy.smallhost.pl' >/dev/null; then
-            test -f "$HOME/matchthis-independent/MT23-OWNED" || { echo TARGET_EXISTS_NOT_OWNED; exit 6; }
+            if test ! -f "$HOME/matchthis-independent/MT23-OWNED"; then
+              placeholder="$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html/index.html"
+              test -f "$placeholder"
+              test "$(sha256sum "$placeholder" | awk '{print $1}')" = 55f51fff889deb8942cb4f0b7d6a7103328252d9993cf4bbed6557b4d9ab4ab9 || { echo UNKNOWN_TARGET_INDEX_ABORT; exit 6; }
+              echo VERIFIED_SMALL2_DEFAULT_PLACEHOLDER
+            fi
           fi
           mkdir -p "$HOME/matchthis-independent/mt-23"
           echo PREFLIGHT_OK
@@ -63,7 +68,11 @@ jobs:
           fi
           devil www list | grep -F "$d"
           test -d "$web" && test ! -L "$web"
-          if test -e "$web/index.html" && test ! -f "$HOME/matchthis-independent/MT23-OWNED"; then echo EXISTING_INDEX_NOT_OURS; exit 8; fi
+          if test -e "$web/index.html" && test ! -f "$HOME/matchthis-independent/MT23-OWNED"; then
+            test "$(sha256sum "$web/index.html" | awk '{print $1}')" = 55f51fff889deb8942cb4f0b7d6a7103328252d9993cf4bbed6557b4d9ab4ab9 || { echo EXISTING_INDEX_NOT_OURS; exit 8; }
+            cp -p "$web/index.html" "$web/index.html.before-matchthis"
+            echo SMALL2_PLACEHOLDER_BACKED_UP
+          fi
           if test -e "$web/index.php" && test ! -f "$HOME/matchthis-independent/MT23-OWNED"; then
             mv "$web/index.php" "$web/index.php.before-matchthis"
           fi
