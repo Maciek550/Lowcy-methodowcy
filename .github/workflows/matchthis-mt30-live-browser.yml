@@ -1,0 +1,70 @@
+name: MatchThis MT30 live viewer and login UI Chromium Firefox
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt30-live-browser.yml']
+permissions: { contents: read }
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Playwright browsers
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt30-browser && cd /tmp/mt30-browser
+          npm init -y >/dev/null
+          npm install --silent playwright
+          npx playwright install --with-deps chromium firefox
+      - name: Test real HTTPS login button, viewer restrictions and responsive results
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/mt30-browser
+          node --input-type=module <<'JS'
+          import {chromium,firefox} from 'playwright';
+          const url='https://matchthis.lowcymethodowcy.smallhost.pl/';
+          let tests=0;
+          for(const [name,browserType] of [['Chromium',chromium],['Firefox',firefox]]){
+           const browser=await browserType.launch({headless:true});
+           try {
+            for(const width of [390,768,1366]){
+             const context=await browser.newContext({viewport:{width,height:790},acceptDownloads:true});
+             const page=await context.newPage();
+             const errors=[];
+             page.on('pageerror',e=>errors.push('JS '+e.message));
+             page.on('download',d=>errors.push('FORBIDDEN_DOWNLOAD '+d.suggestedFilename()));
+             const response=await page.goto(url,{waitUntil:'domcontentloaded',timeout:50000});
+             if(response.status()!==200)throw Error(name+' HTTP '+response.status());
+             if(await page.title()!=='MatchThis MT-30')throw Error(name+' title');
+             if((await page.locator('body').getAttribute('data-role'))!=='viewer')throw Error(name+' public role');
+             if(await page.locator('#roleMode').count())throw Error(name+' role selector exposed');
+             if(await page.locator('#nav [data-view="photoHub"]').count())throw Error(name+' photo admin tool exposed');
+             for(const b of await page.locator('[data-action="export"]').all())if(await b.isVisible())throw Error(name+' export tool exposed');
+             const login=page.locator('#mtLoginOpen');
+             if(!await login.isVisible())throw Error(name+' login button missing');
+             await login.click();
+             if(!await page.locator('#mtLoginModal').isVisible())throw Error(name+' dialog missing');
+             await page.locator('#mtLoginClose').click();
+             if(await page.locator('#mtLoginModal').isVisible())throw Error(name+' cannot close dialog');
+             const docWidth=await page.evaluate(()=>document.documentElement.scrollWidth);
+             if(docWidth>width+3)throw Error(name+' horizontal overflow '+docWidth+' viewport '+width);
+             await page.locator('#nav [data-view="events"]').click();
+             const event=page.locator('#main [data-open]').filter({hasText:'FINAŁ MEGA MATCH THIS CUP 2026'}).first();
+             if(!await event.count())throw Error(name+' competition absent');
+             await event.click();
+             await page.locator('[data-round="1"]').click();
+             await page.locator('[data-sector-filter="D"]').click();
+             if(await page.locator('.sector-result tbody tr').count()!==11)throw Error(name+' sector D regression');
+             if(await page.locator('.sector-exports').count())throw Error(name+' viewer pdf exposed');
+             const unauth=await context.request.get(url+'panel.php',{maxRedirects:0});
+             if(unauth.status()!==303)throw Error(name+' panel not blocked '+unauth.status());
+             if(errors.length)throw Error(name+' browser errors '+errors.join('; '));
+             console.log('PASS_MT30_LIVE browser='+name+' width='+width+' loginDialog=1 viewer=1 sectorD=11 panelHTTP303 errors=0');
+             tests++;
+             await context.close();
+            }
+           } finally {await browser.close();}
+          }
+          if(tests!==6)throw Error('Missing test coverage '+tests);
+          JS
