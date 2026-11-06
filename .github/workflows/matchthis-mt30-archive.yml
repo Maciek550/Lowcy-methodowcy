@@ -1,0 +1,41 @@
+name: MatchThis MT30 verified source archive (no deployment)
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt30-archive.yml']
+permissions: { contents: read }
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify versions and prepare exact original sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f matchthis/MatchThis_MT-30.html
+          test -f matchthis/MatchThis_MT-30_OGLADACZ.html
+          test -f matchthis/MatchThis_MT-30_SEDZIA.html
+          mkdir -p /tmp/mt30-release
+          cp matchthis/MatchThis_MT-30.html matchthis/MatchThis_MT-30_OGLADACZ.html matchthis/MatchThis_MT-30_SEDZIA.html /tmp/mt30-release/
+          cp matchthis/mt30-panel.php matchthis/mt30-login.php matchthis/mt30-logout.php /tmp/mt30-release/
+          cp matchthis/MatchThis_MT-29_OGLADACZ.html /tmp/mt30-release/MatchThis_MT-29_KOPIA_POPRZEDNIA.html
+          cat > /tmp/mt30-release/CZYTAJ_MT30.txt <<'TEXT'
+          MatchThis MT-30 - kopia zrodel i poprzedniej strony.
+          Produkcyjny adres: https://matchthis.lowcymethodowcy.smallhost.pl/
+          Logowanie admin/sedzia odbywa sie po stronie serwera SMALL2.
+          Nie zamieszczono hasel ani danych dostepowych.
+          Strona publiczna: tylko podglad wynikow.
+          Kafel WIDOK u admina otwiera strone publiczna w nowej karcie.
+          Zmiany wynikow nadal zapisują sie lokalnie w przegladarce, a nie we wspolnej bazie.
+          TEXT
+          cd /tmp/mt30-release
+          sha256sum MatchThis_MT-30.html MatchThis_MT-30_OGLADACZ.html MatchThis_MT-30_SEDZIA.html > SHA256_MT30.txt
+          zip -q -9 -r /tmp/MatchThis_MT-30_PAKIET.zip .
+          test -s /tmp/MatchThis_MT-30_PAKIET.zip
+          echo MATCHTHIS_MT30_SOURCE_PACKAGE_READY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MatchThis_MT-30_PAKIET
+          path: /tmp/MatchThis_MT-30_PAKIET.zip
+          retention-days: 14
