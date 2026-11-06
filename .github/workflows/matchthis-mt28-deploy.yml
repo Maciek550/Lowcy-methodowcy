@@ -1,0 +1,159 @@
+name: MatchThis MT28 isolated SMALL2 viewer plus protected administrator
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt28-deploy.yml']
+  workflow_dispatch:
+permissions: { contents: read }
+jobs:
+  publish-matchthis-only:
+    runs-on: ubuntu-latest
+    env:
+      SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+      OLD_SHA: 068eaa68f44b1e4667e636b6b0af3959f9f50aa8cb39be4d87f2a0ecf9424b11
+      VIEWER_SHA: e47fd77158762632a09f7353eb174332c26b6a230989a07dac8acbbf69e747fa
+      ADMIN_SHA: f0b4f2109915c544de2130b3256c70d9276e7e653fc84ee62038a44707c65fa7
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify MT-28 files and trusted SSH host
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SSH_PASSWORD" || { echo MISSING_SSH_SECRET; exit 2; }
+          test "$(sha256sum matchthis/MatchThis_MT-28_OGLADACZ.html | awk '{print $1}')" = "$VIEWER_SHA"
+          test "$(sha256sum matchthis/MatchThis_MT-28.html | awk '{print $1}')" = "$ADMIN_SHA"
+          grep -Fq '<title>MatchThis MT-28</title>' matchthis/MatchThis_MT-28_OGLADACZ.html
+          grep -Fq '<title>MatchThis MT-28</title>' matchthis/MatchThis_MT-28.html
+          grep -Fq 'data-version="MT-28"' matchthis/MatchThis_MT-28_OGLADACZ.html
+          grep -Fq 'data-role="viewer"' matchthis/MatchThis_MT-28_OGLADACZ.html
+          grep -Fq 'aria-label="Wersja MT-28">MT-28' matchthis/MatchThis_MT-28_OGLADACZ.html
+          grep -Fq "const STORAGE_KEY='matchthis-preview-MT-28'" matchthis/MatchThis_MT-28_OGLADACZ.html
+          grep -Fq 'aria-label="Wersja MT-28">MT-28' matchthis/MatchThis_MT-28.html
+          grep -Fq "const APP_VERSION='MT-28'" matchthis/MatchThis_MT-28.html
+          grep -Fq 'password_verify' matchthis/mt28-admin-gateway.php
+          grep -Fq 'WWW-Authenticate: Basic' matchthis/mt28-admin-gateway.php
+          sudo apt-get -qq update && sudo apt-get -qq install -y sshpass
+          mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test "$(ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256 | awk '{print $2}')" = 'SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8'
+          echo MATCHTHIS_MT28_FILES_AND_HOST_VERIFIED
+      - name: Server preflight and upload only to private MatchThis directory
+        shell: bash
+        run: |
+          set -euo pipefail
+          export SSHPASS="$SSH_PASSWORD"
+          o=(-o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15)
+          remote=lowcymethodowcy@s3.small.pl
+          sshpass -e ssh "${o[@]}" "$remote" 'bash -s' <<'EOSSH'
+          set -euo pipefail
+          d=matchthis.lowcymethodowcy.smallhost.pl
+          web="$HOME/domains/$d/public_html"
+          old=068eaa68f44b1e4667e636b6b0af3959f9f50aa8cb39be4d87f2a0ecf9424b11
+          new=e47fd77158762632a09f7353eb174332c26b6a230989a07dac8acbbf69e747fa
+          test "$d" != lowcymethodowcy.smallhost.pl
+          test -f "$HOME/matchthis-independent/MT25-OWNED"
+          test -d "$web" && test ! -L "$web"
+          test -f "$web/index.html" && test ! -L "$web/index.html"
+          devil www list | grep -F "$d"
+          actual="$(sha256sum "$web/index.html" | awk '{print $1}')"
+          if test "$actual" != "$old" && test "$actual" != "$new"; then
+            echo STOP_UNEXPECTED_MATCHTHIS_PRODUCTION_HASH; exit 7
+          fi
+          test ! -L "$web/admin"
+          test ! -L "$web/admin/index.php"
+          mkdir -p "$HOME/matchthis-independent/mt-28"
+          echo MATCHTHIS_MT28_SAFE_PREFLIGHT
+          EOSSH
+          sshpass -e scp "${o[@]}" matchthis/MatchThis_MT-28_OGLADACZ.html "$remote:matchthis-independent/mt-28/MatchThis_MT-28_OGLADACZ.next"
+          sshpass -e scp "${o[@]}" matchthis/MatchThis_MT-28.html "$remote:matchthis-independent/mt-28/MatchThis_MT-28.next"
+          sshpass -e scp "${o[@]}" matchthis/mt28-admin-gateway.php "$remote:matchthis-independent/mt-28/admin-gateway.next.php"
+      - name: Private backup, validate PHP gateway and atomic MatchThis publication
+        shell: bash
+        run: |
+          set -euo pipefail
+          export SSHPASS="$SSH_PASSWORD"
+          o=(-o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15)
+          sshpass -e ssh "${o[@]}" lowcymethodowcy@s3.small.pl 'bash -s' <<'EOSSH'
+          set -euo pipefail
+          d=matchthis.lowcymethodowcy.smallhost.pl
+          root="$HOME/matchthis-independent"
+          private="$root/mt-28"
+          web="$HOME/domains/$d/public_html"
+          old=068eaa68f44b1e4667e636b6b0af3959f9f50aa8cb39be4d87f2a0ecf9424b11
+          viewer=e47fd77158762632a09f7353eb174332c26b6a230989a07dac8acbbf69e747fa
+          admin=f0b4f2109915c544de2130b3256c70d9276e7e653fc84ee62038a44707c65fa7
+          test -f "$root/MT25-OWNED"
+          test -d "$web" && test ! -L "$web"
+          test "$(sha256sum "$private/MatchThis_MT-28_OGLADACZ.next" | awk '{print $1}')" = "$viewer"
+          test "$(sha256sum "$private/MatchThis_MT-28.next" | awk '{print $1}')" = "$admin"
+          php -l "$private/admin-gateway.next.php"
+          actual="$(sha256sum "$web/index.html" | awk '{print $1}')"
+          if test "$actual" != "$old" && test "$actual" != "$viewer"; then echo STOP_PRODUCTION_CHANGED; exit 7; fi
+          if test "$actual" = "$old"; then
+            cp -p "$web/index.html" "$private/MatchThis_MT-25_PRE_MT28_BACKUP.html"
+            test "$(sha256sum "$private/MatchThis_MT-25_PRE_MT28_BACKUP.html" | awk '{print $1}')" = "$old"
+          fi
+          mkdir -p "$web/admin"
+          test ! -L "$web/admin"
+          mv "$private/MatchThis_MT-28.next" "$private/MatchThis_MT-28.html"
+          mv "$private/MatchThis_MT-28_OGLADACZ.next" "$private/MatchThis_MT-28_OGLADACZ.html"
+          cp "$private/admin-gateway.next.php" "$web/admin/index.php.next"
+          mv "$web/admin/index.php.next" "$web/admin/index.php"
+          chmod 644 "$web/admin/index.php"
+          cp "$private/MatchThis_MT-28_OGLADACZ.html" "$web/index.html.next"
+          test "$(sha256sum "$web/index.html.next" | awk '{print $1}')" = "$viewer"
+          mv "$web/index.html.next" "$web/index.html"
+          chmod 644 "$web/index.html"
+          echo 'MT-28 matchthis.lowcymethodowcy.smallhost.pl admin-auth-enabled' > "$root/MT28-OWNED"
+          test "$(sha256sum "$web/index.html" | awk '{print $1}')" = "$viewer"
+          echo MATCHTHIS_MT28_PUBLISHED_ISOLATED_AND_BACKED_UP
+          EOSSH
+      - name: Verify HTTPS viewer MT28 and anonymous admin is forbidden
+        shell: bash
+        run: |
+          set -euo pipefail
+          url=https://matchthis.lowcymethodowcy.smallhost.pl
+          for i in 1 2 3 4 5; do
+            if curl -fsSL --max-time 25 "$url/" -o /tmp/matchthis-viewer.html; then
+              if test "$(sha256sum /tmp/matchthis-viewer.html | awk '{print $1}')" = "$VIEWER_SHA"; then
+                break
+              fi
+            fi
+            sleep 3
+          done
+          test "$(sha256sum /tmp/matchthis-viewer.html | awk '{print $1}')" = "$VIEWER_SHA" || exit 9
+          grep -Fq '<title>MatchThis MT-28</title>' /tmp/matchthis-viewer.html
+          grep -Fq 'data-role="viewer"' /tmp/matchthis-viewer.html
+          status="$(curl -sSL --max-time 25 -o /tmp/matchthis-anonymous-admin.html -w '%{http_code}' "$url/admin/")"
+          test "$status" = 401 || { echo "UNPROTECTED_ADMIN_ENDPOINT_HTTP_$status"; exit 10; }
+          if grep -Fq '<title>MatchThis MT-28</title>' /tmp/matchthis-anonymous-admin.html; then
+            echo PRIVATE_ADMIN_HTML_EXPOSED; exit 11
+          fi
+          echo MATCHTHIS_MT28_LIVE_HTTPS_VIEWER_SHA_OK
+          echo MATCHTHIS_MT28_ANONYMOUS_ADMIN_HTTP401_OK
+      - name: Roll back MatchThis only on failed live security verification
+        if: failure()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SSH_PASSWORD" || exit 0
+          export SSHPASS="$SSH_PASSWORD"
+          o=(-o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15)
+          sshpass -e ssh "${o[@]}" lowcymethodowcy@s3.small.pl 'bash -s' <<'EOSSH'
+          set -euo pipefail
+          d=matchthis.lowcymethodowcy.smallhost.pl
+          p="$HOME/matchthis-independent/mt-28"
+          web="$HOME/domains/$d/public_html"
+          test -f "$web/index.html" && test ! -L "$web/index.html"
+          live="$(sha256sum "$web/index.html" | awk '{print $1}')"
+          if test "$live" = e47fd77158762632a09f7353eb174332c26b6a230989a07dac8acbbf69e747fa; then
+            old="$p/MatchThis_MT-25_PRE_MT28_BACKUP.html"
+            test -f "$old" && test "$(sha256sum "$old" | awk '{print $1}')" = 068eaa68f44b1e4667e636b6b0af3959f9f50aa8cb39be4d87f2a0ecf9424b11
+            cp "$old" "$web/index.html.rollback"
+            mv "$web/index.html.rollback" "$web/index.html"
+            rm -f "$web/admin/index.php"
+            echo MATCHTHIS_MT28_ROLLED_BACK_TO_MT25
+          else
+            echo MATCHTHIS_ROLLBACK_NOT_NEEDED
+          fi
+          EOSSH
