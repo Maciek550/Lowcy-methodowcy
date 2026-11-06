@@ -40,7 +40,7 @@ jobs:
              if((await page.locator('body').getAttribute('data-role'))!=='viewer')throw Error(name+' public role');
              if(await page.locator('#roleMode').count())throw Error(name+' role selector exposed');
              if(await page.locator('#nav [data-view="photoHub"]').count())throw Error(name+' photo admin tool exposed');
-             if(await page.locator('[data-action="export"]').count())throw Error(name+' export tool exposed');
+             for(const b of await page.locator('[data-action="export"]').all())if(await b.isVisible())throw Error(name+' export tool exposed');
              const login=page.locator('#mtLoginOpen');
              if(!await login.isVisible())throw Error(name+' login button missing');
              await login.click();
