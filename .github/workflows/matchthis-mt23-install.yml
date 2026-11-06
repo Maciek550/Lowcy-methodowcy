@@ -1,0 +1,93 @@
+name: MatchThis MT23 isolated SMALL2 deployment
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt23-install.yml']
+  workflow_dispatch:
+permissions: { contents: read }
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    env:
+      SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify exact MT-23 and authenticated server
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SSH_PASSWORD"
+          test "$(sha256sum matchthis/MatchThis_MT-23.html | awk '{print $1}')" = 54623846f96c7a1f684dae116394f9acb9aca667958b89bc40d4c37d55c03c97
+          grep -Fq '<title>MatchThis MT-23</title>' matchthis/MatchThis_MT-23.html
+          sudo apt-get -qq update && sudo apt-get -qq install -y sshpass
+          mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test "$(ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256 | awk '{print $2}')" = 'SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8'
+          echo MATCHTHIS_PREPARED
+      - name: Preflight and stage only in new private directory
+        shell: bash
+        run: |
+          set -euo pipefail
+          export SSHPASS="$SSH_PASSWORD"
+          o=(-o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15)
+          remote=lowcymethodowcy@s3.small.pl
+          sshpass -e ssh "${o[@]}" "$remote" 'bash -s' <<'EOSSH'
+          set -euo pipefail
+          echo 'BEFORE_WEBSITES'
+          devil www list
+          echo 'BEFORE_DATABASES'
+          devil pgsql list
+          test -d "$HOME/domains/lowcymethodowcy.smallhost.pl"
+          if devil www list | grep -F 'matchthis.lowcymethodowcy.smallhost.pl' >/dev/null; then
+            test -f "$HOME/matchthis-independent/MT23-OWNED" || { echo TARGET_EXISTS_NOT_OWNED; exit 6; }
+          fi
+          mkdir -p "$HOME/matchthis-independent/mt-23"
+          echo PREFLIGHT_OK
+          EOSSH
+          sshpass -e scp "${o[@]}" matchthis/MatchThis_MT-23.html "$remote:matchthis-independent/mt-23/MT-23.next"
+      - name: Create separate website and publish only MT23
+        shell: bash
+        run: |
+          set -euo pipefail
+          export SSHPASS="$SSH_PASSWORD"
+          o=(-o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15)
+          sshpass -e ssh "${o[@]}" lowcymethodowcy@s3.small.pl 'bash -s' <<'EOSSH'
+          set -euo pipefail
+          d=matchthis.lowcymethodowcy.smallhost.pl
+          test "$d" != lowcymethodowcy.smallhost.pl
+          private="$HOME/matchthis-independent/mt-23"
+          web="$HOME/domains/$d/public_html"
+          test "$(sha256sum "$private/MT-23.next" | awk '{print $1}')" = 54623846f96c7a1f684dae116394f9acb9aca667958b89bc40d4c37d55c03c97
+          if ! devil www list | grep -F "$d" >/dev/null; then
+            devil www add "$d" php
+          fi
+          devil www list | grep -F "$d"
+          test -d "$web" && test ! -L "$web"
+          if test -e "$web/index.html" && test ! -f "$HOME/matchthis-independent/MT23-OWNED"; then echo EXISTING_INDEX_NOT_OURS; exit 8; fi
+          if test -e "$web/index.php" && test ! -f "$HOME/matchthis-independent/MT23-OWNED"; then
+            mv "$web/index.php" "$web/index.php.before-matchthis"
+          fi
+          cp "$private/MT-23.next" "$web/index.html.next"
+          test "$(sha256sum "$web/index.html.next" | awk '{print $1}')" = 54623846f96c7a1f684dae116394f9acb9aca667958b89bc40d4c37d55c03c97
+          mv "$web/index.html.next" "$web/index.html"
+          chmod 644 "$web/index.html"
+          mv "$private/MT-23.next" "$private/MatchThis_MT-23.html"
+          echo 'MT-23 matchthis.lowcymethodowcy.smallhost.pl' > "$HOME/matchthis-independent/MT23-OWNED"
+          echo AFTER_WEBSITES
+          devil www list
+          echo AFTER_DATABASES
+          devil pgsql list
+          echo MATCHTHIS_NEW_SITE_INSTALLED
+          EOSSH
+      - name: Verify separate public address HTTP HTTPS
+        shell: bash
+        run: |
+          set +e
+          domain=matchthis.lowcymethodowcy.smallhost.pl
+          for t in 1 2 3 4 5 6 7 8; do
+            curl -fsSL --max-time 15 "http://$domain/" -o /tmp/mt23
+            if grep -Fq '<title>MatchThis MT-23</title>' /tmp/mt23 2>/dev/null; then echo MATCHTHIS_PUBLIC_HTTP_OK; break; fi
+            sleep 3
+          done
+          curl -fsSL --max-time 20 "https://$domain/" -o /tmp/mt23secure
+          if grep -Fq '<title>MatchThis MT-23</title>' /tmp/mt23secure 2>/dev/null; then echo MATCHTHIS_PUBLIC_HTTPS_VALID; else echo MATCHTHIS_HTTPS_NOT_CONFIRMED; fi
