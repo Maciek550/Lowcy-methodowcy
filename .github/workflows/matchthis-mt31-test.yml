@@ -1,0 +1,74 @@
+name: MatchThis MT31 FOTO FB source regression
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt31-test.yml']
+permissions: {contents: read}
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Playwright Chromium Firefox
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt31-test && cd /tmp/mt31-test
+          npm init -y >/dev/null
+          npm install --silent playwright
+          npx playwright install --with-deps chromium firefox
+      - name: Verify genuine sectors and block fake sector JPG/PDF
+        run: |
+          set -euo pipefail
+          cd /tmp/mt31-test
+          node --input-type=module <<'JS'
+          import {chromium,firefox} from 'playwright';
+          import {readFile} from 'node:fs/promises';
+          const root=process.env.GITHUB_WORKSPACE+'/matchthis/';
+          const admin=await readFile(root+'MatchThis_MT-31.html','utf8');
+          const viewer=await readFile(root+'MatchThis_MT-31_OGLADACZ.html','utf8');
+          const base='https://matchthis.lowcymethodowcy.smallhost.pl/';
+          let checks=0;
+          for(const [name,engine] of [['Chromium',chromium],['Firefox',firefox]]){
+            const browser=await engine.launch({headless:true});
+            try{
+              for(const width of [390,1366]){
+                const context=await browser.newContext({viewport:{width,height:850},acceptDownloads:true});
+                const page=await context.newPage(),errors=[];
+                page.on('pageerror',e=>errors.push(e.message));
+                await page.route(base+'panel.php',r=>r.fulfill({status:200,contentType:'text/html; charset=utf-8',body:admin}));
+                await page.goto(base+'panel.php',{waitUntil:'domcontentloaded'});
+                if(await page.title()!=='MatchThis MT-31')throw Error(name+' wrong version');
+                await page.locator('#nav [data-view="photoHub"]').click();
+                await page.locator('#fbEntity').selectOption('mt2026-mega-match-this-cup-cycle');
+                await page.locator('#fbRound').selectOption('4');
+                const warning=await page.locator('.notice[role="alert"]').innerText();
+                if(!warning.includes('Brak danych do zdjęć sektorowych')||!warning.includes('36 zawodników'))throw Error(name+' missing fifth round warning: '+warning);
+                if(await page.locator('#fbCanvas,[data-action="downloadFbPhoto"],[data-action="downloadHubPdf"]').count())throw Error(name+' false sector JPG/PDF still available');
+                const bypass=await page.evaluate(()=>{try{fbSectorResults();return 'BYPASS'}catch(e){return e.message}});
+                if(!bypass.includes('Brak rzeczywistych przypisań'))throw Error(name+' invalid direct export not blocked '+bypass);
+                await page.locator('#fbRound').selectOption('2');
+                if(await page.locator('#fbCanvas').count())throw Error(name+' third round false sector image');
+                await page.locator('#fbRound').selectOption('0');
+                if(await page.locator('#fbSector option').count()!==6)throw Error(name+' 1st round lost six sectors');
+                if(await page.locator('#fbCanvas').count()!==1)throw Error(name+' real sector photo missing');
+                if(name==='Chromium'&&width===1366){
+                  const event=page.waitForEvent('download',{timeout:25000});
+                  await page.locator('[data-action="downloadFbPhoto"]').click();
+                  const dl=await event,bytes=await readFile(await dl.path());
+                  if(bytes[0]!==255||bytes[1]!==216||bytes.length<10000)throw Error('Valid sector JPG regression');
+                  console.log('MT31_REAL_SECTOR_JPG_OK bytes='+bytes.length);
+                }
+                await page.locator('#fbRound').selectOption('3');
+                if(await page.locator('#fbSector option').count()!==3)throw Error(name+' 4th round sectors lost');
+                await page.locator('#fbRound').selectOption('5');
+                if(await page.locator('#fbSector option').count()!==3)throw Error(name+' 6th round sectors lost');
+                await page.locator('#fbEntity').selectOption('mt2026-mega-match-this-cup-final');
+                if(await page.locator('#fbSector option').count()!==4)throw Error(name+' final sectors lost');
+                if(errors.length)throw Error(name+' page JS errors '+errors.join('; '));
+                console.log('PASS_MT31 '+name+' width='+width+' rounds_3_5_blocked=1 real_sectors=1');
+                checks++;await context.close();
+              }
+            }finally{await browser.close()}
+          }
+          if(checks!==4)throw Error('Incomplete tests '+checks);
+          JS
