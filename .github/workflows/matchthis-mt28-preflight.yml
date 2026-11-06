@@ -1,0 +1,47 @@
+name: MatchThis MT28 independent SMALL2 read-only preflight
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt28-preflight.yml']
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    env:
+      SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+    steps:
+      - name: Trusted SSH readonly MatchThis inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SSH_PASSWORD" || exit 2
+          sudo apt-get -qq update && sudo apt-get -qq install -y sshpass
+          mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test "$(ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256 | awk '{print $2}')" = 'SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8'
+          export SSHPASS="$SSH_PASSWORD"
+          o=(-o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15)
+          sshpass -e ssh "${o[@]}" lowcymethodowcy@s3.small.pl 'bash -s' <<'EOSSH'
+          set -euo pipefail
+          d=matchthis.lowcymethodowcy.smallhost.pl
+          web="$HOME/domains/$d/public_html"
+          test -f "$HOME/matchthis-independent/MT24-OWNED"
+          test -d "$web" && test ! -L "$web"
+          test -f "$web/index.html" && test ! -L "$web/index.html"
+          echo 'MATCHTHIS_MT28_SSH_CONNECTED'
+          echo 'MATCHTHIS_DOMAIN'
+          devil www list | grep -F "$d"
+          echo 'MATCHTHIS_PUBLIC_SHA256'
+          sha256sum "$web/index.html"
+          echo 'MATCHTHIS_TITLE'
+          head -c 250 "$web/index.html" | sed 's/<style.*/<style.../' || true
+          echo
+          echo 'MATCHTHIS_WWW_FILES'
+          find "$web" -maxdepth 2 -type f -printf '%P %s B\n' | sort | head -40
+          echo 'MATCHTHIS_HTACCESS_PRESENT'
+          test -f "$web/.htaccess" && echo yes || echo no
+          echo 'MATCHTHIS_PRIVATE_MARKERS'
+          find "$HOME/matchthis-independent" -maxdepth 1 -type f -printf '%f\n' | sort | head -35
+          echo 'MATCHTHIS_READONLY_COMPLETE'
+          EOSSH
