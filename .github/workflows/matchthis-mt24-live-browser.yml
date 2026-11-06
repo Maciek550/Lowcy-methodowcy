@@ -1,0 +1,93 @@
+name: MatchThis MT24 LIVE Chromium and Firefox UI regression
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt24-live-browser.yml']
+  workflow_dispatch:
+permissions: { contents: read }
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Chromium Firefox and browser runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/matchthis-live && cd /tmp/matchthis-live
+          npm init -y >/dev/null
+          npm install --silent playwright
+          npx playwright install --with-deps chromium firefox
+      - name: Test actual HTTPS website in Chromium and Firefox (mobile, desktop, zoom)
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/matchthis-live
+          node --input-type=module <<'JAVASCRIPT'
+          import {chromium,firefox} from 'playwright';
+          import {readFile} from 'node:fs/promises';
+          const url='https://matchthis.lowcymethodowcy.smallhost.pl/';
+          for(const [label,engine] of [['Chromium',chromium],['Firefox',firefox]]){
+            const browser=await engine.launch({headless:true});
+            try{
+              for(const [width,zoom] of [[390,1],[1366,1],[1366,1.5]]){
+                const context=await browser.newContext({viewport:{width,height:900},acceptDownloads:true});
+                const page=await context.newPage(); const errs=[];
+                page.on('pageerror',e=>errs.push('JS '+e.message));
+                page.on('console',m=>{if(m.type()==='error')errs.push('CONSOLE '+m.text())});
+                const response=await page.goto(url,{waitUntil:'domcontentloaded',timeout:55000});
+                if(response.status()!==200)throw Error(label+' HTTP '+response.status());
+                if(await page.title()!=='MatchThis MT-24')throw Error(label+' version/title mismatch');
+                if(!(await page.locator('#appversion').innerText()).startsWith('MT-24'))throw Error(label+' version bar mismatch');
+                const data=await page.evaluate(()=>JSON.parse(localStorage.getItem('matchthis-preview-MT-24')));
+                if(data.cycles.length!==1||data.events.length!==3||data.players.length!==132)throw Error(label+' archives not loaded');
+                if(zoom!==1)await page.evaluate(z=>document.body.style.zoom=String(z),zoom);
+                await page.locator('#nav [data-view="cycles"]').click();
+                await page.locator('#main [data-open]').first.click();
+                await page.locator('[data-result-mode="overall"]').first.click();
+                const grid=page.locator('.summary-mobile-list');
+                const visible=await grid.isVisible();
+                if(width===390 && !visible)throw Error(label+' mobile classification not fitting');
+                if(visible){
+                  if(await page.locator('table.summary-cycle').isVisible())throw Error(label+' full wide table still visible');
+                  if(await grid.locator('.mobile-rank-entry').count()!==74)throw Error(label+' missing cycle competitors');
+                  const first=grid.locator('.mobile-rank-entry').first();
+                  if(await first.locator('.mobile-tour-cell').count()!==6)throw Error(label+' tours missing');
+                  const t=await first.innerText();
+                  if(!t.includes('D / 43')||!t.includes('24 470 g'))throw Error(label+' source data missing in mobile');
+                } else if(!(await page.locator('table.summary-cycle').isVisible()))throw Error(label+' classification absent');
+                const dims=await page.evaluate(()=>({sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth}));
+                if(dims.sw>dims.cw+2)throw Error(label+' body overflow '+JSON.stringify(dims));
+                if(width===390){
+                  const rounds=page.locator('.results-navigation .rounds');
+                  if(await rounds.locator('button').count()!==7)throw Error(label+' not all round tabs present');
+                  if(!(await rounds.evaluate(e=>e.scrollWidth<=e.clientWidth+2)))throw Error(label+' round tabs cut off');
+                }
+                await page.locator('#nav [data-view="events"]').click();
+                await page.locator('#main [data-open]').filter({hasText:'FINAŁ MEGA MATCH THIS CUP 2026'}).first().click();
+                await page.locator('[data-result-mode="overall"]').first().click();
+                if(await page.locator('.summary-mobile-list').isVisible()){
+                  if(await page.locator('.summary-mobile-list .mobile-rank-entry').first().locator('.mobile-tour-cell').count()!==2)throw Error(label+' final 2 rounds absent');
+                }
+                await page.locator('#nav [data-view="photoHub"]').click();
+                if(label==='Chromium' && width===390){
+                  const jpgPromise=page.waitForEvent('download',{timeout:20000});
+                  await page.locator('[data-action="downloadFbPhoto"]').click();
+                  const dl=await jpgPromise,bytes=await readFile(await dl.path());
+                  if(bytes[0]!==255||bytes[1]!==216||bytes.length<12000)throw Error('Bad JPG download');
+                  const pdfPromise=page.waitForEvent('download',{timeout:20000});
+                  await page.locator('[data-action="downloadHubPdf"]').click();
+                  const dlpdf=await pdfPromise,pdf=await readFile(await dlpdf.path());
+                  if(pdf.toString('ascii',0,5)!=='%PDF-' || pdf.includes(Buffer.from('/Subtype /Image')))throw Error('Bad vector PDF download');
+                }
+                await page.locator('#roleMode').selectOption('viewer');
+                if(!(await page.locator('#nav [data-view="photoHub"]').isVisible()))throw Error(label+' viewer lacks FB');
+                const stored=await page.evaluate(()=>localStorage.getItem('matchthis-preview-MT-24'));
+                await page.reload({waitUntil:'domcontentloaded'});
+                if((await page.evaluate(()=>localStorage.getItem('matchthis-preview-MT-24')))!==stored)throw Error(label+' reload did not preserve data');
+                if(errs.length)throw Error(label+' browser errors: '+errs.slice(0,4).join('; '));
+                console.log('LIVE_MT24_OK engine='+label+' width='+width+' zoom='+zoom+' cards='+visible+' players=132 roundTabs=7 errors=0');
+                await context.close();
+              }
+            }finally{await browser.close()}
+          }
+          JAVASCRIPT
