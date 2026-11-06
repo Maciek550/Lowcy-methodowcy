@@ -1,0 +1,110 @@
+name: MatchThis MT24 safe independent SMALL2 update
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt24-update.yml']
+  workflow_dispatch:
+permissions: { contents: read }
+jobs:
+  matchthis-only:
+    runs-on: ubuntu-latest
+    env:
+      SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+      OLD_SHA: 54623846f96c7a1f684dae116394f9acb9aca667958b89bc40d4c37d55c03c97
+      NEW_SHA: 6b9617bd208651ccdf43bb21d0427a264da48374705dd11b9b5f8cf9675a1f6c
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate MT24 source and trusted SMALL2 SSH
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SSH_PASSWORD"
+          test "$(sha256sum matchthis/MatchThis_MT-24.html | awk '{print $1}')" = "$NEW_SHA"
+          grep -Fq '<title>MatchThis MT-24</title>' matchthis/MatchThis_MT-24.html
+          grep -Fq 'data-version="MT-24"' matchthis/MatchThis_MT-24.html
+          grep -Fq 'aria-label="Wersja MT-24">MT-24' matchthis/MatchThis_MT-24.html
+          sudo apt-get -qq update && sudo apt-get -qq install -y sshpass
+          mkdir -p "$HOME/.ssh"
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test "$(ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256 | awk '{print $2}')" = 'SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8'
+          echo MATCHTHIS_MT24_SOURCE_VALID
+      - name: Preflight isolated domain and stage MT24
+        shell: bash
+        run: |
+          set -euo pipefail
+          export SSHPASS="$SSH_PASSWORD"
+          o=(-o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15)
+          remote=lowcymethodowcy@s3.small.pl
+          sshpass -e ssh "${o[@]}" "$remote" 'bash -s' <<'EOSSH'
+          set -euo pipefail
+          d=matchthis.lowcymethodowcy.smallhost.pl
+          marker="$HOME/matchthis-independent/MT23-OWNED"
+          web="$HOME/domains/$d/public_html/index.html"
+          test -f "$marker"
+          test -f "$web"
+          test ! -L "$web"
+          devil www list | grep -F "$d"
+          old=54623846f96c7a1f684dae116394f9acb9aca667958b89bc40d4c37d55c03c97
+          new=6b9617bd208651ccdf43bb21d0427a264da48374705dd11b9b5f8cf9675a1f6c
+          actual="$(sha256sum "$web" | awk '{print $1}')"
+          if test "$actual" != "$old" && test "$actual" != "$new"; then
+            echo 'UNEXPECTED_MATCHTHIS_INDEX_CHANGE_ABORT'; exit 7
+          fi
+          mkdir -p "$HOME/matchthis-independent/mt-24"
+          echo 'MATCHTHIS_MT24_PREFLIGHT_OK'
+          echo 'DATABASES_BEFORE'
+          devil pgsql list
+          EOSSH
+          sshpass -e scp "${o[@]}" matchthis/MatchThis_MT-24.html "$remote:matchthis-independent/mt-24/MT24.new"
+      - name: Backup old MatchThis and atomically update only its index
+        shell: bash
+        run: |
+          set -euo pipefail
+          export SSHPASS="$SSH_PASSWORD"
+          o=(-o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15)
+          sshpass -e ssh "${o[@]}" lowcymethodowcy@s3.small.pl 'bash -s' <<'EOSSH'
+          set -euo pipefail
+          domain=matchthis.lowcymethodowcy.smallhost.pl
+          test "$domain" != lowcymethodowcy.smallhost.pl
+          root="$HOME/matchthis-independent"
+          previous=54623846f96c7a1f684dae116394f9acb9aca667958b89bc40d4c37d55c03c97
+          expected=6b9617bd208651ccdf43bb21d0427a264da48374705dd11b9b5f8cf9675a1f6c
+          web="$HOME/domains/$domain/public_html"
+          test -f "$root/MT23-OWNED"
+          test -f "$web/index.html" && test ! -L "$web/index.html"
+          test -f "$root/mt-24/MT24.new"
+          test "$(sha256sum "$root/mt-24/MT24.new" | awk '{print $1}')" = "$expected"
+          current="$(sha256sum "$web/index.html" | awk '{print $1}')"
+          if test "$current" = "$previous"; then
+            cp -p "$web/index.html" "$root/mt-24/MatchThis_MT-23_PRE_UPDATE_BACKUP.html"
+            test "$(sha256sum "$root/mt-24/MatchThis_MT-23_PRE_UPDATE_BACKUP.html" | awk '{print $1}')" = "$previous"
+          elif test "$current" != "$expected"; then echo 'UNEXPECTED_LIVE_SOURCE_ABORT'; exit 7; fi
+          cp "$root/mt-24/MT24.new" "$web/index.html.next"
+          test "$(sha256sum "$web/index.html.next" | awk '{print $1}')" = "$expected"
+          mv "$web/index.html.next" "$web/index.html"
+          chmod 644 "$web/index.html"
+          mv "$root/mt-24/MT24.new" "$root/mt-24/MatchThis_MT-24.html"
+          test "$(sha256sum "$web/index.html" | awk '{print $1}')" = "$expected"
+          echo 'MT-24 matchthis.lowcymethodowcy.smallhost.pl' > "$root/MT24-OWNED"
+          echo MATCHTHIS_MT24_INDEX_UPDATED_ONLY
+          echo 'WEBSITES_AFTER'
+          devil www list
+          echo 'DATABASES_AFTER'
+          devil pgsql list
+          EOSSH
+      - name: Validate live HTTPS MT24 without insecure bypass
+        shell: bash
+        run: |
+          set -euo pipefail
+          url=https://matchthis.lowcymethodowcy.smallhost.pl/
+          for i in 1 2 3 4 5; do
+            curl -fsSL --max-time 20 "$url" -o /tmp/matchthis-live.html || true
+            if grep -Fq '<title>MatchThis MT-24</title>' /tmp/matchthis-live.html 2>/dev/null &&
+               grep -Fq 'aria-label="Wersja MT-24">MT-24' /tmp/matchthis-live.html; then
+              echo MATCHTHIS_LIVE_HTTPS_MT24_VERIFIED
+              exit 0
+            fi
+            sleep 3
+          done
+          echo MATCHTHIS_MT24_LIVE_FAILED
+          exit 9
