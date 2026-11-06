@@ -1,0 +1,23 @@
+name: MatchThis MT32 isolated SMALL2 release
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt32-release.yml']
+permissions: {contents: read}
+jobs:
+  publish-matchthis-only:
+    runs-on: ubuntu-latest
+    env:
+      SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify MT32 deployment and recovery scripts
+        run: |
+          set -euo pipefail
+          bash -n matchthis/deploy-mt32-small2.sh
+          bash -n matchthis/rollback-mt32-small2.sh
+      - name: Deploy MT32 only to independent MatchThis domain
+        run: bash matchthis/deploy-mt32-small2.sh
+      - name: Roll back to MT31 on failed publication or HTTPS verification
+        if: failure()
+        run: bash matchthis/rollback-mt32-small2.sh
