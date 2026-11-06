@@ -1,0 +1,156 @@
+name: MatchThis MT29 isolated SMALL2 single login deploy
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt29-deploy.yml']
+permissions: { contents: read }
+jobs:
+  mt29:
+    runs-on: ubuntu-latest
+    env:
+      SSH_PASSWORD: \${{ secrets.SMALL2_SSH_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate MT29 versions, roles, PHP and JavaScript
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SSH_PASSWORD"
+          python3 - <<'PY'
+          from pathlib import Path
+          import re,subprocess
+          for name,role in [('MatchThis_MT-29.html',"roleMode='admin'"),('MatchThis_MT-29_OGLADACZ.html',"roleMode='viewer'"),('MatchThis_MT-29_SEDZIA.html',"roleMode='judge'")]:
+              s=(Path('matchthis')/name).read_text()
+              assert '<title>MatchThis MT-29</title>' in s,name
+              assert 'data-version="MT-29"' in s,name
+              assert 'aria-label="Wersja MT-29">MT-29' in s,name
+              assert "const APP_VERSION='MT-29'" in s,name
+              assert role in s,name
+              assert 'MT28_STORAGE_KEY' in s,name
+              for i,js in enumerate(re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',s,re.S)):
+                  p=Path('/tmp/mt29-check.js');p.write_text(js)
+                  subprocess.run(['node','--check',str(p)],check=True)
+              print('PASS_MT29_VERSION_AND_JS',name)
+          judge=(Path('matchthis/MatchThis_MT-29_SEDZIA.html')).read_text()
+          assert 'saveJudgeWeights' in judge and 'WPROWADŹ WAGI' in judge
+          viewer=(Path('matchthis/MatchThis_MT-29_OGLADACZ.html')).read_text()
+          assert 'id="mtLoginOpen"' in viewer and 'action="/login.php"' in viewer
+          assert 'PUBLIC_VIEWER_BUILD=true' in viewer
+          PY
+          for f in matchthis/mt29-*.php; do php -l "$f"; done
+          echo "VIEWER_SHA=$(sha256sum matchthis/MatchThis_MT-29_OGLADACZ.html | awk '{print $1}')" >> "$GITHUB_ENV"
+          echo "ADMIN_SHA=$(sha256sum matchthis/MatchThis_MT-29.html | awk '{print $1}')" >> "$GITHUB_ENV"
+          echo "JUDGE_SHA=$(sha256sum matchthis/MatchThis_MT-29_SEDZIA.html | awk '{print $1}')" >> "$GITHUB_ENV"
+          sudo apt-get -qq update && sudo apt-get -qq install -y sshpass
+          mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test "$(ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256 | awk '{print $2}')" = 'SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8'
+      - name: Inspect live MT28 and stage only MatchThis
+        shell: bash
+        run: |
+          set -euo pipefail
+          export SSHPASS="$SSH_PASSWORD"
+          o=(-o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15)
+          remote=lowcymethodowcy@s3.small.pl
+          sshpass -e ssh "\${o[@]}" "$remote" 'bash -s' <<'EOSSH'
+          set -euo pipefail
+          d=matchthis.lowcymethodowcy.smallhost.pl
+          web="$HOME/domains/$d/public_html"
+          test "$d" != lowcymethodowcy.smallhost.pl
+          test -f "$HOME/matchthis-independent/MT28-OWNED"
+          test -f "$web/index.html" && test ! -L "$web/index.html"
+          test -f "$web/admin/index.php" && test ! -L "$web/admin/index.php"
+          devil www list | grep -F "$d"
+          test "$(sha256sum "$web/index.html" | awk '{print $1}')" = e47fd77158762632a09f7353eb174332c26b6a230989a07dac8acbbf69e747fa || { echo STOP_LIVE_CHANGED;exit 7; }
+          mkdir -p "$HOME/matchthis-independent/mt-29"
+          echo MT29_SAFE_MT28_PREFLIGHT_OK
+          EOSSH
+          sshpass -e scp "\${o[@]}" matchthis/MatchThis_MT-29.html matchthis/MatchThis_MT-29_OGLADACZ.html matchthis/MatchThis_MT-29_SEDZIA.html matchthis/mt29-login.php matchthis/mt29-panel.php matchthis/mt29-logout.php matchthis/mt29-old-admin-redirect.php "$remote:matchthis-independent/mt-29/"
+      - name: Backup MT28 and publish MT29 single login, scoped vhost
+        shell: bash
+        run: |
+          set -euo pipefail
+          export SSHPASS="$SSH_PASSWORD"
+          o=(-o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15)
+          sshpass -e ssh "\${o[@]}" lowcymethodowcy@s3.small.pl "VIEWER_SHA='$VIEWER_SHA' ADMIN_SHA='$ADMIN_SHA' JUDGE_SHA='$JUDGE_SHA' bash -s" <<'EOSSH'
+          set -euo pipefail
+          d=matchthis.lowcymethodowcy.smallhost.pl
+          web="$HOME/domains/$d/public_html"
+          private="$HOME/matchthis-independent/mt-29"
+          test -d "$web" && test ! -L "$web"
+          test -f "$HOME/matchthis-independent/MT28-OWNED"
+          test "$(sha256sum "$web/index.html" | awk '{print $1}')" = e47fd77158762632a09f7353eb174332c26b6a230989a07dac8acbbf69e747fa
+          test "$(sha256sum "$private/MatchThis_MT-29.html" | awk '{print $1}')" = "$ADMIN_SHA"
+          test "$(sha256sum "$private/MatchThis_MT-29_OGLADACZ.html" | awk '{print $1}')" = "$VIEWER_SHA"
+          test "$(sha256sum "$private/MatchThis_MT-29_SEDZIA.html" | awk '{print $1}')" = "$JUDGE_SHA"
+          test ! -L "$web/role-pages" && test ! -L "$web/login.php" && test ! -L "$web/panel.php" && test ! -L "$web/logout.php"
+          cp -p "$web/index.html" "$private/MT28_PUBLIC_BACKUP.html"
+          cp -p "$web/admin/index.php" "$private/MT28_OLD_ADMIN_GATEWAY_BACKUP.php"
+          test "$(sha256sum "$private/MT28_PUBLIC_BACKUP.html" | awk '{print $1}')" = e47fd77158762632a09f7353eb174332c26b6a230989a07dac8acbbf69e747fa
+          mkdir -p "$web/role-pages"
+          printf '%s\n' 'Require all denied' > "$web/role-pages/.htaccess.next"
+          mv "$web/role-pages/.htaccess.next" "$web/role-pages/.htaccess"
+          { printf '%s\n' '<?php if (!defined("MATCHTHIS_AUTHED")) {http_response_code(404);exit;} ?>'; cat "$private/MatchThis_MT-29.html"; } > "$web/role-pages/mt29-admin.php.next"
+          { printf '%s\n' '<?php if (!defined("MATCHTHIS_AUTHED")) {http_response_code(404);exit;} ?>'; cat "$private/MatchThis_MT-29_SEDZIA.html"; } > "$web/role-pages/mt29-sedzia.php.next"
+          php -l "$web/role-pages/mt29-admin.php.next"
+          php -l "$web/role-pages/mt29-sedzia.php.next"
+          mv "$web/role-pages/mt29-admin.php.next" "$web/role-pages/mt29-admin.php"
+          mv "$web/role-pages/mt29-sedzia.php.next" "$web/role-pages/mt29-sedzia.php"
+          chmod 644 "$web/role-pages/mt29-admin.php" "$web/role-pages/mt29-sedzia.php"
+          for f in login panel logout; do
+            cp "$private/mt29-$f.php" "$web/$f.php.next"
+            mv "$web/$f.php.next" "$web/$f.php"
+            chmod 644 "$web/$f.php"
+          done
+          cp "$private/mt29-old-admin-redirect.php" "$web/admin/index.php.next"
+          mv "$web/admin/index.php.next" "$web/admin/index.php"
+          cp "$private/MatchThis_MT-29_OGLADACZ.html" "$web/index.html.next"
+          test "$(sha256sum "$web/index.html.next" | awk '{print $1}')" = "$VIEWER_SHA"
+          mv "$web/index.html.next" "$web/index.html"
+          chmod 644 "$web/index.html"
+          echo 'MT-29 viewer + admin/judge login' > "$HOME/matchthis-independent/MT29-OWNED"
+          echo MT29_PUBLISHED_ONLY_MATCHTHIS
+          EOSSH
+      - name: Verify actual public HTTPS and permissions
+        shell: bash
+        run: |
+          set -euo pipefail
+          url=https://matchthis.lowcymethodowcy.smallhost.pl
+          for i in 1 2 3 4 5; do
+            curl -fsSL --max-time 25 "$url/" -o /tmp/mt29-live.html || true
+            if test "$(sha256sum /tmp/mt29-live.html | awk '{print $1}')" = "$VIEWER_SHA";then break;fi
+            sleep 3
+          done
+          test "$(sha256sum /tmp/mt29-live.html | awk '{print $1}')" = "$VIEWER_SHA"
+          grep -Fq 'id="mtLoginOpen"' /tmp/mt29-live.html
+          s="$(curl -sS -o /tmp/mt29-panel-anon -w '%{http_code}' "$url/panel.php")"
+          test "$s" = 303 || { echo "UNAUTHORIZED_PANEL_HTTP_$s";exit 8; }
+          for f in mt29-admin.php mt29-sedzia.php; do
+            s="$(curl -sS -o /tmp/mt29-role-direct -w '%{http_code}' "$url/role-pages/$f")"
+            if test "$s" != 403 && test "$s" != 404;then echo "PRIVATE_SOURCE_EXPOSED_$s";exit 9;fi
+          done
+          s="$(curl -sS -o /tmp/mt29-bad-login -w '%{http_code}' -X POST -d 'username=mt-admin&password=wrong' "$url/login.php")"
+          test "$s" = 303 || { echo "BAD_PASSWORD_NOT_REJECTED_$s";exit 10; }
+          echo MATCHTHIS_MT29_HTTPS_ONE_SITE_SECURITY_CHECKS_OK
+      - name: Rollback MatchThis viewer on failure
+        if: failure()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SSH_PASSWORD" || exit 0
+          export SSHPASS="$SSH_PASSWORD"
+          o=(-o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15)
+          sshpass -e ssh "\${o[@]}" lowcymethodowcy@s3.small.pl 'bash -s' <<'EOSSH'
+          set -euo pipefail
+          private="$HOME/matchthis-independent/mt-29"
+          web="$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html"
+          if test -f "$private/MT28_PUBLIC_BACKUP.html" && test ! -L "$web/index.html";then
+            cp "$private/MT28_PUBLIC_BACKUP.html" "$web/index.html.rollback"
+            mv "$web/index.html.rollback" "$web/index.html"
+            if test -f "$private/MT28_OLD_ADMIN_GATEWAY_BACKUP.php";then
+              cp "$private/MT28_OLD_ADMIN_GATEWAY_BACKUP.php" "$web/admin/index.php.rollback"
+              mv "$web/admin/index.php.rollback" "$web/admin/index.php"
+            fi
+            echo MATCHTHIS_ROLLED_BACK_TO_MT28
+          else echo MATCHTHIS_NO_ROLLBACK_NEEDED;fi
+          EOSSH
