@@ -9,7 +9,7 @@ header('Cache-Control: no-store, no-cache, must-revalidate');
 header('X-Content-Type-Options: nosniff');
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {http_response_code(405);exit;}
 $users = [
- 'mt-admin'=>['hash'=>'$2y$12$DO.HEWC75.xgLzb8KGEanuT9M1jc0cFePHOUMfjpkZ4n1jmIMX6Ji','role'=>'admin'],
+ 'mt-admin'=>['hash'=>'$2y$12$vXt1KxMNIlUQqgrr4wJMGOiEqpL58eK7yWGhAxXzW9DXrwunJsBCy','role'=>'admin'],
  'mt-sedzia'=>['hash'=>'$2y$12$/ge8MB54DJsk.Qx21HkXUuyOuMsVWpXDFmA3w1L7AgwUAdtHNCPru','role'=>'judge']
 ];
 $user=trim((string)($_POST['username']??''));
