@@ -57,3 +57,17 @@ Live smoke passed at viewports 390 and 1366 px. Tested site title and version ba
 - The local HTML's `ADMIN/OGLĄDACZ` toggle is still only a preview, not server authorization; edits use browser localStorage; MatchThis PostgreSQL remains unimplemented.
 - Łowcy S1 and `p1828_lowcy_kop` were not changed.
 - Next release increments to MT-25 only after a real, validated code change.
+
+## Update 2026-11-06 — MT-25 live, compact results-first controls
+- Public HTTPS: https://matchthis.lowcymethodowcy.smallhost.pl/
+- Exact version/source: `matchthis/MatchThis_MT-25.html`, SHA-256 `068eaa68f44b1e4667e636b6b0af3959f9f50aa8cb39be4d87f2a0ecf9424b11`.
+- Source baseline MT-24 SHA-256 `6b9617bd208651ccdf43bb21d0427a264da48374705dd11b9b5f8cf9675a1f6c`; backed up on hosting as `$HOME/matchthis-independent/mt-25/MatchThis_MT-24_PRE_UPDATE_BACKUP.html`.
+- Changed only MatchThis UI: compact entity/tour/sector status, shorter wrapping tour tabs, single sector selection line, PDF and admin actions under explicit dropdowns; no changes to scores or rules.
+- Result at 1366x768: sector D final II round full 11 competitor rows ends at viewport y=723; before MT-24 last row ended y=937.
+- Data migration: storage `matchthis-preview-MT-25` reads `matchthis-preview-MT-24` first, then earlier versions. Does not replace the original browser storage key.
+- Safe deployment passed: https://github.com/Maciek550/Lowcy-methodowcy/actions/runs/42263913799
+- **LIVE Chromium + Firefox passed 6 scenarios** across 390 / 768 / 1366 px, zero console errors, no horizontal page overflow, sector D count 11, dropdown interactions, viewer controls, reload persistence, JPG Foto FB, vector PDF with no embedded raster images:
+  https://github.com/Maciek550/Lowcy-methodowcy/actions/runs/42264123017
+- Caveat: at 390px, last row may be below fold; all entries remain accessible by vertical scrolling. At 1366x768 all 11 results fit. Firefox actually verified via Playwright Firefox in GitHub runner.
+- No MatchThis central PostgreSQL database or server authentication yet; this UI is still localStorage based, and ADMIN/OGLĄDACZ remains a preview switch. Do not present it as a production multiuser backend.
+- Łowcy S1 and p1828_lowcy_kop unchanged. Next release MT-26 only after verified code modifications.
