@@ -1,0 +1,89 @@
+name: MatchThis MT28 LIVE viewer-only Chromium Firefox security smoke
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt28-live-security.yml']
+  workflow_dispatch:
+permissions: { contents: read }
+jobs:
+  browser-live:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Playwright Chromium and Firefox
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt28-live && cd /tmp/mt28-live
+          npm init -y >/dev/null
+          npm install --silent playwright
+          npx playwright install --with-deps chromium firefox
+      - name: Test real HTTPS viewer and blocked admin across desktop and mobile
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/mt28-live
+          node --input-type=module <<'JAVASCRIPT'
+          import {chromium,firefox} from 'playwright';
+          const url='https://matchthis.lowcymethodowcy.smallhost.pl/';
+          let count=0;
+          for (const [name,engine] of [['Chromium',chromium],['Firefox',firefox]]) {
+            const browser=await engine.launch({headless:true});
+            try {
+              for (const width of [390,768,1366]) {
+                const context=await browser.newContext({viewport:{width,height:768},acceptDownloads:true});
+                const page=await context.newPage();
+                const errors=[];
+                page.on('pageerror',e=>errors.push('JS '+e.message));
+                page.on('console',m=>{if(m.type()==='error')errors.push('CONSOLE '+m.text())});
+                page.on('download',d=>errors.push('UNEXPECTED_DOWNLOAD '+d.suggestedFilename()));
+                const response=await page.goto(url,{waitUntil:'domcontentloaded',timeout:50000});
+                if(response.status()!==200)throw Error(name+' HTTP '+response.status());
+                if(await page.title()!=='MatchThis MT-28')throw Error(name+' wrong title');
+                if((await page.locator('#appversion').innerText()).includes('MT-28')===false &&
+                   !(await page.locator('[aria-label="Wersja MT-28"]').count()))throw Error(name+' wrong version display');
+                if(await page.locator('#roleMode').count())throw Error(name+' viewer can select role');
+                if((await page.locator('body').getAttribute('data-role'))!=='viewer')throw Error(name+' wrong body role');
+                const db=await page.evaluate(()=>JSON.parse(localStorage.getItem('matchthis-preview-MT-28')));
+                if(!db||!Array.isArray(db.events)||db.events.length<3)throw Error(name+' archive absent');
+                const allRounds=db.events.flatMap(e=>e.rounds||[]);
+                const sensas=db.events.find(e=>/SENSAS/i.test(e.name));
+                if(!sensas)throw Error(name+' SENSAS missing');
+                const a7=sensas.rounds.flatMap(x=>x.results||[]).find(r=>r.sector==='A'&&Number(r.peg)===7);
+                const d47=sensas.rounds.flatMap(x=>x.results||[]).find(r=>r.sector==='D'&&Number(r.peg)===47);
+                const b24=sensas.rounds.flatMap(x=>x.results||[]).find(r=>r.sector==='B'&&Number(r.peg)===24);
+                if(a7?.weightG!==5570||d47?.weightG!==2830||b24?.competitorName!=='JAROS ARTUR')throw Error(name+' verified results regression '+JSON.stringify({a7,d47,b24}));
+                await page.locator('#nav [data-view="events"]').click();
+                const event=page.locator('#main [data-open]').filter({hasText:'FINAŁ MEGA MATCH THIS CUP 2026'}).first();
+                await event.click();
+                await page.locator('[data-round="1"]').click();
+                await page.locator('[data-sector-filter="D"]').click();
+                if(await page.locator('.sector-result tbody tr').count()!==11)throw Error(name+' sector D row regression');
+                const prohibited=['.admin-tools-menu','.sector-exports','[data-action="downloadFbPhoto"]','[data-result-mode="photo"]','[data-result-mode="edit"]','[data-pdf-sector]','[data-action="export"]'];
+                for (const selector of prohibited) {
+                  const items=page.locator(selector);
+                  for(let i=0;i<await items.count();i++)if(await items.nth(i).isVisible())throw Error(name+' viewer forbidden tool visible '+selector);
+                }
+                const docW=await page.evaluate(()=>document.documentElement.scrollWidth);
+                if(docW>width+2)throw Error(name+' horizontal overflow '+docW+' > '+width);
+                const unauth=await context.request.get(url+'admin/',{maxRedirects:0,timeout:30000});
+                if(unauth.status()!==401)throw Error(name+' exposed admin '+unauth.status());
+                await page.screenshot({path:'/tmp/MT28_LIVE_'+name+'_'+width+'.png',fullPage:false});
+                const previous=await page.evaluate(()=>localStorage.getItem('matchthis-preview-MT-28'));
+                await page.reload({waitUntil:'domcontentloaded'});
+                if(previous!==await page.evaluate(()=>localStorage.getItem('matchthis-preview-MT-28')))throw Error(name+' data changed on reload');
+                if(errors.length)throw Error(name+' browser errors '+errors.join(' | '));
+                console.log('MATCHTHIS_MT28_LIVE_OK browser='+name+' width='+width+' sectorD=11 role=viewer adminHTTP401 localStorage=stable errors=0');
+                count++;
+                await context.close();
+              }
+            } finally {await browser.close();}
+          }
+          if(count!==6)throw Error('Not all six scenarios passed');
+          JAVASCRIPT
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: matchthis-mt28-live-smoke-screenshots
+          path: /tmp/MT28_LIVE_*.png
+          if-no-files-found: ignore
+          retention-days: 7
