@@ -38,10 +38,10 @@ jobs:
           head -c 250 "$web/index.html" | sed 's/<style.*/<style.../' || true
           echo
           echo 'MATCHTHIS_WWW_FILES'
-          find "$web" -maxdepth 2 -type f -printf '%P %s B\n' | sort | head -40
+          ls -la "$web" | head -40
           echo 'MATCHTHIS_HTACCESS_PRESENT'
           test -f "$web/.htaccess" && echo yes || echo no
           echo 'MATCHTHIS_PRIVATE_MARKERS'
-          find "$HOME/matchthis-independent" -maxdepth 1 -type f -printf '%f\n' | sort | head -35
+          ls -1 "$HOME/matchthis-independent" | head -35
           echo 'MATCHTHIS_READONLY_COMPLETE'
           EOSSH
