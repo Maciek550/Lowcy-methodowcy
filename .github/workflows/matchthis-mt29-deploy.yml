@@ -8,7 +8,7 @@ jobs:
   mt29:
     runs-on: ubuntu-latest
     env:
-      SSH_PASSWORD: \${{ secrets.SMALL2_SSH_PASSWORD }}
+      SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
       - name: Validate MT29 versions, roles, PHP and JavaScript
@@ -52,7 +52,7 @@ jobs:
           export SSHPASS="$SSH_PASSWORD"
           o=(-o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15)
           remote=lowcymethodowcy@s3.small.pl
-          sshpass -e ssh "\${o[@]}" "$remote" 'bash -s' <<'EOSSH'
+          sshpass -e ssh "${o[@]}" "$remote" 'bash -s' <<'EOSSH'
           set -euo pipefail
           d=matchthis.lowcymethodowcy.smallhost.pl
           web="$HOME/domains/$d/public_html"
@@ -65,14 +65,14 @@ jobs:
           mkdir -p "$HOME/matchthis-independent/mt-29"
           echo MT29_SAFE_MT28_PREFLIGHT_OK
           EOSSH
-          sshpass -e scp "\${o[@]}" matchthis/MatchThis_MT-29.html matchthis/MatchThis_MT-29_OGLADACZ.html matchthis/MatchThis_MT-29_SEDZIA.html matchthis/mt29-login.php matchthis/mt29-panel.php matchthis/mt29-logout.php matchthis/mt29-old-admin-redirect.php "$remote:matchthis-independent/mt-29/"
+          sshpass -e scp "${o[@]}" matchthis/MatchThis_MT-29.html matchthis/MatchThis_MT-29_OGLADACZ.html matchthis/MatchThis_MT-29_SEDZIA.html matchthis/mt29-login.php matchthis/mt29-panel.php matchthis/mt29-logout.php matchthis/mt29-old-admin-redirect.php "$remote:matchthis-independent/mt-29/"
       - name: Backup MT28 and publish MT29 single login, scoped vhost
         shell: bash
         run: |
           set -euo pipefail
           export SSHPASS="$SSH_PASSWORD"
           o=(-o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15)
-          sshpass -e ssh "\${o[@]}" lowcymethodowcy@s3.small.pl "VIEWER_SHA='$VIEWER_SHA' ADMIN_SHA='$ADMIN_SHA' JUDGE_SHA='$JUDGE_SHA' bash -s" <<'EOSSH'
+          sshpass -e ssh "${o[@]}" lowcymethodowcy@s3.small.pl "VIEWER_SHA='$VIEWER_SHA' ADMIN_SHA='$ADMIN_SHA' JUDGE_SHA='$JUDGE_SHA' bash -s" <<'EOSSH'
           set -euo pipefail
           d=matchthis.lowcymethodowcy.smallhost.pl
           web="$HOME/domains/$d/public_html"
@@ -140,7 +140,7 @@ jobs:
           test -n "$SSH_PASSWORD" || exit 0
           export SSHPASS="$SSH_PASSWORD"
           o=(-o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15)
-          sshpass -e ssh "\${o[@]}" lowcymethodowcy@s3.small.pl 'bash -s' <<'EOSSH'
+          sshpass -e ssh "${o[@]}" lowcymethodowcy@s3.small.pl 'bash -s' <<'EOSSH'
           set -euo pipefail
           private="$HOME/matchthis-independent/mt-29"
           web="$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html"
