@@ -46,3 +46,14 @@ Live smoke passed at viewports 390 and 1366 px. Tested site title and version ba
 4. For each new release: verify filename / HTML `<title>` / top bar / app version match and source hash; stage to new private path; atomic publish into MatchThis public_html only; smoke test on HTTPS and mobile/desktop; never touch Lowcy.
 5. Check real vector PDF exports and independently downloaded FB JPG files; verify no regressions in historic results and classification.
 6. Update this runbook and the Word record after verified changes.
+
+## Update 2026-11-06 — MT-24 deployed and verified
+- Current live version: **MT-24**, https://matchthis.lowcymethodowcy.smallhost.pl/ ; original source: `matchthis/MatchThis_MT-24.html`.
+- SHA-256: `6b9617bd208651ccdf43bb21d0427a264da48374705dd11b9b5f8cf9675a1f6c`.
+- Changes: real sector/peg shown alongside each tour result where sourced; weights grouped by thousands and right aligned, centered column headers; six-round classification becomes a fully visible compact grid on small screens, all seven round/final tabs wrap instead of disappearing off-screen. No changes to results data or scoring.
+- SMALL2 deployment path: existing independent MatchThis-only `public_html/index.html`. The MT-23 server file was preserved as `$HOME/matchthis-independent/mt-24/MatchThis_MT-23_PRE_UPDATE_BACKUP.html`; MT-24 private copy under `$HOME/matchthis-independent/mt-24/MatchThis_MT-24.html`.
+- Installation and HTTPS verification: https://github.com/Maciek550/Lowcy-methodowcy/actions/runs/42261173429 (success).
+- **Live Chromium and Firefox smoke**, real public HTTPS, at 390/1366 px and 150% zoom: https://github.com/Maciek550/Lowcy-methodowcy/actions/runs/42261891482 (6/6 scenarios passed; archives, sector/peg, six rounds, Foto FB, vector PDF, localStorage, no console error). Local regression: 61 functionality tests and 114 responsive tests passed.
+- The local HTML's `ADMIN/OGLĄDACZ` toggle is still only a preview, not server authorization; edits use browser localStorage; MatchThis PostgreSQL remains unimplemented.
+- Łowcy S1 and `p1828_lowcy_kop` were not changed.
+- Next release increments to MT-25 only after a real, validated code change.
