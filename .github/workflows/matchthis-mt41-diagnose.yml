@@ -1,0 +1,22 @@
+name: MatchThis MT41 read-only production auth route diagnosis
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt41-diagnose.yml']
+permissions: {contents: read}
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Observe live HTTP status and PHP endpoint response headers without credentials
+        run: |
+          set -euo pipefail
+          url=https://matchthis.lowcymethodowcy.smallhost.pl
+          for route in / /panel.php /login.php /change-password.php /role-pages/mt40-admin.php; do
+            curl -sS --max-time 25 -D /tmp/mt41-h -o /tmp/mt41-b "$url$route"
+            status="$(head -1 /tmp/mt41-h | tr -d '\r')"
+            loc="$(grep -i '^Location:' /tmp/mt41-h | tail -1 | tr -d '\r' || true)"
+            type="$(grep -i '^Content-Type:' /tmp/mt41-h | tail -1 | tr -d '\r' || true)"
+            echo "ROUTE $route STATUS $status $loc $type BODY_BYTES $(wc -c </tmp/mt41-b)"
+          done
+          grep -Fq 'MatchThis MT-40' <(curl -fsSL --max-time 25 "$url/") && echo MT40_ROLLBACK_CONFIRMED
