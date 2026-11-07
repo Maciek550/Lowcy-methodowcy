@@ -1,0 +1,93 @@
+name: MatchThis MT41 isolated release after password-change tests
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt41-release.yml']
+permissions: {contents: read}
+jobs:
+  test-and-publish:
+    runs-on: ubuntu-latest
+    env:
+      SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build MT41 and verify source versions and preserved archives
+        run: |
+          set -euo pipefail
+          python3 matchthis/build-mt41.py
+          python3 - <<'PY'
+          from pathlib import Path
+          import re,subprocess
+          for suffix in ('','_OGLADACZ','_SEDZIA'):
+              base=Path('matchthis/MatchThis_MT-40'+suffix+'.html').read_text()
+              new=Path('matchthis/MatchThis_MT-41'+suffix+'.html').read_text()
+              for version in ['<title>MatchThis MT-41</title>','aria-label="Wersja MT-41">MT-41','data-version="MT-41"', "const APP_VERSION='MT-41'"]:
+                  assert version in new,(suffix,version)
+              for key in ('MATCHTHIS_ARCHIVE_2026','MATCHTHIS_STANDALONE_2026','MATCHTHIS_ARCHIVE_2025_MEGA_V'):
+                  extract=lambda html:html.split('const '+key+'=')[1].split(';\n')[0]
+                  assert extract(new)==extract(base),(suffix,key)
+              if suffix=='_OGLADACZ':
+                  assert 'href="/change-password.php"' not in new
+              else:
+                  assert new.count('href="/change-password.php"')==1
+                  assert 'localStorage.getItem(MT40_STORAGE_KEY)' in new
+              for i,script in enumerate(re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',new,re.S)):
+                  target=Path('/tmp/mt41-verify.js');target.write_text(script)
+                  subprocess.run(['node','--check',str(target)],check=True)
+          print('PASS MT41 VERSION/ARCHIVE/JS/ACCESS')
+          PY
+      - name: Check PHP and release script syntax
+        run: |
+          set -euo pipefail
+          bash -n matchthis/deploy-mt41-small2.sh
+          bash -n matchthis/rollback-mt41-small2.sh
+          for f in mt41-auth.php mt41-login.php mt41-panel.php mt41-change-password.php mt41-seed.php;do php -l "matchthis/$f";done
+      - name: Exercise password hashing and per-user atomic persistence
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt41-auth-test
+          cp matchthis/mt41-auth.php /tmp/mt41-auth-test/mt41-auth.php
+          php -r '$u=["mt-admin"=>["hash"=>password_hash("OldSyntheticAdmin#2026",PASSWORD_DEFAULT),"role"=>"admin"],"mt-sedzia"=>["hash"=>password_hash("OldSyntheticJudge#2026",PASSWORD_DEFAULT),"role"=>"judge"]];file_put_contents("/tmp/mt41-auth-test/users.json",json_encode($u));'
+          php -r 'session_start();require "/tmp/mt41-auth-test/mt41-auth.php";if(!mt41_change_password("mt-admin","OldSyntheticAdmin#2026","NewSyntheticAdmin#2026"))exit(10);$u=mt41_read_users();if(password_verify("OldSyntheticAdmin#2026",$u["mt-admin"]["hash"]))exit(11);if(!password_verify("NewSyntheticAdmin#2026",$u["mt-admin"]["hash"]))exit(12);if(!password_verify("OldSyntheticJudge#2026",$u["mt-sedzia"]["hash"]))exit(13);echo "PASS_MT41_ATOMIC_PASSWORD_CHANGE_AND_USER_ISOLATION\n";'
+      - name: Test real HTTP login and password protection on local PHP server
+        run: |
+          set -euo pipefail
+          root=/tmp/mt41-site
+          web="$root/domains/test.example/public_html"
+          mkdir -p "$web/role-pages" "$root/matchthis-independent/auth"
+          cp matchthis/mt41-auth.php "$root/matchthis-independent/auth/mt41-auth.php"
+          cp matchthis/mt41-login.php "$web/login.php"
+          cp matchthis/mt41-change-password.php "$web/change-password.php"
+          cp matchthis/mt41-panel.php "$web/panel.php"
+          cp matchthis/MatchThis_MT-41_OGLADACZ.html "$web/index.html"
+          { printf '%s\n' '<?php if (!defined("MATCHTHIS_AUTHED")) {http_response_code(404);exit;} ?>';cat matchthis/MatchThis_MT-41.html; } > "$web/role-pages/mt41-admin.php"
+          { printf '%s\n' '<?php if (!defined("MATCHTHIS_AUTHED")) {http_response_code(404);exit;} ?>';cat matchthis/MatchThis_MT-41_SEDZIA.html; } > "$web/role-pages/mt41-sedzia.php"
+          php -r '$u=["mt-admin"=>["hash"=>password_hash("OldSyntheticAdmin#2026",PASSWORD_DEFAULT),"role"=>"admin"],"mt-sedzia"=>["hash"=>password_hash("OldSyntheticJudge#2026",PASSWORD_DEFAULT),"role"=>"judge"]];file_put_contents("/tmp/mt41-site/matchthis-independent/auth/users.json",json_encode($u));'
+          php -S 127.0.0.1:8109 -t "$web" > /tmp/mt41-server.log 2>&1 &
+          server=$!
+          trap 'kill "$server" || true' EXIT
+          sleep 1
+          test "$(curl -sS -o /dev/null -w '%{http_code}' http://localhost:8109/change-password.php)" = 303
+          test "$(curl -sS -o /dev/null -w '%{http_code}' http://localhost:8109/role-pages/mt41-admin.php)" = 404
+          curl -sS -c /tmp/mt41-cookies -D /tmp/mt41-login-headers -o /dev/null -d 'username=mt-admin&password=OldSyntheticAdmin%232026' http://localhost:8109/login.php
+          grep -Fq 'Location: /panel.php' /tmp/mt41-login-headers
+          curl -sS -b /tmp/mt41-cookies http://localhost:8109/change-password.php > /tmp/mt41-form.html
+          grep -Fq 'name="csrf"' /tmp/mt41-form.html
+          csrf="$(sed -n 's/.*name="csrf" value="\([^"]*\)".*/\1/p' /tmp/mt41-form.html | head -1)"
+          test -n "$csrf"
+          test "$(curl -sS -b /tmp/mt41-cookies -o /dev/null -w '%{http_code}' -d 'csrf=bogus&current_password=123&new_password=abc&new_password_confirm=abc' http://localhost:8109/change-password.php)" = 403
+          curl -sS -b /tmp/mt41-cookies -c /tmp/mt41-cookies -D /tmp/mt41-changed-headers -o /dev/null --data-urlencode "csrf=$csrf" --data-urlencode 'current_password=OldSyntheticAdmin#2026' --data-urlencode 'new_password=NewSyntheticAdmin#2026' --data-urlencode 'new_password_confirm=NewSyntheticAdmin#2026' http://localhost:8109/change-password.php
+          grep -Fq 'Location: /change-password.php?changed=1' /tmp/mt41-changed-headers
+          curl -sS -D /tmp/mt41-old-headers -o /dev/null -d 'username=mt-admin&password=OldSyntheticAdmin%232026' http://localhost:8109/login.php
+          grep -Fq 'Location: /?login_error=1' /tmp/mt41-old-headers
+          curl -sS -D /tmp/mt41-new-headers -o /dev/null -d 'username=mt-admin&password=NewSyntheticAdmin%232026' http://localhost:8109/login.php
+          grep -Fq 'Location: /panel.php' /tmp/mt41-new-headers
+          curl -sS -D /tmp/mt41-judge-headers -o /dev/null -d 'username=mt-sedzia&password=OldSyntheticJudge%232026' http://localhost:8109/login.php
+          grep -Fq 'Location: /panel.php' /tmp/mt41-judge-headers
+          echo PASS_MT41_HTTP_LOGIN_CHANGE_RELOGIN_CSRF_JUDGE
+      - name: Deploy only independent MatchThis SMALL2 vhost
+        id: deploy
+        run: bash matchthis/deploy-mt41-small2.sh
+      - name: Roll back MT41 only when publication fails and passwords remain unchanged
+        if: failure() && steps.deploy.outcome == 'failure'
+        run: bash matchthis/rollback-mt41-small2.sh
