@@ -36,7 +36,7 @@ jobs:
                   const page=await ctx.newPage(),errors=[];
                   page.on('pageerror',e=>errors.push(e.message));
                   await page.route(base+'panel.php',r=>r.fulfill({status:200,contentType:'text/html; charset=utf-8',body:html}));
-                  await page.route(base+'change-password.php',r=>r.fulfill({status:200,contentType:'text/html',body:'<h1>Zmiana hasła</h1>'}));
+                  await page.route('**/change-password.php',r=>{console.log('PASSWORD_ROUTE_HIT',r.request().url());return r.fulfill({status:200,contentType:'text/html; charset=utf-8',body:'<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>Formularz</title></head><body><h1>Zmiana hasła</h1></body></html>'});});
                   await page.goto(base+'panel.php',{waitUntil:'domcontentloaded'});
                   if(await page.title()!=='MatchThis MT-41')throw Error('VERSION '+kind+' '+role);
                   if((await page.locator('#appversion').innerText())!=='MT-41')throw Error('APP_VERSION');
@@ -51,7 +51,8 @@ jobs:
                     }
                     await link.click();
                     await page.waitForURL('**/change-password.php',{waitUntil:'domcontentloaded'});
-                    await page.getByRole('heading',{name:'Zmiana hasła'}).waitFor({state:'visible'});
+                    console.log('NAVIGATED_TO',page.url(),'TITLE',await page.title(),'BODY',(await page.locator('body').innerText()).slice(0,300));
+                    await page.getByRole('heading',{name:'Zmiana hasła'}).waitFor({state:'visible',timeout:5000});
                   }
                   if(errors.length)throw Error('JS_ERRORS '+errors.join(';'));
                   console.log('PASS',kind,role,width);
