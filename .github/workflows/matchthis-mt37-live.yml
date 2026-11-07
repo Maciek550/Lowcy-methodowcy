@@ -77,7 +77,7 @@ jobs:
                   await page.locator('[data-sector-filter="'+sec+'"]').first().click();
                   const rows=page.locator('main table tbody tr');
                   if(await rows.count()!==10)throw Error('MEGA2025_V_SECTOR_'+sec+'_'+await rows.count());
-                  for(const pos of [1,2,3])if(await rows.locator('.podium-'+pos).count()!==1)throw Error('MEGA2025_PODIUM_'+sec+'_'+pos);
+                  for(const pos of [1,2,3])if(await page.locator('main table tbody tr.podium-'+pos).count()!==1)throw Error('MEGA2025_PODIUM_'+sec+'_'+pos);
                   if(!(await page.locator('.sector-title').first().innerText()).includes('27.09.2025'))throw Error('SECTOR_DATE_'+sec);
                 }
                 await page.locator('[data-round="0"]').first().click();
