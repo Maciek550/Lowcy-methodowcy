@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-require dirname(__DIR__,3).'/matchthis-independent/auth/mt41-auth.php';
+require __DIR__.'/.mt41-private/mt41-auth.php';
 mt41_session_start();
 if($_SERVER['REQUEST_METHOD']!=='POST'){http_response_code(405);exit;}
 $username=trim((string)($_POST['username']??''));
