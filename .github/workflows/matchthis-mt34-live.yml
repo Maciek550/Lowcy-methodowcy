@@ -52,6 +52,7 @@ jobs:
                   const got=await rows.count();
                   if(got!==count)throw Error('2025 sector '+sec+' '+got);
                 }
+                await page.locator('[data-sector-filter="E"]').first().click();
                 const e=await page.locator('main').innerText();
                 if(!e.includes('RADOMSKI KAZIMIERZ')||!e.includes('185'))throw Error('Radomski E51 correction missing');
                 const data=await page.evaluate(()=>{
