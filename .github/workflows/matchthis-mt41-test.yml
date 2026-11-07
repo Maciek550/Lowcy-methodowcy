@@ -1,0 +1,65 @@
+name: MatchThis MT41 browser preflight (no deployment)
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt41-test.yml']
+permissions: {contents: read}
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build MT41 frontend from immutable MT40 source
+        run: python3 matchthis/build-mt41.py
+      - name: Install browser engines
+        run: |
+          mkdir -p /tmp/mt41 && cd /tmp/mt41
+          npm init -y >/dev/null
+          npm install --silent playwright
+          npx playwright install --with-deps chromium firefox
+      - name: Click password links and check role isolation, version, responsive layout
+        run: |
+          cd /tmp/mt41
+          node --input-type=module <<'JS'
+          import {chromium,firefox} from 'playwright';
+          import {readFile} from 'node:fs/promises';
+          const root=process.env.GITHUB_WORKSPACE+'/matchthis/';
+          const base='https://matchthis.lowcymethodowcy.smallhost.pl/';
+          let checks=0;
+          for(const [kind,engine] of [['Chromium',chromium],['Firefox',firefox]]){
+            const b=await engine.launch({headless:true});
+            try{
+              for(const [role,suffix] of [['admin',''],['judge','_SEDZIA'],['viewer','_OGLADACZ']]){
+                const html=await readFile(root+'MatchThis_MT-41'+suffix+'.html','utf8');
+                for(const width of [390,1366]){
+                  const ctx=await b.newContext({viewport:{width,height:900}});
+                  const page=await ctx.newPage(),errors=[];
+                  page.on('pageerror',e=>errors.push(e.message));
+                  await page.route(base+'panel.php',r=>r.fulfill({status:200,contentType:'text/html; charset=utf-8',body:html}));
+                  await page.route(base+'change-password.php',r=>r.fulfill({status:200,contentType:'text/html',body:'<h1>Zmiana hasła</h1>'}));
+                  await page.goto(base+'panel.php',{waitUntil:'domcontentloaded'});
+                  if(await page.title()!=='MatchThis MT-41')throw Error('VERSION '+kind+' '+role);
+                  if((await page.locator('#appversion').innerText())!=='MT-41')throw Error('APP_VERSION');
+                  const link=page.getByRole('link',{name:'Zmień hasło'});
+                  if(role==='viewer'){
+                    if(await link.count())throw Error('PUBLIC_PASSWORD_LINK_EXPOSED');
+                  }else{
+                    if(!await link.isVisible())throw Error('PASSWORD_LINK_HIDDEN '+role);
+                    if(width===390){
+                      const r=await link.evaluate(e=>{const r=e.getBoundingClientRect();return {left:r.left,right:r.right,width:innerWidth}});
+                      if(r.left<0||r.right>r.width+1)throw Error('PASSWORD_LINK_CLIPPED '+JSON.stringify(r));
+                    }
+                    await link.click();
+                    if(!page.url().endsWith('/change-password.php'))throw Error('LINK_NAVIGATION');
+                    if(!await page.getByRole('heading',{name:'Zmiana hasła'}).isVisible())throw Error('LINK_TARGET');
+                  }
+                  if(errors.length)throw Error('JS_ERRORS '+errors.join(';'));
+                  console.log('PASS',kind,role,width);
+                  await ctx.close();checks++;
+                }
+              }
+            }finally{await b.close();}
+          }
+          if(checks!==12)throw Error('MISSING '+checks);
+          console.log('MT41 BROWSER CHECKS 12/12 PASS');
+          JS
