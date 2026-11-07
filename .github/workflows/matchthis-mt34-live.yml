@@ -1,0 +1,86 @@
+name: MatchThis MT34 live Chromium and Firefox verification
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt34-live.yml']
+permissions: {contents: read}
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Chromium and Firefox via Playwright
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt34-live
+          cd /tmp/mt34-live
+          npm init -y >/dev/null
+          npm install --silent playwright
+          npx playwright install --with-deps chromium firefox
+      - name: Verify actual SMALL2 public HTTPS and restored results
+        run: |
+          set -euo pipefail
+          cd /tmp/mt34-live
+          node --input-type=module <<'JS'
+          import {chromium,firefox} from 'playwright';
+          const url='https://matchthis.lowcymethodowcy.smallhost.pl/';
+          const eventId='mt2025-sensas-challenge-2026-dec06';
+          let checks=0;
+          for(const [name,engine] of [['Chromium',chromium],['Firefox',firefox]]){
+            const browser=await engine.launch({headless:true});
+            try {
+              for(const width of [390,1366]){
+                const context=await browser.newContext({viewport:{width,height:900}});
+                const page=await context.newPage();
+                page.setDefaultTimeout(15000);
+                const errors=[];
+                page.on('pageerror',err=>errors.push('JS: '+err.message));
+                page.on('console',msg=>{if(msg.type()==='error')errors.push('console: '+msg.text())});
+                const res=await page.goto(url,{waitUntil:'domcontentloaded',timeout:45000});
+                if(res.status()!==200)throw Error('HTTPS '+res.status());
+                if((await page.title())!=='MatchThis MT-34')throw Error('Wrong version '+(await page.title()));
+                const year=page.locator('details[data-year="2025"]');
+                if(await year.count()!==1)throw Error('2025 missing');
+                if(await year.getAttribute('open')===null)await year.locator('summary').click();
+                const open=page.locator('[data-open="'+eventId+'"]');
+                await open.click();
+                const rows=page.locator('main table tbody tr');
+                if(await rows.count()!==67)throw Error('2025 rows '+(await rows.count()));
+                const expected={A:12,B:11,C:11,D:11,E:11,F:11};
+                for(const [sec,count] of Object.entries(expected)){
+                  await page.locator('[data-sector-filter="'+sec+'"]').first().click();
+                  const got=await rows.count();
+                  if(got!==count)throw Error('2025 sector '+sec+' '+got);
+                }
+                const e=await page.locator('main').innerText();
+                if(!e.includes('RADOMSKI KAZIMIERZ')||!e.includes('185'))throw Error('Radomski E51 correction missing');
+                const data=await page.evaluate(()=>{
+                  const cycle=db.cycles.find(c=>c.id==='mt2026-mega-match-this-cup-cycle');
+                  if(!cycle)return null;
+                  const tour=cycle.tours.find(t=>t.date==='2026-05-23');
+                  if(!tour)return null;
+                  const valid=tour.results.filter(r=>!r.absent);
+                  const sectorCounts={};
+                  for(const row of valid)sectorCounts[row.sector]=(sectorCounts[row.sector]||0)+1;
+                  return {count:valid.length,sectorCounts};
+                });
+                if(!data||data.count!==28||data.sectorCounts.A!==10||data.sectorCounts.B!==9||data.sectorCounts.C!==9)throw Error('2026 third tour data '+JSON.stringify(data));
+                if(width===390){
+                  const dimensions=await page.evaluate(()=>({doc:document.documentElement.scrollWidth,width:innerWidth}));
+                  if(dimensions.doc>dimensions.width)throw Error('Horizontal overflow '+JSON.stringify(dimensions));
+                }
+                const controls=page.locator('[data-action="export"],[data-pdf-sector],[data-action="pdfAllSectors"]');
+                if(await controls.count()){
+                  const visible=await controls.evaluateAll(nodes=>nodes.some(n=>{const x=n.getBoundingClientRect();const st=getComputedStyle(n);return x.width>0&&x.height>0&&st.visibility!=='hidden'&&st.display!=='none'}));
+                  if(visible)throw Error('Viewer can access export controls');
+                }
+                if(errors.length)throw Error(errors.join('; '));
+                checks++;
+                console.log('PASS LIVE',name,'width='+width,'2025=67','sectors=A12_B11_C11_D11_E11_F11','2026_III=28','viewer_exports_hidden','no_console_errors');
+                await context.close();
+              }
+            } finally {await browser.close()}
+          }
+          if(checks!==4)throw Error('Unexpected checks '+checks);
+          console.log('MATCHTHIS_MT34_LIVE_BROWSER_TESTS_4_OF_4_PASSED');
+          JS
