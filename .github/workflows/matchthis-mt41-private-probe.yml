@@ -29,11 +29,13 @@ jobs:
           header('Cache-Control: no-store');
           header('Content-Type: text/plain; charset=UTF-8');
           $root=dirname(__DIR__,3);
-          $auth=$root.'/matchthis-independent/auth/mt41-auth.php';
-          $users=$root.'/matchthis-independent/auth/users.json';
-          echo 'PHP_VERSION='.PHP_VERSION.' PRIVATE_DIR='.(is_dir(dirname($auth))?1:0)
-            .' AUTH_EXISTS='.(is_file($auth)?1:0).' AUTH_READABLE='.(is_readable($auth)?1:0)
-            .' USERS_EXISTS='.(is_file($users)?1:0).' USERS_READABLE='.(is_readable($users)?1:0);
+          $homeAuth=$root.'/matchthis-independent/auth/mt41-auth.php';
+          $domainPrivate=dirname(__DIR__).'/.matchthis-private-auth';
+          echo 'PHP_VERSION='.PHP_VERSION.' OPEN_BASEDIR='.ini_get('open_basedir')
+            .' DOMAIN_PARENT_VISIBLE='.(is_dir(dirname(__DIR__))?1:0)
+            .' HOME_PRIVATE_ACCESSIBLE='.(is_readable($homeAuth)?1:0)
+            .' DOMAIN_PARENT_WRITABLE='.(is_writable(dirname(__DIR__))?1:0)
+            .' DOMAIN_PRIVATE_EXISTS='.(is_dir($domainPrivate)?1:0);
           PHP
           trap 'rm -f "$web/mt41-private-readonly-probe.php"' EXIT
           chmod 644 "$web/mt41-private-readonly-probe.php"
