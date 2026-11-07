@@ -14,9 +14,9 @@ foreach(['mt-admin'=>'admin','mt-sedzia'=>'judge'] as $name=>$role) {
  if(!preg_match($pattern,$contents,$match)||!password_get_info($match[1])['algo'])exit(14);
  $users[$name]=['hash'=>$match[1],'role'=>$role];
 }
-$json=json_encode($users,JSON_PRETTY_PRINT|JSON_THROW_ON_ERROR);
-$tmp=$target.'.new';
-if(file_put_contents($tmp,$json,LOCK_EX)!==strlen($json))exit(15);
+$payload='<?php if (!defined("MATCHTHIS_AUTH_INTERNAL")) {http_response_code(404);exit;} return '.var_export($users,true).";\\n";
+$tmp=$target.'.'.bin2hex(random_bytes(8)).'.php';
+if(file_put_contents($tmp,$payload,LOCK_EX)!==strlen($payload))exit(15);
 chmod($tmp,0600);
 if(!rename($tmp,$target))exit(16);
 exit(0);
