@@ -64,7 +64,7 @@ function mt41_change_password(string $username,string $current,string $next): bo
   $hash=password_hash($next,PASSWORD_DEFAULT);
   if(!$hash)throw new RuntimeException('Nie można zapisać hasła');
   $users[$username]['hash']=$hash;
-  $payload='<?php if (!defined("MATCHTHIS_AUTH_INTERNAL")) {http_response_code(404);exit;} return '.var_export($users,true).";\\n";
+  $payload='<?php if (!defined("MATCHTHIS_AUTH_INTERNAL")) {http_response_code(404);exit;} return '.var_export($users,true).';';
   $temp=__DIR__.'/.users-'.bin2hex(random_bytes(12)).'.php';
   try {
    if(file_put_contents($temp,$payload,LOCK_EX)!==strlen($payload))throw new RuntimeException('Niepełny zapis');
