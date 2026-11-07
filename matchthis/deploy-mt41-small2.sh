@@ -23,7 +23,7 @@ ssh-keyscan -T 10 -t ed25519 s3.small.pl > "$HOME/.ssh/known_hosts" 2>/dev/null
 test "$(ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256 | awk '{print $2}')" = 'SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8'
 export SSHPASS="$SSH_PASSWORD"
 remote=lowcymethodowcy@s3.small.pl
-sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o ConnectTimeout=15 "$remote" "OLD_SHA='$OLD_SHA' bash -s" <<'REMOTE'
+sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15 "$remote" "OLD_SHA='$OLD_SHA' bash -s" <<'REMOTE'
 set -euo pipefail
 web="$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html"
 test -f "$HOME/matchthis-independent/MT40-OWNED"
@@ -37,8 +37,8 @@ devil www list | grep -F 'matchthis.lowcymethodowcy.smallhost.pl'
 mkdir -p "$HOME/matchthis-independent/mt-41"
 echo MT41_PREFLIGHT_OK
 REMOTE
-sshpass -e scp -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o ConnectTimeout=15   matchthis/MatchThis_MT-41.html matchthis/MatchThis_MT-41_OGLADACZ.html matchthis/MatchThis_MT-41_SEDZIA.html   matchthis/mt41-auth.php matchthis/mt41-panel.php matchthis/mt41-login.php matchthis/mt41-change-password.php matchthis/mt41-seed.php   "$remote:matchthis-independent/mt-41/"
-sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o ConnectTimeout=15 "$remote" "OLD_SHA='$OLD_SHA' VIEW_SHA='$VIEW_SHA' ADMIN_SHA='$ADMIN_SHA' JUDGE_SHA='$JUDGE_SHA' bash -s" <<'REMOTE'
+sshpass -e scp -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15   matchthis/MatchThis_MT-41.html matchthis/MatchThis_MT-41_OGLADACZ.html matchthis/MatchThis_MT-41_SEDZIA.html   matchthis/mt41-auth.php matchthis/mt41-panel.php matchthis/mt41-login.php matchthis/mt41-change-password.php matchthis/mt41-seed.php   "$remote:matchthis-independent/mt-41/"
+sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15 "$remote" "OLD_SHA='$OLD_SHA' VIEW_SHA='$VIEW_SHA' ADMIN_SHA='$ADMIN_SHA' JUDGE_SHA='$JUDGE_SHA' bash -s" <<'REMOTE'
 set -euo pipefail
 web="$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html"
 stage="$HOME/matchthis-independent/mt-41"
@@ -56,12 +56,13 @@ cp -p "$web/index.html" "$stage/index-MT40.backup"
 cp -p "$web/login.php" "$stage/login-MT40.backup"
 cp -p "$web/panel.php" "$stage/panel-MT40.backup"
 test "$(sha256sum "$stage/index-MT40.backup" | awk '{print $1}')" = "$OLD_SHA"
-mkdir -p "$auth" && chmod 700 "$auth"
 test ! -L "$auth" && test ! -L "$auth/users.json"
+mkdir -p "$auth" && chmod 700 "$auth"
 if test ! -e "$auth/users.json"; then
   php "$stage/mt41-seed.php" "$stage/login-MT40.backup" "$auth/users.json" || { echo HASH_MIGRATION_FAILED; exit 8; }
 fi
 test -f "$auth/users.json" && chmod 600 "$auth/users.json"
+sha256sum "$auth/users.json" | awk '{print $1}' > "$stage/credentials-before.sha"
 php -r '$p=$argv[1];$u=json_decode(file_get_contents($p),true);if(!isset($u["mt-admin"]["hash"],$u["mt-sedzia"]["hash"])||$u["mt-admin"]["role"]!=="admin"||$u["mt-sedzia"]["role"]!=="judge")exit(3);' "$auth/users.json"
 cp "$stage/mt41-auth.php" "$auth/mt41-auth.php.next"
 php -l "$auth/mt41-auth.php.next"
