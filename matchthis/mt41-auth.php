@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-/* MT-41: private credential store. Deploy outside public_html. */
+/* MT-41: protected PHP credential store. This hosting has open_basedir to public_html. */
 function mt41_session_start(): void {
  ini_set('session.use_strict_mode','1');
  ini_set('session.use_only_cookies','1');
@@ -13,13 +13,13 @@ function mt41_session_start(): void {
  header('X-Frame-Options: DENY');
  header('Referrer-Policy: no-referrer');
 }
-function mt41_users_file(): string { return __DIR__.'/users.json'; }
+function mt41_users_file(): string { return __DIR__.'/users.php'; }
 function mt41_read_users(): array {
  $path=mt41_users_file();
  if(!is_file($path)||is_link($path))throw new RuntimeException('Brak prywatnego magazynu kont');
- $raw=file_get_contents($path);
- if($raw===false||strlen($raw)>20000)throw new RuntimeException('Nie można odczytać magazynu kont');
- $users=json_decode($raw,true,16,JSON_THROW_ON_ERROR);
+ if(filesize($path)>25000)throw new RuntimeException('Magazyn kont jest za duży');
+ if(!defined('MATCHTHIS_AUTH_INTERNAL'))define('MATCHTHIS_AUTH_INTERNAL',true);
+ $users=require $path;
  if(!is_array($users))throw new RuntimeException('Nieprawidłowe konta');
  foreach($users as $username=>$record) {
   if(!is_string($username)||!is_array($record)||!isset($record['role'],$record['hash'])
@@ -64,12 +64,11 @@ function mt41_change_password(string $username,string $current,string $next): bo
   $hash=password_hash($next,PASSWORD_DEFAULT);
   if(!$hash)throw new RuntimeException('Nie można zapisać hasła');
   $users[$username]['hash']=$hash;
-  $json=json_encode($users,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);
-  $temp=tempnam(__DIR__,'.users-');
-  if(!$temp)throw new RuntimeException('Nie można zapisać hasła');
+  $payload='<?php if (!defined("MATCHTHIS_AUTH_INTERNAL")) {http_response_code(404);exit;} return '.var_export($users,true).";\\n";
+  $temp=__DIR__.'/.users-'.bin2hex(random_bytes(12)).'.php';
   try {
+   if(file_put_contents($temp,$payload,LOCK_EX)!==strlen($payload))throw new RuntimeException('Niepełny zapis');
    chmod($temp,0600);
-   if(file_put_contents($temp,$json,LOCK_EX)!==strlen($json))throw new RuntimeException('Niepełny zapis');
    if(!rename($temp,mt41_users_file()))throw new RuntimeException('Błąd zapisu hasła');
   }finally{if(is_file($temp))unlink($temp);}
   $_SESSION['mt41_auth_tag']=hash('sha256',$hash);
