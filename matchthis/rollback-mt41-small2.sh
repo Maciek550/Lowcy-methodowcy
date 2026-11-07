@@ -9,13 +9,13 @@ sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o Prefer
 set -euo pipefail
 web="$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html"
 stage="$HOME/matchthis-independent/mt-41"
-auth="$HOME/matchthis-independent/auth"
+auth="$web/.mt41-private"
 for f in index-MT40.backup login-MT40.backup panel-MT40.backup credentials-before.sha; do test -f "$stage/$f"; done
 test ! -L "$web" && test ! -L "$web/login.php" && test ! -L "$web/panel.php" && test ! -L "$web/index.html"
-test -f "$auth/users.json" && test ! -L "$auth/users.json"
+test -f "$auth/users.php" && test ! -L "$auth/users.php"
 # Never restore the old static login if someone already changed a password.
 original="$(cat "$stage/credentials-before.sha")"
-current="$(sha256sum "$auth/users.json" | awk '{print $1}')"
+current="$(sha256sum "$auth/users.php" | awk '{print $1}')"
 if test "$current" != "$original"; then echo CREDENTIALS_CHANGED_NO_UNSAFE_ROLLBACK; exit 9; fi
 cp "$stage/login-MT40.backup" "$web/login.php.rollback"
 cp "$stage/panel-MT40.backup" "$web/panel.php.rollback"
