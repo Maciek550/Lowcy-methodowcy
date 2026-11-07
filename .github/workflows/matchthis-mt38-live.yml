@@ -82,6 +82,7 @@ jobs:
                 }
                 await page.locator('[data-round="0"]').first().click();
                 if(!(await page.locator('.results-state').innerText()).includes('Data niepotwierdzona'))throw Error('UNVERIFIED_TOUR_DATE_WAS_INVENTED');
+                await page.locator('[data-round="4"]').first().click();
                 await page.locator('[data-sector-filter="C"]').first().click();
                 for(const [n,expected] of [[1,'rgb(249, 223, 227)'],[2,'rgb(220, 232, 247)'],[3,'rgb(222, 240, 227)']]){
                   const info=await page.locator('main table tbody tr.podium-'+n+' td').first().evaluate(node=>{
