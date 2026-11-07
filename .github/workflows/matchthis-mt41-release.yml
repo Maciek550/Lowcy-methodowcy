@@ -47,27 +47,28 @@ jobs:
           set -euo pipefail
           mkdir -p /tmp/mt41-auth-test
           cp matchthis/mt41-auth.php /tmp/mt41-auth-test/mt41-auth.php
-          php -r '$u=["mt-admin"=>["hash"=>password_hash("OldSyntheticAdmin#2026",PASSWORD_DEFAULT),"role"=>"admin"],"mt-sedzia"=>["hash"=>password_hash("OldSyntheticJudge#2026",PASSWORD_DEFAULT),"role"=>"judge"]];file_put_contents("/tmp/mt41-auth-test/users.json",json_encode($u));'
+          php -r '$u=["mt-admin"=>["hash"=>password_hash("OldSyntheticAdmin#2026",PASSWORD_DEFAULT),"role"=>"admin"],"mt-sedzia"=>["hash"=>password_hash("OldSyntheticJudge#2026",PASSWORD_DEFAULT),"role"=>"judge"]];$p="<?php if (!defined(\"MATCHTHIS_AUTH_INTERNAL\")) {http_response_code(404);exit;} return ".var_export($u,true).";";file_put_contents("/tmp/mt41-auth-test/users.php",$p);'
           php -r 'session_start();require "/tmp/mt41-auth-test/mt41-auth.php";if(!mt41_change_password("mt-admin","OldSyntheticAdmin#2026","NewSyntheticAdmin#2026"))exit(10);$u=mt41_read_users();if(password_verify("OldSyntheticAdmin#2026",$u["mt-admin"]["hash"]))exit(11);if(!password_verify("NewSyntheticAdmin#2026",$u["mt-admin"]["hash"]))exit(12);if(!password_verify("OldSyntheticJudge#2026",$u["mt-sedzia"]["hash"]))exit(13);echo "PASS_MT41_ATOMIC_PASSWORD_CHANGE_AND_USER_ISOLATION\n";'
       - name: Test real HTTP login and password protection on local PHP server
         run: |
           set -euo pipefail
           root=/tmp/mt41-site
           web="$root/domains/test.example/public_html"
-          mkdir -p "$web/role-pages" "$root/matchthis-independent/auth"
-          cp matchthis/mt41-auth.php "$root/matchthis-independent/auth/mt41-auth.php"
+          mkdir -p "$web/role-pages" "$web/.mt41-private"
+          cp matchthis/mt41-auth.php "$web/.mt41-private/mt41-auth.php"
           cp matchthis/mt41-login.php "$web/login.php"
           cp matchthis/mt41-change-password.php "$web/change-password.php"
           cp matchthis/mt41-panel.php "$web/panel.php"
           cp matchthis/MatchThis_MT-41_OGLADACZ.html "$web/index.html"
           { printf '%s\n' '<?php if (!defined("MATCHTHIS_AUTHED")) {http_response_code(404);exit;} ?>';cat matchthis/MatchThis_MT-41.html; } > "$web/role-pages/mt41-admin.php"
           { printf '%s\n' '<?php if (!defined("MATCHTHIS_AUTHED")) {http_response_code(404);exit;} ?>';cat matchthis/MatchThis_MT-41_SEDZIA.html; } > "$web/role-pages/mt41-sedzia.php"
-          php -r '$u=["mt-admin"=>["hash"=>password_hash("OldSyntheticAdmin#2026",PASSWORD_DEFAULT),"role"=>"admin"],"mt-sedzia"=>["hash"=>password_hash("OldSyntheticJudge#2026",PASSWORD_DEFAULT),"role"=>"judge"]];file_put_contents("/tmp/mt41-site/matchthis-independent/auth/users.json",json_encode($u));'
+          php -r '$u=["mt-admin"=>["hash"=>password_hash("OldSyntheticAdmin#2026",PASSWORD_DEFAULT),"role"=>"admin"],"mt-sedzia"=>["hash"=>password_hash("OldSyntheticJudge#2026",PASSWORD_DEFAULT),"role"=>"judge"]];$p="<?php if (!defined(\"MATCHTHIS_AUTH_INTERNAL\")) {http_response_code(404);exit;} return ".var_export($u,true).";";file_put_contents("/tmp/mt41-site/domains/test.example/public_html/.mt41-private/users.php",$p);'
           php -S 127.0.0.1:8109 -t "$web" > /tmp/mt41-server.log 2>&1 &
           server=$!
           trap 'kill "$server" || true' EXIT
           sleep 1
           test "$(curl -sS -o /dev/null -w '%{http_code}' http://localhost:8109/change-password.php)" = 303
+          test "$(curl -sS -o /dev/null -w '%{http_code}' http://localhost:8109/.mt41-private/users.php)" = 404
           test "$(curl -sS -o /dev/null -w '%{http_code}' http://localhost:8109/role-pages/mt41-admin.php)" = 404
           curl -sS -c /tmp/mt41-cookies -D /tmp/mt41-login-headers -o /dev/null -d 'username=mt-admin&password=OldSyntheticAdmin%232026' http://localhost:8109/login.php
           grep -Fq 'Location: /panel.php' /tmp/mt41-login-headers
