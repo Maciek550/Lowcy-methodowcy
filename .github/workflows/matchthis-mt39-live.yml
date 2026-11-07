@@ -1,0 +1,71 @@
+name: MatchThis MT39 live empty archive regression
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt39-live.yml']
+permissions: {contents: read}
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install real Chromium and Firefox
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt39-live && cd /tmp/mt39-live
+          npm init -y >/dev/null
+          npm install --silent playwright
+          npx playwright install --with-deps chromium firefox
+      - name: Verify live archive, no fake overall, real dates
+        run: |
+          set -euo pipefail
+          cd /tmp/mt39-live
+          node --input-type=module <<'JS'
+          import {chromium,firefox} from 'playwright';
+          const url='https://matchthis.lowcymethodowcy.smallhost.pl/';
+          let n=0;
+          for(const [name,engine] of [['Chromium',chromium],['Firefox',firefox]]){
+            const browser=await engine.launch({headless:true});
+            try {
+              for(const width of [390,1366]){
+                const context=await browser.newContext({viewport:{width,height:880}});
+                const page=await context.newPage(),errors=[];
+                page.setDefaultTimeout(15000);
+                page.on('pageerror',e=>errors.push(e.message));
+                page.on('console',m=>{if(m.type()==='error')errors.push(m.text())});
+                const response=await page.goto(url,{waitUntil:'domcontentloaded',timeout:45000});
+                if(response.status()!==200||(await page.title())!=='MatchThis MT-39')throw Error('LIVE_VERSION');
+                const year=page.locator('details[data-year="2025"]');
+                if(await year.getAttribute('open')===null)await year.locator('summary').click();
+                await page.locator('[data-open="mt2025-mega-match-this-cup-cycle"]').first().click();
+                if(await page.locator('.results-navigation [data-round]').count()!==1)throw Error('EMPTY_ROUNDS_NOT_HIDDEN');
+                if(await page.locator('[data-round="4"].active').count()!==1)throw Error('FIFTH_ROUND_NOT_DEFAULT');
+                if(await page.locator('main table tbody tr').count()!==30)throw Error('SOURCE_RESULTS_MISSING');
+                for(const sec of ['A','B','C']){
+                  await page.locator('[data-sector-filter="'+sec+'"]').first().click();
+                  if(await page.locator('main table tbody tr').count()!==10)throw Error('SECTOR_'+sec);
+                  for(const rank of [1,2,3])if(await page.locator('main table tbody tr.podium-'+rank).count()!==1)throw Error('PODIUM_'+rank);
+                }
+                await page.locator('[data-result-mode="overall"]').first().click();
+                if(!(await page.locator('main').innerText()).includes('CYKL NIEKOMPLETNY'))throw Error('FAKE_OVERALL');
+                if(await page.locator('main table tbody tr').count()!==0)throw Error('FAKE_CLASSIFICATION_ROWS');
+                const data=await page.evaluate(()=>{
+                  const c=db.cycles.find(x=>x.id==='mt2026-mega-match-this-cup-cycle');
+                  const t=c?.tours.find(x=>x.date==='2026-05-23');
+                  const r=(t?.results||[]).filter(x=>!x.absent);
+                  return [r.length,...['A','B','C'].map(s=>r.filter(x=>x.sector===s).length)]
+                });
+                if(JSON.stringify(data)!=='[28,10,9,9]')throw Error('2026_REGRESSION '+JSON.stringify(data));
+                if(width===390){
+                  const z=await page.evaluate(()=>({a:document.documentElement.scrollWidth,b:innerWidth}));
+                  if(z.a>z.b)throw Error('MOBILE_OVERFLOW '+JSON.stringify(z));
+                }
+                if(errors.length)throw Error('JS_ERROR '+errors.join('; '));
+                n++;console.log('PASS MT39 LIVE',name,width,'MEGA2025_V=30','NO_FAKE_ROUNDS','2026_III=28');
+                await context.close();
+              }
+            }finally{await browser.close()}
+          }
+          if(n!==4)throw Error('COVERAGE '+n);
+          console.log('MATCHTHIS_MT39_LIVE_ALL_4_SCENARIOS_PASSED');
+          JS
