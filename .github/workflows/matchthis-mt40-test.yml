@@ -1,0 +1,117 @@
+name: MatchThis MT40 pre-release Chromium Firefox regression
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt40-test.yml']
+permissions: {contents: read}
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Chromium and Firefox
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt40-tests && cd /tmp/mt40-tests
+          npm init -y >/dev/null
+          npm install --silent playwright
+          npx playwright install --with-deps chromium firefox
+      - name: Verify versions, source preservation, role access and in-app history
+        run: |
+          set -euo pipefail
+          cd /tmp/mt40-tests
+          node --input-type=module <<'JS'
+          import {chromium,firefox} from 'playwright';
+          import {readFile,writeFile} from 'node:fs/promises';
+          import {execFileSync} from 'node:child_process';
+          const root=process.env.GITHUB_WORKSPACE+'/matchthis/';
+          const source={};
+          let staticChecks=0,browserChecks=0;
+          for(const [role,suffix] of [['admin',''],['viewer','_OGLADACZ'],['judge','_SEDZIA']]){
+            const html=await readFile(root+'MatchThis_MT-40'+suffix+'.html','utf8');
+            const old=await readFile(root+'MatchThis_MT-39'+suffix+'.html','utf8');
+            source[role]=html;
+            for(const v of ['<title>MatchThis MT-40</title>','aria-label="Wersja MT-40">MT-40','data-version="MT-40"',"const APP_VERSION='MT-40'"])
+              if(!html.includes(v))throw Error('WRONG_VERSION '+role+' '+v);
+            for(const k of ['MATCHTHIS_ARCHIVE_2026','MATCHTHIS_STANDALONE_2026','MATCHTHIS_ARCHIVE_2025_MEGA_V']){
+              const read=(x)=>x.split('const '+k+'=')[1].split(';\n')[0];
+              if(read(html)!==read(old))throw Error('HISTORIC_RESULTS_CHANGED '+role+' '+k);
+            }
+            const scripts=[...html.matchAll(/<script(?:\s[^>]*)?>(.*?)<\/script>/gs)].map(m=>m[1]);
+            for(let i=0;i<scripts.length;i++){
+              await writeFile('/tmp/mt40-tests/check.js',scripts[i],'utf8');
+              execFileSync('node',['--check','/tmp/mt40-tests/check.js']);
+            }
+            staticChecks++;
+          }
+          const base='https://matchthis.lowcymethodowcy.smallhost.pl/';
+          for(const [engineName,engine] of [['Chromium',chromium],['Firefox',firefox]]){
+            const browser=await engine.launch({headless:true});
+            try{
+              for(const role of ['viewer','judge','admin']){
+                for(const width of [390,1366]){
+                  const context=await browser.newContext({viewport:{width,height:900}});
+                  const page=await context.newPage();
+                  page.setDefaultTimeout(16000);
+                  const errors=[];
+                  page.on('pageerror',e=>errors.push(e.message));
+                  await page.route(base+'panel.php',r=>r.fulfill({status:200,contentType:'text/html; charset=utf-8',body:source[role]}));
+                  const res=await page.goto(base+'panel.php',{waitUntil:'domcontentloaded',timeout:45000});
+                  if(res.status()!==200||await page.title()!=='MatchThis MT-40')throw Error('BROWSER_VERSION '+engineName+' '+role);
+                  if((await page.locator('#appversion').innerText())!=='MT-40')throw Error('BAR_VERSION');
+                  if((await page.evaluate(()=>history.state?.depth))!==0)throw Error('HISTORY_INIT');
+                  await page.locator('#nav [data-view="archive"]').click();
+                  const year=page.locator('details[data-year="2025"]');
+                  if(await year.getAttribute('open')===null)await year.locator('summary').click();
+                  await page.locator('[data-open="mt2025-splawikowo-dec07"]').click();
+                  if((await page.evaluate(()=>history.state?.depth))!==2)throw Error('HISTORY_ENTITY');
+                  const sector=page.locator('main table.sector-result tbody tr');
+                  if(await sector.count()!==36)throw Error('SECTOR_ROWS_LOST');
+                  await page.locator('[data-result-mode="round"]').first().click();
+                  const rows=page.locator('main table.round-result tbody tr');
+                  if(await rows.count()!==36)throw Error('GENERAL_ROWS_LOST');
+                  const h=await page.locator('main table.round-result th').allInnerTexts();
+                  if(h.length!==6||h[0]!=='M. og.'||h[2]!=='Pkt. sekt.')throw Error('OVERALL_COLUMN_MISSING '+JSON.stringify(h));
+                  const places=await rows.locator('td.overall-place-cell').allInnerTexts();
+                  if(places.some((v,i)=>v!==String(i+1)))throw Error('GENERAL_RANKS');
+                  const pts=await rows.locator('td.points-cell').allInnerTexts();
+                  if(pts.slice(0,4).join(',')!=='1,1,1,1')throw Error('SECTOR_POINTS_CHANGED');
+                  for(let i=0;i<3;i++)if(await rows.nth(i).getAttribute('class')!=='podium-'+(i+1))throw Error('GENERAL_PODIUM_CHANGED');
+                  if((await rows.nth(3).getAttribute('class'))!=='')throw Error('FOURTH_INCORRECT_PODIUM');
+                  await page.goBack({timeout:15000});
+                  if((await page.evaluate(()=>resultMode))!=='sectors')throw Error('BACK_SECTORS');
+                  await page.goForward({timeout:15000});
+                  if((await page.evaluate(()=>resultMode))!=='round')throw Error('FORWARD_ROUND');
+                  await page.locator('[data-nav-back]').click();
+                  await page.waitForFunction(()=>resultMode==='sectors');
+                  await page.locator('[data-sector-filter="A"]').first().click();
+                  await page.goBack({timeout:15000});
+                  if((await page.evaluate(()=>selectedSector))!=='ALL')throw Error('BACK_SECTOR_FILTER');
+                  await page.goBack({timeout:15000});
+                  if((await page.evaluate(()=>page))!=='archive')throw Error('BACK_ARCHIVE');
+                  await page.goBack({timeout:15000});
+                  if((await page.evaluate(()=>page))!=='home')throw Error('BACK_HOME');
+                  if(width===390){
+                    const d=await page.evaluate(()=>({viewport:innerWidth,document:document.documentElement.scrollWidth}));
+                    if(d.document>d.viewport+1)throw Error('PAGE_OVERFLOW '+JSON.stringify(d));
+                  }
+                  if(role==='viewer' && (await page.locator('[data-action="export"]').count())!==0){
+                    const visible=await page.locator('[data-action="export"]').first().isVisible();
+                    if(visible)throw Error('VIEWER_EXPORT_EXPOSED');
+                  }
+                  const original=await page.evaluate(()=>{
+                    const c=db.cycles.find(c=>c.id==='mt2026-mega-match-this-cup-cycle');
+                    return c.tours.find(t=>t.date==='2026-05-23').results.filter(r=>!r.absent).length;
+                  });
+                  if(original!==28)throw Error('2026_THIRD_TOUR_CHANGED');
+                  if(errors.length)throw Error('JS_ERRORS '+errors.join('; '));
+                  browserChecks++;
+                  console.log('PASS_MT40_BROWSER',engineName,role,width,'GENERAL_1_36 BACK_FORWARD_2025_2026_OK');
+                  await context.close();
+                }
+              }
+            }finally{await browser.close()}
+          }
+          if(staticChecks!==3||browserChecks!==12)throw Error('INCOMPLETE_TESTS '+staticChecks+' '+browserChecks);
+          console.log('PASS_MT40_SOURCE_3_OF_3_BROWSER_12_OF_12');
+          JS
