@@ -50,8 +50,8 @@ jobs:
                       if(r.left<0||r.right>r.width+1)throw Error('PASSWORD_LINK_CLIPPED '+JSON.stringify(r));
                     }
                     await link.click();
-                    if(!page.url().endsWith('/change-password.php'))throw Error('LINK_NAVIGATION');
-                    if(!await page.getByRole('heading',{name:'Zmiana hasła'}).isVisible())throw Error('LINK_TARGET');
+                    await page.waitForURL('**/change-password.php',{waitUntil:'domcontentloaded'});
+                    await page.getByRole('heading',{name:'Zmiana hasła'}).waitFor({state:'visible'});
                   }
                   if(errors.length)throw Error('JS_ERRORS '+errors.join(';'));
                   console.log('PASS',kind,role,width);
