@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 test -n "$SSH_PASSWORD" || { echo MISSING_SSH_SECRET; exit 2; }
-for f in MatchThis_MT-41.html MatchThis_MT-41_OGLADACZ.html MatchThis_MT-41_SEDZIA.html mt41-auth.php mt41-panel.php mt41-login.php mt41-change-password.php mt41-seed.php; do
+for f in MatchThis_MT-41.html MatchThis_MT-41_OGLADACZ.html MatchThis_MT-41_SEDZIA.html mt41-auth.php mt41-panel.php mt41-login.php mt41-change-password.php mt41-seed.php mt41-private.htaccess; do
   test -f "matchthis/$f"
 done
 for suffix in '' _SEDZIA _OGLADACZ; do
@@ -37,12 +37,12 @@ devil www list | grep -F 'matchthis.lowcymethodowcy.smallhost.pl'
 mkdir -p "$HOME/matchthis-independent/mt-41"
 echo MT41_PREFLIGHT_OK
 REMOTE
-sshpass -e scp -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15   matchthis/MatchThis_MT-41.html matchthis/MatchThis_MT-41_OGLADACZ.html matchthis/MatchThis_MT-41_SEDZIA.html   matchthis/mt41-auth.php matchthis/mt41-panel.php matchthis/mt41-login.php matchthis/mt41-change-password.php matchthis/mt41-seed.php   "$remote:matchthis-independent/mt-41/"
+sshpass -e scp -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15   matchthis/MatchThis_MT-41.html matchthis/MatchThis_MT-41_OGLADACZ.html matchthis/MatchThis_MT-41_SEDZIA.html   matchthis/mt41-auth.php matchthis/mt41-panel.php matchthis/mt41-login.php matchthis/mt41-change-password.php matchthis/mt41-seed.php matchthis/mt41-private.htaccess   "$remote:matchthis-independent/mt-41/"
 sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15 "$remote" "OLD_SHA='$OLD_SHA' VIEW_SHA='$VIEW_SHA' ADMIN_SHA='$ADMIN_SHA' JUDGE_SHA='$JUDGE_SHA' bash -s" <<'REMOTE'
 set -euo pipefail
 web="$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html"
 stage="$HOME/matchthis-independent/mt-41"
-auth="$HOME/matchthis-independent/auth"
+auth="$web/.mt41-private"
 test -f "$HOME/matchthis-independent/MT40-OWNED"
 test "$(sha256sum "$web/index.html" | awk '{print $1}')" = "$OLD_SHA"
 test "$(sha256sum "$stage/MatchThis_MT-41.html" | awk '{print $1}')" = "$ADMIN_SHA"
@@ -56,18 +56,36 @@ cp -p "$web/index.html" "$stage/index-MT40.backup"
 cp -p "$web/login.php" "$stage/login-MT40.backup"
 cp -p "$web/panel.php" "$stage/panel-MT40.backup"
 test "$(sha256sum "$stage/index-MT40.backup" | awk '{print $1}')" = "$OLD_SHA"
-test ! -L "$auth" && test ! -L "$auth/users.json"
+test ! -L "$auth" && test ! -L "$auth/users.php"
 mkdir -p "$auth" && chmod 700 "$auth"
-if test ! -e "$auth/users.json"; then
-  php "$stage/mt41-seed.php" "$stage/login-MT40.backup" "$auth/users.json" || { echo HASH_MIGRATION_FAILED; exit 8; }
+cp "$stage/mt41-private.htaccess" "$auth/.htaccess"
+chmod 600 "$auth/.htaccess"
+if test ! -e "$auth/users.php"; then
+  php "$stage/mt41-seed.php" "$stage/login-MT40.backup" "$auth/users.php" || { echo HASH_MIGRATION_FAILED; exit 8; }
 fi
-test -f "$auth/users.json" && chmod 600 "$auth/users.json"
-sha256sum "$auth/users.json" | awk '{print $1}' > "$stage/credentials-before.sha"
-php -r '$p=$argv[1];$u=json_decode(file_get_contents($p),true);if(!isset($u["mt-admin"]["hash"],$u["mt-sedzia"]["hash"])||$u["mt-admin"]["role"]!=="admin"||$u["mt-sedzia"]["role"]!=="judge")exit(3);' "$auth/users.json"
-cp "$stage/mt41-auth.php" "$auth/mt41-auth.php.next"
-php -l "$auth/mt41-auth.php.next"
-mv "$auth/mt41-auth.php.next" "$auth/mt41-auth.php"
+test -f "$auth/users.php" && chmod 600 "$auth/users.php"
+sha256sum "$auth/users.php" | awk '{print $1}' > "$stage/credentials-before.sha"
+php -r 'define("MATCHTHIS_AUTH_INTERNAL",true);$u=require $argv[1];if(!isset($u["mt-admin"]["hash"],$u["mt-sedzia"]["hash"])||$u["mt-admin"]["role"]!=="admin"||$u["mt-sedzia"]["role"]!=="judge")exit(3);' "$auth/users.php"
+cp "$stage/mt41-auth.php" "$auth/.mt41-auth.next.php"
+php -l "$auth/.mt41-auth.next.php"
+mv "$auth/.mt41-auth.next.php" "$auth/mt41-auth.php"
 chmod 600 "$auth/mt41-auth.php"
+# Confirm the real PHP web runtime can read the protected directory while HTTP clients cannot.
+cat > "$web/mt41-private-probe.php" <<'PHP'
+<?php
+header('Content-Type: text/plain');
+$d=__DIR__.'/.mt41-private';
+echo is_readable($d.'/mt41-auth.php')&&is_readable($d.'/users.php')?'OK':'NO';
+PHP
+trap 'rm -f "$web/mt41-private-probe.php"' EXIT
+code="$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' 'https://matchthis.lowcymethodowcy.smallhost.pl/.mt41-private/users.php')"
+if test "$code" != 403 && test "$code" != 404; then echo CREDENTIALS_HTTP_ACCESS_NOT_DENIED; exit 14; fi
+code="$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' 'https://matchthis.lowcymethodowcy.smallhost.pl/.mt41-private/mt41-auth.php')"
+if test "$code" != 403 && test "$code" != 404; then echo AUTH_LIB_HTTP_ACCESS_NOT_DENIED; exit 15; fi
+test "$(curl -fsSL --max-time 20 'https://matchthis.lowcymethodowcy.smallhost.pl/mt41-private-probe.php')" = 'OK' || { echo PHP_PRIVATE_DIRECTORY_NOT_READABLE; exit 16; }
+rm -f "$web/mt41-private-probe.php"
+trap - EXIT
+echo MT41_PHP_PRIVATE_AUTH_ACCESS_AND_HTTP_DENY_OK
 # Create protected role templates and all next-version endpoints before publishing.
 { printf '%s\n' '<?php if (!defined("MATCHTHIS_AUTHED")) {http_response_code(404);exit;} ?>'; cat "$stage/MatchThis_MT-41.html"; } > "$web/role-pages/mt41-admin.php.next"
 { printf '%s\n' '<?php if (!defined("MATCHTHIS_AUTHED")) {http_response_code(404);exit;} ?>'; cat "$stage/MatchThis_MT-41_SEDZIA.html"; } > "$web/role-pages/mt41-sedzia.php.next"
