@@ -60,7 +60,7 @@ jobs:
                     }
                     await page.locator('[data-sector-filter="ALL"]').first().click();
                   }
-                  if(event.id===events[0].id){
+                  if(event.id==='mt2025-sensas-challenge-2026-dec06'){
                     await page.locator('[data-sector-filter="E"]').first().click();
                     const e=await page.locator('main').innerText();
                     if(!e.includes('RADOMSKI KAZIMIERZ')||!e.includes('185'))throw Error('CORRECTED_2025_SOURCE_LOST');
