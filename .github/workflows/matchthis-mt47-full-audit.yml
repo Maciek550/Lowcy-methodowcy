@@ -1,0 +1,82 @@
+name: MatchThis MT47 READ ONLY complete results audit 2025 and 2026
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt47-full-audit.yml']
+permissions: {contents: read}
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install headless Chromium
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt47-audit && cd /tmp/mt47-audit
+          npm init -y >/dev/null
+          npm install --silent playwright
+          npx playwright install --with-deps chromium
+      - name: Audit LIVE page in a fresh public session without changing website or stored data
+        run: |
+          set -euo pipefail
+          cd /tmp/mt47-audit
+          node --input-type=module <<'JS'
+          import { chromium } from 'playwright';
+          const b=await chromium.launch({headless:true});
+          try{
+            const ctx=await b.newContext({viewport:{width:1366,height:900}});
+            const page=await ctx.newPage();
+            const errors=[];
+            page.on('pageerror',e=>errors.push(e.message));
+            const response=await page.goto('https://matchthis.lowcymethodowcy.smallhost.pl/',{waitUntil:'domcontentloaded',timeout:45000});
+            console.log('AUDIT_HTTP',response.status(),'TITLE',await page.title(),'VERSION',await page.locator('#appversion').innerText());
+            if(response.status()!==200||await page.title()!=='MatchThis MT-47')throw Error('LIVE_BASELINE_CHANGED');
+            const report=await page.evaluate(()=>{
+              const list=[];
+              function audit(entity,kind,year,round,roundIndex){
+                const rows=round.results||[];
+                const abs=r=>r.absent===true||r.noStartFirstRound===true||(Number(r.officialPlace)===100&&r.peg==null&&r.sector==null);
+                const active=rows.filter(r=>!abs(r));
+                const p=active.filter(r=>r.peg!=null&&r.peg!==''),sec=active.filter(r=>r.sector!=null&&r.sector!==''&&r.sector!=='—');
+                const freq=new Map();
+                for(const r of p)freq.set(String(r.peg),(freq.get(String(r.peg))||0)+1);
+                const duplicatePegs=[...freq].filter(([peg,count])=>count>1);
+                const counts={};
+                for(const r of sec){counts[r.sector]=(counts[r.sector]||0)+1}
+                let calculated=null;
+                try{
+                  const cl=core.tourClassification(round);
+                  calculated={length:cl.length,placeDefined:cl.filter(r=>r.place!=null).length};
+                }catch(e){calculated={error:String(e.message||e)}}
+                return {kind,year,id:entity.id,event:entity.name,date:round.date||'',round:round.name||'',roundIndex,total:rows.length,active:active.length,absent:rows.length-active.length,
+                  missingPeg:active.length-p.length,missingSector:active.length-sec.length,
+                  missingWeight:active.filter(r=>r.weightG===null||r.weightG===undefined||!Number.isFinite(Number(r.weightG))).length,
+                  missingOfficialPlace:active.filter(r=>r.officialPlace===null||r.officialPlace===undefined||!Number.isFinite(Number(r.officialPlace))).length,
+                  missingName:active.filter(r=>!(r.competitorName||'').trim()).length,
+                  duplicatePegs:duplicatePegs.map(x=>x[0]), sectorCounts:counts,
+                  unassignedNames:active.filter(r=>r.peg==null||r.sector==null).slice(0,8).map(r=>r.competitorName),
+                  calculated};
+              }
+              for(const event of db.events)for(let i=0;i<(event.rounds||[]).length;i++)list.push(audit(event,'event',event.year,event.rounds[i],i+1));
+              for(const cycle of db.cycles)for(let i=0;i<(cycle.tours||[]).length;i++)list.push(audit(cycle,'cycle',cycle.year,cycle.tours[i],i+1));
+              const grouped={};
+              for(const r of list){let y=String(r.year||'unknown');(grouped[y]??=[]).push(r)}
+              const cycleFinals=db.cycles.map(c=>{
+                let result={id:c.id,name:c.name,roundCounts:c.tours.map(t=>t.results.length),countedTours:c.countedTours??null};
+                try{const x=core.cycleClassification(c);result.classification={rows:x.rows.length,complete:x.complete};}catch(e){result.classification={error:String(e.message)};}
+                return result;
+              });
+              const suspiciousDate=list.filter(r=>r.event.match(/2026/)&&String(r.date||r.event).includes('2025'));
+              return {totalEvents:db.events.length,totalCycles:db.cycles.length,totalRounds:list.length,all:list,byYear:grouped,cycleFinals,suspiciousDate};
+            });
+            console.log('AUDIT_GLOBAL',JSON.stringify({totalEvents:report.totalEvents,totalCycles:report.totalCycles,totalRounds:report.totalRounds,cycleFinals:report.cycleFinals,suspiciousDate:report.suspiciousDate.map(x=>({event:x.event,date:x.date}))}));
+            for(const r of report.all){
+              const {unassignedNames,...main}=r;
+              console.log('AUDIT_ROW',JSON.stringify({...main,unassignedNames:unassignedNames.length&&r.missingPeg<12?unassignedNames:undefined}));
+            }
+            console.log('AUDIT_SUMMARY',JSON.stringify({byYear:Object.fromEntries(Object.entries(report.byYear).map(([year,arr])=>[year,{rounds:arr.length,missingPeg:arr.reduce((s,r)=>s+r.missingPeg,0),missingSector:arr.reduce((s,r)=>s+r.missingSector,0),missingWeight:arr.reduce((s,r)=>s+r.missingWeight,0),missingOfficialPlace:arr.reduce((s,r)=>s+r.missingOfficialPlace,0),duplicatePegs:arr.filter(r=>r.duplicatePegs.length).map(r=>r.id)}]))}));
+            console.log('AUDIT_PAGEERRORS',JSON.stringify(errors));
+            if(errors.length)throw Error('PAGE_CONSOLE_ERRORS');
+            await ctx.close();
+          }finally{await b.close()}
+          JS
