@@ -1,4 +1,4 @@
-name: MatchThis MT44 source results and browser regression
+name: MatchThis MT44 import source browser regression rerun
 on:
   push:
     branches: [matchthis-mt23-independent-small2-20261106]
