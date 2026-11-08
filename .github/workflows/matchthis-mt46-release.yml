@@ -1,0 +1,118 @@
+name: MatchThis MT46 XIII Puchar 22 Nov first round draw only
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt46-release.yml']
+permissions: {contents: read}
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deterministically build MT46 and verify unchanged source archives
+        run: |
+          set -euo pipefail
+          for v in 41 42 43 44 45 46; do python3 "matchthis/build-mt$v.py";done
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess,re
+          root=Path('matchthis')
+          for suffix in ('','_SEDZIA','_OGLADACZ'):
+              before=(root/f'MatchThis_MT-45{suffix}.html').read_text()
+              after=(root/f'MatchThis_MT-46{suffix}.html').read_text()
+              assert all(m in after for m in ('<title>MatchThis MT-46</title>','aria-label="Wersja MT-46">MT-46','data-version="MT-46"', "const APP_VERSION='MT-46'"))
+              for key in ('MATCHTHIS_ARCHIVE_2026','MATCHTHIS_STANDALONE_2026','MATCHTHIS_ARCHIVE_2025_MEGA_V','MATCHTHIS_ARCHIVE_2025_MAVER_OCT','MT44_MISSING_2025','MT44_MEGA_2025','MT45_MEGA_2025_ROUNDS'):
+                  extract=lambda x:x.split('const '+key+'=')[1].split(';\n')[0]
+                  assert extract(before)==extract(after),(suffix,key)
+              for script in re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',after,re.S):
+                  Path('/tmp/mt46-syntax.js').write_text(script)
+                  subprocess.run(['node','--check','/tmp/mt46-syntax.js'],check=True)
+          print('MT46_SOURCE_AND_VERSION_VALIDATION_OK')
+          PY
+          bash -n matchthis/deploy-mt46-small2.sh
+          bash -n matchthis/rollback-mt46-small2.sh
+      - name: Publish strictly to isolated MatchThis with MT45 backups
+        id: deploy
+        run: bash matchthis/deploy-mt46-small2.sh
+      - name: Install real browsers
+        run: |
+          mkdir -p /tmp/mt46-live && cd /tmp/mt46-live
+          npm init -y >/dev/null
+          npm install --silent playwright
+          npx playwright install --with-deps chromium firefox
+      - name: Check actual production results in Chromium and Firefox mobile desktop
+        run: |
+          set -euo pipefail
+          cd /tmp/mt46-live
+          node --input-type=module <<'JS'
+          import {chromium,firefox} from 'playwright';
+          const base='https://matchthis.lowcymethodowcy.smallhost.pl/';
+          let checks=0;
+          for(const [engineName,engine] of [['Chromium',chromium],['Firefox',firefox]]){
+            const browser=await engine.launch({headless:true});
+            try{
+              for(const width of [390,1366]){
+                const ctx=await browser.newContext({viewport:{width,height:900}});
+                const page=await ctx.newPage();page.setDefaultTimeout(16000);
+                const errors=[];page.on('pageerror',e=>errors.push(e.message));
+                const response=await page.goto(base,{waitUntil:'domcontentloaded',timeout:45000});
+                if(response.status()!==200||await page.title()!=='MatchThis MT-46'||await page.locator('#appversion').innerText()!=='MT-46')throw Error('VERSION');
+                const s=await page.evaluate(()=>{
+                  const c=db.cycles.find(x=>x.id==='mt2025-mega-match-this-cup-cycle');
+                  const classification=core.cycleClassification(c);
+                  const ids=['mt2025-float_king_2025','mt2025-matchthis_puchar_2025','mt2025-champions_2025','mt2025-mega_final_2025'];
+                  const puchar=db.events.find(e=>e.id==='mt2025-matchthis_puchar_2025');
+                  const first=puchar?.rounds[0].results,second=puchar?.rounds[1].results;
+                  return {mega:c.tours.map(t=>({count:t.results.length,pegs:t.results.filter(r=>r.peg!=null).length,date:t.date,status:t.status})),
+                    eligible:classification.complete,rows:classification.rows.length,best:c.countedTours,
+                    events:ids.map(id=>db.events.find(e=>e.id===id)?.rounds[0].results.length),
+                    maver:db.events.find(e=>e.id==='mt2025-maver-super-cup-oct')?.rounds[1].results.length,
+                    me2026:db.cycles.find(c=>c.id==='mt2026-mega-match-this-cup-cycle')?.tours.find(t=>t.date==='2026-05-23')?.results.filter(r=>!r.absent).length,
+                    firstPegs:first?.map(r=>r.peg).sort((a,b)=>a-b),
+                    firstSectorCounts:'ABCDEFG'.split('').map(sec=>first?.filter(r=>r.sector===sec).length),
+                    secondUnknown:second?.filter(r=>r.peg==null&&r.sector==null).length
+                  };
+                });
+                const sizes=[79,79,84,82,50,52],pegs=[78,78,84,82,50,52],dates=['2025-03-08','2025-03-09','2025-03-22','2025-03-23','2025-09-27','2025-09-28'];
+                if(s.mega?.length!==6||s.mega.some((t,i)=>t.count!==sizes[i]||t.pegs!==pegs[i]||t.date!==dates[i]||t.status!=='FINAL')||
+                   !s.eligible||s.best!==4||s.rows<79||JSON.stringify(s.events)!==JSON.stringify([71,77,60,54])||s.maver!==32||s.me2026!==28||
+                   s.firstPegs?.length!==77||s.firstPegs.some((p,i)=>p!==i+1)||
+                   JSON.stringify(s.firstSectorCounts)!==JSON.stringify([11,11,11,11,11,11,11])||
+                   s.secondUnknown!==77)
+                   throw Error('PRODUCTION_DATA_'+JSON.stringify(s));
+                await page.locator('#nav [data-view="archive"]').click();
+                const y=page.locator('details[data-year="2025"]');
+                if(await y.getAttribute('open')===null)await y.locator('summary').click();
+                const puchar=page.locator('[data-open="mt2025-matchthis_puchar_2025"]');
+                if(await puchar.count()!==1)throw Error('MISSING_PUCHAR_IN_ARCHIVE');
+                await puchar.click();
+                await page.locator('[data-result-mode="round"]').first().click();
+                if(await page.locator('table.round-result tbody tr').count()!==77)throw Error('VISIBLE_PUCHAR_77');
+                await page.reload({waitUntil:'domcontentloaded'});
+                const remaining=await page.evaluate(()=>{
+                  const p=db.events.find(e=>e.id==='mt2025-matchthis_puchar_2025');
+                  return {mega:db.cycles.find(c=>c.id==='mt2025-mega-match-this-cup-cycle').tours.map(t=>t.results.length),
+                    pucharPegs:p.rounds[0].results.filter(r=>r.peg!=null&&r.sector!=null).length,
+                    pucharSecond:p.rounds[1].results.filter(r=>r.peg==null&&r.sector==null).length,
+                    duplicates:db.events.filter(e=>e.id===p.id).length}
+                });
+                if(JSON.stringify(remaining.mega)!==JSON.stringify(sizes)||remaining.pucharPegs!==77||remaining.pucharSecond!==77||remaining.duplicates!==1)
+                   throw Error('RELOAD_LOST_DATA_'+JSON.stringify(remaining));
+                if(width===390){
+                  const dims=await page.evaluate(()=>({w:innerWidth,s:document.documentElement.scrollWidth}));
+                  if(dims.s>dims.w+1)throw Error('MOBILE_OVERFLOW_'+JSON.stringify(dims));
+                }
+                if(errors.length)throw Error('CONSOLE_'+errors.join(';'));
+                checks++;console.log('PASS_MT46_LIVE',engineName,width,'XIII_PUCHAR_22_11_A_TO_G_77');
+                await ctx.close();
+              }
+            }finally{await browser.close()}
+          }
+          if(checks!==4)throw Error('INCOMPLETE_'+checks);
+          console.log('PASS_MT46_LIVE_CHROMIUM_FIREFOX_4_OF_4');
+          JS
+      - name: Roll back MT46 to MT45 if publication or production smoke fails
+        if: failure() && steps.deploy.outcome != 'skipped'
+        run: bash matchthis/rollback-mt46-small2.sh
