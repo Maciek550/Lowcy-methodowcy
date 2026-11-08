@@ -3,7 +3,7 @@ from collections import Counter
 import json,unicodedata,re
 root=Path(__file__).resolve().parent
 def norm(s):
- return ''.join(c for c in unicodedata.normalize('NFKD',s.upper()) if not unicodedata.combining(c) and c.isalnum())
+ return ''.join(c for c in unicodedata.normalize('NFKD',s.upper().replace('Ł','L')) if not unicodedata.combining(c) and c.isalnum())
 source=[]
 for line in (root/'mt46_puchar_2025_round1_draw.tsv').read_text('utf8').splitlines():
  if not line or line.startswith('#'): continue
