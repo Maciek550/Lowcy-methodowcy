@@ -34,8 +34,8 @@ jobs:
               assert 'mt49SiteYear()' in after
               if suffix!='_OGLADACZ':assert "localStorage.getItem(MT53_STORAGE_KEY)" in after
               assert "const STORAGE_KEY='matchthis-preview-MT-54'" in after
-              from52=json.loads(get(before,'MT52_XIV_NAMES'))
-              to54=json.loads(get(after,'MT52_XIV_NAMES'))
+              from52=json.loads(before.split('const MT52_XIV_NAMES=')[1].split(';\n')[0])
+              to54=json.loads(after.split('const MT52_XIV_NAMES=')[1].split(';\n')[0])
               assert len(from52)==len(to54)==72
               assert [(i+1,a,b) for i,(a,b) in enumerate(zip(from52,to54)) if a!=b]==[(44,'STEFANIU RAFAŁ','STEFANIUK RAFAŁ')]
               assert "const mt54AdminTiles=roleMode==='admin'?" in after
@@ -44,7 +44,7 @@ jobs:
 
               assert 'function mt52ImportXivRoster()' in after
               assert 'function mt52ReplaceReservation(e)' in after
-              assert 'const MT54_XIV_NAMES=' in after
+              assert 'const MT52_XIV_NAMES=' in after
               assert 'function mt51DateInput(i,item)' in after
               assert 'function mt51SetDateCount(form)' in after
               assert 'rounds.forEach((r,i)=>r.date=dates[i]);' in after
