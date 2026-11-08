@@ -1,0 +1,140 @@
+name: MatchThis MT52 XIV Puchar list and reservation replacement regression
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt52-test.yml','matchthis/build-mt52.py','matchthis/mt52_xiv_puchar_2026_startowa.txt']
+permissions: {contents: read}
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build authentic MT51 and verify MT52 data invariants, JavaScript and version
+        run: |
+          set -euo pipefail
+          for v in 41 42 43 44 45 46 47 48 49 50 51 52; do python3 "matchthis/build-mt$v.py";done
+          python3 - <<'PY'
+          from pathlib import Path
+          import re,subprocess,json
+          root=Path('matchthis')
+          keys=('MATCHTHIS_ARCHIVE_2026','MATCHTHIS_STANDALONE_2026','MATCHTHIS_ARCHIVE_2025_MEGA_V','MATCHTHIS_ARCHIVE_2025_MAVER_OCT','MT44_MISSING_2025','MT44_MEGA_2025','MT45_MEGA_2025_ROUNDS','MT46_PUCHAR_ROUND1_DRAW','MT47_PUCHAR_ROUND2_DRAW','MT48_FLOAT_ROUND2_DRAW')
+          for suffix in ('','_SEDZIA','_OGLADACZ'):
+              old=(root/f'MatchThis_MT-51{suffix}.html').read_text('utf8')
+              new=(root/f'MatchThis_MT-52{suffix}.html').read_text('utf8')
+              for key in keys:
+                  get=lambda h:h.split('const '+key+'=')[1].split(';\n')[0]
+                  assert get(old)==get(new),(suffix,key)
+              for marker in ('<title>MatchThis MT-52</title>','aria-label="Wersja MT-52">MT-52','data-version="MT-52"', "const APP_VERSION='MT-52'"):
+                  assert marker in new,(suffix,marker)
+              assert 'function mt52ImportXivRoster()' in new
+              assert 'function mt52ReplaceReservation(e)' in new
+              if suffix!='_OGLADACZ':assert 'localStorage.getItem(MT51_STORAGE_KEY)' in new
+              for script in re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',new,re.S):
+                  Path('/tmp/mt52.js').write_text(script)
+                  subprocess.run(['node','--check','/tmp/mt52.js'],check=True)
+              names=json.loads(new.split('const MT52_XIV_NAMES=')[1].split(';\n')[0])
+              assert len(names)==72 and names[70]=='REZERWACJA' and len(set(names))==72
+              assert not any(x.endswith('.') for x in names)
+          print('MT52_PRECHECK_ALL_PRIOR_RESULTS_IDENTICAL_AND_72_SOURCE_ROWS_VALID')
+          PY
+      - name: Install Chromium and Firefox
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt52-ui && cd /tmp/mt52-ui
+          npm init -y >/dev/null
+          npm install --silent playwright
+          npx playwright install --with-deps chromium firefox
+      - name: Real browser UI including import, exact order, reserve replacement, add, reload and no prior data regression
+        run: |
+          set -euo pipefail
+          cd /tmp/mt52-ui
+          node --input-type=module <<'JS'
+          import {chromium,firefox} from 'playwright';
+          import {readFile} from 'node:fs/promises';
+          const base='https://matchthis.lowcymethodowcy.smallhost.pl/';
+          const folder=process.env.GITHUB_WORKSPACE+'/matchthis/';
+          let ok=0;
+          for(const [browserName,engine] of [['Chromium',chromium],['Firefox',firefox]]){
+            const browser=await engine.launch({headless:true});
+            try{
+              for(const [role,suffix] of [['admin',''],['judge','_SEDZIA'],['viewer','_OGLADACZ']]){
+                const html=await readFile(folder+'MatchThis_MT-52'+suffix+'.html','utf8');
+                for(const width of [390,1366]){
+                  const ctx=await browser.newContext({viewport:{width,height:900}});
+                  const page=await ctx.newPage();page.setDefaultTimeout(15000);
+                  const errors=[];page.on('pageerror',e=>errors.push(e.message));
+                  await page.route(base+'panel.php',route=>route.fulfill({status:200,contentType:'text/html; charset=utf-8',body:html}));
+                  await page.goto(base+'panel.php',{waitUntil:'domcontentloaded',timeout:45000});
+                  if(await page.title()!=='MatchThis MT-52'||await page.locator('#appversion').innerText()!=='MT-52')throw Error('VERSION');
+                  const state=await page.evaluate(()=>{
+                    const e=db.events.filter(x=>mt52IsXiv(x));
+                    const p=e[0]?.entrantIds.map(id=>findPlayer(id));
+                    return {n:e.length,dates:e[0]?.rounds.map(t=>t.date),names:p?.map(fullName),reserveCount:p?.filter(x=>x?.isReservation).length,
+                      sourceImported:e[0]?.mt52RosterImported,otherEvents:db.events.filter(x=>x.id==='mt2025-float_king_2025').length,
+                      float:db.events.find(x=>x.id==='mt2025-float_king_2025').rounds[1].results.filter(r=>r.peg!=null).length,
+                      puchar:db.events.find(x=>x.id==='mt2025-matchthis_puchar_2025').rounds[1].results.filter(r=>r.peg!=null).length,
+                      playersPlaceholder:activePlayers().filter(x=>x.isReservation).length};
+                  });
+                  if(state.n!==1||JSON.stringify(state.dates)!==JSON.stringify(['2026-11-28','2026-11-29'])||state.names?.length!==72||
+                    state.names[0]!=='WOLAMIN ANDRZEJ'||state.names[70]!=='REZERWACJA'||state.names[71]!=='GODOS PAWEŁ'||
+                    state.names.some(x=>x.endsWith('.'))||state.reserveCount!==1||state.sourceImported!==true||
+                    state.otherEvents!==1||state.float!==70||state.puchar!==66||state.playersPlaceholder!==0)
+                    throw Error('IMPORT_'+JSON.stringify({...state,names:state.names?.slice(0,5)}));
+                  await page.locator('#nav [data-view="events"]').click();
+                  const opening=page.locator('[data-open="mt2026-xiv-puchar-matchthis-28-29-nov"]').first();
+                  if(await opening.count()!==1)throw Error('EVENT_MISSING_FROM_CURRENT_YEAR');
+                  await opening.click();
+                  if(role==='admin'){
+                    await page.locator('[data-result-mode="roster"]').first().click();
+                    const rows=page.locator('table tbody tr');
+                    if(await rows.count()!==72)throw Error('VISIBLE_72_'+await rows.count());
+                    if(!(await rows.nth(70).innerText()).includes('REZERWACJA'))throw Error('PLACEHOLDER_NOT_71');
+                    if(!(await rows.nth(71).innerText()).includes('GODOS PAWEŁ'))throw Error('GODOS_NOT_72');
+                    await page.locator('[data-replace-reservation]').click();
+                    const form=page.locator('#mt52ReplaceReservation');
+                    if(await form.count()!==1)throw Error('REPLACE_FORM_MISSING');
+                    await form.locator('[name="lastName"]').fill('TESTOWY');
+                    await form.locator('[name="firstName"]').fill('NOWY');
+                    await form.locator('button[type="submit"]').click();
+                    const replacement=await page.evaluate(()=>{
+                      const e=db.events.find(x=>mt52IsXiv(x));
+                      const p=e.entrantIds.map(findPlayer);
+                      return {length:p.length,pos:p[70]&&fullName(p[70]),reserved:p.filter(x=>x?.isReservation).length,
+                        base:activePlayers().some(x=>fullName(x)==='TESTOWY NOWY'),marker:e.mt52RosterImported};
+                    });
+                    if(replacement.length!==72||replacement.pos!=='TESTOWY NOWY'||replacement.reserved!==0||!replacement.base||!replacement.marker)
+                      throw Error('REPLACEMENT_'+JSON.stringify(replacement));
+                    await page.reload({waitUntil:'domcontentloaded'});
+                    const persisted=await page.evaluate(()=>db.events.find(x=>mt52IsXiv(x)).entrantIds.map(id=>fullName(findPlayer(id))));
+                    if(persisted.length!==72||persisted[70]!=='TESTOWY NOWY'||persisted.filter(x=>x==='REZERWACJA').length)throw Error('REPLACEMENT_LOST_OR_RECREATED');
+                    await page.locator('#nav [data-view="events"]').click();
+                    await page.locator('[data-open="mt2026-xiv-puchar-matchthis-28-29-nov"]').first().click();
+                    await page.locator('[data-result-mode="roster"]').first().click();
+                    await page.locator('[data-action="mt52AddReservation"]').click();
+                    const added=await page.evaluate(()=>{
+                      const e=db.events.find(x=>mt52IsXiv(x));const list=e.entrantIds.map(findPlayer);
+                      return {n:list.length,addedReservation:list[72].isReservation,global:filteredPlayers().filter(p=>p.isReservation).length};
+                    });
+                    if(added.n!==73||!added.addedReservation||added.global!==0)throw Error('ADD_RESERVATION_'+JSON.stringify(added));
+                    await page.reload({waitUntil:'domcontentloaded'});
+                    const kept=await page.evaluate(()=>db.events.find(x=>mt52IsXiv(x)).entrantIds.map(findPlayer).filter(p=>p.isReservation).length);
+                    if(kept!==1)throw Error('ADDED_RESERVATION_NOT_PERSISTED');
+                  }else{
+                    // Separate role HTML must never expose the replace/add action.
+                    if(await page.locator('[data-replace-reservation],[data-action="mt52AddReservation"]').count())
+                      throw Error('UNAUTHORIZED_RESERVATION_EDITOR_'+role);
+                  }
+                  if(width===390){
+                    const dim=await page.evaluate(()=>({viewport:innerWidth,doc:document.documentElement.scrollWidth}));
+                    if(dim.doc>dim.viewport+1)throw Error('HORIZONTAL_OVERFLOW_'+JSON.stringify(dim));
+                  }
+                  if(errors.length)throw Error('JS_ERRORS_'+errors.join('|'));
+                  await ctx.close();ok++;
+                  console.log('MT52_BROWSER_PASS',browserName,role,width,'XIV_72_SLOTS');
+                }
+              }
+            }finally{await browser.close()}
+          }
+          if(ok!==12)throw Error('EXPECTED_12_ACTUAL_'+ok);
+          console.log('MT52_BROWSER_CHROMIUM_FIREFOX_12_OF_12_PASS');
+          JS
