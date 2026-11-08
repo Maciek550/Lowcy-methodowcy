@@ -1,0 +1,100 @@
+name: MatchThis MT45 isolated release complete MEGA 2025
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt45-release.yml']
+permissions: {contents: read}
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deterministically build MT45 and verify unchanged source archives
+        run: |
+          set -euo pipefail
+          for v in 41 42 43 44 45; do python3 "matchthis/build-mt$v.py";done
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess,re
+          root=Path('matchthis')
+          for suffix in ('','_SEDZIA','_OGLADACZ'):
+              before=(root/f'MatchThis_MT-44{suffix}.html').read_text()
+              after=(root/f'MatchThis_MT-45{suffix}.html').read_text()
+              assert all(m in after for m in ('<title>MatchThis MT-45</title>','aria-label="Wersja MT-45">MT-45','data-version="MT-45"', "const APP_VERSION='MT-45'"))
+              for key in ('MATCHTHIS_ARCHIVE_2026','MATCHTHIS_STANDALONE_2026','MATCHTHIS_ARCHIVE_2025_MEGA_V','MATCHTHIS_ARCHIVE_2025_MAVER_OCT','MT44_MISSING_2025','MT44_MEGA_2025'):
+                  extract=lambda x:x.split('const '+key+'=')[1].split(';\n')[0]
+                  assert extract(before)==extract(after),(suffix,key)
+              for script in re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',after,re.S):
+                  Path('/tmp/mt45-syntax.js').write_text(script)
+                  subprocess.run(['node','--check','/tmp/mt45-syntax.js'],check=True)
+          print('MT45_SOURCE_AND_VERSION_VALIDATION_OK')
+          PY
+          bash -n matchthis/deploy-mt45-small2.sh
+          bash -n matchthis/rollback-mt45-small2.sh
+      - name: Publish strictly to isolated MatchThis with MT44 backups
+        id: deploy
+        run: bash matchthis/deploy-mt45-small2.sh
+      - name: Install real browsers
+        run: |
+          mkdir -p /tmp/mt45-live && cd /tmp/mt45-live
+          npm init -y >/dev/null
+          npm install --silent playwright
+          npx playwright install --with-deps chromium firefox
+      - name: Check actual production results in Chromium and Firefox mobile desktop
+        run: |
+          set -euo pipefail
+          cd /tmp/mt45-live
+          node --input-type=module <<'JS'
+          import {chromium,firefox} from 'playwright';
+          const base='https://matchthis.lowcymethodowcy.smallhost.pl/';
+          let checks=0;
+          for(const [engineName,engine] of [['Chromium',chromium],['Firefox',firefox]]){
+            const browser=await engine.launch({headless:true});
+            try{
+              for(const width of [390,1366]){
+                const ctx=await browser.newContext({viewport:{width,height:900}});
+                const page=await ctx.newPage();page.setDefaultTimeout(16000);
+                const errors=[];page.on('pageerror',e=>errors.push(e.message));
+                const response=await page.goto(base,{waitUntil:'domcontentloaded',timeout:45000});
+                if(response.status()!==200||await page.title()!=='MatchThis MT-45'||await page.locator('#appversion').innerText()!=='MT-45')throw Error('VERSION');
+                const s=await page.evaluate(()=>{
+                  const c=db.cycles.find(x=>x.id==='mt2025-mega-match-this-cup-cycle');
+                  const classification=core.cycleClassification(c);
+                  const ids=['mt2025-float_king_2025','mt2025-matchthis_puchar_2025','mt2025-champions_2025','mt2025-mega_final_2025'];
+                  return {mega:c.tours.map(t=>({count:t.results.length,pegs:t.results.filter(r=>r.peg!=null).length,date:t.date,status:t.status})),
+                    eligible:classification.complete,rows:classification.rows.length,best:c.countedTours,
+                    events:ids.map(id=>db.events.find(e=>e.id===id)?.rounds[0].results.length),
+                    maver:db.events.find(e=>e.id==='mt2025-maver-super-cup-oct')?.rounds[1].results.length,
+                    me2026:db.cycles.find(c=>c.id==='mt2026-mega-match-this-cup-cycle')?.tours.find(t=>t.date==='2026-05-23')?.results.filter(r=>!r.absent).length
+                  };
+                });
+                const sizes=[79,79,84,82,50,52],pegs=[78,78,84,82,50,52],dates=['2025-03-08','2025-03-09','2025-03-22','2025-03-23','2025-09-27','2025-09-28'];
+                if(s.mega?.length!==6||s.mega.some((t,i)=>t.count!==sizes[i]||t.pegs!==pegs[i]||t.date!==dates[i]||t.status!=='FINAL')||
+                   !s.eligible||s.best!==4||s.rows<79||JSON.stringify(s.events)!==JSON.stringify([71,77,60,54])||s.maver!==32||s.me2026!==28)
+                   throw Error('PRODUCTION_DATA_'+JSON.stringify(s));
+                await page.locator('#nav [data-view="archive"]').click();
+                const y=page.locator('details[data-year="2025"]');
+                if(await y.getAttribute('open')===null)await y.locator('summary').click();
+                const mega=page.locator('[data-open="mt2025-mega-match-this-cup-cycle"]');
+                if(await mega.count()!==1)throw Error('MISSING_CYCLE_IN_ARCHIVE');
+                await mega.click();await page.reload({waitUntil:'domcontentloaded'});
+                const remaining=await page.evaluate(()=>db.cycles.find(c=>c.id==='mt2025-mega-match-this-cup-cycle').tours.map(t=>t.results.length));
+                if(JSON.stringify(remaining)!==JSON.stringify(sizes))throw Error('RELOAD_LOST_DATA');
+                if(width===390){
+                  const dims=await page.evaluate(()=>({w:innerWidth,s:document.documentElement.scrollWidth}));
+                  if(dims.s>dims.w+1)throw Error('MOBILE_OVERFLOW_'+JSON.stringify(dims));
+                }
+                if(errors.length)throw Error('CONSOLE_'+errors.join(';'));
+                checks++;console.log('PASS_MT45_LIVE',engineName,width,'MEGA_79_79_84_82_50_52');
+                await ctx.close();
+              }
+            }finally{await browser.close()}
+          }
+          if(checks!==4)throw Error('INCOMPLETE_'+checks);
+          console.log('PASS_MT45_LIVE_CHROMIUM_FIREFOX_4_OF_4');
+          JS
+      - name: Roll back MT45 to MT44 if publication or production smoke fails
+        if: failure() && steps.deploy.outcome != 'skipped'
+        run: bash matchthis/rollback-mt45-small2.sh
