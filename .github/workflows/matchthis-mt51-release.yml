@@ -1,0 +1,132 @@
+name: MatchThis MT51 production independent dates for competition rounds
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt51-release.yml']
+permissions: {contents: read}
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rebuild exact MT50 baseline and MT51; verify all source data unchanged
+        run: |
+          set -euo pipefail
+          for v in 41 42 43 44 45 46 47 48 49 50 51; do python3 "matchthis/build-mt$v.py";done
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess,re
+          root=Path('matchthis')
+          keys=('MATCHTHIS_ARCHIVE_2026','MATCHTHIS_STANDALONE_2026','MATCHTHIS_ARCHIVE_2025_MEGA_V','MATCHTHIS_ARCHIVE_2025_MAVER_OCT','MT44_MISSING_2025','MT44_MEGA_2025','MT45_MEGA_2025_ROUNDS','MT46_PUCHAR_ROUND1_DRAW','MT47_PUCHAR_ROUND2_DRAW','MT48_FLOAT_ROUND2_DRAW')
+          for suffix in ('','_SEDZIA','_OGLADACZ'):
+              before=(root/f'MatchThis_MT-50{suffix}.html').read_text()
+              after=(root/f'MatchThis_MT-51{suffix}.html').read_text()
+              for marker in ('<title>MatchThis MT-51</title>','aria-label="Wersja MT-51">MT-51','data-version="MT-51"', "const APP_VERSION='MT-51'"):
+                  assert marker in after,(suffix,marker)
+              for key in keys:
+                  get=lambda html:html.split('const '+key+'=')[1].split(';\n')[0]
+                  assert get(before)==get(after),(suffix,key)
+              assert "['cycles','CYKLE']" not in after
+              assert 'mt49SiteYear()' in after
+              if suffix!='_OGLADACZ':assert "localStorage.getItem(MT48_STORAGE_KEY)" in after
+              assert "const STORAGE_KEY='matchthis-preview-MT-51'" in after
+              assert 'function mt51DateInput(i,item)' in after
+              assert 'function mt51SetDateCount(form)' in after
+              assert 'rounds.forEach((r,i)=>r.date=dates[i]);' in after
+              if suffix!='_OGLADACZ':
+                  assert 'function mt50ArchiveOldVersionsAndRecover()' in after
+                  assert "localStorage.getItem(MT50_STORAGE_KEY)" in after
+              else:
+                  assert 'function save(){/* publiczny widok oglądacza: nie wykonuje żadnego zapisu */}' in after
+              for script in re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',after,re.S):
+                  Path('/tmp/mt51-check.js').write_text(script)
+                  subprocess.run(['node','--check','/tmp/mt51-check.js'],check=True)
+          print('MT51_SOURCE_ARCHIVES_AUTH_VERSION_JS_PRECHECK_PASS')
+          PY
+          bash -n matchthis/deploy-mt51-small2.sh
+          bash -n matchthis/rollback-mt51-small2.sh
+      - name: Publish MT51 tour-date form only; preserve MT50 backup and authentication
+        id: deploy
+        run: bash matchthis/deploy-mt51-small2.sh
+      - name: Install real browsers
+        run: |
+          mkdir -p /tmp/mt51-live && cd /tmp/mt51-live
+          npm init -y >/dev/null
+          npm install --silent playwright
+          npx playwright install --with-deps chromium firefox
+      - name: Verify actual public nav, cycle, archives and year rollover on Chromium and Firefox
+        run: |
+          set -euo pipefail
+          cd /tmp/mt51-live
+          node --input-type=module <<'JS'
+          import {chromium,firefox} from 'playwright';
+          const base='https://matchthis.lowcymethodowcy.smallhost.pl/';
+          let passes=0;
+          for(const [engineName,engine] of [['Chromium',chromium],['Firefox',firefox]]){
+            const browser=await engine.launch({headless:true});
+            try{
+              for(const width of [390,1366]){
+                const ctx=await browser.newContext({viewport:{width,height:900}});
+                const page=await ctx.newPage();page.setDefaultTimeout(16000);
+                const errors=[];page.on('pageerror',e=>errors.push(e.message));
+                const response=await page.goto(base,{waitUntil:'domcontentloaded',timeout:45000});
+                if(response.status()!==200||await page.title()!=='MatchThis MT-51'||await page.locator('#appversion').innerText()!=='MT-51')
+                    throw Error('LIVE_VERSION');
+                const labels=await page.locator('#nav button').allTextContents();
+                if(labels.includes('CYKLE')||!labels.includes('ZAWODY 2026')||!labels.includes('ZAWODY DO 2025'))throw Error('LIVE_NAV_'+JSON.stringify(labels));
+                if(await page.locator('#main h1').first().innerText()!=='Planowane zawody')throw Error('LIVE_PLANNED_HOME');
+                if(await page.getByRole('heading',{name:'Ostatnio rozegrane zawody'}).count()!==1)throw Error('LIVE_RECENT_HOME');
+                await page.locator('#nav [data-view="events"]').click();
+                if(await page.locator('.mt49-two-columns > .mt49-column').count()!==2)throw Error('LIVE_TWO_COLUMNS');
+                if(await page.getByRole('heading',{name:'MEGA MATCH THIS CUP 2026'}).count()!==1)throw Error('LIVE_MEGA_LEFT');
+                if(await page.getByRole('heading',{name:'Pozostałe zawody 2026'}).count()!==1)throw Error('LIVE_OTHERS_RIGHT');
+                const items=page.locator('.mt49-column').first().locator('[data-open-round]');
+                if(await items.count()!==6)throw Error('LIVE_CYCLE_6_TOURS');
+                const order=await items.evaluateAll(a=>a.map(x=>Number(x.dataset.openRound)));
+                if(JSON.stringify(order)!==JSON.stringify([5,4,3,2,1,0]))throw Error('LIVE_CYCLE_ORDER_'+JSON.stringify(order));
+                if(await page.locator('.mt49-column').last().locator('[data-open]').count()!==2)throw Error('LIVE_OTHER_EVENTS_2026');
+                await items.first().click();
+                const round=await page.evaluate(()=>({page,roundIndex}));
+                if(round.page!=='cycle'||round.roundIndex!==5)throw Error('LIVE_OPEN_NEWEST_TOUR_'+JSON.stringify(round));
+                await page.locator('#nav [data-view="archive"]').click();
+                if(await page.locator('details[data-year="2025"]').count()!==1||await page.locator('details[data-year="2026"]').count()!==0)throw Error('LIVE_ARCHIVE_YEAR');
+                const state=await page.evaluate(()=>{
+                  const f=db.events.find(x=>x.id==='mt2025-float_king_2025'),p=db.events.find(x=>x.id==='mt2025-matchthis_puchar_2025'),c=db.cycles.find(x=>x.id==='mt2025-mega-match-this-cup-cycle');
+                  return {float:f.rounds[1].results.filter(r=>r.peg!=null).length,puchar:p.rounds[1].results.filter(r=>r.peg!=null).length,
+                    mega:c.tours.map(t=>t.results.length),
+                    rollover:[mt49SiteYear(new Date('2026-12-31T23:59:00+01:00')),mt49SiteYear(new Date('2027-01-01T00:01:00+01:00'))],
+                    after:mt49NavLabelsAt(2027)};
+                });
+                if(state.float!==70||state.puchar!==66||JSON.stringify(state.mega)!==JSON.stringify([79,79,84,82,50,52])||
+                    JSON.stringify(state.rollover)!==JSON.stringify([2026,2027])||state.after.archive!=='ZAWODY DO 2026')
+                    throw Error('LIVE_OLD_DATA_OR_ROLLOVER_'+JSON.stringify(state));
+                await page.reload({waitUntil:'domcontentloaded'});
+                if(await page.title()!=='MatchThis MT-51')throw Error('LIVE_RELOAD');
+                if(width===390){
+                  const size=await page.evaluate(()=>({window:innerWidth,content:document.documentElement.scrollWidth}));
+                  if(size.content>size.window+1)throw Error('LIVE_HORIZONTAL_OVERFLOW_'+JSON.stringify(size));
+                }
+                if(errors.length)throw Error('LIVE_SCRIPT_ERRORS_'+errors.join(';'));
+                await ctx.close();passes++;console.log('MT51_PUBLIC_LIVE_PASS',engineName,width,'2026_TWO_COL_ARCHIVE_2025_ROLLOVER');
+              }
+            }finally{await browser.close()}
+          }
+          if(passes!==4)throw Error('LIVE_INCOMPLETE_'+passes);
+          console.log('MT51_PRODUCTION_CHROMIUM_FIREFOX_4_OF_4_PASS');
+          JS
+      - name: Package downloadable verified MT51 HTML files
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: MatchThis_MT-51_HTML
+          path: |
+            matchthis/MatchThis_MT-51.html
+            matchthis/MatchThis_MT-51_OGLADACZ.html
+            matchthis/MatchThis_MT-51_SEDZIA.html
+          if-no-files-found: error
+          retention-days: 90
+      - name: Restore MT50 automatically if any live MT51 browser or access check fails
+        if: failure() && steps.deploy.outcome != 'skipped'
+        run: bash matchthis/rollback-mt51-small2.sh
