@@ -103,7 +103,7 @@ jobs:
                     });
                     await page.reload({waitUntil:'domcontentloaded'});
                     const restored=await check();
-                    if(restored.pegs.length!==70||restored.missing.length!==1)throw Error('MIGRATION_FAILED');
+                    if(restored.pegs.length!==70||restored.missing.length!==1)throw Error('MIGRATION_FAILED_'+JSON.stringify({pegs:restored.pegs.length,missing:restored.missing,first:restored.first,second:restored.second,keys:await page.evaluate(()=>Object.keys(localStorage))}));
                     const persisted=await page.evaluate(()=>{
                       const raw=JSON.parse(localStorage.getItem('matchthis-preview-MT-48'));
                       return raw.events.find(x=>x.id==='mt2025-float_king_2025').rounds[1].results.filter(r=>r.peg!=null).length;
