@@ -15,7 +15,7 @@ assert len(records)==32 and len(set(x['name'] for x in records))==32
 assert sorted(x['peg'] for x in records if x['peg'])==list(range(1,31))
 assert [sum(x['sector']==s for x in records) for s in 'ABC']==[10,10,10]
 assert [x['p1']+x['p2'] for x in records]==[3,5,6,6,6,7,7,7,7,8,8,9.5,11.5,12,12,12,13,13,14,14,14,15,15,15,16,16,17,18,19,20,34,34]
-assert [x['w1']+x['w2'] for x in records]==[20890,23210,23220,17950,14505,19610,18920,18470,18135,15150,15035,18100,12840,15255,14920,14920,13030,16075,13405,15130,13105,12180,14405,14010,9785,13130,11655,11705,9375,8390,6930,11530,10200][:32] if False else True
+assert [x['w1']+x['w2'] for x in records]==[20890,23210,23220,17950,14505,19610,18920,18470,18135,15150,15035,18100,12840,15255,14920,13030,16075,13405,15130,13105,12180,14405,14010,9785,13130,11655,11705,9375,8390,6930,11530,10200]
 assert sorted(records,key=lambda x:(x['p1']+x['p2'],-x['w1']-x['w2']))==records
 description='MAVER SUPER CUP 11–12.10.2025: tura 1 źródła 558908097, 558258285, 560636609, 559217588; końcowa tabela i tura 2 559138797. Nie podano stanowisk i sektorów tury 2.'
 players=[];first=[];second=[]
