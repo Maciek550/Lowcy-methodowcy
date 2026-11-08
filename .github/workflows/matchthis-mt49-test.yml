@@ -2,7 +2,7 @@ name: MatchThis MT49 pre-release new year navigation and two-column competitions
 on:
   push:
     branches: [matchthis-mt23-independent-small2-20261106]
-    paths: ['.github/workflows/matchthis-mt49-test.yml']
+    paths: ['.github/workflows/matchthis-mt49-test.yml', 'matchthis/build-mt49.py']
 permissions: {contents: read}
 jobs:
   test:
