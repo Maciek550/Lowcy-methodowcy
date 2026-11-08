@@ -1,0 +1,155 @@
+name: MatchThis MT53 verified STEFANIUK RAFAŁ at XIV Puchar slot 44
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt53-test.yml','matchthis/build-mt53.py']
+permissions: {contents: read}
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build original baseline and only corrected MT53, validate JS and unchanged scores
+        run: |
+          set -euo pipefail
+          for v in 41 42 43 44 45 46 47 48 49 50 51 52 53;do python3 "matchthis/build-mt$v.py";done
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,re,subprocess
+          root=Path('matchthis')
+          unchanged=('MATCHTHIS_ARCHIVE_2026','MATCHTHIS_STANDALONE_2026','MATCHTHIS_ARCHIVE_2025_MEGA_V','MATCHTHIS_ARCHIVE_2025_MAVER_OCT','MT44_MISSING_2025','MT44_MEGA_2025','MT45_MEGA_2025_ROUNDS','MT46_PUCHAR_ROUND1_DRAW','MT47_PUCHAR_ROUND2_DRAW','MT48_FLOAT_ROUND2_DRAW')
+          take=lambda html,key:html.split('const '+key+'=')[1].split(';\n')[0]
+          for suf in ('','_SEDZIA','_OGLADACZ'):
+              old=(root/f'MatchThis_MT-52{suf}.html').read_text('utf8')
+              new=(root/f'MatchThis_MT-53{suf}.html').read_text('utf8')
+              for key in unchanged:assert take(old,key)==take(new,key),(suf,key)
+              first=json.loads(take(old,'MT52_XIV_NAMES'))
+              last=json.loads(take(new,'MT52_XIV_NAMES'))
+              assert len(first)==len(last)==72
+              assert [(i+1,a,b) for i,(a,b) in enumerate(zip(first,last)) if a!=b]==[(44,'STEFANIU RAFAŁ','STEFANIUK RAFAŁ')]
+              for marker in ('<title>MatchThis MT-53</title>','aria-label="Wersja MT-53">MT-53','data-version="MT-53'", "const APP_VERSION='MT-53'"):
+                  assert marker in new,(suf,marker)
+              if suf!='_OGLADACZ':assert "localStorage.getItem(MT52_STORAGE_KEY)" in new
+              assert "mt53CorrectXivStefaniuk();" in new
+              for js in re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',new,re.S):
+                  Path('/tmp/mt53.js').write_text(js)
+                  subprocess.run(['node','--check','/tmp/mt53.js'],check=True)
+          print('MT53_SOURCE_DIFF_EXACTLY_ONE_CORRECTION_ALL_RESULTS_IDENTICAL')
+          PY
+      - name: Install Chromium and Firefox
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt53-browser && cd /tmp/mt53-browser
+          npm init -y >/dev/null
+          npm install --silent playwright
+          npx playwright install --with-deps chromium firefox
+      - name: Test real roster clicks, fresh corrected identity, MT52 saved data migration, reload and no duplicate
+        run: |
+          set -euo pipefail
+          cd /tmp/mt53-browser
+          node --input-type=module <<'JS'
+          import {chromium,firefox} from 'playwright';
+          import {readFile} from 'node:fs/promises';
+          const base='https://matchthis.lowcymethodowcy.smallhost.pl/';
+          const dir=process.env.GITHUB_WORKSPACE+'/matchthis/';
+          let checks=0;
+          for(const [engineName,engine] of [['Chromium',chromium],['Firefox',firefox]]){
+            const browser=await engine.launch({headless:true});
+            try{
+              for(const [role,suf] of [['admin',''],['judge','_SEDZIA'],['viewer','_OGLADACZ']]){
+                const html=await readFile(dir+'MatchThis_MT-53'+suf+'.html','utf8');
+                for(const width of [390,1366]){
+                  const context=await browser.newContext({viewport:{width,height:900}});
+                  const page=await context.newPage();page.setDefaultTimeout(18000);
+                  const errors=[];page.on('pageerror',e=>errors.push(e.message));
+                  await page.route(base+'panel.php',r=>r.fulfill({status:200,contentType:'text/html; charset=utf-8',body:html}));
+                  await page.goto(base+'panel.php',{waitUntil:'domcontentloaded'});
+                  if(await page.title()!=='MatchThis MT-53'||await page.locator('#appversion').innerText()!=='MT-53')throw Error('VERSION');
+                  const before=await page.evaluate(()=>{
+                    const e=db.events.find(mt52IsXiv);
+                    return {events:db.events.filter(mt52IsXiv).length,slots:e?.entrantIds.length,
+                      person44:fullName(findPlayer(e.entrantIds[43])),person44Id:e.entrantIds[43],
+                      all:e.entrantIds.map(id=>fullName(findPlayer(id))),
+                      stefaniu:db.players.filter(p=>fullName(p)==='STEFANIU RAFAŁ').length,
+                      canonical:db.players.filter(p=>p.id==='mt2026-person-stefaniuk-rafa').length,
+                      float:db.events.find(x=>x.id==='mt2025-float_king_2025').rounds[1].results.filter(r=>r.peg!=null).length,
+                      puchar:db.events.find(x=>x.id==='mt2025-matchthis_puchar_2025').rounds[1].results.filter(r=>r.peg!=null).length,
+                      dates:e?.rounds.map(t=>t.date),reservation:fullName(findPlayer(e.entrantIds[70]))};
+                  });
+                  if(before.events!==1||before.slots!==72||before.person44!=='STEFANIUK RAFAŁ'||
+                    before.person44Id!=='mt2026-person-stefaniuk-rafa'||before.stefaniu!==0||before.canonical!==1||
+                    before.float!==70||before.puchar!==66||before.all[0]!=='WOLAMIN ANDRZEJ'||
+                    before.all[71]!=='GODOS PAWEŁ'||before.reservation!=='REZERWACJA'||
+                    JSON.stringify(before.dates)!==JSON.stringify(['2026-11-28','2026-11-29']))
+                    throw Error('FRESH_DATA_'+JSON.stringify({...before,all:before.all.slice(40,46)}));
+                  await page.locator('#nav [data-view="events"]').click();
+                  if(await page.locator('.mt49-two-columns > .mt49-column').count()!==2)throw Error('TWO_COLS');
+                  await page.locator('[data-open="mt2026-xiv-puchar-matchthis-28-29-nov"]').first().click();
+                  if(role==='admin'){
+                    await page.locator('details.admin-tools-menu > summary').click();
+                    await page.locator('[data-result-mode="roster"]').first().click();
+                    const rows=page.locator('table tbody tr');
+                    if(await rows.count()!==72||!(await rows.nth(43).innerText()).includes('STEFANIUK RAFAŁ'))
+                      throw Error('VISIBLE_SLOT_44');
+                    if(await page.locator('[data-replace-reservation]').count()!==1)throw Error('REPLACE_BUTTON_MISSING');
+                  }else{
+                    if(await page.locator('[data-replace-reservation]').count()!==0)throw Error('UNAUTHORIZED_EDIT');
+                  }
+                  if(width===390){
+                    const dims=await page.evaluate(()=>({w:innerWidth,scroll:document.documentElement.scrollWidth}));
+                    if(dims.scroll>dims.w+1)throw Error('MOBILE_OVERFLOW_'+JSON.stringify(dims));
+                  }
+                  if(errors.length)throw Error('PAGEERRORS_'+errors.join(';'));
+                  await context.close();checks++;
+                  console.log('MT53_FRESH_PASS',engineName,role,width,'STEFANIUK_CANONICAL_SLOT_44');
+                }
+              }
+              const context=await browser.newContext();
+              const page=await context.newPage();
+              const base52=await readFile(dir+'MatchThis_MT-52.html','utf8');
+              const base53=await readFile(dir+'MatchThis_MT-53.html','utf8');
+              let content=base52;
+              await page.route(base+'panel.php',r=>r.fulfill({status:200,contentType:'text/html; charset=utf-8',body:content}));
+              await page.goto(base+'panel.php',{waitUntil:'domcontentloaded'});
+              const old=await page.evaluate(()=>{
+                const e=db.events.find(mt52IsXiv);
+                const id=e.entrantIds[43],names=e.entrantIds.map(x=>fullName(findPlayer(x)));
+                if(names[43]!=='STEFANIU RAFAŁ')throw Error('ORIGINAL_MISSPELLING_NOT_REPRODUCED');
+                const saved=save();
+                return {id,names,saved,otherID:db.players.find(p=>p.id==='mt2026-person-stefaniuk-rafa')?.id};
+              });
+              if(!old.saved)throw Error('MT52_SEED_NOT_PERSISTED');
+              content=base53;
+              await page.reload({waitUntil:'domcontentloaded'});
+              const migrated=await page.evaluate(()=>{
+                const e=db.events.find(mt52IsXiv);
+                return {events:db.events.filter(mt52IsXiv).length,
+                  correctedId:e.entrantIds[43],all:e.entrantIds.map(x=>fullName(findPlayer(x))),
+                  oldOrphan:db.players.some(p=>fullName(p)==='STEFANIU RAFAŁ'),
+                  marked:!!e.mt53Correction,saved:!!localStorage.getItem('matchthis-preview-MT-53')};
+              });
+              if(migrated.events!==1||migrated.correctedId!==old.otherID||
+                migrated.all.some((n,i)=>i!==43&&n!==old.names[i])||migrated.all[43]!=='STEFANIUK RAFAŁ'||
+                migrated.oldOrphan||!migrated.marked||!migrated.saved)
+                throw Error('MT52_TO_MT53_MIGRATION_'+JSON.stringify({...migrated,all:migrated.all.slice(40,46)}));
+              await page.reload({waitUntil:'domcontentloaded'});
+              const stable=await page.evaluate(()=>({name:fullName(findPlayer(db.events.find(mt52IsXiv).entrantIds[43])),count:db.events.filter(mt52IsXiv).length,old:db.players.some(p=>fullName(p)==='STEFANIU RAFAŁ')}));
+              if(stable.name!=='STEFANIUK RAFAŁ'||stable.count!==1||stable.old)throw Error('MIGRATION_NOT_PERSISTENT');
+              // Explicit protect manually edited position 44 in an older saved event:
+              // the correction should not roll back a user's replacement.
+              await page.evaluate(()=>{
+                const e=db.events.find(mt52IsXiv),p=db.players.find(x=>fullName(x)==='MIROWSKI MIROSŁAW');
+                if(!p)throw Error('CUSTOM_PERSON_UNAVAILABLE');
+                e.entrantIds[43]=p.id;
+                save();
+              });
+              await page.reload({waitUntil:'domcontentloaded'});
+              const customized=await page.evaluate(()=>fullName(findPlayer(db.events.find(mt52IsXiv).entrantIds[43])));
+              if(customized!=='MIROWSKI MIROSŁAW')throw Error('MANUAL_CHANGE_OVERWRITTEN');
+              await context.close();checks++;
+              console.log('MT53_MT52_SAVED_UPGRADE_PASS',engineName,'ONE_PERSON_RECORD_AND_NO_OVERWRITE');
+            }finally{await browser.close()}
+          }
+          if(checks!==14)throw Error('EXPECTED_14_GOT_'+checks);
+          console.log('MT53_CHROMIUM_FIREFOX_14_OF_14_PASS');
+          JS
