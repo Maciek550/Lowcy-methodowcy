@@ -27,7 +27,7 @@ jobs:
               last=json.loads(take(new,'MT52_XIV_NAMES'))
               assert len(first)==len(last)==72
               assert [(i+1,a,b) for i,(a,b) in enumerate(zip(first,last)) if a!=b]==[(44,'STEFANIU RAFAŁ','STEFANIUK RAFAŁ')]
-              for marker in ('<title>MatchThis MT-53</title>','aria-label="Wersja MT-53">MT-53','data-version="MT-53'", "const APP_VERSION='MT-53'"):
+              for marker in ('<title>MatchThis MT-53</title>','aria-label="Wersja MT-53">MT-53','data-version="MT-53"', "const APP_VERSION='MT-53'"):
                   assert marker in new,(suf,marker)
               if suf!='_OGLADACZ':assert "localStorage.getItem(MT52_STORAGE_KEY)" in new
               assert "mt53CorrectXivStefaniuk();" in new
