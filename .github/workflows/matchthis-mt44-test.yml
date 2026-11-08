@@ -1,0 +1,117 @@
+name: MatchThis MT44 source results and browser regression
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt44-test.yml']
+permissions: {contents: read}
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rebuild MT44 strictly from MT43 and validate all source snapshots
+        run: |
+          set -euo pipefail
+          python3 matchthis/build-mt41.py
+          python3 matchthis/build-mt42.py
+          python3 matchthis/build-mt43.py
+          python3 matchthis/build-mt44.py
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess,re,json
+          root=Path('matchthis')
+          for suf in ('','_SEDZIA','_OGLADACZ'):
+              a=(root/f'MatchThis_MT-43{suf}.html').read_text()
+              b=(root/f'MatchThis_MT-44{suf}.html').read_text()
+              assert all(v in b for v in ['<title>MatchThis MT-44</title>','aria-label="Wersja MT-44">MT-44','data-version="MT-44"', "const APP_VERSION='MT-44'"])
+              for key in ('MATCHTHIS_ARCHIVE_2026','MATCHTHIS_STANDALONE_2026','MATCHTHIS_ARCHIVE_2025_MEGA_V','MATCHTHIS_ARCHIVE_2025_MAVER_OCT'):
+                  data=lambda h:h.split('const '+key+'=')[1].split(';\n')[0]
+                  assert data(a)==data(b),(suf,key)
+              for script in re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',b,re.S):
+                  Path('/tmp/mt44-check.js').write_text(script)
+                  subprocess.run(['node','--check','/tmp/mt44-check.js'],check=True)
+              if suf!='_OGLADACZ':assert "localStorage.getItem(MT43_STORAGE_KEY)" in b
+          print('MT44_SOURCE_PRESERVATION_VERSION_SYNTAX_3_OF_3_PASS')
+          PY
+      - name: Install real Chromium and Firefox browsers
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt44-browser && cd /tmp/mt44-browser
+          npm init -y >/dev/null
+          npm install --silent playwright
+          npx playwright install --with-deps chromium firefox
+      - name: Validate four added events and full loaded MEGA V VI in three roles and two widths
+        run: |
+          set -euo pipefail
+          cd /tmp/mt44-browser
+          node --input-type=module <<'JS'
+          import {chromium,firefox} from 'playwright';
+          import {readFile} from 'node:fs/promises';
+          const base='https://matchthis.lowcymethodowcy.smallhost.pl/';
+          const root=process.env.GITHUB_WORKSPACE+'/matchthis/';
+          let checks=0;
+          const expected=[
+            ['mt2025-float_king_2025',71,'KUCHCIAK KONRAD',2,29050],
+            ['mt2025-matchthis_puchar_2025',77,'BOLEK KAMIL',2,475],
+            ['mt2025-champions_2025',60,'KULKA ARTUR',2,11630],
+            ['mt2025-mega_final_2025',54,'SOBUSIAK KAMIL',3,34355]
+          ];
+          for(const [engineName,engine] of [['Chromium',chromium],['Firefox',firefox]]){
+            const browser=await engine.launch({headless:true});
+            try{
+              for(const [role,suffix] of [['admin',''],['judge','_SEDZIA'],['viewer','_OGLADACZ']]){
+                const html=await readFile(root+'MatchThis_MT-44'+suffix+'.html','utf8');
+                for(const width of [390,1366]){
+                  const context=await browser.newContext({viewport:{width,height:900}});
+                  const page=await context.newPage();page.setDefaultTimeout(15000);
+                  const errs=[];page.on('pageerror',e=>errs.push(e.message));
+                  await page.route(base+'panel.php',r=>r.fulfill({status:200,contentType:'text/html; charset=utf-8',body:html}));
+                  await page.goto(base+'panel.php',{waitUntil:'domcontentloaded',timeout:45000});
+                  if(await page.title()!=='MatchThis MT-44'||await page.locator('#appversion').innerText()!=='MT-44')throw Error('VERSION');
+                  const state=await page.evaluate(()=>{
+                    const ids=['mt2025-float_king_2025','mt2025-matchthis_puchar_2025','mt2025-champions_2025','mt2025-mega_final_2025'];
+                    const rows=ids.map(id=>{
+                      const ev=db.events.find(x=>x.id===id);
+                      if(!ev)return {missing:id};
+                      const c=core.eventClassification(ev);
+                      const top=c.rows[0];
+                      return [id,ev.rounds[0].results.length,ev.rounds[1].results.length,c.rows.length,top?.competitorName,top?.points,top?.weightG];
+                    });
+                    const mega=db.cycles.find(x=>x.id==='mt2025-mega-match-this-cup-cycle');
+                    const mav=db.events.find(x=>x.id==='mt2025-maver-super-cup-oct');
+                    return {rows,mega:mega?.tours.map(t=>t.results.length),maver:mav?.rounds[1].results.length,
+                      pegFloat:db.events.find(x=>x.id==='mt2025-float_king_2025')?.rounds[0].results.filter(r=>r.peg!=null&&r.sector!=null).length,
+                      noFakePegs:db.events.find(x=>x.id==='mt2025-matchthis_puchar_2025')?.rounds.every(t=>t.results.every(r=>r.peg==null&&r.sector==null)),
+                      megaOld:mega?.tours.slice(0,4).every(t=>t.results.length===0)
+                    };
+                  });
+                  for(let i=0;i<expected.length;i++){
+                    const [id,n,top,pts,weight]=expected[i], r=state.rows[i];
+                    if(JSON.stringify(r)!==JSON.stringify([id,n,n,n,top,pts,weight]))throw Error('EVENT_'+JSON.stringify(r));
+                  }
+                  if(JSON.stringify(state.mega)!==JSON.stringify([0,0,0,0,50,52])||state.maver!==32||state.pegFloat!==71||!state.noFakePegs||!state.megaOld)
+                    throw Error('CYCLE_REGRESSION_'+JSON.stringify(state));
+                  await page.locator('#nav [data-view="archive"]').click();
+                  const year=page.locator('details[data-year="2025"]');
+                  if(await year.getAttribute('open')===null)await year.locator('summary').click();
+                  const target=page.locator('[data-open="mt2025-float_king_2025"]');
+                  if(await target.count()!==1)throw Error('FLOAT_MISSING_ARCHIVE');
+                  await target.click();
+                  await page.locator('[data-result-mode="round"]').first().click();
+                  if(await page.locator('table.round-result tbody tr').count()!==71)throw Error('ROUND_VISIBLE_71');
+                  await page.reload({waitUntil:'domcontentloaded'});
+                  if(await page.evaluate(()=>db.events.filter(e=>e.id==='mt2025-float_king_2025').length)!==1)throw Error('RELOAD_DUPLICATES');
+                  if(width===390){
+                    const d=await page.evaluate(()=>({w:innerWidth,scroll:document.documentElement.scrollWidth}));
+                    if(d.scroll>d.w+1)throw Error('HORIZONTAL_OVERFLOW_'+JSON.stringify(d));
+                  }
+                  if(errs.length)throw Error('PAGE_ERRORS_'+errs.join('|'));
+                  await context.close();checks++;
+                  console.log('PASS_MT44_BROWSER',engineName,role,width,'4_EVENTS_262_ENTRIES_MEGA_V50_VI52');
+                }
+              }
+            }finally{await browser.close()}
+          }
+          if(checks!==12)throw Error('INCOMPLETE_BROWSER_'+checks);
+          console.log('MT44_PRE_RELEASE_CHROMIUM_FIREFOX_12_OF_12_PASS');
+          JS
