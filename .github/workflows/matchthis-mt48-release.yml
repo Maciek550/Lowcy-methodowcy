@@ -1,0 +1,157 @@
+name: MatchThis MT48 production FLOAT KING 2025 II round 70 station assignments
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt48-release.yml']
+permissions: {contents: read}
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deterministically build MT48 and verify unchanged source archives
+        run: |
+          set -euo pipefail
+          for v in 41 42 43 44 45 46 47 48; do python3 "matchthis/build-mt$v.py";done
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess,re
+          root=Path('matchthis')
+          for suffix in ('','_SEDZIA','_OGLADACZ'):
+              before=(root/f'MatchThis_MT-47{suffix}.html').read_text()
+              after=(root/f'MatchThis_MT-48{suffix}.html').read_text()
+              assert all(m in after for m in ('<title>MatchThis MT-48</title>','aria-label="Wersja MT-48">MT-48','data-version="MT-48"', "const APP_VERSION='MT-48'"))
+              for key in ('MATCHTHIS_ARCHIVE_2026','MATCHTHIS_STANDALONE_2026','MATCHTHIS_ARCHIVE_2025_MEGA_V','MATCHTHIS_ARCHIVE_2025_MAVER_OCT','MT44_MEGA_2025','MT45_MEGA_2025_ROUNDS','MT46_PUCHAR_ROUND1_DRAW','MT47_PUCHAR_ROUND2_DRAW'):
+                  extract=lambda x:x.split('const '+key+'=')[1].split(';\n')[0]
+                  assert extract(before)==extract(after),(suffix,key)
+              import json
+              parse=lambda html:json.loads(html.split('const MT44_MISSING_2025=')[1].split(';\n')[0])['data']['events']
+              prev=parse(before);nextv=parse(after)
+              assert len(prev)==len(nextv)==4
+              for p,n in zip(prev,nextv):
+                  assert p['id']==n['id']
+                  if p['id']!='mt2025-float_king_2025':
+                      assert p==n,(suffix,p['id'])
+                  else:
+                      assert p['rounds'][0]==n['rounds'][0]
+                      original=p['rounds'][1]['results']; updated=n['rounds'][1]['results']
+                      assert len(original)==len(updated)==71
+                      for x,y in zip(original,updated):
+                          assert {k:v for k,v in x.items() if k not in ('peg','sector','sectorSource')}=={k:v for k,v in y.items() if k not in ('peg','sector','sectorSource')},(suffix,x['competitorName'])
+                      assert sorted(r['peg'] for r in updated if r['peg'] is not None)==list(range(1,71))
+                      assert [sum(r['sector']==sec for r in updated) for sec in 'ABCDEF']==[12,12,12,12,11,11]
+                      missing=[r for r in updated if r['peg'] is None and r['sector'] is None]
+                      assert len(missing)==1 and missing[0]['competitorName']=='JAROS ARTUR' and missing[0]['weightG']==0 and missing[0]['officialPlace']==13
+              for script in re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',after,re.S):
+                  Path('/tmp/mt48-syntax.js').write_text(script)
+                  subprocess.run(['node','--check','/tmp/mt48-syntax.js'],check=True)
+          print('MT48_SOURCE_AND_VERSION_VALIDATION_OK')
+          PY
+          bash -n matchthis/deploy-mt48-small2.sh
+          bash -n matchthis/rollback-mt48-small2.sh
+      - name: Publish strictly to isolated MatchThis with MT47 backups
+        id: deploy
+        run: bash matchthis/deploy-mt48-small2.sh
+      - name: Install real browsers
+        run: |
+          mkdir -p /tmp/mt48-live && cd /tmp/mt48-live
+          npm init -y >/dev/null
+          npm install --silent playwright
+          npx playwright install --with-deps chromium firefox
+      - name: Check actual production results in Chromium and Firefox mobile desktop
+        run: |
+          set -euo pipefail
+          cd /tmp/mt48-live
+          node --input-type=module <<'JS'
+          import {chromium,firefox} from 'playwright';
+          const base='https://matchthis.lowcymethodowcy.smallhost.pl/';
+          let checks=0;
+          for(const [engineName,engine] of [['Chromium',chromium],['Firefox',firefox]]){
+            const browser=await engine.launch({headless:true});
+            try{
+              for(const width of [390,1366]){
+                const ctx=await browser.newContext({viewport:{width,height:900}});
+                const page=await ctx.newPage();page.setDefaultTimeout(16000);
+                const errors=[];page.on('pageerror',e=>errors.push(e.message));
+                const response=await page.goto(base,{waitUntil:'domcontentloaded',timeout:45000});
+                if(response.status()!==200||await page.title()!=='MatchThis MT-48'||await page.locator('#appversion').innerText()!=='MT-48')throw Error('VERSION');
+                const s=await page.evaluate(()=>{
+                  const c=db.cycles.find(x=>x.id==='mt2025-mega-match-this-cup-cycle');
+                  const classification=core.cycleClassification(c);
+                  const ids=['mt2025-float_king_2025','mt2025-matchthis_puchar_2025','mt2025-champions_2025','mt2025-mega_final_2025'];
+                  const puchar=db.events.find(e=>e.id==='mt2025-matchthis_puchar_2025');
+                  const first=puchar?.rounds[0].results,second=puchar?.rounds[1].results;
+                  const floatRound=db.events.find(e=>e.id==='mt2025-float_king_2025')?.rounds[1].results;
+                  return {mega:c.tours.map(t=>({count:t.results.length,pegs:t.results.filter(r=>r.peg!=null).length,date:t.date,status:t.status})),
+                    eligible:classification.complete,rows:classification.rows.length,best:c.countedTours,
+                    events:ids.map(id=>db.events.find(e=>e.id===id)?.rounds[0].results.length),
+                    maver:db.events.find(e=>e.id==='mt2025-maver-super-cup-oct')?.rounds[1].results.length,
+                    me2026:db.cycles.find(c=>c.id==='mt2026-mega-match-this-cup-cycle')?.tours.find(t=>t.date==='2026-05-23')?.results.filter(r=>!r.absent).length,
+                    firstPegs:first?.map(r=>r.peg).sort((a,b)=>a-b),
+                    firstSectorCounts:'ABCDEFG'.split('').map(sec=>first?.filter(r=>r.sector===sec).length),
+                    secondUnknown:second?.filter(r=>r.peg==null&&r.sector==null).length,
+                    secondAbsent:second?.filter(r=>r.absent&&r.peg==null&&r.sector==null&&r.weightG===0&&r.officialPlace===100).length,
+                    secondPegs:second?.filter(r=>r.peg!=null).map(r=>r.peg).sort((a,b)=>a-b),
+                    secondSectors:'ABCDEF'.split('').map(sec=>second?.filter(r=>r.sector===sec).length),
+                    floatPegs:floatRound?.filter(r=>r.peg!=null).map(r=>r.peg).sort((a,b)=>a-b),
+                    floatSectors:'ABCDEF'.split('').map(sec=>floatRound?.filter(r=>r.sector===sec).length),
+                    floatUnassigned:floatRound?.filter(r=>r.peg==null&&r.sector==null).map(r=>[r.competitorName,r.weightG,r.officialPlace])
+                  };
+                });
+                const sizes=[79,79,84,82,50,52],pegs=[78,78,84,82,50,52],dates=['2025-03-08','2025-03-09','2025-03-22','2025-03-23','2025-09-27','2025-09-28'];
+                if(s.mega?.length!==6||s.mega.some((t,i)=>t.count!==sizes[i]||t.pegs!==pegs[i]||t.date!==dates[i]||t.status!=='FINAL')||
+                   !s.eligible||s.best!==4||s.rows<79||JSON.stringify(s.events)!==JSON.stringify([71,77,60,54])||s.maver!==32||s.me2026!==28||
+                   s.firstPegs?.length!==77||s.firstPegs.some((p,i)=>p!==i+1)||
+                   JSON.stringify(s.firstSectorCounts)!==JSON.stringify([11,11,11,11,11,11,11])||
+                   s.secondUnknown!==11||s.secondAbsent!==11||s.secondPegs?.length!==66||
+                   s.secondPegs.some((p,i)=>p!==i+1)||
+                   JSON.stringify(s.secondSectors)!==JSON.stringify([11,11,11,11,11,11])||
+                   s.floatPegs?.length!==70||s.floatPegs.some((p,i)=>p!==i+1)||
+                   JSON.stringify(s.floatSectors)!==JSON.stringify([12,12,12,12,11,11])||
+                   JSON.stringify(s.floatUnassigned)!==JSON.stringify([['JAROS ARTUR',0,13]]))
+                   throw Error('PRODUCTION_DATA_'+JSON.stringify(s));
+                await page.locator('#nav [data-view="archive"]').click();
+                const y=page.locator('details[data-year="2025"]');
+                if(await y.getAttribute('open')===null)await y.locator('summary').click();
+                const float=page.locator('[data-open="mt2025-float_king_2025"]');
+                if(await float.count()!==1)throw Error('FLOAT_MISSING_ARCHIVE');
+                await float.click();
+                await page.locator('[data-result-mode="round"]').first().click();
+                if(await page.locator('table.round-result tbody tr').count()!==71)throw Error('LIVE_FLOAT_ROWS');
+                await page.locator('#nav [data-view="archive"]').click();
+                const puchar=page.locator('[data-open="mt2025-matchthis_puchar_2025"]');
+                if(await puchar.count()!==1)throw Error('MISSING_PUCHAR_IN_ARCHIVE');
+                await puchar.click();
+                await page.locator('[data-result-mode="round"]').first().click();
+                if(await page.locator('table.round-result tbody tr').count()!==77)throw Error('VISIBLE_PUCHAR_77');
+                await page.reload({waitUntil:'domcontentloaded'});
+                const remaining=await page.evaluate(()=>{
+                  const p=db.events.find(e=>e.id==='mt2025-matchthis_puchar_2025');
+                  return {mega:db.cycles.find(c=>c.id==='mt2025-mega-match-this-cup-cycle').tours.map(t=>t.results.length),
+                    pucharPegs:p.rounds[0].results.filter(r=>r.peg!=null&&r.sector!=null).length,
+                    pucharSecond:p.rounds[1].results.filter(r=>r.peg!=null&&r.sector!=null).length,
+                    pucharAbsent:p.rounds[1].results.filter(r=>r.absent&&r.peg==null&&r.sector==null).length,
+                    duplicates:db.events.filter(e=>e.id===p.id).length,
+                    floatPegs:db.events.find(e=>e.id==='mt2025-float_king_2025').rounds[1].results.filter(r=>r.peg!=null).length,
+                    floatCount:db.events.filter(e=>e.id==='mt2025-float_king_2025').length}
+                });
+                if(JSON.stringify(remaining.mega)!==JSON.stringify(sizes)||remaining.pucharPegs!==77||remaining.pucharSecond!==66||remaining.pucharAbsent!==11||remaining.duplicates!==1||remaining.floatPegs!==70||remaining.floatCount!==1)
+                   throw Error('RELOAD_LOST_DATA_'+JSON.stringify(remaining));
+                if(width===390){
+                  const dims=await page.evaluate(()=>({w:innerWidth,s:document.documentElement.scrollWidth}));
+                  if(dims.s>dims.w+1)throw Error('MOBILE_OVERFLOW_'+JSON.stringify(dims));
+                }
+                if(errors.length)throw Error('CONSOLE_'+errors.join(';'));
+                checks++;console.log('PASS_MT48_LIVE',engineName,width,'FLOAT_KING_11_11_70_PEGS_1_UNASSIGNED');
+                await ctx.close();
+              }
+            }finally{await browser.close()}
+          }
+          if(checks!==4)throw Error('INCOMPLETE_'+checks);
+          console.log('PASS_MT48_LIVE_CHROMIUM_FIREFOX_4_OF_4');
+          JS
+      - name: Roll back MT48 to MT47 if publication or production smoke fails
+        if: failure() && steps.deploy.outcome != 'skipped'
+        run: bash matchthis/rollback-mt48-small2.sh
