@@ -1,0 +1,118 @@
+name: MatchThis MT49 pre-release new year navigation and two-column competitions
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt49-test.yml']
+permissions: {contents: read}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rebuild exact MT48 baseline and MT49 from source and prove no data changes
+        run: |
+          set -euo pipefail
+          for v in 41 42 43 44 45 46 47 48 49; do python3 "matchthis/build-mt$v.py"; done
+          python3 - <<'PY'
+          from pathlib import Path
+          import re,subprocess
+          root=Path('matchthis')
+          keys=('MATCHTHIS_ARCHIVE_2026','MATCHTHIS_STANDALONE_2026','MATCHTHIS_ARCHIVE_2025_MEGA_V','MATCHTHIS_ARCHIVE_2025_MAVER_OCT','MT44_MISSING_2025','MT44_MEGA_2025','MT45_MEGA_2025_ROUNDS','MT46_PUCHAR_ROUND1_DRAW','MT47_PUCHAR_ROUND2_DRAW','MT48_FLOAT_ROUND2_DRAW')
+          for suffix in ('','_SEDZIA','_OGLADACZ'):
+              old=(root/f'MatchThis_MT-48{suffix}.html').read_text()
+              new=(root/f'MatchThis_MT-49{suffix}.html').read_text()
+              for key in keys:
+                  get=lambda html:html.split('const '+key+'=')[1].split(';\n')[0]
+                  assert get(old)==get(new),(suffix,key)
+              for marker in ('<title>MatchThis MT-49</title>','aria-label="Wersja MT-49">MT-49','data-version="MT-49"', "const APP_VERSION='MT-49'"):
+                  assert marker in new,(suffix,marker)
+              assert "['cycles','CYKLE']" not in new
+              assert "data-open-round=" in new
+              assert "mt49SiteYear()" in new
+              if suffix!='_OGLADACZ':
+                  assert "localStorage.getItem(MT48_STORAGE_KEY)" in new
+              for script in re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',new,re.S):
+                  Path('/tmp/mt49-check.js').write_text(script)
+                  subprocess.run(['node','--check','/tmp/mt49-check.js'],check=True)
+          print('MT49_ALL_10_SOURCE_ARCHIVES_IDENTICAL_3_VERSIONS_JS_SYNTAX_OK')
+          PY
+      - name: Install Chromium and Firefox
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt49-browser && cd /tmp/mt49-browser
+          npm init -y >/dev/null
+          npm install --silent playwright
+          npx playwright install --with-deps chromium firefox
+      - name: Real UI clicks, rollover labels, archive isolation, mobile and storage regression
+        run: |
+          set -euo pipefail
+          cd /tmp/mt49-browser
+          node --input-type=module <<'JS'
+          import {chromium,firefox} from 'playwright';
+          import {readFile} from 'node:fs/promises';
+          const origin='https://matchthis.lowcymethodowcy.smallhost.pl/';
+          const folder=process.env.GITHUB_WORKSPACE+'/matchthis/';
+          let checks=0;
+          for(const [browserName,engine] of [['Chromium',chromium],['Firefox',firefox]]){
+            const browser=await engine.launch({headless:true});
+            try{
+              for(const [role,suffix] of [['admin',''],['judge','_SEDZIA'],['viewer','_OGLADACZ']]){
+                const html=await readFile(folder+'MatchThis_MT-49'+suffix+'.html','utf8');
+                for(const width of [390,1366]){
+                  const ctx=await browser.newContext({viewport:{width,height:900}});
+                  const page=await ctx.newPage();page.setDefaultTimeout(15000);
+                  const errors=[];page.on('pageerror',e=>errors.push(e.message));
+                  await page.route(origin+'panel.php',route=>route.fulfill({status:200,contentType:'text/html; charset=utf-8',body:html}));
+                  await page.goto(origin+'panel.php',{waitUntil:'domcontentloaded',timeout:45000});
+                  if(await page.title()!=='MatchThis MT-49'||await page.locator('#appversion').innerText()!=='MT-49')throw Error('VERSION');
+                  const labels=await page.locator('#nav button').allTextContents();
+                  if(labels.includes('CYKLE')||labels.includes('ZAWODY')||!labels.includes('ZAWODY 2026')||!labels.includes('ZAWODY DO 2025'))throw Error('NAV_'+JSON.stringify(labels));
+                  if(await page.locator('#main h1').first().innerText()!=='Planowane zawody')throw Error('HOME_PLANNED_NOT_FIRST');
+                  if(await page.getByRole('heading',{name:'Ostatnio rozegrane zawody'}).count()!==1)throw Error('HOME_RECENT_MISSING');
+                  const year=await page.evaluate(()=>({before:mt49SiteYear(new Date('2026-12-31T23:59:00+01:00')),after:mt49SiteYear(new Date('2027-01-01T00:01:00+01:00')),labels:mt49NavLabelsAt(2027),today:mt49TodayIso(new Date('2027-01-01T00:01:00+01:00'))}));
+                  if(year.before!==2026||year.after!==2027||year.labels.events!=='ZAWODY 2027'||year.labels.archive!=='ZAWODY DO 2026'||year.today!=='2027-01-01')throw Error('NEW_YEAR_'+JSON.stringify(year));
+                  await page.locator('#nav [data-view="events"]').click();
+                  if(await page.locator('.mt49-two-columns > .mt49-column').count()!==2)throw Error('NOT_TWO_COLUMNS');
+                  if(await page.getByRole('heading',{name:'MEGA MATCH THIS CUP 2026'}).count()!==1)throw Error('MEGA_LEFT');
+                  if(await page.getByRole('heading',{name:'Pozostałe zawody 2026'}).count()!==1)throw Error('OTHERS_RIGHT');
+                  const tours=page.locator('.mt49-column').first().locator('[data-open-round]');
+                  if(await tours.count()!==6)throw Error('MEGA_6_TOURS_'+await tours.count());
+                  const order=await tours.evaluateAll(nodes=>nodes.map(n=>Number(n.dataset.openRound)));
+                  if(JSON.stringify(order)!==JSON.stringify([5,4,3,2,1,0]))throw Error('ORDER_'+JSON.stringify(order));
+                  if(await page.locator('.mt49-column').last().locator('[data-open]').count()!==2)throw Error('OTHERS_CURRENT_YEAR_ONLY');
+                  const megaId=await tours.first().getAttribute('data-open');
+                  await tours.first().click();
+                  const detail=await page.evaluate(()=>({page,selectedId,roundIndex}));
+                  if(detail.page!=='cycle'||detail.selectedId!==megaId||detail.roundIndex!==5)throw Error('DIRECT_LAST_TOUR_'+JSON.stringify(detail));
+                  await page.locator('#nav [data-view="archive"]').click();
+                  if(await page.locator('details[data-year="2025"]').count()!==1||await page.locator('details[data-year="2026"]').count()!==0)throw Error('ARCHIVE_SHOWS_CURRENT_YEAR');
+                  if(await page.locator('details[data-year="2025"] [data-open]').count()<5)throw Error('ARCHIVE_2025_MISSING');
+                  if(role==='admin'&&width===1366){
+                    await page.locator('#nav [data-view="home"]').click();
+                    await page.evaluate(()=>{
+                      db.events.push({id:'mt49-regression-planned',name:'TEST ZAPLANOWANYCH ZAWODÓW',kind:'EVENT',year:2026,date:'2026-12-15',archived:false,entrantIds:[],rounds:[{id:'mt49-test-round',name:'I tura',date:'2026-12-15',status:'DRAFT',results:[]}]});
+                      save();render();
+                    });
+                    if(await page.locator('#main [data-open="mt49-regression-planned"]').count()!==1)throw Error('PLANNED_CREATED_NOT_VISIBLE');
+                    await page.reload({waitUntil:'domcontentloaded'});
+                    if(await page.locator('#main [data-open="mt49-regression-planned"]').count()!==1)throw Error('PLANNED_NOT_PERSISTED');
+                    await page.evaluate(()=>{db.events=db.events.filter(e=>e.id!=='mt49-regression-planned');save();render();});
+                    await page.reload({waitUntil:'domcontentloaded'});
+                    if(await page.locator('#main [data-open="mt49-regression-planned"]').count())throw Error('REGRESSION_TEST_DATA_NOT_CLEANED');
+                    const existing=await page.evaluate(()=>({float:db.events.find(e=>e.id==='mt2025-float_king_2025').rounds[1].results.filter(r=>r.peg!=null).length,puchar:db.events.find(e=>e.id==='mt2025-matchthis_puchar_2025').rounds[1].results.filter(r=>r.peg!=null).length}));
+                    if(existing.float!==70||existing.puchar!==66)throw Error('OLD_RESULTS_REGRESSION_'+JSON.stringify(existing));
+                  }
+                  if(width===390){
+                    const dims=await page.evaluate(()=>({screen:innerWidth,doc:document.documentElement.scrollWidth}));
+                    if(dims.doc>dims.screen+1)throw Error('HORIZONTAL_OVERFLOW_'+JSON.stringify(dims));
+                  }
+                  if(errors.length)throw Error('JS_ERRORS_'+errors.join(';'));
+                  await ctx.close();checks++;
+                  console.log('MT49_BROWSER_PASS',browserName,role,width,'CURRENT_YEAR_2COL_PLANNED_RECENT_ARCHIVE');
+                }
+              }
+            }finally{await browser.close()}
+          }
+          if(checks!==12)throw Error('EXPECTED_12_GOT_'+checks);
+          console.log('MT49_CHROMIUM_FIREFOX_12_OF_12_PASS');
+          JS
