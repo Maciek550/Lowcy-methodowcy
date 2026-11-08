@@ -175,11 +175,11 @@ for suffix in ('','_OGLADACZ','_SEDZIA'):
  start='roundIndex=partialHistoricCycle(current())?firstPopulatedHistoricRound(current()):0;'
  assert s.count(start)==1,(suffix,'data-open handler')
  s=s.replace(start,'roundIndex=b.dataset.openRound!==undefined?Math.max(0,Math.min(getRounds(current()).length-1,Number(b.dataset.openRound)||0)):(partialHistoricCycle(current())?firstPopulatedHistoricRound(current()):0);')
- start='mtNavInit(); render(); </script>'
+ start='mtNavInit();\nrender();\n'
  assert s.count(start)==1,(suffix,'startup')
  s=s.replace(start,
-   "let mt49LastCalendarYear=mt49SiteYear();"
-   "setInterval(()=>{const now=mt49SiteYear();if(now!==mt49LastCalendarYear){mt49LastCalendarYear=now;if(['home','events','archive'].includes(page))render();else renderNav();}},60000); "
+   "let mt49LastCalendarYear=mt49SiteYear();\n"
+   "setInterval(()=>{const now=mt49SiteYear();if(now!==mt49LastCalendarYear){mt49LastCalendarYear=now;if(['home','events','archive'].includes(page))render();else renderNav();}},60000);\n"
    +start)
  for check in ['<title>MatchThis MT-49</title>','aria-label="Wersja MT-49">MT-49','data-version="MT-49"', "const APP_VERSION='MT-49'"]:
   assert check in s,(suffix,check)
