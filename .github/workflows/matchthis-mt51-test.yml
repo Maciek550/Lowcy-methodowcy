@@ -1,0 +1,135 @@
+name: MatchThis MT51 per-tour dates and real form regression
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt51-test.yml','matchthis/build-mt51.py']
+permissions: {contents: read}
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rebuild all releases and confirm only new-event form code changed
+        run: |
+          set -euo pipefail
+          for v in 41 42 43 44 45 46 47 48 49 50 51; do python3 "matchthis/build-mt$v.py"; done
+          python3 - <<'PY'
+          from pathlib import Path
+          import re,subprocess
+          root=Path('matchthis')
+          keys=('MATCHTHIS_ARCHIVE_2026','MATCHTHIS_STANDALONE_2026','MATCHTHIS_ARCHIVE_2025_MEGA_V','MATCHTHIS_ARCHIVE_2025_MAVER_OCT','MT44_MISSING_2025','MT44_MEGA_2025','MT45_MEGA_2025_ROUNDS','MT46_PUCHAR_ROUND1_DRAW','MT47_PUCHAR_ROUND2_DRAW','MT48_FLOAT_ROUND2_DRAW')
+          for suf in ('','_SEDZIA','_OGLADACZ'):
+              a=(root/f'MatchThis_MT-50{suf}.html').read_text()
+              b=(root/f'MatchThis_MT-51{suf}.html').read_text()
+              for key in keys:
+                  v=lambda s:s.split('const '+key+'=')[1].split(';\n')[0]
+                  assert v(a)==v(b),(suf,key)
+              for version in ('<title>MatchThis MT-51</title>','aria-label="Wersja MT-51">MT-51','data-version="MT-51"', "const APP_VERSION='MT-51'"):
+                  assert version in b,(suf,version)
+              assert "function mt51SetDateCount(form)" in b
+              assert "const event={id:uid(),name,year,date:dates[0]||'',kind,archived:false,rounds};" in b
+              if suf!='_OGLADACZ':assert "localStorage.getItem(MT50_STORAGE_KEY)" in b
+              for script in re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',b,re.S):
+                  Path('/tmp/mt51-check.js').write_text(script)
+                  subprocess.run(['node','--check','/tmp/mt51-check.js'],check=True)
+          print('PASS_MT51_SOURCE_IMMUTABILITY_AND_VERSION')
+          PY
+      - name: Install Chromium and Firefox
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt51 && cd /tmp/mt51
+          npm init -y >/dev/null
+          npm install --silent playwright
+          npx playwright install --with-deps chromium firefox
+      - name: Real clicks, auto next day, independent date, persistence and all roles
+        run: |
+          set -euo pipefail
+          cd /tmp/mt51
+          node --input-type=module <<'JS'
+          import {chromium,firefox} from 'playwright';
+          import {readFile} from 'node:fs/promises';
+          const base='https://matchthis.lowcymethodowcy.smallhost.pl/';
+          const root=process.env.GITHUB_WORKSPACE+'/matchthis/';
+          let passed=0;
+          for(const [engineName,engine] of [['Chromium',chromium],['Firefox',firefox]]){
+            const browser=await engine.launch({headless:true});
+            try{
+              for(const [role,suffix] of [['admin',''],['judge','_SEDZIA'],['viewer','_OGLADACZ']]){
+                const html=await readFile(root+'MatchThis_MT-51'+suffix+'.html','utf8');
+                for(const width of [390,1366]){
+                  const ctx=await browser.newContext({viewport:{width,height:900}});
+                  const page=await ctx.newPage();page.setDefaultTimeout(16000);
+                  const errors=[];page.on('pageerror',e=>errors.push(e.message));
+                  await page.route(base+'panel.php',r=>r.fulfill({status:200,contentType:'text/html; charset=utf-8',body:html}));
+                  await page.goto(base+'panel.php',{waitUntil:'domcontentloaded',timeout:45000});
+                  if(await page.title()!=='MatchThis MT-51'||await page.locator('#appversion').innerText()!=='MT-51')throw Error('VERSION_'+role);
+                  await page.locator('#nav [data-view="events"]').click();
+                  if(role==='viewer'){
+                    if(await page.locator('[data-view="newEvent"]').count())throw Error('VIEWER_CREATION_EXPOSED');
+                    if(errors.length)throw Error('VIEWER_JS_ERRORS_'+errors.join('|'));
+                    await ctx.close();passed++;console.log('PASS_MT51_VIEWER',engineName,width);continue;
+                  }
+                  await page.locator('[data-view="newEvent"]').first().click();
+                  const form=page.locator('form#createEvent');
+                  if(await form.count()!==1||await form.locator('[data-event-tour-date]').count()!==1)throw Error('ONE_TOUR_DATE_MISSING');
+                  await form.locator('[name="name"]').fill('XIV PUCHAR MatchThis 28-29.11.2026');
+                  await form.locator('[name="year"]').fill('2026');
+                  await form.locator('[name="rounds"]').fill('2');
+                  if(await form.locator('[data-event-tour-date]').count()!==2)throw Error('TWO_DATES_NOT_VISIBLE');
+                  await form.locator('[data-event-tour-date="0"]').fill('2026-11-28');
+                  const auto=await form.locator('[data-event-tour-date="1"]').inputValue();
+                  if(auto!=='2026-11-29')throw Error('AUTO_NEXT_DAY_'+auto);
+                  const days=await form.locator('.mt51-weekday').allTextContents();
+                  if(JSON.stringify(days)!==JSON.stringify(['sobota','niedziela']))throw Error('WRONG_WEEKDAYS_'+JSON.stringify(days));
+                  await form.locator('[data-event-tour-date="1"]').fill('2026-12-06');
+                  await form.locator('[data-event-tour-date="0"]').fill('2026-12-05');
+                  if(await form.locator('[data-event-tour-date="1"]').inputValue()!=='2026-12-06')throw Error('MANUAL_SECOND_DATE_OVERWRITTEN');
+                  await form.locator('[data-event-tour-date="0"]').fill('2026-11-28');
+                  await form.locator('[data-event-tour-date="1"]').fill('2026-11-29');
+                  await form.locator('button[type="submit"]').click();
+                  const created=await page.evaluate(()=>{
+                    const e=db.events.find(e=>e.name==='XIV PUCHAR MatchThis 28-29.11.2026');
+                    return {event:!!e,year:e?.year,date:e?.date,rounds:e?.rounds.map(t=>[t.name,t.date,t.status]),
+                      saved:!!localStorage.getItem(STORAGE_KEY),label:e?entityDateLabel(e):null,
+                      prev2025:db.events.find(e=>e.id==='mt2025-float_king_2025')?.rounds[1].results.filter(r=>r.peg!=null).length};
+                  });
+                  if(!created.event||created.year!==2026||created.date!=='2026-11-28'||created.saved||false){
+                    // Explicit check below; this guard intentionally allows nonpersistent
+                    // fallback only when quota cannot be triggered in this clean context.
+                    if(!created.event||created.year!==2026||created.date!=='2026-11-28')throw Error('CREATED_'+JSON.stringify(created));
+                  }
+                  if(JSON.stringify(created.rounds)!==JSON.stringify([['Tura 1','2026-11-28','DRAFT'],['Tura 2','2026-11-29','DRAFT']])||
+                    !created.saved||!created.label.includes('28.11.2026')||!created.label.includes('29.11.2026')||created.prev2025!==70)
+                    throw Error('DATES_OR_REGRESSION_'+JSON.stringify(created));
+                  await page.reload({waitUntil:'domcontentloaded'});
+                  const reloaded=await page.evaluate(()=>{
+                    const e=db.events.find(e=>e.name==='XIV PUCHAR MatchThis 28-29.11.2026');
+                    return e?.rounds.map(r=>r.date);
+                  });
+                  if(JSON.stringify(reloaded)!==JSON.stringify(['2026-11-28','2026-11-29']))throw Error('DATES_LOST_AFTER_RELOAD');
+                  await page.locator('#nav [data-view="events"]').click();
+                  await page.locator('[data-view="newEvent"]').first().click();
+                  const single=page.locator('form#createEvent');
+                  if(await single.locator('[data-event-tour-date]').count()!==1)throw Error('SINGLE_TOUR_REGRESSION');
+                  await single.locator('[name="name"]').fill('Test jednej tury');
+                  await single.locator('[name="year"]').fill('2026');
+                  await single.locator('[data-event-tour-date="0"]').fill('2026-12-12');
+                  await single.locator('button[type="submit"]').click();
+                  const one=await page.evaluate(()=>{
+                    const e=db.events.find(e=>e.name==='Test jednej tury');
+                    return e?.rounds.map(x=>x.date);
+                  });
+                  if(JSON.stringify(one)!==JSON.stringify(['2026-12-12']))throw Error('SINGLE_TOUR_DATE_NOT_SAVED');
+                  if(width===390){
+                    const dim=await page.evaluate(()=>({w:innerWidth,scroll:document.documentElement.scrollWidth}));
+                    if(dim.scroll>dim.w+1)throw Error('HORIZONTAL_OVERFLOW_'+JSON.stringify(dim));
+                  }
+                  if(errors.length)throw Error('JS_ERRORS_'+errors.join('|'));
+                  await ctx.close();passed++;console.log('PASS_MT51_BROWSER',engineName,role,width);
+                }
+              }
+            }finally{await browser.close()}
+          }
+          if(passed!==12)throw Error('SCENARIOS_INCOMPLETE_'+passed);
+          console.log('MT51_CHROMIUM_FIREFOX_12_OF_12_PASS');
+          JS
