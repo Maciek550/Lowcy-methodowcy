@@ -1,0 +1,98 @@
+name: MatchThis MT45 pre-release complete MEGA 2025 six rounds
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt45-test.yml']
+permissions: {contents: read}
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build all versions and verify source integrity
+        run: |
+          set -euo pipefail
+          for v in 41 42 43 44 45; do python3 "matchthis/build-mt$v.py"; done
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess,re
+          root=Path('matchthis')
+          for suffix in ('','_OGLADACZ','_SEDZIA'):
+              old=(root/f'MatchThis_MT-44{suffix}.html').read_text()
+              new=(root/f'MatchThis_MT-45{suffix}.html').read_text()
+              for marker in ('<title>MatchThis MT-45</title>','aria-label="Wersja MT-45">MT-45','data-version="MT-45"', "const APP_VERSION='MT-45'"):
+                  assert marker in new,(suffix,marker)
+              for key in ('MATCHTHIS_ARCHIVE_2026','MATCHTHIS_STANDALONE_2026','MATCHTHIS_ARCHIVE_2025_MEGA_V','MATCHTHIS_ARCHIVE_2025_MAVER_OCT','MT44_MISSING_2025','MT44_MEGA_2025'):
+                  raw=lambda s:s.split('const '+key+'=')[1].split(';\n')[0]
+                  assert raw(old)==raw(new),(suffix,key)
+              for script in re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',new,re.S):
+                  Path('/tmp/mt45.js').write_text(script)
+                  subprocess.run(['node','--check','/tmp/mt45.js'],check=True)
+          print('MT45_OLD_SOURCES_IMMUTABLE_AND_VERSION_PASS')
+          PY
+      - name: Install Chromium Firefox
+        run: |
+          mkdir -p /tmp/mt45-browser && cd /tmp/mt45-browser
+          npm init -y >/dev/null
+          npm install --silent playwright
+          npx playwright install --with-deps chromium firefox
+      - name: Verify all six rounds, four best-of-six classification, archive, role isolation and reload
+        run: |
+          set -euo pipefail
+          cd /tmp/mt45-browser
+          node --input-type=module <<'JS'
+          import {chromium,firefox} from 'playwright';
+          import {readFile} from 'node:fs/promises';
+          const origin='https://matchthis.lowcymethodowcy.smallhost.pl/';
+          const folder=process.env.GITHUB_WORKSPACE+'/matchthis/';
+          let checks=0;
+          for(const [name,engine] of [['Chromium',chromium],['Firefox',firefox]]){
+            const browser=await engine.launch({headless:true});
+            try{
+              for(const [role,suffix] of [['admin',''],['judge','_SEDZIA'],['viewer','_OGLADACZ']]){
+                const html=await readFile(folder+'MatchThis_MT-45'+suffix+'.html','utf8');
+                for(const width of [390,1366]){
+                  const ctx=await browser.newContext({viewport:{width,height:900}});
+                  const page=await ctx.newPage();page.setDefaultTimeout(16000);
+                  const errors=[];page.on('pageerror',e=>errors.push(e.message));
+                  await page.route(origin+'panel.php',r=>r.fulfill({status:200,contentType:'text/html; charset=utf-8',body:html}));
+                  await page.goto(origin+'panel.php',{waitUntil:'domcontentloaded',timeout:45000});
+                  if(await page.title()!=='MatchThis MT-45'||await page.locator('#appversion').innerText()!=='MT-45')throw Error('VERSION');
+                  const data=await page.evaluate(()=>{
+                    const c=db.cycles.find(x=>x.id==='mt2025-mega-match-this-cup-cycle');
+                    const x=core.cycleClassification(c);
+                    const summary=c.tours.map(t=>({date:t.date,count:t.results.length,pegs:new Set(t.results.filter(r=>r.peg!=null).map(r=>r.peg)).size,final:t.status==='FINAL'}));
+                    const other=db.events.find(e=>e.id==='mt2025-float_king_2025');
+                    const apr=db.events.find(e=>e.id==='mt2025-maver-super-cup-apr');
+                    return {summary,complete:x.complete,rows:x.rows.length,top:x.rows.slice(0,1).map(r=>r.competitorName),
+                     fourBest:c.countedTours===4,other:other.rounds[0].results.length,
+                     april:apr.rounds[0].results.find(r=>r.peg===14&&r.weightG===2975)?.officialPlace,
+                     noDup:c.tours.every(t=>new Set(t.results.map(r=>r.competitorId)).size===t.results.length),
+                     source2026:db.cycles.find(c=>c.id==='mt2026-mega-match-this-cup-cycle')?.tours.find(t=>t.date==='2026-05-23')?.results.filter(r=>!r.absent).length};
+                  });
+                  const counts=[79,79,84,82,50,52], pegs=[78,78,84,82,50,52];
+                  if(!data.complete||data.fourBest!==true||!data.noDup||data.other!==71||data.april!==5||data.source2026!==28)throw Error('REGRESSION '+JSON.stringify(data));
+                  if(data.summary.length!==6||data.summary.some((s,i)=>s.count!==counts[i]||s.pegs!==pegs[i]||!s.final))throw Error('WRONG_ROUNDS '+JSON.stringify(data.summary));
+                  if(data.rows<79)throw Error('LOST_CYCLE_PEOPLE '+data.rows);
+                  await page.locator('#nav [data-view="archive"]').click();
+                  const y=page.locator('details[data-year="2025"]');
+                  if(await y.getAttribute('open')===null)await y.locator('summary').click();
+                  if(await page.locator('[data-open="mt2025-mega-match-this-cup-cycle"]').count()!==1)throw Error('MEGA_CYCLE_NOT_IN_ARCHIVE');
+                  await page.locator('[data-open="mt2025-mega-match-this-cup-cycle"]').click();
+                  await page.reload({waitUntil:'domcontentloaded'});
+                  const x=await page.evaluate(()=>db.cycles.find(c=>c.id==='mt2025-mega-match-this-cup-cycle').tours.map(t=>t.results.length));
+                  if(JSON.stringify(x)!==JSON.stringify(counts))throw Error('STORAGE_RELOAD '+JSON.stringify(x));
+                  if(width===390){
+                    const dim=await page.evaluate(()=>({w:innerWidth,s:document.documentElement.scrollWidth}));
+                    if(dim.s>dim.w+1)throw Error('PAGE_OVERFLOW '+JSON.stringify(dim));
+                  }
+                  if(errors.length)throw Error('PAGE_JS_ERRORS '+errors.join('|'));
+                  console.log('PASS_MT45_BROWSER',name,role,width,'MEGA_79_79_84_82_50_52');
+                  await ctx.close();checks++;
+                }
+              }
+            }finally{await browser.close()}
+          }
+          if(checks!==12)throw Error('MISSING '+checks);
+          console.log('MT45_PRE_RELEASE_CHROMIUM_FIREFOX_12_OF_12_PASS');
+          JS
