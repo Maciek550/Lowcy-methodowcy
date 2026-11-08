@@ -1,0 +1,135 @@
+name: MatchThis MT47 XIII Puchar 23 Nov 2025 II round 66 peg/11 absent regression
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt47-test.yml']
+permissions: {contents: read}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rebuild MT47, compare with MT46 and validate JavaScript and version
+        run: |
+          set -euo pipefail
+          for v in 41 42 43 44 45 46 47;do python3 "matchthis/build-mt$v.py";done
+          python3 - <<'PY'
+          from pathlib import Path
+          import re,json,subprocess
+          root=Path('matchthis')
+          for suffix in ('','_SEDZIA','_OGLADACZ'):
+              a=(root/f'MatchThis_MT-46{suffix}.html').read_text()
+              b=(root/f'MatchThis_MT-47{suffix}.html').read_text()
+              for key in ('MATCHTHIS_ARCHIVE_2026','MATCHTHIS_STANDALONE_2026','MATCHTHIS_ARCHIVE_2025_MEGA_V','MATCHTHIS_ARCHIVE_2025_MAVER_OCT','MT45_MEGA_2025_ROUNDS','MT44_MEGA_2025'):
+                  extract=lambda h:h.split('const '+key+'=')[1].split(';\n')[0]
+                  assert extract(a)==extract(b),(suffix,key)
+              for marker in ('<title>MatchThis MT-47</title>','aria-label="Wersja MT-47">MT-47','data-version="MT-47"', "const APP_VERSION='MT-47'"):
+                  assert marker in b,(suffix,marker)
+              x=lambda h:json.loads(h.split('const MT44_MISSING_2025=')[1].split(';\n')[0])
+              prev=x(a)['data']['events'];nxt=x(b)['data']['events']
+              assert len(prev)==len(nxt)==4
+              for p,n in zip(prev,nxt):
+                  assert p['id']==n['id']
+                  if p['id']!='mt2025-matchthis_puchar_2025':
+                      assert p==n,(suffix,p['id'])
+                      continue
+                  assert p['rounds'][0]==n['rounds'][0],(suffix,'round 1 untouched')
+                  orig=p['rounds'][1]['results'];out=n['rounds'][1]['results']
+                  assert len(orig)==len(out)==77
+                  for x,y in zip(orig,out):
+                      assert x['peg'] is None and x['sector'] is None
+                      assert {k:v for k,v in x.items() if k not in ('peg','sector','sectorSource')}=={k:v for k,v in y.items() if k not in ('peg','sector','sectorSource')},(suffix,x['competitorName'])
+                  assert sorted(r['peg'] for r in out if r['peg'] is not None)==list(range(1,67))
+                  assert [sum(r['sector']==s for r in out) for s in 'ABCDEF']==[11]*6
+                  assert len([r for r in out if r['peg'] is None and r['sector'] is None and r.get('absent') and r['weightG']==0 and r['officialPlace']==100])==11
+              for script in re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',b,re.S):
+                  Path('/tmp/mt47.js').write_text(script)
+                  subprocess.run(['node','--check','/tmp/mt47.js'],check=True)
+          print('PASS_MT47_ONLY_ROUND2_66_PEGS_CHANGED_AND_OLD_ARCHIVES_INTACT')
+          PY
+      - name: Install Chromium and Firefox
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt47-browser && cd /tmp/mt47-browser
+          npm init -y >/dev/null
+          npm install --silent playwright
+          npx playwright install --with-deps chromium firefox
+      - name: Verify actual clicks, sectors, storage migration, responsive UI and console
+        run: |
+          set -euo pipefail
+          cd /tmp/mt47-browser
+          node --input-type=module <<'JS'
+          import {chromium,firefox} from 'playwright';
+          import {readFile} from 'node:fs/promises';
+          const origin='https://matchthis.lowcymethodowcy.smallhost.pl/';
+          const root=process.env.GITHUB_WORKSPACE+'/matchthis/';
+          let pass=0;
+          for(const [browserName,engine] of [['Chromium',chromium],['Firefox',firefox]]){
+            const browser=await engine.launch({headless:true});
+            try{
+              for(const [role,suffix] of [['admin',''],['judge','_SEDZIA'],['viewer','_OGLADACZ']]){
+                const html=await readFile(root+'MatchThis_MT-47'+suffix+'.html','utf8');
+                for(const width of [390,1366]){
+                  const ctx=await browser.newContext({viewport:{width,height:900}});
+                  const page=await ctx.newPage();page.setDefaultTimeout(15000);
+                  const errors=[];page.on('pageerror',e=>errors.push(e.message));
+                  await page.route(origin+'panel.php',r=>r.fulfill({status:200,contentType:'text/html; charset=utf-8',body:html}));
+                  await page.goto(origin+'panel.php',{waitUntil:'domcontentloaded',timeout:45000});
+                  if(await page.title()!=='MatchThis MT-47'||await page.locator('#appversion').innerText()!=='MT-47')throw Error('VERSION_'+role);
+                  const d=await page.evaluate(()=>{
+                    const e=db.events.find(x=>x.id==='mt2025-matchthis_puchar_2025');
+                    const r1=e?.rounds[0],r2=e?.rounds[1];
+                    const positions=r1?.results.map(r=>r.peg).sort((a,b)=>a-b);
+                    const sectors='ABCDEFG'.split('').map(s=>r1?.results.filter(r=>r.sector===s).length);
+                    return {r1:r1?.results.length,r2:r2?.results.length,pegs:positions,sectorCounts:sectors,
+                      r2Unknown:r2?.results.filter(r=>r.peg==null&&r.sector==null).length,
+                      r2Absent:r2?.results.filter(r=>r.absent===true&&r.peg==null&&r.sector==null&&r.weightG===0&&r.officialPlace===100).length,
+                      r2Pegs:r2?.results.filter(r=>r.peg!=null).map(r=>r.peg).sort((a,b)=>a-b),
+                      r2Sectors:'ABCDEF'.split('').map(s=>r2?.results.filter(r=>r.sector===s).length),
+                      r1Total:r1?.results.reduce((s,r)=>s+r.weightG,0),
+                      mega:db.cycles.find(c=>c.id==='mt2025-mega-match-this-cup-cycle')?.tours.map(t=>t.results.length),
+                      mav:db.events.find(x=>x.id==='mt2025-maver-super-cup-oct')?.rounds[1].results.length
+                    }
+                  });
+                  if(d.r1!==77||d.r2!==77||d.r2Unknown!==11||d.r2Absent!==11||d.r2Pegs?.length!==66||d.r2Pegs.some((p,i)=>p!==i+1)||JSON.stringify(d.r2Sectors)!==JSON.stringify([11,11,11,11,11,11])||JSON.stringify(d.sectorCounts)!==JSON.stringify([11,11,11,11,11,11,11])||d.pegs?.some((p,i)=>p!==i+1)||JSON.stringify(d.mega)!==JSON.stringify([79,79,84,82,50,52])||d.mav!==32)
+                    throw Error('DATA_'+JSON.stringify(d));
+                  if(role!=='viewer'&&width===1366){
+                    await page.evaluate(()=>{
+                      const snapshot=JSON.parse(JSON.stringify(db));
+                      const e=snapshot.events.find(x=>x.id==='mt2025-matchthis_puchar_2025');
+                      for(const r of e.rounds[1].results){r.peg=null;r.sector=null;}
+                      localStorage.setItem('matchthis-preview-MT-46',JSON.stringify(snapshot));
+                      localStorage.removeItem('matchthis-preview-MT-47');
+                    });
+                    await page.reload({waitUntil:'domcontentloaded'});
+                    const fixed=await page.evaluate(()=>{
+                      const e=db.events.find(x=>x.id==='mt2025-matchthis_puchar_2025');
+                      const stored=JSON.parse(localStorage.getItem('matchthis-preview-MT-47'));
+                      return [e.rounds[1].results.filter(r=>r.peg!=null&&r.sector!=null).length,
+                        stored.events.find(x=>x.id===e.id).rounds[1].results.filter(r=>r.peg!=null&&r.sector!=null).length,
+                        e.rounds[1].results.filter(r=>r.absent).length]
+                    });
+                    if(JSON.stringify(fixed)!==JSON.stringify([66,66,11]))throw Error('PERSISTENCE_'+JSON.stringify(fixed));
+                  }
+                  await page.locator('#nav [data-view="archive"]').click();
+                  const y=page.locator('details[data-year="2025"]');
+                  if(await y.getAttribute('open')===null)await y.locator('summary').click();
+                  await page.locator('[data-open="mt2025-matchthis_puchar_2025"]').click();
+                  await page.locator('[data-result-mode="round"]').first().click();
+                  if(await page.locator('table.round-result tbody tr').count()!==77)throw Error('VISIBLE_77_ROWS');
+                  await page.reload({waitUntil:'domcontentloaded'});
+                  if(await page.evaluate(()=>db.events.filter(e=>e.id==='mt2025-matchthis_puchar_2025').length)!==1)throw Error('RELOAD_DUPLICATE');
+                  if(width===390){
+                    const dims=await page.evaluate(()=>({screen:innerWidth,doc:document.documentElement.scrollWidth}));
+                    if(dims.doc>dims.screen+1)throw Error('HORIZONTAL_OVERFLOW_'+JSON.stringify(dims));
+                  }
+                  if(errors.length)throw Error('JS_ERRORS_'+errors.join(';'));
+                  await ctx.close();pass++;
+                  console.log('PASS_MT47_BROWSER',browserName,role,width,'ROUND2_66_PEGS_11_ABSENT');
+                }
+              }
+            }finally{await browser.close()}
+          }
+          if(pass!==12)throw Error('INCOMPLETE_'+pass);
+          console.log('PASS_MT47_CHROMIUM_FIREFOX_12_OF_12');
+          JS
