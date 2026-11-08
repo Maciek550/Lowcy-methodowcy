@@ -137,6 +137,53 @@ jobs:
               }
             }finally{await browser.close()}
           }
+
+          // Regression: user had already created the competition in MT51 in a
+          // browser; upgrading MT52 must enrich it, not duplicate or erase it.
+          {
+            const browser=await chromium.launch({headless:true});
+            try{
+              const ctx=await browser.newContext({viewport:{width:1366,height:900}});
+              const page=await ctx.newPage();
+              const mt51=await readFile(folder+'MatchThis_MT-51.html','utf8');
+              const mt52=await readFile(folder+'MatchThis_MT-52.html','utf8');
+              await page.route(base+'panel.php',route=>route.fulfill({status:200,contentType:'text/html; charset=utf-8',body:mt51}));
+              await page.goto(base+'panel.php',{waitUntil:'domcontentloaded'});
+              const prior=await page.evaluate(()=>{
+                const first=db.players.find(p=>!p.isReservation&&fullName(p)==='WOLAMIN ANDRZEJ');
+                const outsider=db.players.find(p=>!p.isReservation&&fullName(p)==='MIROWSKI MIROSŁAW');
+                if(!first||!outsider)throw Error('SEED_PLAYERS_MISSING');
+                db.events.push({
+                  id:'my-user-created-xiv',name:'XIV PUCHAR SKLEPU MatchThis.pl 28-29.11.2026r – Kanał Żerański ALEKSANDRÓW',
+                  year:2026,kind:'EVENT',date:'2026-11-28',archived:false,
+                  entrantIds:[first.id,outsider.id],rounds:[
+                    {id:'custom-r1',name:'Tura 1',date:'2026-11-28',status:'DRAFT',results:[]},
+                    {id:'custom-r2',name:'Tura 2',date:'2026-11-29',status:'DRAFT',results:[]}
+                  ]});
+                save();return {current:db.events.filter(e=>mt49EntityDates(e).includes('2026-11-28')).length,storage:!!localStorage.getItem(STORAGE_KEY)};
+              });
+              if(!prior.storage)throw Error('LEGACY_EVENT_NOT_SAVED');
+              await page.route(base+'panel.php',route=>route.fulfill({status:200,contentType:'text/html; charset=utf-8',body:mt52}));
+              await page.reload({waitUntil:'domcontentloaded'});
+              const newer=await page.evaluate(()=>{
+                const matches=db.events.filter(mt52IsXiv);
+                const e=matches[0],persons=(e?.entrantIds||[]).map(findPlayer);
+                return {count:matches.length,id:e?.id,dates:e?.rounds.map(t=>t.date),
+                  length:persons.length,originalFirst:persons[0]&&fullName(persons[0]),
+                  reserved:persons[70]&&fullName(persons[70]),
+                  extra:persons[72]&&fullName(persons[72]),marked:e?.mt52RosterImported};
+              });
+              if(newer.count!==1||newer.id!=='my-user-created-xiv'||newer.length!==73||
+                newer.originalFirst!=='WOLAMIN ANDRZEJ'||newer.reserved!=='REZERWACJA'||
+                newer.extra!=='MIROWSKI MIROSŁAW'||!newer.marked||
+                JSON.stringify(newer.dates)!==JSON.stringify(['2026-11-28','2026-11-29']))
+                throw Error('EXISTING_MT51_MERGE_BROKEN_'+JSON.stringify(newer));
+              await page.reload({waitUntil:'domcontentloaded'});
+              if(await page.evaluate(()=>db.events.filter(mt52IsXiv).length)!==1)throw Error('UPGRADE_DUPLICATES_ON_RELOAD');
+              console.log('MT52_EXISTING_MT51_EVENT_MERGED_NO_DUPLICATE_AND_PRESERVED_EXTRAS');
+              await ctx.close();
+            }finally{await browser.close()}
+          }
           if(ok!==12)throw Error('EXPECTED_12_ACTUAL_'+ok);
           console.log('MT52_BROWSER_CHROMIUM_FIREFOX_12_OF_12_PASS');
           JS
