@@ -1,0 +1,57 @@
+name: MT49 admin blank-page storage regression reproduction
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt49-quota-repro.yml']
+permissions: {contents: read}
+jobs:
+  reproduce:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build baseline 49 for authentic administrator HTML
+        run: |
+          set -euo pipefail
+          for v in 41 42 43 44 45 46 47 48 49; do python3 "matchthis/build-mt$v.py"; done
+      - name: Install browser
+        run: |
+          mkdir -p /tmp/mt49quota; cd /tmp/mt49quota
+          npm init -y >/dev/null; npm i --silent playwright
+          npx playwright install --with-deps chromium
+      - name: Reproduce blank admin panel with versioned localStorage copies
+        run: |
+          cd /tmp/mt49quota
+          node --input-type=module <<'JS'
+          import {chromium} from 'playwright';
+          import {readFile} from 'node:fs/promises';
+          const html=await readFile(process.env.GITHUB_WORKSPACE+'/matchthis/MatchThis_MT-49.html','utf8');
+          const origin='https://matchthis.lowcymethodowcy.smallhost.pl/panel.php';
+          const browser=await chromium.launch({headless:true});
+          try{
+            const context=await browser.newContext();
+            const page=await context.newPage();
+            const errors=[];page.on('pageerror',e=>errors.push(e.message));
+            page.on('console',msg=>{if(msg.type()==='error')console.log('JS_CONSOLE_ERROR',msg.text().slice(0,450))});
+            await page.route(origin,route=>route.fulfill({status:200,contentType:'text/html; charset=utf-8',body:html}));
+            await page.goto(origin,{waitUntil:'domcontentloaded'});
+            const fresh=await page.evaluate(()=>({nav:document.getElementById('nav')?.innerText?.length,storage:JSON.stringify(db).length}));
+            console.log('MT49_FRESH_ADMIN',JSON.stringify(fresh));
+            await page.evaluate(()=>{
+              let base=JSON.stringify(db);
+              localStorage.setItem('matchthis-preview-MT-48',base);
+              localStorage.removeItem('matchthis-preview-MT-49');
+              // Past release snapshots at the same origin, stop on quota.
+              for(let i=10;i<48;i++){
+                try{localStorage.setItem('matchthis-preview-MT-'+i,base)}
+                catch(e){console.log('MT49_FILL_QUOTA',e.name,'versions',Object.keys(localStorage).length);break}
+              }
+            });
+            errors.length=0;
+            await page.reload({waitUntil:'domcontentloaded'});
+            const after=await page.evaluate(()=>({nav:document.getElementById('nav')?.innerText?.length,main:document.getElementById('main')?.innerText?.length,keys:Object.keys(localStorage).length,activeStored:!!localStorage.getItem('matchthis-preview-MT-49'),hasOld:!!localStorage.getItem('matchthis-preview-MT-48')}));
+            console.log('MT49_WITH_OLD_RELEASES',JSON.stringify(after),'PAGEERRORS',JSON.stringify(errors));
+            if(fresh.nav<=0)throw Error('FRESH_PAGE_INVALID');
+            if(after.nav===0&&errors.some(e=>/quota|exceeded|storage/i.test(e)))console.log('CONFIRMED_QUOTA_CAUSES_BLANK_ADMIN');
+            else console.log('OTHER_ROOT_CAUSE_OR_NOT_REPRODUCED');
+          }finally{await browser.close()}
+          JS
