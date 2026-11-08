@@ -85,6 +85,7 @@ jobs:
                   if(await opening.count()!==1)throw Error('EVENT_MISSING_FROM_CURRENT_YEAR');
                   await opening.click();
                   if(role==='admin'){
+                    await page.locator('details.admin-tools-menu > summary').click();
                     await page.locator('[data-result-mode="roster"]').first().click();
                     const rows=page.locator('table tbody tr');
                     if(await rows.count()!==72)throw Error('VISIBLE_72_'+await rows.count());
@@ -109,6 +110,7 @@ jobs:
                     if(persisted.length!==72||persisted[70]!=='TESTOWY NOWY'||persisted.filter(x=>x==='REZERWACJA').length)throw Error('REPLACEMENT_LOST_OR_RECREATED');
                     await page.locator('#nav [data-view="events"]').click();
                     await page.locator('[data-open="mt2026-xiv-puchar-matchthis-28-29-nov"]').first().click();
+                    await page.locator('details.admin-tools-menu > summary').click();
                     await page.locator('[data-result-mode="roster"]').first().click();
                     await page.locator('[data-action="mt52AddReservation"]').click();
                     const added=await page.evaluate(()=>{
