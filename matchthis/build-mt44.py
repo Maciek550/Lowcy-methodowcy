@@ -87,7 +87,6 @@ function mt44CompleteMega2025(){
  if(added)save();
  return added;
 }
-mt44CompleteMega2025();
 """
 for suffix in ('','_OGLADACZ','_SEDZIA'):
     base=(root/f'MatchThis_MT-43{suffix}.html').read_text('utf8')
@@ -105,6 +104,9 @@ for suffix in ('','_OGLADACZ','_SEDZIA'):
     m='mt43ApplyMaverSecondRoundDraw();'
     assert s.count(m)==1
     s=s.replace(m,m+'\n'+patch)
+    after='const sectorImportApplied=enrichArchivedSectorAssignments();'
+    assert s.count(after)==1
+    s=s.replace(after,after+'\nmt44CompleteMega2025();')
     for check in ('<title>MatchThis MT-44</title>','aria-label="Wersja MT-44">MT-44','data-version="MT-44"', "const APP_VERSION='MT-44'"):
         assert check in s,(suffix,check)
     (root/f'MatchThis_MT-44{suffix}.html').write_text(s,encoding='utf8')
