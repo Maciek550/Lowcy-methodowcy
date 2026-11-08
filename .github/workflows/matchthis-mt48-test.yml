@@ -1,4 +1,4 @@
-name: MatchThis MT48 FLOAT KING November 2025 second round pre-release
+name: MatchThis MT48 FLOAT KING 2025 round II final pre-release regression
 on:
   push:
     branches: [matchthis-mt23-independent-small2-20261106]
@@ -102,12 +102,6 @@ jobs:
                       localStorage.removeItem('matchthis-preview-MT-48');
                     });
                     await page.reload({waitUntil:'domcontentloaded'});
-                    const inspect=await page.evaluate(()=>{
-                      const ev=db.events.find(e=>e.id==='mt2025-float_king_2025'),rnd=ev.rounds[1];
-                      const map=new Map(MT48_FLOAT_ROUND2_DRAW.map(([name,peg,sector,weight,place])=>[norm(name),{peg,sector,weight,place}]));
-                      const bad=rnd.results.filter(r=>{const key=norm(r.competitorName||'');const d=map.get(key);return d?(Number(r.weightG)!==d.weight||Number(r.officialPlace)!==d.place):(key!=='JAROSARTUR'||Number(r.weightG)!==0||Number(r.officialPlace)!==13||r.peg!=null||r.sector!=null)}).map(r=>({name:r.competitorName,peg:r.peg,sec:r.sector,weight:r.weightG,place:r.officialPlace,lookup:map.get(norm(r.competitorName||''))}));
-                      return {mapSize:map.size,bad,match:MT48_FLOAT_ROUND2_DRAW.length,call:mt48ApplyFloatKingRoundTwoDraw()};
-                    });console.log('MT48_MIGRATION_DIAG',JSON.stringify(inspect));
                     const restored=await check();
                     if(restored.pegs.length!==70||restored.missing.length!==1)throw Error('MIGRATION_FAILED_'+JSON.stringify({pegs:restored.pegs.length,missing:restored.missing,first:restored.first,second:restored.second,keys:await page.evaluate(()=>Object.keys(localStorage))}));
                     const persisted=await page.evaluate(()=>{
