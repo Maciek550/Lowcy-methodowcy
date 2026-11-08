@@ -34,7 +34,7 @@ opts=(-o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthen
 sshpass -e ssh "${opts[@]}" "$remote" "OLD_SHA='$old' bash -s" <<'REMOTE'
 set -euo pipefail
 web="$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html"
-stage="$HOME/matchthis-independent/mt-42"
+stage="$HOME/matchthis-independent/mt-43"
 test -f "$HOME/matchthis-independent/MT42-OWNED"
 test -d "$web/role-pages" && test ! -L "$web/role-pages"
 test -f "$web/index.html" && test ! -L "$web/index.html"
@@ -48,12 +48,12 @@ devil www list | grep -F 'matchthis.lowcymethodowcy.smallhost.pl'
 mkdir -p "$stage"
 echo MT43_PREFLIGHT_AND_SOURCE_OK
 REMOTE
-sshpass -e scp "${opts[@]}"   matchthis/MatchThis_MT-43.html matchthis/MatchThis_MT-43_SEDZIA.html matchthis/MatchThis_MT-43_OGLADACZ.html   "$remote:matchthis-independent/mt-42/"
-sshpass -e scp "${opts[@]}" /tmp/mt43-panel.php /tmp/mt43-change-password.php "$remote:matchthis-independent/mt-42/"
+sshpass -e scp "${opts[@]}"   matchthis/MatchThis_MT-43.html matchthis/MatchThis_MT-43_SEDZIA.html matchthis/MatchThis_MT-43_OGLADACZ.html   "$remote:matchthis-independent/mt-43/"
+sshpass -e scp "${opts[@]}" /tmp/mt43-panel.php /tmp/mt43-change-password.php "$remote:matchthis-independent/mt-43/"
 sshpass -e ssh "${opts[@]}" "$remote" "OLD_SHA='$old' NEW_SHA='$new' ADMIN_SHA='$admin' JUDGE_SHA='$judge' bash -s" <<'REMOTE'
 set -euo pipefail
 web="$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html"
-stage="$HOME/matchthis-independent/mt-42"
+stage="$HOME/matchthis-independent/mt-43"
 test -f "$HOME/matchthis-independent/MT42-OWNED"
 test "$(sha256sum "$web/index.html" | awk '{print $1}')" = "$OLD_SHA"
 test "$(sha256sum "$stage/MatchThis_MT-43_OGLADACZ.html" | awk '{print $1}')" = "$NEW_SHA"
@@ -85,7 +85,7 @@ mv "$web/change-password.php.next" "$web/change-password.php"
 mv "$web/index.html.next" "$web/index.html"
 chmod 644 "$web/role-pages/mt43-admin.php" "$web/role-pages/mt43-sedzia.php" "$web/panel.php" "$web/change-password.php" "$web/index.html"
 test "$(sha256sum "$web/index.html" | awk '{print $1}')" = "$NEW_SHA"
-printf '%s\n' 'MT43 Maver October 2025 completed, April points corrected, preserved MT42 authentication' > "$HOME/matchthis-independent/MT43-OWNED"
+printf '%s\n' 'MT43: MAVER 12.10.2025 II tura — sektor i stanowisko 32 osób; MT42 zachowany' > "$HOME/matchthis-independent/MT43-OWNED"
 trap - ERR
 echo MT43_PUBLISHED_ONLY_MATCHTHIS
 REMOTE
