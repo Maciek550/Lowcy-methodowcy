@@ -1,0 +1,109 @@
+name: MatchThis MT43 isolated SMALL2 release MAVER 2025
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt43-release.yml']
+permissions: {contents: read}
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rebuild clean MT41 baseline and verify MT43 import and immutable older data
+        run: |
+          set -euo pipefail
+          python3 matchthis/build-mt41.py
+          python3 matchthis/build-mt42.py
+          python3 matchthis/build-mt43.py
+          python3 - <<'PY'
+          from pathlib import Path
+          import re,subprocess
+          root=Path('matchthis')
+          for suf in ('','_SEDZIA','_OGLADACZ'):
+            new=(root/f'MatchThis_MT-43{suf}.html').read_text()
+            old=(root/f'MatchThis_MT-42{suf}.html').read_text()
+            for text in ('<title>MatchThis MT-43</title>','aria-label="Wersja MT-43">MT-43','data-version="MT-43"', "const APP_VERSION='MT-43'"):
+              assert text in new,(suf,text)
+            for key in ('MATCHTHIS_ARCHIVE_2026','MATCHTHIS_STANDALONE_2026','MATCHTHIS_ARCHIVE_2025_MEGA_V'):
+              read=lambda html:html.split('const '+key+'=')[1].split(';\n')[0]
+              assert read(new)==read(old),(suf,key)
+            assert new.count('"id":"mt2025-maver-super-cup-oct"')==1
+            for script in re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',new,re.S):
+              Path('/tmp/mt43-syntax.js').write_text(script)
+              subprocess.run(['node','--check','/tmp/mt43-syntax.js'],check=True)
+          print('MT43_BUILD_AND_SOURCE_VALIDATION_PASS')
+          PY
+          bash -n matchthis/deploy-mt43-small2.sh
+          bash -n matchthis/rollback-mt43-small2.sh
+      - name: Deploy strictly to independent MatchThis SMALL2 vhost after SHA preflight
+        id: deploy
+        run: bash matchthis/deploy-mt43-small2.sh
+      - name: Install Playwright browsers for real LIVE public UI check
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt43-live && cd /tmp/mt43-live
+          npm init -y >/dev/null
+          npm install --silent playwright
+          npx playwright install --with-deps chromium firefox
+      - name: Verify real public MT43 interface results and browser navigation on Chromium and Firefox
+        run: |
+          set -euo pipefail
+          cd /tmp/mt43-live
+          node --input-type=module <<'JS'
+          import {chromium,firefox} from 'playwright';
+          const base='https://matchthis.lowcymethodowcy.smallhost.pl/';
+          let checks=0;
+          for(const [name,engine] of [['Chromium',chromium],['Firefox',firefox]]){
+            const browser=await engine.launch({headless:true});
+            try{
+              for(const width of [390,1366]){
+                const ctx=await browser.newContext({viewport:{width,height:900}});
+                const page=await ctx.newPage();page.setDefaultTimeout(16000);
+                const errors=[];page.on('pageerror',e=>errors.push(e.message));
+                const res=await page.goto(base,{waitUntil:'domcontentloaded',timeout:45000});
+                if(res.status()!==200||await page.title()!=='MatchThis MT-43'||await page.locator('#appversion').innerText()!=='MT-43')throw Error('PUBLIC_VERSION_MISMATCH');
+                const model=await page.evaluate(()=>{
+                  const oct=db.events.find(e=>e.id==='mt2025-maver-super-cup-oct');
+                  const apr=db.events.find(e=>e.id==='mt2025-maver-super-cup-apr');
+                  return {octCount:db.events.filter(e=>e.id==='mt2025-maver-super-cup-oct').length,
+                    first:oct?.rounds[0]?.results.length,second:oct?.rounds[1]?.results.length,
+                    final:oct?core.eventClassification(oct).rows.length:null,
+                    drawA:oct?.rounds[1].results.filter(r=>r.sector==='A').length,
+                    drawB:oct?.rounds[1].results.filter(r=>r.sector==='B').length,
+                    drawC:oct?.rounds[1].results.filter(r=>r.sector==='C').length,
+                    drawPegs:oct?.rounds[1].results.map(r=>r.peg).sort((a,b)=>a-b),
+                    winners:oct?core.tourClassification(oct.rounds[1]).filter(r=>r.place===1).map(r=>[r.competitorName,r.sector,r.peg,r.weightG]).sort((a,b)=>a[1].localeCompare(b[1])):[],
+                    z:apr?.rounds[0]?.results.find(r=>r.peg===14&&r.weightG===2975)?.officialPlace,
+                    p:apr?.rounds[0]?.results.find(r=>r.peg===17&&r.weightG===2880)?.officialPlace
+                  };
+                });
+                if(model.octCount!==1||model.first!==32||model.second!==32||model.final!==32||model.drawA!==11||model.drawB!==10||model.drawC!==11||model.drawPegs?.length!==32||model.drawPegs.some((p,i)=>p!==i+1)||model.z!==5||model.p!==6)throw Error('LIVE_RESULTS_'+JSON.stringify(model));
+                if(JSON.stringify(model.winners)!==JSON.stringify([['RZEPCZYŃSKI MARCIN','A',2,14420],['KOŁAKOWSKI KONRAD','B',21,15000],['BIEŃ PAWEŁ','C',23,15000]]))throw Error('LIVE_WINNERS_'+JSON.stringify(model.winners));
+                await page.locator('#nav [data-view="archive"]').click();
+                const year=page.locator('details[data-year="2025"]');
+                if(await year.getAttribute('open')===null)await year.locator('summary').click();
+                await page.locator('[data-open="mt2025-maver-super-cup-oct"]').click();
+                await page.locator('[data-result-mode="round"]').first().click();
+                if(await page.locator('table.round-result tbody tr').count()!==32)throw Error('LIVE_VISIBLE_MAVER_32');
+                await page.reload({waitUntil:'domcontentloaded'});
+                const retained=await page.evaluate(()=>db.events.filter(e=>e.id==='mt2025-maver-super-cup-oct').length);
+                if(retained!==1)throw Error('LIVE_RELOAD_LOST');
+                await page.goBack({timeout:15000});
+                if(width===390){
+                  const d=await page.evaluate(()=>({w:innerWidth,s:document.documentElement.scrollWidth}));
+                  if(d.s>d.w+1)throw Error('LIVE_HORIZONTAL_OVERFLOW_'+JSON.stringify(d));
+                }
+                if(errors.length)throw Error('LIVE_JS_ERRORS_'+errors.join(';'));
+                console.log('PASS_MT43_LIVE',name,width,'MAVER_DRAW_A11_B10_C11_PEGS32 APR_5_6');
+                checks++;await ctx.close();
+              }
+            }finally{await browser.close();}
+          }
+          if(checks!==4)throw Error('LIVE_INCOMPLETE_'+checks);
+          console.log('MT43_LIVE_CHROMIUM_FIREFOX_4_OF_4_OK');
+          JS
+      - name: Roll back only MatchThis frontend to MT41 on deployment or smoke failure
+        if: failure() && steps.deploy.outcome != 'skipped'
+        run: bash matchthis/rollback-mt43-small2.sh
