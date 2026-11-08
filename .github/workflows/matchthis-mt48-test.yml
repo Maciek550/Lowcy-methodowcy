@@ -1,0 +1,134 @@
+name: MatchThis MT48 FLOAT KING November 2025 second round pre-release
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt48-test.yml']
+permissions: {contents: read}
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build all prior releases, verify unchanged source records and current version
+        run: |
+          set -euo pipefail
+          for v in 41 42 43 44 45 46 47 48; do python3 "matchthis/build-mt$v.py"; done
+          python3 - <<'PY'
+          from pathlib import Path
+          import re,json,subprocess
+          root=Path('matchthis')
+          for suffix in ('','_SEDZIA','_OGLADACZ'):
+             old=(root/f'MatchThis_MT-47{suffix}.html').read_text()
+             new=(root/f'MatchThis_MT-48{suffix}.html').read_text()
+             for version in ('<title>MatchThis MT-48</title>','aria-label="Wersja MT-48">MT-48','data-version="MT-48"', "const APP_VERSION='MT-48'"):
+                assert version in new,(suffix,version)
+             keys=('MATCHTHIS_ARCHIVE_2026','MATCHTHIS_STANDALONE_2026','MATCHTHIS_ARCHIVE_2025_MEGA_V','MATCHTHIS_ARCHIVE_2025_MAVER_OCT','MT45_MEGA_2025_ROUNDS','MT44_MEGA_2025','MT46_PUCHAR_ROUND1_DRAW','MT47_PUCHAR_ROUND2_DRAW')
+             extract=lambda x,key:x.split('const '+key+'=')[1].split(';\n')[0]
+             for key in keys:assert extract(old,key)==extract(new,key),(suffix,key)
+             parse=lambda s:json.loads(extract(s,'MT44_MISSING_2025'))['data']['events']
+             a,b=parse(old),parse(new)
+             assert len(a)==len(b)==4
+             for prev,nxt in zip(a,b):
+                assert prev['id']==nxt['id']
+                if prev['id']!='mt2025-float_king_2025':
+                   assert prev==nxt,(suffix,prev['id'])
+                else:
+                   assert prev['rounds'][0]==nxt['rounds'][0]
+                   before=prev['rounds'][1]['results'];after=nxt['rounds'][1]['results']
+                   assert len(before)==len(after)==71
+                   for x,y in zip(before,after):
+                      assert x['peg'] is None and x['sector'] is None
+                      assert {k:v for k,v in x.items() if k not in ('peg','sector','sectorSource')}=={k:v for k,v in y.items() if k not in ('peg','sector','sectorSource')},(suffix,x['competitorName'])
+                   assert sorted(r['peg'] for r in after if r['peg'] is not None)==list(range(1,71))
+                   assert [sum(r['sector']==s for r in after) for s in 'ABCDEF']==[12,12,12,12,11,11]
+                   other=[r for r in after if r['peg'] is None and r['sector'] is None]
+                   assert len(other)==1 and other[0]['competitorName']=='JAROS ARTUR' and other[0]['weightG']==0 and other[0]['officialPlace']==13
+             for script in re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',new,re.S):
+                Path('/tmp/mt48.js').write_text(script)
+                subprocess.run(['node','--check','/tmp/mt48.js'],check=True)
+          print('PASS_MT48_70_SOURCE_MATCHES_OTHER_RESULTS_IMMUTABLE_VERSION_3_OF_3')
+          PY
+      - name: Install Chromium and Firefox
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt48-browser && cd /tmp/mt48-browser
+          npm init -y >/dev/null
+          npm install --silent playwright
+          npx playwright install --with-deps chromium firefox
+      - name: Check real clicks, 6 sector assignments, old storage migration and browser errors
+        run: |
+          set -euo pipefail
+          cd /tmp/mt48-browser
+          node --input-type=module <<'JS'
+          import {chromium,firefox} from 'playwright';
+          import {readFile} from 'node:fs/promises';
+          const base='https://matchthis.lowcymethodowcy.smallhost.pl/';
+          const folder=process.env.GITHUB_WORKSPACE+'/matchthis/';
+          let checks=0;
+          for(const [engineName,engine] of [['Chromium',chromium],['Firefox',firefox]]){
+            const browser=await engine.launch({headless:true});
+            try{
+              for(const [role,suffix] of [['admin',''],['judge','_SEDZIA'],['viewer','_OGLADACZ']]){
+                const html=await readFile(folder+'MatchThis_MT-48'+suffix+'.html','utf8');
+                for(const width of [390,1366]){
+                  const context=await browser.newContext({viewport:{width,height:900}});
+                  const page=await context.newPage();page.setDefaultTimeout(15000);
+                  const errors=[];page.on('pageerror',err=>errors.push(err.message));
+                  await page.route(base+'panel.php',r=>r.fulfill({status:200,contentType:'text/html; charset=utf-8',body:html}));
+                  await page.goto(base+'panel.php',{waitUntil:'domcontentloaded',timeout:45000});
+                  if(await page.title()!=='MatchThis MT-48'||await page.locator('#appversion').innerText()!=='MT-48')throw Error('VERSION');
+                  async function check(){
+                    return page.evaluate(()=>{
+                      const e=db.events.find(x=>x.id==='mt2025-float_king_2025');
+                      const [first,second]=e.rounds;
+                      const pegs=second.results.filter(r=>r.peg!=null).map(r=>r.peg).sort((a,b)=>a-b);
+                      const sectors='ABCDEF'.split('').map(s=>second.results.filter(r=>r.sector===s).length);
+                      const missing=second.results.filter(r=>r.peg==null&&r.sector==null).map(r=>[r.competitorName,r.weightG,r.officialPlace]);
+                      return {pegs,sectors,missing,first:first.results.length,second:second.results.length,
+                      puchar:db.events.find(x=>x.id==='mt2025-matchthis_puchar_2025').rounds.map(r=>r.results.filter(x=>x.peg!=null).length),
+                      mega:db.cycles.find(x=>x.id==='mt2025-mega-match-this-cup-cycle').tours.map(t=>t.results.length)};
+                    });
+                  }
+                  const data=await check();
+                  if(data.pegs.length!==70||data.pegs.some((p,i)=>p!==i+1)||JSON.stringify(data.sectors)!==JSON.stringify([12,12,12,12,11,11])||
+                    JSON.stringify(data.missing)!==JSON.stringify([['JAROS ARTUR',0,13]])||data.first!==71||data.second!==71||
+                    JSON.stringify(data.puchar)!==JSON.stringify([77,66])||
+                    JSON.stringify(data.mega)!==JSON.stringify([79,79,84,82,50,52]))throw Error('DATA_'+JSON.stringify(data));
+                  if(role!=='viewer'&&width===1366){
+                    await page.evaluate(()=>{
+                      const snapshot=JSON.parse(JSON.stringify(db));
+                      for(const r of snapshot.events.find(x=>x.id==='mt2025-float_king_2025').rounds[1].results){r.peg=null;r.sector=null;}
+                      localStorage.setItem('matchthis-preview-MT-47',JSON.stringify(snapshot));
+                      localStorage.removeItem('matchthis-preview-MT-48');
+                    });
+                    await page.reload({waitUntil:'domcontentloaded'});
+                    const restored=await check();
+                    if(restored.pegs.length!==70||restored.missing.length!==1)throw Error('MIGRATION_FAILED');
+                    const persisted=await page.evaluate(()=>{
+                      const raw=JSON.parse(localStorage.getItem('matchthis-preview-MT-48'));
+                      return raw.events.find(x=>x.id==='mt2025-float_king_2025').rounds[1].results.filter(r=>r.peg!=null).length;
+                    });
+                    if(persisted!==70)throw Error('MIGRATION_NOT_SAVED');
+                  }
+                  await page.locator('#nav [data-view="archive"]').click();
+                  const year=page.locator('details[data-year="2025"]');
+                  if(await year.getAttribute('open')===null)await year.locator('summary').click();
+                  await page.locator('[data-open="mt2025-float_king_2025"]').click();
+                  await page.locator('[data-result-mode="round"]').first().click();
+                  if(await page.locator('table.round-result tbody tr').count()!==71)throw Error('VISIBLE_ROUND');
+                  await page.reload({waitUntil:'domcontentloaded'});
+                  if(await page.evaluate(()=>db.events.filter(e=>e.id==='mt2025-float_king_2025').length)!==1)throw Error('RELOAD_DUPLICATE');
+                  if(width===390){
+                    const w=await page.evaluate(()=>({screen:innerWidth,doc:document.documentElement.scrollWidth}));
+                    if(w.doc>w.screen+1)throw Error('MOBILE_OVERFLOW_'+JSON.stringify(w));
+                  }
+                  if(errors.length)throw Error('JS_ERRORS_'+errors.join('|'));
+                  console.log('PASS_MT48_BROWSER',engineName,role,width,'FLOAT_KING_70_PEGS_1_UNASSIGNED');
+                  await context.close();checks++;
+                }
+              }
+            }finally{await browser.close()}
+          }
+          if(checks!==12)throw Error('INCOMPLETE_'+checks);
+          console.log('PASS_MT48_CHROMIUM_FIREFOX_12_OF_12');
+          JS
