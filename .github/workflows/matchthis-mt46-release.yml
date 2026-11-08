@@ -23,9 +23,23 @@ jobs:
               before=(root/f'MatchThis_MT-45{suffix}.html').read_text()
               after=(root/f'MatchThis_MT-46{suffix}.html').read_text()
               assert all(m in after for m in ('<title>MatchThis MT-46</title>','aria-label="Wersja MT-46">MT-46','data-version="MT-46"', "const APP_VERSION='MT-46'"))
-              for key in ('MATCHTHIS_ARCHIVE_2026','MATCHTHIS_STANDALONE_2026','MATCHTHIS_ARCHIVE_2025_MEGA_V','MATCHTHIS_ARCHIVE_2025_MAVER_OCT','MT44_MISSING_2025','MT44_MEGA_2025','MT45_MEGA_2025_ROUNDS'):
+              for key in ('MATCHTHIS_ARCHIVE_2026','MATCHTHIS_STANDALONE_2026','MATCHTHIS_ARCHIVE_2025_MEGA_V','MATCHTHIS_ARCHIVE_2025_MAVER_OCT','MT44_MEGA_2025','MT45_MEGA_2025_ROUNDS'):
                   extract=lambda x:x.split('const '+key+'=')[1].split(';\n')[0]
                   assert extract(before)==extract(after),(suffix,key)
+              import json
+              parse=lambda html:json.loads(html.split('const MT44_MISSING_2025=')[1].split(';\n')[0])['data']['events']
+              prev=parse(before);nextv=parse(after)
+              assert len(prev)==len(nextv)==4
+              for p,n in zip(prev,nextv):
+                  assert p['id']==n['id']
+                  if p['id']!='mt2025-matchthis_puchar_2025':
+                      assert p==n,(suffix,p['id'])
+                  else:
+                      assert p['rounds'][1]==n['rounds'][1]
+                      for x,y in zip(p['rounds'][0]['results'],n['rounds'][0]['results']):
+                          assert x['peg'] is None and x['sector'] is None
+                          assert {k:v for k,v in x.items() if k not in ('peg','sector','sectorSource')}=={k:v for k,v in y.items() if k not in ('peg','sector','sectorSource')}
+                      assert sorted(r['peg'] for r in n['rounds'][0]['results'])==list(range(1,78))
               for script in re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',after,re.S):
                   Path('/tmp/mt46-syntax.js').write_text(script)
                   subprocess.run(['node','--check','/tmp/mt46-syntax.js'],check=True)
