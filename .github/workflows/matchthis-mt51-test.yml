@@ -64,10 +64,10 @@ jobs:
                   await page.goto(base+'panel.php',{waitUntil:'domcontentloaded',timeout:45000});
                   if(await page.title()!=='MatchThis MT-51'||await page.locator('#appversion').innerText()!=='MT-51')throw Error('VERSION_'+role);
                   await page.locator('#nav [data-view="events"]').click();
-                  if(role==='viewer'){
-                    if(await page.locator('[data-view="newEvent"]').count())throw Error('VIEWER_CREATION_EXPOSED');
-                    if(errors.length)throw Error('VIEWER_JS_ERRORS_'+errors.join('|'));
-                    await ctx.close();passed++;console.log('PASS_MT51_VIEWER',engineName,width);continue;
+                  if(role!=='admin'){
+                    if(await page.locator('[data-view="newEvent"]').count())throw Error('NON_ADMIN_CREATION_EXPOSED');
+                    if(errors.length)throw Error('NON_ADMIN_JS_ERRORS_'+errors.join('|'));
+                    await ctx.close();passed++;console.log('PASS_MT51_NON_ADMIN_READ_ONLY',engineName,width);continue;
                   }
                   await page.locator('[data-view="newEvent"]').first().click();
                   const form=page.locator('form#createEvent');
@@ -93,11 +93,7 @@ jobs:
                       saved:!!localStorage.getItem(STORAGE_KEY),label:e?entityDateLabel(e):null,
                       prev2025:db.events.find(e=>e.id==='mt2025-float_king_2025')?.rounds[1].results.filter(r=>r.peg!=null).length};
                   });
-                  if(!created.event||created.year!==2026||created.date!=='2026-11-28'||created.saved||false){
-                    // Explicit check below; this guard intentionally allows nonpersistent
-                    // fallback only when quota cannot be triggered in this clean context.
-                    if(!created.event||created.year!==2026||created.date!=='2026-11-28')throw Error('CREATED_'+JSON.stringify(created));
-                  }
+                  if(!created.event||created.year!==2026||created.date!=='2026-11-28')throw Error('CREATED_'+JSON.stringify(created));
                   if(JSON.stringify(created.rounds)!==JSON.stringify([['Tura 1','2026-11-28','DRAFT'],['Tura 2','2026-11-29','DRAFT']])||
                     !created.saved||!created.label.includes('28.11.2026')||!created.label.includes('29.11.2026')||created.prev2025!==70)
                     throw Error('DATES_OR_REGRESSION_'+JSON.stringify(created));
