@@ -139,6 +139,13 @@ for suffix in ('','_OGLADACZ','_SEDZIA'):
  assert old.count("<title>MatchThis MT-48</title>")==1
  assert old.count('data-version="MT-48"')==1
  s=old.replace('MT-48','MT-49')
+ if suffix!='_OGLADACZ':
+  key="const MT47_STORAGE_KEY='matchthis-preview-MT-47';"
+  assert s.count(key)==1,(suffix,'old storage key')
+  s=s.replace(key,"const MT48_STORAGE_KEY='matchthis-preview-MT-48';\n"+key)
+  key="localStorage.getItem(MT47_STORAGE_KEY)||"
+  assert s.count(key)==1,(suffix,'migration')
+  s=s.replace(key,"localStorage.getItem(MT48_STORAGE_KEY)||"+key)
  assert s.count('</head>')==1
  s=s.replace('</head>',STYLE+'</head>')
  anchor='function renderNav(){'
