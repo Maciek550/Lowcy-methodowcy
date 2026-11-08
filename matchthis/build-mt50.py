@@ -123,18 +123,21 @@ function save(){
 for suffix in ('','_OGLADACZ','_SEDZIA'):
  previous=(root/f'MatchThis_MT-49{suffix}.html').read_text('utf8')
  s=previous.replace('MT-49','MT-50')
- old="const MT48_STORAGE_KEY='matchthis-preview-MT-48';"
- assert s.count(old)==1,(suffix,'storage anchor')
- s=s.replace(old,"const MT49_STORAGE_KEY='matchthis-preview-MT-49';\n"+old)
- old="function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(db));}"
- assert s.count(old)==1,(suffix,'save anchor')
- s=s.replace(old,QUOTA_FIX)
- old="const loaded=JSON.parse(fresh||localStorage.getItem(MT48_STORAGE_KEY)||"
- assert s.count(old)==1,(suffix,'load anchor')
- s=s.replace(old,"const loaded=JSON.parse(fresh||mt50FallbackSessionRead()||localStorage.getItem(MT49_STORAGE_KEY)||localStorage.getItem(MT48_STORAGE_KEY)||")
+ if suffix!='_OGLADACZ':
+  old="const MT48_STORAGE_KEY='matchthis-preview-MT-48';"
+  assert s.count(old)==1,(suffix,'storage anchor')
+  s=s.replace(old,"const MT49_STORAGE_KEY='matchthis-preview-MT-49';\n"+old)
+  old="function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(db));}"
+  assert s.count(old)==1,(suffix,'save anchor')
+  s=s.replace(old,QUOTA_FIX)
+  old="const loaded=JSON.parse(fresh||localStorage.getItem(MT48_STORAGE_KEY)||"
+  assert s.count(old)==1,(suffix,'load anchor')
+  s=s.replace(old,"const loaded=JSON.parse(fresh||mt50FallbackSessionRead()||localStorage.getItem(MT49_STORAGE_KEY)||localStorage.getItem(MT48_STORAGE_KEY)||")
+ else:
+  assert 'function save(){/* publiczny widok oglądacza: nie wykonuje żadnego zapisu */}' in s
  for check in ('<title>MatchThis MT-50</title>','aria-label="Wersja MT-50">MT-50','data-version="MT-50"', "const APP_VERSION='MT-50'","const STORAGE_KEY='matchthis-preview-MT-50'"):
   assert check in s,(suffix,check)
- assert s.count('function mt50ArchiveOldVersionsAndRecover()')==1
+ if suffix!='_OGLADACZ':assert s.count('function mt50ArchiveOldVersionsAndRecover()')==1
  assert s.count('function save(){')==1
  output=root/f'MatchThis_MT-50{suffix}.html'
  output.write_text(s,encoding='utf8')
