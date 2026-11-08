@@ -76,14 +76,14 @@ jobs:
                 if(await page.locator('#main h1').first().innerText()!=='Planowane zawody')throw Error('LIVE_PLANNED_HOME');
                 if(await page.getByRole('heading',{name:'Ostatnio rozegrane zawody'}).count()!==1)throw Error('LIVE_RECENT_HOME');
                 await page.locator('#nav [data-view="events"]').click();
-                if(await page.locator('.mt50-two-columns > .mt50-column').count()!==2)throw Error('LIVE_TWO_COLUMNS');
+                if(await page.locator('.mt49-two-columns > .mt49-column').count()!==2)throw Error('LIVE_TWO_COLUMNS');
                 if(await page.getByRole('heading',{name:'MEGA MATCH THIS CUP 2026'}).count()!==1)throw Error('LIVE_MEGA_LEFT');
                 if(await page.getByRole('heading',{name:'Pozostałe zawody 2026'}).count()!==1)throw Error('LIVE_OTHERS_RIGHT');
-                const items=page.locator('.mt50-column').first().locator('[data-open-round]');
+                const items=page.locator('.mt49-column').first().locator('[data-open-round]');
                 if(await items.count()!==6)throw Error('LIVE_CYCLE_6_TOURS');
                 const order=await items.evaluateAll(a=>a.map(x=>Number(x.dataset.openRound)));
                 if(JSON.stringify(order)!==JSON.stringify([5,4,3,2,1,0]))throw Error('LIVE_CYCLE_ORDER_'+JSON.stringify(order));
-                if(await page.locator('.mt50-column').last().locator('[data-open]').count()!==2)throw Error('LIVE_OTHER_EVENTS_2026');
+                if(await page.locator('.mt49-column').last().locator('[data-open]').count()!==2)throw Error('LIVE_OTHER_EVENTS_2026');
                 await items.first().click();
                 const round=await page.evaluate(()=>({page,roundIndex}));
                 if(round.page!=='cycle'||round.roundIndex!==5)throw Error('LIVE_OPEN_NEWEST_TOUR_'+JSON.stringify(round));
@@ -93,8 +93,8 @@ jobs:
                   const f=db.events.find(x=>x.id==='mt2025-float_king_2025'),p=db.events.find(x=>x.id==='mt2025-matchthis_puchar_2025'),c=db.cycles.find(x=>x.id==='mt2025-mega-match-this-cup-cycle');
                   return {float:f.rounds[1].results.filter(r=>r.peg!=null).length,puchar:p.rounds[1].results.filter(r=>r.peg!=null).length,
                     mega:c.tours.map(t=>t.results.length),
-                    rollover:[mt50SiteYear(new Date('2026-12-31T23:59:00+01:00')),mt50SiteYear(new Date('2027-01-01T00:01:00+01:00'))],
-                    after:mt50NavLabelsAt(2027)};
+                    rollover:[mt49SiteYear(new Date('2026-12-31T23:59:00+01:00')),mt49SiteYear(new Date('2027-01-01T00:01:00+01:00'))],
+                    after:mt49NavLabelsAt(2027)};
                 });
                 if(state.float!==70||state.puchar!==66||JSON.stringify(state.mega)!==JSON.stringify([79,79,84,82,50,52])||
                     JSON.stringify(state.rollover)!==JSON.stringify([2026,2027])||state.after.archive!=='ZAWODY DO 2026')
