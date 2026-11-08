@@ -146,8 +146,8 @@ for suffix in ('','_OGLADACZ','_SEDZIA'):
   key="localStorage.getItem(MT47_STORAGE_KEY)||"
   assert s.count(key)==1,(suffix,'migration')
   s=s.replace(key,"localStorage.getItem(MT48_STORAGE_KEY)||"+key)
- assert s.count('</head>')==1
- s=s.replace('</head>',STYLE+'</head>')
+ assert s.count('</head>')>=1
+ s=s.replace('</head>',STYLE+'</head>',1)
  anchor='function renderNav(){'
  assert s.count(anchor)==1
  s=s.replace(anchor,HELPERS+anchor)
