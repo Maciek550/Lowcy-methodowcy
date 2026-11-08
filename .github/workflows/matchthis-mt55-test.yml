@@ -1,0 +1,164 @@
+name: MatchThis MT55 station entry sectors autosave reset regression
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt55-test.yml','matchthis/build-mt55.py']
+permissions: {contents: read}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build previous releases and MT55, verify version and historical results unchanged
+        run: |
+          set -euo pipefail
+          for v in 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55; do python3 "matchthis/build-mt$v.py";done
+          python3 - <<'PY'
+          from pathlib import Path
+          import re,subprocess
+          root=Path('matchthis')
+          keys=('MATCHTHIS_ARCHIVE_2026','MATCHTHIS_STANDALONE_2026','MATCHTHIS_ARCHIVE_2025_MEGA_V','MATCHTHIS_ARCHIVE_2025_MAVER_OCT','MT44_MISSING_2025','MT44_MEGA_2025','MT45_MEGA_2025_ROUNDS','MT46_PUCHAR_ROUND1_DRAW','MT47_PUCHAR_ROUND2_DRAW','MT48_FLOAT_ROUND2_DRAW','MT52_XIV_NAMES')
+          for suffix in ('','_SEDZIA','_OGLADACZ'):
+              a=(root/f'MatchThis_MT-54{suffix}.html').read_text('utf8')
+              b=(root/f'MatchThis_MT-55{suffix}.html').read_text('utf8')
+              for key in keys:
+                  extract=lambda html:html.split('const '+key+'=')[1].split(';\n')[0]
+                  assert extract(a)==extract(b),(suffix,key)
+              for v in ('<title>MatchThis MT-55</title>',"const APP_VERSION='MT-55'",'data-version="MT-55"','aria-label="Wersja MT-55">MT-55'):
+                  assert v in b,(suffix,v)
+              for func in ('function mt55ResetDraw()','function mt55PlanSectors()','function mt55EditOnBlur(input)','function mt55SectorPanels(e,t)'):
+                  assert func in b,(suffix,func)
+              if suffix!='_OGLADACZ':assert 'localStorage.getItem(MT54_STORAGE_KEY)' in b
+              for script in re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',b,re.S):
+                  Path('/tmp/mt55.js').write_text(script)
+                  subprocess.run(['node','--check','/tmp/mt55.js'],check=True)
+          print('MT55_SOURCE_AND_VERSION_ALL_3_ROLES_PASS')
+          PY
+      - name: Install Chromium and Firefox
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt55-browser && cd /tmp/mt55-browser
+          npm init -y >/dev/null
+          npm install --silent playwright
+          npx playwright install --with-deps chromium firefox
+      - name: Click through actual MT55 UI in 12 browser viewport and role scenarios
+        run: |
+          set -euo pipefail
+          cd /tmp/mt55-browser
+          node --input-type=module <<'JS'
+          import {chromium,firefox} from 'playwright';
+          import {readFile} from 'node:fs/promises';
+          const base='https://matchthis.lowcymethodowcy.smallhost.pl/';
+          const folder=process.env.GITHUB_WORKSPACE+'/matchthis/';
+          let count=0;
+          for(const [browserName,engine] of [['Chromium',chromium],['Firefox',firefox]]){
+            const browser=await engine.launch({headless:true});
+            try{
+              for(const [role,suffix] of [['admin',''],['judge','_SEDZIA'],['viewer','_OGLADACZ']]){
+                const html=await readFile(folder+'MatchThis_MT-55'+suffix+'.html','utf8');
+                for(const width of [360,1366]){
+                  const context=await browser.newContext({viewport:{width,height:900}});
+                  const page=await context.newPage();
+                  page.setDefaultTimeout(18000);
+                  const errors=[];page.on('pageerror',err=>errors.push(err.message));
+                  await page.route(base+'panel.php',route=>route.fulfill({status:200,contentType:'text/html; charset=utf-8',body:html}));
+                  await page.goto(base+'panel.php',{waitUntil:'domcontentloaded',timeout:45000});
+                  if(await page.title()!=='MatchThis MT-55'||await page.locator('#appversion').innerText()!=='MT-55')throw Error('VERSION');
+                  const prior=await page.evaluate(()=>{
+                    const f=db.events.find(x=>x.id==='mt2025-float_king_2025');
+                    const p=db.events.find(x=>x.id==='mt2025-matchthis_puchar_2025');
+                    const xiv=db.events.find(mt52IsXiv);
+                    return {float:f.rounds[1].results.filter(r=>r.peg!=null).length,puchar:p.rounds[1].results.filter(r=>r.peg!=null).length,slot44:fullName(findPlayer(xiv.entrantIds[43])),slots:xiv.entrantIds.length};
+                  });
+                  if(prior.float!==70||prior.puchar!==66||prior.slot44!=='STEFANIUK RAFAŁ'||prior.slots!==72)
+                    throw Error('HISTORICAL_DATA_'+JSON.stringify(prior));
+                  await page.locator('#nav [data-view="events"]').click();
+                  await page.locator('[data-open="mt2026-xiv-puchar-matchthis-28-29-nov"]').first().click();
+                  if(role!=='admin'){
+                    if(await page.locator('[data-action="mt55ResetDraw"]').count()||await page.locator('[data-mt55-field]').count())
+                      throw Error('UNAUTHORIZED_DRAW_EDIT_'+role);
+                  }else{
+                    await page.locator('.mt54-tool[data-result-mode="draw"]').click();
+                    const a=page.locator('#mt55Assignments [data-mt55-field="peg"]');
+                    if(await a.count()!==71)throw Error('ROSTER_EXCLUDES_RESERVATION');
+                    await page.locator('#pegs').fill('1-72');
+                    await page.locator('#sectors').fill('6');
+                    await page.locator('[data-action="divide"]').click();
+                    if(await page.locator('.mt55-sector-card').count()!==6)throw Error('SIX_SECTORS');
+                    const peg=page.locator('#mt55Assignments [data-mt55-field="peg"]').first();
+                    await peg.fill('13');
+                    await a.nth(1).focus();
+                    if(await page.locator('[data-mt55-sector]').first().innerText()!=='B')throw Error('AUTO_SECTOR_B');
+                    if(!await peg.evaluate(x=>x.classList.contains('mt55-saved')))throw Error('GREEN_CONFIRMATION_MISSING');
+                    const empty=await page.evaluate(()=>({n:db.events.find(mt52IsXiv).rounds[0].results.length,stored:!!localStorage.getItem(STORAGE_KEY)}));
+                    if(empty.n!==0||!empty.stored)throw Error('ZERO_WEIGHT_FABRICATION_'+JSON.stringify(empty));
+                    await page.waitForTimeout(2100);
+                    if(await peg.evaluate(x=>x.classList.contains('mt55-saved')))throw Error('GREEN_CONFIRMATION_NOT_CLEARED');
+                    // Must reject a station already occupied.
+                    await a.nth(1).fill('13');
+                    await a.nth(2).focus();
+                    if(await a.nth(1).inputValue()!=='')throw Error('DUPLICATE_NOT_REJECTED');
+                    await a.nth(1).fill('1');
+                    await a.nth(2).focus();
+                    if(await page.locator('[data-mt55-sector]').nth(1).innerText()!=='A')throw Error('AUTO_SECTOR_A');
+                    const sectorB=page.locator('.mt55-sector-card').nth(1);
+                    const sectorA=page.locator('.mt55-sector-card').first();
+                    if(await sectorA.locator('tbody tr').count()!==1||await sectorB.locator('tbody tr').count()!==1)throw Error('SECTOR_TABLES');
+                    const weight=sectorB.locator('[data-mt55-field="weight"]');
+                    await weight.fill('1450');
+                    await a.nth(2).focus();
+                    if(!await weight.evaluate(x=>x.classList.contains('mt55-saved')))throw Error('WEIGHT_GREEN_MISSING');
+                    const weighed=await page.evaluate(()=>({results:db.events.find(mt52IsXiv).rounds[0].results,
+                      other:db.events.find(mt52IsXiv).rounds[1].results.length}));
+                    if(weighed.results.length!==1||weighed.results[0].peg!==13||weighed.results[0].sector!=='B'||weighed.results[0].weightG!==1450||weighed.other!==0)
+                      throw Error('AUTOSAVE_WEIGHT_'+JSON.stringify(weighed));
+                    if(await page.locator('#mt55Assignments [data-mt55-field="weight"]').first().inputValue()!=='1450')throw Error('WEIGHT_NOT_SYNCED');
+                    await page.reload({waitUntil:'domcontentloaded'});
+                    await page.locator('#nav [data-view="events"]').click();
+                    await page.locator('[data-open="mt2026-xiv-puchar-matchthis-28-29-nov"]').first().click();
+                    await page.locator('.mt54-tool[data-result-mode="draw"]').click();
+                    if(await page.locator('#pegs').inputValue()!=='1-72'||await page.locator('#sectors').inputValue()!=='6'||await page.locator('#mt55Assignments [data-mt55-field="weight"]').first().inputValue()!=='1450')
+                      throw Error('LOST_ON_RELOAD');
+                    await page.locator('[data-action="mt55ResetDraw"]').click();
+                    if(await page.evaluate(()=>db.events.find(mt52IsXiv).rounds[0].results.length)!==1)throw Error('RESET_ERASED_WEIGHT');
+                    // Second tour has no weights: reset must only clear that tour.
+                    await page.locator('[data-round="1"]').click();
+                    await page.locator('.mt54-tool[data-result-mode="draw"]').click();
+                    await page.locator('#pegs').fill('1-72');await page.locator('#sectors').fill('6');
+                    await page.locator('[data-action="divide"]').click();
+                    await page.locator('#mt55Assignments [data-mt55-field="peg"]').first().fill('4');
+                    await page.locator('#mt55Assignments [data-mt55-field="peg"]').nth(1).focus();
+                    page.once('dialog',d=>d.accept());
+                    await page.locator('[data-action="mt55ResetDraw"]').click();
+                    const reset=await page.evaluate(()=>{
+                      const rounds=db.events.find(mt52IsXiv).rounds;
+                      return {first:rounds[0].results[0].weightG,second:rounds[1].mt55Entries[0].peg,plan:rounds[1].mt55SectorPlan.sectors};
+                    });
+                    if(reset.first!==1450||reset.second!==null||reset.plan!==6)throw Error('CROSS_ROUND_RESET_'+JSON.stringify(reset));
+                    await page.locator('[data-action="draw"]').click();
+                    const drawn=await page.evaluate(()=>{
+                      const t=db.events.find(mt52IsXiv).rounds[1];
+                      return {entries:t.mt55Entries.length,unique:new Set(t.mt55Entries.map(r=>r.peg)).size,results:t.results.length,
+                        sectors:t.mt55Entries.filter(r=>r.sector).length};
+                    });
+                    if(drawn.entries!==71||drawn.unique!==71||drawn.results!==0||drawn.sectors!==71)throw Error('AUTO_DRAW_'+JSON.stringify(drawn));
+                    page.once('dialog',d=>d.accept());
+                    await page.locator('[data-action="mt55ResetDraw"]').click();
+                    if(await page.evaluate(()=>db.events.find(mt52IsXiv).rounds[1].mt55Entries.some(r=>r.peg!=null)))throw Error('SECOND_RESET_DID_NOT_CLEAR');
+                    await page.reload({waitUntil:'domcontentloaded'});
+                    if(await page.evaluate(()=>db.events.find(mt52IsXiv).rounds[0].results[0].weightG)!==1450)throw Error('FIRST_ROUND_LOST');
+                  }
+                  if(width===360){
+                    const dimensions=await page.evaluate(()=>({w:innerWidth,doc:document.documentElement.scrollWidth}));
+                    if(dimensions.doc>dimensions.w+1)throw Error('MOBILE_OVERFLOW_'+JSON.stringify(dimensions));
+                  }
+                  if(errors.length)throw Error('PAGE_ERRORS_'+errors.join(';'));
+                  await context.close();count++;
+                  console.log('MT55_BROWSER_PASS',browserName,role,width);
+                }
+              }
+            }finally{await browser.close()}
+          }
+          if(count!==12)throw Error('INCOMPLETE_'+count);
+          console.log('MT55_CHROMIUM_FIREFOX_12_OF_12_PASS');
+          JS
