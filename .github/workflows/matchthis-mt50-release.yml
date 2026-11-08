@@ -29,7 +29,7 @@ jobs:
                   get=lambda html:html.split('const '+key+'=')[1].split(';\n')[0]
                   assert get(before)==get(after),(suffix,key)
               assert "['cycles','CYKLE']" not in after
-              assert 'mt50SiteYear()' in after
+              assert 'mt49SiteYear()' in after
               if suffix!='_OGLADACZ':assert "localStorage.getItem(MT48_STORAGE_KEY)" in after
               assert "const STORAGE_KEY='matchthis-preview-MT-50'" in after
               if suffix!='_OGLADACZ':
