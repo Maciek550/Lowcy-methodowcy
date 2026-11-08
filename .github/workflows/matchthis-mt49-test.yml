@@ -85,7 +85,7 @@ jobs:
                   const detail=await page.evaluate(()=>({page,selectedId,roundIndex}));
                   if(detail.page!=='cycle'||detail.selectedId!==megaId||detail.roundIndex!==5)throw Error('DIRECT_LAST_TOUR_'+JSON.stringify(detail));
                   await page.locator('#nav [data-view="archive"]').click();
-                  console.log('MT49_ARCHIVE_DIAG',JSON.stringify(await page.evaluate(()=>({page,year:mt49SiteYear(),mainYears:[...document.querySelectorAll('details[data-year]')].map(x=>x.dataset.year),heading:document.querySelector('#main h1')?.textContent}))));
+                  console.log('MT49_ARCHIVE_DIAG',JSON.stringify(await page.evaluate(()=>{let error=null,html='';try{html=renderArchive().slice(0,320);}catch(e){error=String(e.stack||e);}return {page,year:mt49SiteYear(),mainYears:[...document.querySelectorAll('details[data-year]')].map(x=>x.dataset.year),heading:document.querySelector('#main h1')?.textContent,error,html,alert:document.querySelector('.toast,.notice,[role="alert"]')?.textContent};})));
                   if(await page.locator('details[data-year="2025"]').count()!==1||await page.locator('details[data-year="2026"]').count()!==0)throw Error('ARCHIVE_SHOWS_CURRENT_YEAR');
                   if(await page.locator('details[data-year="2025"] [data-open]').count()<5)throw Error('ARCHIVE_2025_MISSING');
                   if(role==='admin'&&width===1366){
