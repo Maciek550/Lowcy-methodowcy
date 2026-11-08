@@ -31,13 +31,13 @@ jobs:
                   assert get(before)==get(after),(suffix,key)
               assert "['cycles','CYKLE']" not in after
               assert 'mt49SiteYear()' in after
-              if suffix!='_OGLADACZ':assert "localStorage.getItem(MT48_STORAGE_KEY)" in after
+              if suffix!='_OGLADACZ':assert "localStorage.getItem(MT51_STORAGE_KEY)" in after
               assert "const STORAGE_KEY='matchthis-preview-MT-52'" in after
               assert 'function mt52ImportXivRoster()' in after
               assert 'function mt52ReplaceReservation(e)' in after
               assert 'const MT52_XIV_NAMES=' in after
-              assert 'function mt52DateInput(i,item)' in after
-              assert 'function mt52SetDateCount(form)' in after
+              assert 'function mt51DateInput(i,item)' in after
+              assert 'function mt51SetDateCount(form)' in after
               assert 'rounds.forEach((r,i)=>r.date=dates[i]);' in after
               if suffix!='_OGLADACZ':
                   assert 'function mt50ArchiveOldVersionsAndRecover()' in after
