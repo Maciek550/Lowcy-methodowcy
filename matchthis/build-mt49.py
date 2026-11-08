@@ -166,8 +166,9 @@ for suffix in ('','_OGLADACZ','_SEDZIA'):
  change_function('function renderEventsIndex(){','function genuinePhotoSectors(',EVENTS)
  change_function('function renderArchive(){','function render(){',ARCHIVE)
  assert s.count('function renderYearAccordion(){')==1
- s=s.replace('function renderYearAccordion(){  const years=archivedYearEntries();',
-             'function renderYearAccordion(maxYear=Infinity){  const years=archivedYearEntries().filter(g=>g.year<=maxYear);')
+ s=s.replace('function renderYearAccordion(){','function renderYearAccordion(maxYear=Infinity){')
+ assert s.count('const years=archivedYearEntries();')==1
+ s=s.replace('const years=archivedYearEntries();','const years=archivedYearEntries().filter(g=>g.year<=maxYear);')
  assert s.count("year===expandedYear?'open':''")==1
  s=s.replace("year===expandedYear?'open':''","year===(expandedYear<=maxYear?expandedYear:maxYear)?'open':''")
  assert s.count('function render(){if(roleMode')==1
