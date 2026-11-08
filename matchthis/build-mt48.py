@@ -28,7 +28,7 @@ function mt48ApplyFloatKingRoundTwoDraw(){
   const key=norm(row.competitorName||'');
   const d=map.get(key);
   if(!d){
-   if(key!=='JAROSARTUR'||Number(row.weightG)!==0||Number(row.officialPlace)!==13||row.peg!=null||row.sector!=null)return 0;
+   if(key!==norm('JAROS ARTUR')||Number(row.weightG)!==0||Number(row.officialPlace)!==13||row.peg!=null||row.sector!=null)return 0;
    extra++;continue;
   }
   if(found.has(key)||Number(row.weightG)!==d.weight||Number(row.officialPlace)!==d.place)return 0;
