@@ -1,0 +1,153 @@
+name: MatchThis MT50 prevent blank administrator on full browser storage
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt50-test.yml','matchthis/build-mt50.py']
+permissions: {contents: read}
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build MT50 from preserved MT49, check title/JS and no data or UI changes
+        run: |
+          set -euo pipefail
+          for v in 41 42 43 44 45 46 47 48 49 50; do python3 "matchthis/build-mt$v.py"; done
+          python3 - <<'PY'
+          from pathlib import Path
+          import re,subprocess
+          root=Path('matchthis')
+          keys=('MATCHTHIS_ARCHIVE_2026','MATCHTHIS_STANDALONE_2026','MATCHTHIS_ARCHIVE_2025_MEGA_V','MATCHTHIS_ARCHIVE_2025_MAVER_OCT','MT44_MISSING_2025','MT44_MEGA_2025','MT45_MEGA_2025_ROUNDS','MT46_PUCHAR_ROUND1_DRAW','MT47_PUCHAR_ROUND2_DRAW','MT48_FLOAT_ROUND2_DRAW')
+          for suffix in ('','_SEDZIA','_OGLADACZ'):
+              prev=(root/f'MatchThis_MT-49{suffix}.html').read_text()
+              nxt=(root/f'MatchThis_MT-50{suffix}.html').read_text()
+              for key in keys:
+                  get=lambda h:h.split('const '+key+'=')[1].split(';\n')[0]
+                  assert get(prev)==get(nxt),(suffix,key)
+              for marker in ('<title>MatchThis MT-50</title>','aria-label="Wersja MT-50">MT-50','data-version="MT-50"', "const APP_VERSION='MT-50'","const STORAGE_KEY='matchthis-preview-MT-50'"):
+                  assert marker in nxt,(suffix,marker)
+              assert nxt.count('function save(){')==1
+              assert nxt.count('function mt50ArchiveOldVersionsAndRecover()')==1
+              assert "localStorage.getItem(MT49_STORAGE_KEY)" in nxt
+              assert "mt50FallbackSessionRead()" in nxt
+              for script in re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',nxt,re.S):
+                  Path('/tmp/mt50-check.js').write_text(script)
+                  subprocess.run(['node','--check','/tmp/mt50-check.js'],check=True)
+          print('MT50_SOURCE_ARCHIVES_INTACT_VERSION_CONSISTENT_AND_JS_SYNTAX_PASS')
+          PY
+      - name: Install real Chromium and Firefox
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt50-browser && cd /tmp/mt50-browser
+          npm init -y >/dev/null
+          npm install --silent playwright
+          npx playwright install --with-deps chromium firefox
+      - name: Real admin/judge/viewer startup, full storage reproduction and archived backup persistence
+        run: |
+          set -euo pipefail
+          cd /tmp/mt50-browser
+          node --input-type=module <<'JS'
+          import {chromium,firefox} from 'playwright';
+          import {readFile} from 'node:fs/promises';
+          const origin='https://matchthis.lowcymethodowcy.smallhost.pl/panel.php';
+          const folder=process.env.GITHUB_WORKSPACE+'/matchthis/';
+          let scenarios=0;
+          for(const [browserName,engine] of [['Chromium',chromium],['Firefox',firefox]]){
+            const browser=await engine.launch({headless:true});
+            try{
+              for(const [role,suffix] of [['admin',''],['judge','_SEDZIA'],['viewer','_OGLADACZ']]){
+                const html=await readFile(folder+'MatchThis_MT-50'+suffix+'.html','utf8');
+                const ctx=await browser.newContext({viewport:{width:1366,height:900}});
+                const page=await ctx.newPage();page.setDefaultTimeout(18000);
+                const errors=[];page.on('pageerror',e=>errors.push(e.message));
+                await page.route(origin,route=>route.fulfill({status:200,contentType:'text/html; charset=utf-8',body:html}));
+                await page.goto(origin,{waitUntil:'domcontentloaded',timeout:45000});
+                if(await page.title()!=='MatchThis MT-50'||await page.locator('#appversion').innerText()!=='MT-50')throw Error('VERSION_'+role);
+                const fresh=await page.evaluate(()=>({nav:document.getElementById('nav')?.textContent?.length,main:document.getElementById('main')?.textContent?.length,stored:!!localStorage.getItem('matchthis-preview-MT-50')}));
+                if(!fresh.nav||!fresh.main)throw Error('BLANK_FRESH_'+role+JSON.stringify(fresh));
+                await page.locator('#nav [data-view="events"]').click();
+                if(await page.locator('.mt49-two-columns > .mt49-column').count()!==2)throw Error('TWO_COLUMN_REGRESSION_'+role);
+                await page.locator('#nav [data-view="archive"]').click();
+                if(await page.locator('details[data-year="2025"]').count()!==1||await page.locator('details[data-year="2026"]').count()!==0)throw Error('ARCHIVE_REGRESSION_'+role);
+                const sizes=await page.evaluate(()=>{
+                  const event=db.events.find(e=>e.id==='mt2025-float_king_2025');
+                  const p=db.events.find(e=>e.id==='mt2025-matchthis_puchar_2025');
+                  return {float:event.rounds[1].results.filter(r=>r.peg!=null).length,puchar:p.rounds[1].results.filter(r=>r.peg!=null).length};
+                });
+                if(sizes.float!==70||sizes.puchar!==66)throw Error('PRIOR_RESULTS_REGRESSION_'+role);
+                if(errors.length)throw Error('FRESH_JS_'+errors.join(';'));
+                scenarios++;console.log('MT50_FRESH_UI_PASS',browserName,role);
+                await ctx.close();
+              }
+              // One full-browser localStorage scenario with genuine previous
+              // snapshots and custom administrator-created data, not a fresh profile.
+              const html=await readFile(folder+'MatchThis_MT-50.html','utf8');
+              const ctx=await browser.newContext({viewport:{width:1366,height:900}});
+              const page=await ctx.newPage();page.setDefaultTimeout(30000);
+              const errors=[];page.on('pageerror',e=>errors.push(e.message));
+              await page.route(origin,route=>route.fulfill({status:200,contentType:'text/html; charset=utf-8',body:html}));
+              await page.goto(origin,{waitUntil:'domcontentloaded'});
+              const seeded=await page.evaluate(()=>{
+                const event={id:'mt50-user-owned-planned-event',name:'MOJE ZAPLANOWANE ZAWODY',kind:'EVENT',year:2026,date:'2026-12-15',archived:false,entrantIds:[],rounds:[{id:'mt50-user-round',name:'I tura',date:'2026-12-15',status:'DRAFT',results:[]}]};
+                db.events.push(event);
+                const snapshot=JSON.stringify(db);
+                localStorage.setItem('matchthis-preview-MT-49',snapshot);
+                localStorage.setItem('custom-unrelated-pref','must-stay');
+                localStorage.removeItem('matchthis-preview-MT-50');
+                let filled=0,quotaHit=false;
+                for(let i=10;i<48;i++){
+                  try{localStorage.setItem('matchthis-preview-MT-'+i,snapshot);filled++;}
+                  catch(e){quotaHit=e.name==='QuotaExceededError'||String(e).toLowerCase().includes('quota');break;}
+                }
+                return {filled,quotaHit,oldSize:snapshot.length,keys:Object.keys(localStorage).length};
+              });
+              if(!seeded.quotaHit||seeded.filled<2)throw Error('DID_NOT_CREATE_REAL_QUOTA_'+JSON.stringify(seeded));
+              errors.length=0;
+              await page.reload({waitUntil:'domcontentloaded'});
+              const before=await page.evaluate(()=>({
+                nav:document.getElementById('nav')?.textContent?.length,
+                main:document.getElementById('main')?.textContent?.length,
+                custom:!!db.events.find(e=>e.id==='mt50-user-owned-planned-event'),
+                saved:!!localStorage.getItem('matchthis-preview-MT-50')
+              }));
+              if(!before.nav||!before.main||!before.custom)throw Error('QUOTA_BLANK_OR_LOST_DATA_'+JSON.stringify(before)+' ERRORS '+JSON.stringify(errors));
+              await page.waitForFunction(()=>Boolean(localStorage.getItem('matchthis-preview-MT-50')),{timeout:30000});
+              const recovery=await page.evaluate(async()=>{
+                const data=JSON.parse(localStorage.getItem('matchthis-preview-MT-50'));
+                const open=indexedDB.open('MatchThis-zabezpieczone-kopie-wersji',1);
+                const backup=await new Promise((resolve,reject)=>{
+                  open.onerror=()=>reject(open.error);
+                  open.onsuccess=()=>{
+                    const transaction=open.result.transaction('snapshots','readonly');
+                    const req=transaction.objectStore('snapshots').get('matchthis-preview-MT-49');
+                    req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
+                  };
+                });
+                return {custom:data.events.some(e=>e.id==='mt50-user-owned-planned-event'),
+                  oldBackedUp:backup?.data?.includes('mt50-user-owned-planned-event'),
+                  oldSize:backup?.data?.length, unrelated:localStorage.getItem('custom-unrelated-pref'),
+                  storageWarning:!!document.getElementById('mt50-storage-warning'),
+                  numOldKeys:Object.keys(localStorage).filter(k=>/^matchthis-preview-MT-\d+$/.test(k)).length
+                };
+              });
+              if(!recovery.custom||!recovery.oldBackedUp||recovery.unrelated!=='must-stay'||recovery.storageWarning)throw Error('QUOTA_RECOVERY_INCOMPLETE_'+JSON.stringify(recovery));
+              // Actual user save followed by reload.
+              await page.evaluate(()=>{
+                db.events.find(e=>e.id==='mt50-user-owned-planned-event').name='ZAPIS PO NAPRAWIE';
+                if(save()!==true)throw Error('LAST_WRITE_NOT_PERSISTENT');
+              });
+              await page.reload({waitUntil:'domcontentloaded'});
+              const persisted=await page.evaluate(()=>({
+                name:db.events.find(e=>e.id==='mt50-user-owned-planned-event')?.name,
+                nav:document.getElementById('nav')?.textContent?.length,
+                size:db.events.find(e=>e.id==='mt2025-float_king_2025')?.rounds[1].results.filter(r=>r.peg!=null).length
+              }));
+              if(persisted.name!=='ZAPIS PO NAPRAWIE'||!persisted.nav||persisted.size!==70)throw Error('RELOAD_PERSISTENCE_'+JSON.stringify(persisted));
+              if(errors.length)throw Error('JS_ERROR_ON_QUOTA_'+errors.join(';'));
+              scenarios++;console.log('MT50_QUOTA_BACKUP_RECOVERY_PASS',browserName,JSON.stringify({seeded,recovery,persisted}));
+              await ctx.close();
+            }finally{await browser.close()}
+          }
+          if(scenarios!==8)throw Error('INCOMPLETE_'+scenarios);
+          console.log('MT50_CHROMIUM_FIREFOX_8_OF_8_PASS_INCLUDING_REAL_QUOTA_AND_PERSISTENCE');
+          JS
