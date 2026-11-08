@@ -27,9 +27,12 @@ jobs:
               for marker in ('<title>MatchThis MT-50</title>','aria-label="Wersja MT-50">MT-50','data-version="MT-50"', "const APP_VERSION='MT-50'","const STORAGE_KEY='matchthis-preview-MT-50'"):
                   assert marker in nxt,(suffix,marker)
               assert nxt.count('function save(){')==1
-              assert nxt.count('function mt50ArchiveOldVersionsAndRecover()')==1
-              assert "localStorage.getItem(MT49_STORAGE_KEY)" in nxt
-              assert "mt50FallbackSessionRead()" in nxt
+              if suffix!='_OGLADACZ':
+                  assert nxt.count('function mt50ArchiveOldVersionsAndRecover()')==1
+                  assert "localStorage.getItem(MT49_STORAGE_KEY)" in nxt
+                  assert "mt50FallbackSessionRead()" in nxt
+              else:
+                  assert 'function save(){/* publiczny widok oglądacza: nie wykonuje żadnego zapisu */}' in nxt
               for script in re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',nxt,re.S):
                   Path('/tmp/mt50-check.js').write_text(script)
                   subprocess.run(['node','--check','/tmp/mt50-check.js'],check=True)
