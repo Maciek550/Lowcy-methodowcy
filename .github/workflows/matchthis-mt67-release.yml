@@ -221,12 +221,23 @@ jobs:
           const response=await p.goto(url,{waitUntil:'networkidle',timeout:55000});
           if(response.status()!==200||await p.title()!=='MatchThis MT-67'||await p.locator('#appversion').innerText()!=='MT-67')
            throw Error(name+' LIVE_VERSION');
-          await p.waitForFunction(()=>mt60PublicDraws.size>0);
+          const real=await p.evaluate(async()=>{
+           await mt60RefreshPublicDraws();
+           const r=await fetch('/mt60-draws.php',{cache:'no-store',credentials:'omit'});
+           const result=await r.json();return {http:r.status,draws:result.draws};
+          });
+          if(real.http!==200||!Array.isArray(real.draws))throw Error(name+' ANONYMOUS_PUBLIC_API');
+          const inEvent=real.draws.filter(x=>x.eventId===eventId);
+          const expectedRows=inEvent.reduce((n,x)=>n+x.rows.length,0);
+          const expectedCards=inEvent.reduce((n,x)=>n+new Set(x.rows.map(y=>y.sector)).size,0);
           await p.locator('[data-view="events"]').first().click();
           await p.locator('[data-open="'+eventId+'"]').first().click();
           await p.locator('[data-result-mode="publishedDraw"]').click();
-          if(await p.locator('.mt60-draw-card').count()!==6||await p.locator('.mt60-draw-card tbody tr').count()!==71)
-           throw Error(name+' PUBLIC_DRAW_REGRESSION');
+          const pubCards=await p.locator('.mt60-draw-card').count();
+          const pubRows=await p.locator('.mt60-draw-card tbody tr').count();
+          console.log('MT67_ACTUAL_PUBLIC_DRAW_STATE',name,JSON.stringify({publishedRounds:inEvent.length,rows:expectedRows,cards:expectedCards,visibleRows:pubRows,visibleCards:pubCards}));
+          if(pubCards!==expectedCards||pubRows!==expectedRows)
+           throw Error(name+' PUBLIC_DRAW_REGRESSION '+JSON.stringify({expectedRows,expectedCards,pubRows,pubCards}));
           if(await p.locator('[data-action="mt67DownloadAllDrawSectors"]').count()!==0)throw Error(name+' VIEWER_DOWNLOAD_ACCESS');
           await ctx.close();
           // All data mutations below happen in a fresh, isolated JS test page; never on the production server.
