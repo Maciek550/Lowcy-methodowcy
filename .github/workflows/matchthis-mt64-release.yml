@@ -1,0 +1,100 @@
+name: MatchThis MT64 accepted XIV roster names on SMALL2
+'on':
+  push:
+    branches:
+    - matchthis-mt23-independent-small2-20261106
+    paths:
+    - .github/workflows/matchthis-mt64-release.yml
+permissions:
+  contents: read
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    env:
+      SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+    steps:
+    - uses: actions/checkout@v4
+    - name: Rebuild guarded MT57 deploy baseline
+      run: 'set -euo pipefail
+
+        for v in 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55; do python3 "matchthis/build-mt$v.py";done
+
+        python3 matchthis/build-mt52-release-scripts.py
+
+        python3 matchthis/build-mt54-release-scripts.py
+
+        python3 matchthis/build-mt55-release-scripts.py
+
+        python3 matchthis/build-mt57-release-scripts.py
+
+        '
+    - name: Generate MT58 judge/viewer from their MT57 originals, validate three roles and rollback
+      run: "set -euo pipefail\npython3 - <<'PY'\nfrom pathlib import Path\nimport hashlib,re,subprocess\nroot=Path('matchthis')\nexpected='2c6910834afb00abb369c31da33704b27841ad8a74a2c5aee65878fd95a2214e'\nmain=(root/'MatchThis_MT-58.html').read_text('utf8')\nassert hashlib.sha256(main.encode()).hexdigest()==expected,'Not the exact reviewed MT58 file'\nexpected_old={\n  '':'5330d4741e0315fdcbda67717dee8f35297a015b9d5250f0d4f5b4808f9f5d7c',\n  '_SEDZIA':'2d4b1aa112c05897deddea7d40e932a0e692fde61d21ef32fd5c2c058c8db2de',\n  '_OGLADACZ':'e08ed407f0fcd7334c17fa8435600f42d0ec507d9ada84829416dc4a2938aff3'\n}\ndef resolver(s):\n  start=s.index('function resolveCompetitor(name){')\n  end=s.index('function saveSelectedRoster(){',start)\n  return s[start:end]\nupdated=resolver(main)\nfor suffix,sha in expected_old.items():\n  previous=(root/f'MatchThis_MT-57{suffix}.html').read_text('utf8')\n  assert hashlib.sha256(previous.encode()).hexdigest()==sha,(suffix,'MT57 source changed')\n  if suffix:\n\
+        \    old=resolver(previous)\n    assert 'Dwie osoby o nazwie' in old\n    newer=previous.replace(old,updated,1)\n    pairs=[\n      ('<title>MatchThis MT-57</title>','<title>MatchThis MT-58</title>'),\n      ('data-version=\"MT-57\"','data-version=\"MT-58\"'),\n      ('<span class=\"mt-build-badge\" aria-label=\"Wersja MT-57\">MT-57</span>','<span class=\"mt-build-badge\" aria-label=\"Wersja MT-58\">MT-58</span>'),\n      ('<div class=\"version\" id=\"appversion\">MT-57</div>','<div class=\"version\" id=\"appversion\">MT-58</div>'),\n      (\"const APP_VERSION='MT-57';\",\"const APP_VERSION='MT-58';\"),\n      (\"const STORAGE_KEY='matchthis-preview-MT-57';\",\"const STORAGE_KEY='matchthis-preview-MT-58';\\nconst MT57_STORAGE_KEY='matchthis-preview-MT-57';\"),\n      (\"console.error('MatchThis MT-57:\",\"console.error('MatchThis MT-58:\"),\n      (\"console.warn('MatchThis MT-57:\",\"console.warn('MatchThis MT-58:\")\n    ]\n    for a,b in pairs:\n      if a.startswith('console.')\
+        \ and a not in newer: continue\n      assert newer.count(a)==1,(suffix,a,newer.count(a))\n      newer=newer.replace(a,b,1)\n    migration='localStorage.getItem(MT56_STORAGE_KEY)||'\n    if migration in newer:\n      assert newer.count(migration)==1\n      newer=newer.replace(migration,'localStorage.getItem(MT57_STORAGE_KEY)||'+migration,1)\n    (root/f'MatchThis_MT-58{suffix}.html').write_text(newer,'utf8')\n  else: newer=main\n  for t in ('<title>MatchThis MT-58</title>',\"const APP_VERSION='MT-58'\",'data-version=\"MT-58\"','aria-label=\"Wersja MT-58\">MT-58'):\n    assert t in newer,(suffix,t)\n  for script in re.findall(r'<script(?:\\s[^>]*)?>(.*?)</script>',newer,re.S):\n    Path('/tmp/mt58-check.js').write_text(script)\n    subprocess.run(['node','--check','/tmp/mt58-check.js'],check=True)\n  print('MT58_ROLE_VERSION_JS_OK',suffix)\n# Upgrade the already guarded MT57 release scripts: MT57 becomes MT58,\n# while their previous MT55 baseline becomes MT57, preserving rollbacks.\n\
+        for kind in ('deploy','rollback'):\n  script=(root/f'{kind}-mt57-small2.sh').read_text('utf8')\n  for old,new in (('MT-57','MT-58'),('MT57','MT58'),('mt57','mt58'),('mt-57','mt-58'),\n                  ('MT-55','MT-57'),('MT55','MT57'),('mt55','mt57'),('mt-55','mt-57')):\n    script=script.replace(old,new)\n  assert 'index-MT57.backup' in script\n  assert 'matchthis-independent/mt-58' in script\n  assert 'MatchThis_MT-58_OGLADACZ.html' in script\n  (root/f'{kind}-mt58-small2.sh').write_text(script,'utf8')\nprint('MT58_EXACT_ADMIN_HASH_AND_THREE_ROLES_AND_ROLLBACK_PRECHECK_PASS')\nPY\nbash -n matchthis/deploy-mt58-small2.sh\nbash -n matchthis/rollback-mt58-small2.sh\n"
+    - name: Promote MT58 roles to exact verified MT59 station-only UI with sector weights
+      run: "set -euo pipefail\npython3 - <<'PY'\nfrom pathlib import Path\nimport hashlib,re,subprocess\nroot=Path('matchthis')\nnames={\n '':('2c6910834afb00abb369c31da33704b27841ad8a74a2c5aee65878fd95a2214e','455a80cca888160a76b204f90e2aa889ce01505169450e66d5a249f051a3c8da'),\n '_SEDZIA':('b066b8dd0cf25671caf11e0bb01564c336b6c9274f6820fe5d9a9de13afafe01','26f89b8f25bef26c16497b425c382dead29b3be62008e8cf93b1bb8cd8dd1d86'),\n '_OGLADACZ':('69cf9d3b36ace1897cea949180ed3df20f111c8fe141e6a8ea6d3c03f928627d','0dccdf7e19f2564b28f100f152fb6c74930b2995074eac4c6cd7bf8afe2e01e0')\n}\nadmin=(root/'MatchThis_MT-59.html').read_text('utf8')\nassert hashlib.sha256(admin.encode()).hexdigest()==names[''][1],'MT59 source changed'\na=admin.index('function mt59AssignmentsWorkspace(e,t){')\nb=admin.index('\\nfunction mt55RefreshUI(e,t,',a)\nworkspace=admin[a:b]\nfocus_css='.mt55-table input:focus{outline:2px solid #e96609;outline-offset:1px}'\ncss=focus_css+'''\n/* MT-59: number inputs stay validated; no mouse\
+        \ spinners in station/weight tables. */\n.mt55-table input[type=\"number\"]{appearance:textfield;-moz-appearance:textfield}\n.mt55-table input[type=\"number\"]::-webkit-inner-spin-button,\n.mt55-table input[type=\"number\"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}'''\n# Remove indentation added by YAML block without changing canonical source.\ncss=css.replace('\\n          ','\\n')\nassert css in admin\ndef once(s,old,new):\n assert s.count(old)==1,(old[:85],s.count(old))\n return s.replace(old,new,1)\nfor suffix,(oldhash,newhash) in names.items():\n old=(root/f'MatchThis_MT-58{suffix}.html').read_text('utf8')\n assert hashlib.sha256(old.encode()).hexdigest()==oldhash,(suffix,'MT58 mismatch')\n if not suffix: new=admin\n else:\n  new=once(old,focus_css,css)\n  a=new.index('function mt55Workspace(e,t){');b=new.index('\\nfunction mt55RefreshUI(e,t,',a)\n  new=new[:a]+workspace+new[b:]\n  new=once(new,'mt55Writable(e,t)&&!t.sourceOfficial?mt55Workspace(e,t):renderResultsEditor(t)',\n\
+        \        'mt55Writable(e,t)&&!t.sourceOfficial?mt59WeightsWorkspace(e,t):renderResultsEditor(t)')\n  oldcall=chr(36)+'{mt55Workspace(e,t)}'+chr(96)+';'\n  newcall=chr(36)+'{mt59AssignmentsWorkspace(e,t)}'+chr(96)+';'\n  new=once(new,oldcall,newcall)\n  for oldtag,newtag in (\n   ('<title>MatchThis MT-58</title>','<title>MatchThis MT-59</title>'),\n   ('data-version=\"MT-58\"','data-version=\"MT-59\"'),\n   ('aria-label=\"Wersja MT-58\">MT-58','aria-label=\"Wersja MT-59\">MT-59'),\n   ('<div class=\"version\" id=\"appversion\">MT-58</div>','<div class=\"version\" id=\"appversion\">MT-59</div>'),\n   (\"const APP_VERSION='MT-58';\",\"const APP_VERSION='MT-59';\"),\n   (\"const STORAGE_KEY='matchthis-preview-MT-58';\",\"const STORAGE_KEY='matchthis-preview-MT-59';\\nconst MT58_STORAGE_KEY='matchthis-preview-MT-58';\")\n  ):new=once(new,oldtag,newtag)\n  if 'localStorage.getItem(MT57_STORAGE_KEY)||' in new:\n   new=once(new,'localStorage.getItem(MT57_STORAGE_KEY)||',\n      'localStorage.getItem(MT58_STORAGE_KEY)||localStorage.getItem(MT57_STORAGE_KEY)||')\n\
+        \  for token in (\"console.error('MatchThis MT-58:\",\"console.warn('MatchThis MT-58:\"):\n   if token in new:new=once(new,token,token.replace('MT-58','MT-59'))\n  (root/f'MatchThis_MT-59{suffix}.html').write_text(new,'utf8')\n assert hashlib.sha256(new.encode()).hexdigest()==newhash,(suffix,'MT59 output mismatch',hashlib.sha256(new.encode()).hexdigest())\n for token in ('<title>MatchThis MT-59</title>',\"const APP_VERSION='MT-59'\",'data-version=\"MT-59\"',\n        'aria-label=\"Wersja MT-59\">MT-59','function mt59AssignmentsWorkspace(e,t)',\n        'function mt59WeightsWorkspace(e,t)'):\n  assert token in new,(suffix,token)\n assert new.count(\"mt55EntryInput(x,'weight')\")==1\n assert \"mt55EntryInput(r,'weight')\" not in new\n for key in ('MATCHTHIS_ARCHIVE_2026','MATCHTHIS_STANDALONE_2026','MATCHTHIS_ARCHIVE_2025_MEGA_V',\n            'MATCHTHIS_ARCHIVE_2025_MAVER_OCT','MT44_MISSING_2025','MT44_MEGA_2025',\n            'MT45_MEGA_2025_ROUNDS','MT46_PUCHAR_ROUND1_DRAW','MT47_PUCHAR_ROUND2_DRAW',\n\
+        \            'MT48_FLOAT_ROUND2_DRAW'):\n  get=lambda html:html.split('const '+key+'=',1)[1].split(';\\n',1)[0]\n  assert get(old)==get(new),(suffix,'historic data changed',key)\n for script in re.findall(r'<script(?:\\s[^>]*)?>(.*?)</script>',new,re.S):\n  if script.strip():\n   Path('/tmp/mt59-check.js').write_text(script)\n   subprocess.run(['node','--check','/tmp/mt59-check.js'],check=True)\n print('MT59_ROLE_SHA_VERSION_UI_JS_DATA_PASS',suffix)\nfor kind in ('deploy','rollback'):\n text=(root/f'{kind}-mt58-small2.sh').read_text('utf8')\n for old,new in (\n   ('MT-58','MT-59'),('MT58','MT59'),('mt58','mt59'),('mt-58','mt-59'),\n   ('MT-57','MT-58'),('MT57','MT58'),('mt57','mt58'),('mt-57','mt-58')\n ):text=text.replace(old,new)\n assert 'index-MT58.backup' in text and 'matchthis-independent/mt-59' in text\n assert 'MatchThis_MT-59_OGLADACZ.html' in text\n assert ('MT59_VERSION_AUTH_HTTPS_OK' in text if kind=='deploy' else 'MT59_ROLLBACK_MT58' in text)\n (root/f'{kind}-mt59-small2.sh').write_text(text,'utf8')\n\
+        print('MT59_ROLLBACK_TO_MT58_CONFIGURED')\nPY\nbash -n matchthis/deploy-mt59-small2.sh\nbash -n matchthis/rollback-mt59-small2.sh\n"
+    - name: Build MT60 from MT59, check all role checksums, archives and rollback
+      run: 'set -euo pipefail
+
+        python3 matchthis/build-mt60.py
+
+        php -l matchthis/mt60-draws.php
+
+        bash -n matchthis/deploy-mt60-small2.sh
+
+        bash -n matchthis/rollback-mt60-small2.sh
+
+        '
+    - name: Produce MT61 HTML roles from exact MT60 baseline and safe rollback
+      run: "set -euo pipefail\ntest -f AGENTS.md\npython3 matchthis/build-mt61.py\npython3 - <<'PY'\nfrom pathlib import Path\nimport hashlib\nroot=Path('matchthis')\nbaseline={\n '':'929413d687332e24b71ea775d971a201be6b51d5dee494597f6a1a99baf9eb56',\n '_OGLADACZ':'7e0ba35366add30dc791f5c750ce9d201fc85a8d9969243ca64ca129cae88aeb',\n '_SEDZIA':'5536b19e7089686c821b6ab5e827ff4af7a4712a050d98d275b8982b0191d864'\n}\nresult={\n '':'87909ba2d3438f43bd64f444f3bdae947e55eda794178fe07bc829d12c26f36a',\n '_OGLADACZ':'19a5c5f4551c8388c64edbdc6bd54605790e3fe92c1ec0fad04eb707c1af24e9',\n '_SEDZIA':'0aa056a94fcbc87e51ce9ac993aa1394f1259ef8b814a8f89a81f2006a8a610f'\n}\nfor role in baseline:\n assert hashlib.sha256((root/f'MatchThis_MT-60{role}.html').read_bytes()).hexdigest()==baseline[role]\n assert hashlib.sha256((root/f'MatchThis_MT-61{role}.html').read_bytes()).hexdigest()==result[role]\nfor kind in ('deploy','rollback'):\n data=(root/f'{kind}-mt60-small2.sh').read_text('utf8')\n for before,after in\
+        \ (\n  ('MT-60','MT-61'),('MT60','MT61'),('mt60','mt61'),('mt-60','mt-61'),\n  ('MT-59','MT-60'),('MT59','MT60'),('mt59','mt60'),('mt-59','mt-60')\n ):data=data.replace(before,after)\n assert 'index-MT60.backup' in data\n assert 'matchthis-independent/mt-61' in data\n assert 'MatchThis_MT-61_OGLADACZ.html' in data\n assert ('MT61_VERSION_AUTH_HTTPS_OK' in data if kind=='deploy' else 'MT61_ROLLBACK_MT60' in data)\n (root/f'{kind}-mt61-small2.sh').write_text(data,'utf8')\nprint('MT61_BASELINES_VERSION_ROLES_AND_ROLLBACK_PASS')\nPY\nbash -n matchthis/deploy-mt61-small2.sh\nbash -n matchthis/rollback-mt61-small2.sh\n"
+    - name: Build MT62 from exact verified MT61 with 71 equals 71 rule and preserved data
+      run: "set -euo pipefail\ntest -f AGENTS.md\npython3 matchthis/build-mt62.py\npython3 - <<'PY'\nfrom pathlib import Path\nimport hashlib\nD=Path('matchthis')\nexpected={\n '':'ff3ef02ec1d9f3550366f5671460194c27c2e3b643f9fa1b54b94ff010d7f851',\n '_OGLADACZ':'e93a66c5941e5177ea1a6e126c5c4ef8a2fc5fd5a132a73b2d4b7a53a5ebd317',\n '_SEDZIA':'7ea30c27e0b2b951f94ae8c7e1835de426320548dcdee686c9c91d617ce3d421'\n}\nfor role,sha in expected.items():\n path=D/f'MatchThis_MT-62{role}.html'\n assert hashlib.sha256(path.read_bytes()).hexdigest()==sha,role\n text=path.read_text('utf8')\n for v in ('<title>MatchThis MT-62</title>','data-version=\"MT-62\"', \"const APP_VERSION='MT-62'\",'aria-label=\"Wersja MT-62\">MT-62'):\n  assert v in text,(role,v)\nfor kind in ('deploy','rollback'):\n data=(D/f'{kind}-mt61-small2.sh').read_text('utf8')\n for a,b in (('MT-61','MT-62'),('MT61','MT62'),('mt61','mt62'),('mt-61','mt-62'),\n             ('MT-60','MT-61'),('MT60','MT61'),('mt60','mt61'),('mt-60','mt-61')):\n\
+        \  data=data.replace(a,b)\n assert 'index-MT61.backup' in data\n assert 'matchthis-independent/mt-62' in data\n assert 'MatchThis_MT-62_OGLADACZ.html' in data\n assert ('MT62_VERSION_AUTH_HTTPS_OK' in data if kind=='deploy' else 'MT62_ROLLBACK_MT61' in data)\n (D/f'{kind}-mt62-small2.sh').write_text(data,'utf8')\nprint('MT62_EXACT_ROLES_SHA_VERSIONS_ROLLBACK_PASS')\nPY\nbash -n matchthis/deploy-mt62-small2.sh\nbash -n matchthis/rollback-mt62-small2.sh\n"
+    - name: Build MT63 confirmations from exact MT62 preserving archives
+      run: python3 matchthis/build-mt63.py
+    - name: Build MT64 accepted XIV roster labels preserving all data
+      run: python3 matchthis/build-mt64.py
+    - name: Install Chromium and Firefox for actual UI tests
+      run: 'mkdir -p /tmp/mt63-test
+
+        cd /tmp/mt63-test
+
+        npm init -y
+
+        npm install playwright@1.58.2
+
+        npx playwright install --with-deps chromium firefox'
+    - name: Reproduce MT63 warning and test MT64 correction in Chromium and Firefox
+      run: NODE_PATH=/tmp/mt63-test/node_modules node matchthis/test-mt64.cjs
+    - name: Run complete confirmation and draw regressions on MT64
+      run: 'sed ''s/MT-63/MT-64/g'' matchthis/test-mt63.cjs > matchthis/test-mt64-confirmations.cjs
+
+        NODE_PATH=/tmp/mt63-test/node_modules node matchthis/test-mt64-confirmations.cjs'
+    - name: Deploy only MatchThis MT64 to SMALL2 with MT63 backup
+      id: deploy
+      run: bash matchthis/deploy-mt64-small2.sh
+    - name: Verify deployed version and repeat user regressions
+      run: NODE_PATH=/tmp/mt63-test/node_modules MT63_LIVE_URL=https://matchthis.lowcymethodowcy.smallhost.pl/ node matchthis/test-mt64-confirmations.cjs
+    - name: Verify real unauthenticated LOSOWANIE tile with published second round through actual clicks
+      run: "set -euo pipefail\ncd /tmp/mt63-test\nnode --input-type=module <<'JS'\nimport {chromium,firefox} from 'playwright';\nconst url='https://matchthis.lowcymethodowcy.smallhost.pl/';\nconst id='mt2026-xiv-puchar-matchthis-28-29-nov';\nfor (const [name,browserType] of [['Chromium',chromium],['Firefox',firefox]]) {\n const browser=await browserType.launch({headless:true});\n try {\n  const page=await browser.newPage({viewport:{width:1465,height:880}});\n  const errors=[];\n  page.on('pageerror',e=>errors.push(e.message));\n  const resp=await page.goto(url,{waitUntil:'networkidle',timeout:50000});\n  if(resp.status()!==200||await page.title()!=='MatchThis MT-64')throw Error(name+' PUBLIC_VERSION');\n  const version=await page.locator('#appversion').innerText();\n  if(version!=='MT-64')throw Error(name+' HEADER_VERSION '+version);\n  const api=await page.evaluate(async()=> {\n   const response=await fetch('/mt60-draws.php',{cache:'no-store',credentials:'omit'});\n   const obj=await response.json();\n\
+        \   return {http:response.status,items:obj.draws};\n  });\n  if(api.http!==200)throw Error(name+' PUBLIC_API_STATUS');\n  const published=api.items.filter(x=>x.eventId===id);\n  if(published.length!==1||published[0].roundIndex!==1||published[0].rows.length!==71)\n    throw Error(name+' PUBLISHED_TURA2_EXPECTED_'+JSON.stringify(published.map(x=>[x.roundIndex,x.rows.length])));\n  await page.waitForFunction(()=>mt60PublicDraws.size>=1);\n  await page.locator('[data-view=\"events\"]').first().click();\n  await page.locator('[data-open=\"'+id+'\"]').first().click();\n  const button=page.locator('[data-result-mode=\"publishedDraw\"]');\n  if(await button.count()!==1||!await button.isVisible()||(await button.innerText())!=='LOSOWANIE')throw Error(name+' LOSOWANIE_TILE_MISSING');\n  if(await page.locator('[data-round=\"0\"].active').count()!==1)throw Error(name+' FIRST_ROUND_NOT_DEFAULT');\n  await button.click();\n  const state=await page.evaluate(()=>{\n   const cards=[...document.querySelectorAll('.mt60-draw-card')];\n\
+        \   const statuses=[...document.querySelectorAll('.mt61-round-status span')].map(n=>n.textContent);\n   return {mode:resultMode,roundIndex,cards:cards.length,\n    rows:document.querySelectorAll('.mt60-draw-card tbody tr').length,\n    labels:cards.map(x=>x.querySelector('h3').textContent),\n    statuses,\n    derlaga:[...document.querySelectorAll('.mt60-draw-card tbody tr')].filter(x=>x.textContent.includes('DERLAGA JAKUB')).length};\n  });\n  if(state.mode!=='publishedDraw'||state.roundIndex!==0||state.cards!==6||state.rows!==71||state.derlaga!==1)\n    throw Error(name+' PUBLIC_DRAW_ROWS_'+JSON.stringify(state));\n  if(!state.statuses.some(s=>s.includes('Tura 1')&&s.includes('nieopublikowane'))||\n     !state.statuses.some(s=>s.includes('Tura 2')&&s.includes('71 wylosowanych')))\n    throw Error(name+' PUBLISHED_STATUS_'+JSON.stringify(state.statuses));\n  if(await page.locator('[data-action=\"pdfAllSectors\"],[data-action=\"draw\"],[data-mt55-field=\"weight\"]').count())\n  \
+        \  throw Error(name+' ADMIN_CONTROL_LEAK');\n  // The tile remains reachable after navigating to another result/round and back.\n  await page.locator('[data-round=\"1\"]').click();\n  if(await page.locator('[data-result-mode=\"publishedDraw\"]').count()!==1)throw Error(name+' TILE_LOST_AFTER_ROUND_SWITCH');\n  await page.locator('[data-result-mode=\"publishedDraw\"]').click();\n  if(await page.locator('.mt60-draw-card tbody tr').count()!==71)throw Error(name+' DRAW_LOST_AFTER_ROUND_SWITCH');\n  await page.locator('[data-result-mode=\"round\"]').click();\n  await page.locator('[data-result-mode=\"publishedDraw\"]').click();\n  if(await page.locator('.mt60-draw-card tbody tr').count()!==71)throw Error(name+' DRAW_LOST_AFTER_RESULTS');\n  const css=await page.locator('.mt61-draw-overview').evaluate(x=>getComputedStyle(x).display);\n  if(css==='none')throw Error(name+' DRAW_HIDDEN_CSS');\n  const view=await page.locator('.mt60-draw-grid').first().evaluate(x=>({scroll:x.scrollWidth,client:x.clientWidth}));\n\
+        \  if(view.scroll>view.client+2)throw Error(name+' PUBLIC_DRAW_HORIZONTAL_OVERFLOW_'+JSON.stringify(view));\n  if(errors.length)throw Error(name+' JS_ERRORS_'+JSON.stringify(errors));\n  await page.screenshot({path:'/tmp/mt63-test/MatchThis_MT64_'+name+'_real_public_draw.png',fullPage:true});\n  console.log('MT64_REAL_PUBLIC_VIEWER_LOSOWANIE_PASS',name,\n              JSON.stringify({rows:state.rows,sectors:state.cards,publishedTura:2,version,errors:0}));\n  await page.close();\n } finally {await browser.close()}\n}\nJS\n"
+    - name: Package verified HTML files
+      uses: actions/upload-artifact@v4
+      with:
+        name: MatchThis_MT-64_verified
+        path: matchthis/MatchThis_MT-64*.html
+        if-no-files-found: error
+    - name: Rollback to MT63 if deployed test fails
+      if: failure() && steps.deploy.outcome == 'success'
+      run: bash matchthis/rollback-mt64-small2.sh
