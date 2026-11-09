@@ -4,6 +4,7 @@ on:
     branches: [matchthis-mt23-independent-small2-20261106]
     paths: ['.github/workflows/matchthis-mt60-release.yml']
 permissions: {contents: read}
+# MT60 role generation uses exact local source checksums; no writes to historical datasets
 jobs:
   deploy:
     runs-on: ubuntu-latest
