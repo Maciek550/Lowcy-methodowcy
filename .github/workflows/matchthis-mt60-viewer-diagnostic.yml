@@ -57,5 +57,26 @@ jobs:
               pubRows:[...document.querySelectorAll('.mt60-draw-card tbody tr')].length};
           });
           console.log('TURA2_SECTORS_RENDER',JSON.stringify(sectors),'PAGE_ERRORS',JSON.stringify(errors));
+          await page.goto(base,{waitUntil:'networkidle',timeout:45000});
+          await page.waitForFunction(()=>mt60PublicDraws.size>0,{timeout:15000});
+          await page.locator('[data-view="events"]').first().click();
+          const realId='mt2026-xiv-puchar-matchthis-28-29-nov';
+          const candidate=page.locator('[data-open="'+realId+'"]');
+          console.log('REAL_NAV_EVENT_LINKS',await candidate.count());
+          await candidate.first().click();
+          await page.locator('[data-round="1"]').first().click();
+          console.log('REAL_NAV_TURA2_SECTORS',JSON.stringify(await page.evaluate(()=>({
+            page,resultMode,roundIndex,pubCards:document.querySelectorAll('.mt60-draw-card').length,
+            pubRows:document.querySelectorAll('.mt60-draw-card tbody tr').length,
+            mainText:document.getElementById('main')?.innerText?.slice(0,100)||'',
+            scrollY:window.scrollY
+          }))));
+          await page.locator('[data-result-mode="round"]').first().click();
+          console.log('REAL_NAV_TURA2_WHOLE_ROUND',JSON.stringify(await page.evaluate(()=>({
+            page,resultMode,roundIndex,pubCards:document.querySelectorAll('.mt60-draw-card').length,
+            pubRows:document.querySelectorAll('.mt60-draw-card tbody tr').length,
+            scrollY:window.scrollY,
+            pubBlockVisible:(()=>{const x=document.querySelector('.mt60-published-draw');return x?getComputedStyle(x).display:'absent'})()
+          }))));
           await browser.close();
           JS
