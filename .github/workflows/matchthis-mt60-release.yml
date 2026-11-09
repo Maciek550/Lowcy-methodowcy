@@ -351,6 +351,8 @@ jobs:
             const errors=[];page.on('pageerror',e=>errors.push(e.message));
             const response=await page.goto(base,{waitUntil:'domcontentloaded',timeout:45000});
             if(response.status()!==200||await page.title()!=='MatchThis MT-60')throw Error(name+' LIVE_VERSION');
+            await page.close();
+            page=await ctx.newPage();page.on('pageerror',e=>errors.push(e.message));
             await page.route('**/mt60-draws.php*',async route=>{
              const request=route.request();
              if(request.url().includes('?token=1'))
