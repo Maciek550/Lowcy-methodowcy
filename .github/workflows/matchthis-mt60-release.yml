@@ -384,9 +384,11 @@ jobs:
             page=await ctx.newPage();page.on('pageerror',e=>errors.push(e.message));
             await page.route('**/mt60-draws.php*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({draws:[item]})}));
             await page.goto(base,{waitUntil:'domcontentloaded',timeout:45000});
-            await page.setContent(viewer.replace("roleMode!=='viewer'||!['https:','http:'].includes(location.protocol)","roleMode!=='viewer'"),{waitUntil:'load',timeout:60000});
+            if(await page.title()!=='MatchThis MT-60')throw Error(name+' PUBLIC_SITE_NOT_MT60');
             await page.evaluate(()=>{const e=db.events.find(mt52IsXiv);page='event';selectedId=e.id;roundIndex=0;resultMode='sectors';render()});
-            await page.waitForFunction(()=>document.querySelectorAll('.mt60-draw-card').length===6,{timeout:10000});
+            await page.evaluate(()=>mt60RefreshPublicDraws());
+            const drawState=await page.evaluate(()=>({role:roleMode,found:mt60PublicDraws.size,cards:document.querySelectorAll('.mt60-draw-card').length,entry:mt60PublicDraws.get(mt60DrawKey(db.events.find(mt52IsXiv).id,0))?.rows?.length}));
+            if(drawState.cards!==6)throw Error(name+' VIEWER_DRAW_NOT_VISIBLE_'+JSON.stringify(drawState));
             const count=await page.locator('.mt60-draw-card tbody tr').count();
             if(count!==71||await page.locator('[data-action="pdfAllSectors"]').count()!==0)
              throw Error(name+' PUBLIC_VIEWER_INCORRECT');
