@@ -118,7 +118,7 @@ jobs:
                   key:i=>Object.keys(store)[i]||null,get length(){return Object.keys(store).length}
                 }});
               });
-              const page=await ctx.newPage();
+              let page=await ctx.newPage();
               const errors=[];page.on('pageerror',e=>errors.push(e.message));
               const resp=await page.goto(origin,{waitUntil:'domcontentloaded',timeout:45000});
               if(resp.status()!==200||await page.title()!=='MatchThis MT-58'||await page.locator('#appversion').innerText()!=='MT-58')
@@ -131,6 +131,9 @@ jobs:
               }));
               if(base.xiv!==1||base.slots!==72||JSON.stringify(base.dates)!==JSON.stringify(['2026-11-28','2026-11-29']))
                 throw Error(name+' PUBLIC_DATA '+JSON.stringify(base));
+              await page.close();
+              page=await ctx.newPage();
+              page.on('pageerror',e=>errors.push(e.message));
               await page.setContent(html,{waitUntil:'load',timeout:60000});
               const id=await page.evaluate(()=>{
                 const event=db.events.find(mt52IsXiv);
@@ -152,6 +155,12 @@ jobs:
               await input.fill('3715');await input.press('Tab');
               const w=await page.evaluate(id=>db.events.find(mt52IsXiv).rounds[0].mt55Entries.find(x=>x.competitorId===id)?.weightG,id);
               if(w!==3715)throw Error(name+' AUTOSAVE '+w);
+              const snapshot=await page.evaluate(()=>localStorage.getItem('matchthis-preview-MT-58'));
+              if(!snapshot)throw Error(name+' NO_SAVED_DATA');
+              await page.close();
+              page=await ctx.newPage();
+              page.on('pageerror',e=>errors.push(e.message));
+              await page.evaluate(snapshot=>localStorage.setItem('matchthis-preview-MT-58',snapshot),snapshot);
               await page.setContent(html,{waitUntil:'load',timeout:60000});
               const w2=await page.evaluate(id=>db.events.find(mt52IsXiv).rounds[0].mt55Entries.find(x=>x.competitorId===id)?.weightG,id);
               if(w2!==3715)throw Error(name+' PERSISTENCE '+w2);
