@@ -16,8 +16,8 @@ jobs:
           import urllib.request, urllib.error, json, hashlib, re
           base='https://matchthis.lowcymethodowcy.smallhost.pl'
           class NoRedirect(urllib.request.HTTPRedirectHandler):
-    def redirect_request(self, req, fp, code, msg, headers, newurl):
-        return None
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  return None
           def get(path, follow_redirects=True):
               request=urllib.request.Request(base+path,headers={'User-Agent':'MatchThis-production-readonly-audit/1.0','Cache-Control':'no-cache'})
               try:
