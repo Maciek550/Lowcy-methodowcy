@@ -1,0 +1,408 @@
+name: MatchThis MT60 public sector draws and compact weights on SMALL2
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt60-release.yml']
+permissions: {contents: read}
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rebuild guarded MT57 deploy baseline
+        run: |
+          set -euo pipefail
+          for v in 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55; do python3 "matchthis/build-mt$v.py";done
+          python3 matchthis/build-mt52-release-scripts.py
+          python3 matchthis/build-mt54-release-scripts.py
+          python3 matchthis/build-mt55-release-scripts.py
+          python3 matchthis/build-mt57-release-scripts.py
+      - name: Generate MT58 judge/viewer from their MT57 originals, validate three roles and rollback
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,re,subprocess
+          root=Path('matchthis')
+          expected='2c6910834afb00abb369c31da33704b27841ad8a74a2c5aee65878fd95a2214e'
+          main=(root/'MatchThis_MT-58.html').read_text('utf8')
+          assert hashlib.sha256(main.encode()).hexdigest()==expected,'Not the exact reviewed MT58 file'
+          expected_old={
+            '':'5330d4741e0315fdcbda67717dee8f35297a015b9d5250f0d4f5b4808f9f5d7c',
+            '_SEDZIA':'2d4b1aa112c05897deddea7d40e932a0e692fde61d21ef32fd5c2c058c8db2de',
+            '_OGLADACZ':'e08ed407f0fcd7334c17fa8435600f42d0ec507d9ada84829416dc4a2938aff3'
+          }
+          def resolver(s):
+            start=s.index('function resolveCompetitor(name){')
+            end=s.index('function saveSelectedRoster(){',start)
+            return s[start:end]
+          updated=resolver(main)
+          for suffix,sha in expected_old.items():
+            previous=(root/f'MatchThis_MT-57{suffix}.html').read_text('utf8')
+            assert hashlib.sha256(previous.encode()).hexdigest()==sha,(suffix,'MT57 source changed')
+            if suffix:
+              old=resolver(previous)
+              assert 'Dwie osoby o nazwie' in old
+              newer=previous.replace(old,updated,1)
+              pairs=[
+                ('<title>MatchThis MT-57</title>','<title>MatchThis MT-58</title>'),
+                ('data-version="MT-57"','data-version="MT-58"'),
+                ('<span class="mt-build-badge" aria-label="Wersja MT-57">MT-57</span>','<span class="mt-build-badge" aria-label="Wersja MT-58">MT-58</span>'),
+                ('<div class="version" id="appversion">MT-57</div>','<div class="version" id="appversion">MT-58</div>'),
+                ("const APP_VERSION='MT-57';","const APP_VERSION='MT-58';"),
+                ("const STORAGE_KEY='matchthis-preview-MT-57';","const STORAGE_KEY='matchthis-preview-MT-58';\nconst MT57_STORAGE_KEY='matchthis-preview-MT-57';"),
+                ("console.error('MatchThis MT-57:","console.error('MatchThis MT-58:"),
+                ("console.warn('MatchThis MT-57:","console.warn('MatchThis MT-58:")
+              ]
+              for a,b in pairs:
+                if a.startswith('console.') and a not in newer: continue
+                assert newer.count(a)==1,(suffix,a,newer.count(a))
+                newer=newer.replace(a,b,1)
+              migration='localStorage.getItem(MT56_STORAGE_KEY)||'
+              if migration in newer:
+                assert newer.count(migration)==1
+                newer=newer.replace(migration,'localStorage.getItem(MT57_STORAGE_KEY)||'+migration,1)
+              (root/f'MatchThis_MT-58{suffix}.html').write_text(newer,'utf8')
+            else: newer=main
+            for t in ('<title>MatchThis MT-58</title>',"const APP_VERSION='MT-58'",'data-version="MT-58"','aria-label="Wersja MT-58">MT-58'):
+              assert t in newer,(suffix,t)
+            for script in re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',newer,re.S):
+              Path('/tmp/mt58-check.js').write_text(script)
+              subprocess.run(['node','--check','/tmp/mt58-check.js'],check=True)
+            print('MT58_ROLE_VERSION_JS_OK',suffix)
+          # Upgrade the already guarded MT57 release scripts: MT57 becomes MT58,
+          # while their previous MT55 baseline becomes MT57, preserving rollbacks.
+          for kind in ('deploy','rollback'):
+            script=(root/f'{kind}-mt57-small2.sh').read_text('utf8')
+            for old,new in (('MT-57','MT-58'),('MT57','MT58'),('mt57','mt58'),('mt-57','mt-58'),
+                            ('MT-55','MT-57'),('MT55','MT57'),('mt55','mt57'),('mt-55','mt-57')):
+              script=script.replace(old,new)
+            assert 'index-MT57.backup' in script
+            assert 'matchthis-independent/mt-58' in script
+            assert 'MatchThis_MT-58_OGLADACZ.html' in script
+            (root/f'{kind}-mt58-small2.sh').write_text(script,'utf8')
+          print('MT58_EXACT_ADMIN_HASH_AND_THREE_ROLES_AND_ROLLBACK_PRECHECK_PASS')
+          PY
+          bash -n matchthis/deploy-mt58-small2.sh
+          bash -n matchthis/rollback-mt58-small2.sh
+      - name: Promote MT58 roles to exact verified MT59 station-only UI with sector weights
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,re,subprocess
+          root=Path('matchthis')
+          names={
+           '':('2c6910834afb00abb369c31da33704b27841ad8a74a2c5aee65878fd95a2214e','455a80cca888160a76b204f90e2aa889ce01505169450e66d5a249f051a3c8da'),
+           '_SEDZIA':('b066b8dd0cf25671caf11e0bb01564c336b6c9274f6820fe5d9a9de13afafe01','26f89b8f25bef26c16497b425c382dead29b3be62008e8cf93b1bb8cd8dd1d86'),
+           '_OGLADACZ':('69cf9d3b36ace1897cea949180ed3df20f111c8fe141e6a8ea6d3c03f928627d','0dccdf7e19f2564b28f100f152fb6c74930b2995074eac4c6cd7bf8afe2e01e0')
+          }
+          admin=(root/'MatchThis_MT-59.html').read_text('utf8')
+          assert hashlib.sha256(admin.encode()).hexdigest()==names[''][1],'MT59 source changed'
+          a=admin.index('function mt59AssignmentsWorkspace(e,t){')
+          b=admin.index('\nfunction mt55RefreshUI(e,t,',a)
+          workspace=admin[a:b]
+          focus_css='.mt55-table input:focus{outline:2px solid #e96609;outline-offset:1px}'
+          css=focus_css+'''
+          /* MT-59: number inputs stay validated; no mouse spinners in station/weight tables. */
+          .mt55-table input[type="number"]{appearance:textfield;-moz-appearance:textfield}
+          .mt55-table input[type="number"]::-webkit-inner-spin-button,
+          .mt55-table input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}'''
+          # Remove indentation added by YAML block without changing canonical source.
+          css=css.replace('\n          ','\n')
+          assert css in admin
+          def once(s,old,new):
+           assert s.count(old)==1,(old[:85],s.count(old))
+           return s.replace(old,new,1)
+          for suffix,(oldhash,newhash) in names.items():
+           old=(root/f'MatchThis_MT-58{suffix}.html').read_text('utf8')
+           assert hashlib.sha256(old.encode()).hexdigest()==oldhash,(suffix,'MT58 mismatch')
+           if not suffix: new=admin
+           else:
+            new=once(old,focus_css,css)
+            a=new.index('function mt55Workspace(e,t){');b=new.index('\nfunction mt55RefreshUI(e,t,',a)
+            new=new[:a]+workspace+new[b:]
+            new=once(new,'mt55Writable(e,t)&&!t.sourceOfficial?mt55Workspace(e,t):renderResultsEditor(t)',
+                  'mt55Writable(e,t)&&!t.sourceOfficial?mt59WeightsWorkspace(e,t):renderResultsEditor(t)')
+            oldcall=chr(36)+'{mt55Workspace(e,t)}'+chr(96)+';'
+            newcall=chr(36)+'{mt59AssignmentsWorkspace(e,t)}'+chr(96)+';'
+            new=once(new,oldcall,newcall)
+            for oldtag,newtag in (
+             ('<title>MatchThis MT-58</title>','<title>MatchThis MT-59</title>'),
+             ('data-version="MT-58"','data-version="MT-59"'),
+             ('aria-label="Wersja MT-58">MT-58','aria-label="Wersja MT-59">MT-59'),
+             ('<div class="version" id="appversion">MT-58</div>','<div class="version" id="appversion">MT-59</div>'),
+             ("const APP_VERSION='MT-58';","const APP_VERSION='MT-59';"),
+             ("const STORAGE_KEY='matchthis-preview-MT-58';","const STORAGE_KEY='matchthis-preview-MT-59';\nconst MT58_STORAGE_KEY='matchthis-preview-MT-58';")
+            ):new=once(new,oldtag,newtag)
+            if 'localStorage.getItem(MT57_STORAGE_KEY)||' in new:
+             new=once(new,'localStorage.getItem(MT57_STORAGE_KEY)||',
+                'localStorage.getItem(MT58_STORAGE_KEY)||localStorage.getItem(MT57_STORAGE_KEY)||')
+            for token in ("console.error('MatchThis MT-58:","console.warn('MatchThis MT-58:"):
+             if token in new:new=once(new,token,token.replace('MT-58','MT-59'))
+            (root/f'MatchThis_MT-59{suffix}.html').write_text(new,'utf8')
+           assert hashlib.sha256(new.encode()).hexdigest()==newhash,(suffix,'MT59 output mismatch',hashlib.sha256(new.encode()).hexdigest())
+           for token in ('<title>MatchThis MT-59</title>',"const APP_VERSION='MT-59'",'data-version="MT-59"',
+                  'aria-label="Wersja MT-59">MT-59','function mt59AssignmentsWorkspace(e,t)',
+                  'function mt59WeightsWorkspace(e,t)'):
+            assert token in new,(suffix,token)
+           assert new.count("mt55EntryInput(x,'weight')")==1
+           assert "mt55EntryInput(r,'weight')" not in new
+           for key in ('MATCHTHIS_ARCHIVE_2026','MATCHTHIS_STANDALONE_2026','MATCHTHIS_ARCHIVE_2025_MEGA_V',
+                      'MATCHTHIS_ARCHIVE_2025_MAVER_OCT','MT44_MISSING_2025','MT44_MEGA_2025',
+                      'MT45_MEGA_2025_ROUNDS','MT46_PUCHAR_ROUND1_DRAW','MT47_PUCHAR_ROUND2_DRAW',
+                      'MT48_FLOAT_ROUND2_DRAW'):
+            get=lambda html:html.split('const '+key+'=',1)[1].split(';\n',1)[0]
+            assert get(old)==get(new),(suffix,'historic data changed',key)
+           for script in re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',new,re.S):
+            if script.strip():
+             Path('/tmp/mt59-check.js').write_text(script)
+             subprocess.run(['node','--check','/tmp/mt59-check.js'],check=True)
+           print('MT59_ROLE_SHA_VERSION_UI_JS_DATA_PASS',suffix)
+          for kind in ('deploy','rollback'):
+           text=(root/f'{kind}-mt58-small2.sh').read_text('utf8')
+           for old,new in (
+             ('MT-58','MT-59'),('MT58','MT59'),('mt58','mt59'),('mt-58','mt-59'),
+             ('MT-57','MT-58'),('MT57','MT58'),('mt57','mt58'),('mt-57','mt-58')
+           ):text=text.replace(old,new)
+           assert 'index-MT58.backup' in text and 'matchthis-independent/mt-59' in text
+           assert 'MatchThis_MT-59_OGLADACZ.html' in text
+           assert ('MT59_VERSION_AUTH_HTTPS_OK' in text if kind=='deploy' else 'MT59_ROLLBACK_MT58' in text)
+           (root/f'{kind}-mt59-small2.sh').write_text(text,'utf8')
+          print('MT59_ROLLBACK_TO_MT58_CONFIGURED')
+          PY
+          bash -n matchthis/deploy-mt59-small2.sh
+          bash -n matchthis/rollback-mt59-small2.sh
+      - name: Build MT60 from MT59, check all role checksums, archives and rollback
+        run: |
+          set -euo pipefail
+          python3 matchthis/build-mt60.py
+          php -l matchthis/mt60-draws.php
+          bash -n matchthis/deploy-mt60-small2.sh
+          bash -n matchthis/rollback-mt60-small2.sh
+      - name: Deploy only separate MatchThis HTML and protected role templates to SMALL2
+        id: deploy
+        run: bash matchthis/deploy-mt60-small2.sh
+      - name: Install authenticated draw publishing API without modifying other projects or data
+        run: |
+          set -euo pipefail
+          export SSHPASS="$SSH_PASSWORD"
+          remote=lowcymethodowcy@s3.small.pl
+          sshpass -e scp -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15 matchthis/mt60-draws.php "$remote:matchthis-independent/mt-60/mt60-draws.php"
+          sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15 "$remote" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          web="$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html"
+          stage="$HOME/matchthis-independent/mt-60"
+          private="$web/.mt41-private"
+          test -d "$private" && test ! -L "$private"
+          test -f "$private/mt41-auth.php"
+          test -f "$private/.htaccess" && grep -Fq 'Require all denied' "$private/.htaccess"
+          test ! -L "$web/mt60-draws.php"
+          test -f "$stage/mt60-draws.php"
+          cp "$stage/mt60-draws.php" "$web/mt60-draws.php.next"
+          php -l "$web/mt60-draws.php.next"
+          mv "$web/mt60-draws.php.next" "$web/mt60-draws.php"
+          chmod 644 "$web/mt60-draws.php"
+          echo MT60_AUTH_API_NO_DATABASE_OR_PASSWORD_CHANGES
+          REMOTE
+          url=https://matchthis.lowcymethodowcy.smallhost.pl
+          curl -fsSL --max-time 25 "$url/mt60-draws.php" -o /tmp/mt60-public.json
+          python3 - <<'PY'
+          import json
+          doc=json.load(open('/tmp/mt60-public.json'))
+          assert isinstance(doc['draws'],list)
+          print('MT60_ANON_GET_PASS',len(doc['draws']))
+          PY
+          test "$(curl -sS -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' --data '{"action":"hide","eventId":"invalid","roundIndex":0}' "$url/mt60-draws.php")" = 403
+          test "$(curl -sS -o /dev/null -w '%{http_code}' "$url/mt60-draws.php?token=1")" = 403
+          code="$(curl -sS -o /dev/null -w '%{http_code}' "$url/.mt41-private/mt41-auth.php")"
+          test "$code" = 403 -o "$code" = 404
+          echo MT60_PUBLIC_READ_ONLY_ADMIN_POST_FORBIDDEN_UNAUTH_PASS
+      - name: Install real browsers
+        run: |
+          mkdir -p /tmp/mt60-live && cd /tmp/mt60-live
+          npm init -y >/dev/null
+          npm install --silent playwright
+          npx playwright install --with-deps chromium firefox
+      - name: Verify live version and duplicate DERLAGA regression on Chromium and Firefox
+        run: |
+          set -euo pipefail
+          cd /tmp/mt60-live
+          node --input-type=module <<'JS'
+          import {chromium,firefox} from 'playwright';
+          import fs from 'node:fs';
+          const origin='https://matchthis.lowcymethodowcy.smallhost.pl/';
+          const html=fs.readFileSync(process.env.GITHUB_WORKSPACE+'/matchthis/MatchThis_MT-60.html','utf8');
+          for(const [name,engine] of [['Chromium',chromium],['Firefox',firefox]]){
+            const browser=await engine.launch({headless:true});
+            try{
+              const ctx=await browser.newContext({viewport:{width:1366,height:900}});
+              await ctx.addInitScript(()=>{
+                const store={};
+                Object.defineProperty(window,'localStorage',{configurable:true,value:{
+                  getItem:k=>Object.hasOwn(store,k)?store[k]:null,
+                  setItem:(k,v)=>{store[k]=String(v)},removeItem:k=>{delete store[k]},
+                  clear:()=>{for(const k of Object.keys(store))delete store[k]},
+                  key:i=>Object.keys(store)[i]||null,get length(){return Object.keys(store).length}
+                }});
+              });
+              let page=await ctx.newPage();
+              const errors=[];page.on('pageerror',e=>errors.push(e.message));
+              const resp=await page.goto(origin,{waitUntil:'domcontentloaded',timeout:45000});
+              if(resp.status()!==200||await page.title()!=='MatchThis MT-60'||await page.locator('#appversion').innerText()!=='MT-60')
+                throw Error(name+' PUBLIC_VERSION');
+              const base=await page.evaluate(()=>({
+                xiv:db.events.filter(mt52IsXiv).length,
+                slots:db.events.find(mt52IsXiv)?.entrantIds.length,
+                dates:db.events.find(mt52IsXiv)?.rounds.map(t=>t.date),
+                archives:db.cycles.length
+              }));
+              if(base.xiv!==1||base.slots!==72||JSON.stringify(base.dates)!==JSON.stringify(['2026-11-28','2026-11-29']))
+                throw Error(name+' PUBLIC_DATA '+JSON.stringify(base));
+              await page.close();
+              page=await ctx.newPage();
+              page.on('pageerror',e=>errors.push(e.message));
+              await page.setContent(html,{waitUntil:'load',timeout:60000});
+              const id=await page.evaluate(()=>{
+                const event=db.events.find(mt52IsXiv);
+                const ids=event.entrantIds.filter(id=>norm(fullName(findPlayer(id)))==='derlaga jakub');
+                if(ids.length!==1)throw Error('DERLAGA_NOT_SINGLE_ENTRANT');
+                const duplicate='mt60-test-extra-derlaga';
+                db.players.push({id:duplicate,lastName:'DERLAGA',firstName:'JAKUB',club:'',archived:false,aliases:['DERLAGA JAKUB']});
+                page='event';selectedId=event.id;roundIndex=0;resultMode='draw';
+                if(resolveCompetitor('DERLAGA JAKUB')!==ids[0])throw Error('DUPLICATE_FALSE_POSITIVE');
+                save();render();return ids[0];
+              });
+              await page.locator('#sectors').fill('6');
+              await page.locator('[data-action="draw"]').click();
+              const draw=await page.evaluate(()=>{
+                const t=db.events.find(mt52IsXiv).rounds[0];
+                return t.mt55Entries.filter(x=>norm(x.competitorName)==='derlaga jakub').map(x=>({id:x.competitorId,peg:x.peg,sector:x.sector}));
+              });
+              if(draw.length!==1||draw[0].id!==id||!draw[0].peg||!draw[0].sector)throw Error(name+' DRAW '+JSON.stringify(draw));
+              const free=await page.evaluate(()=>{
+                const t=db.events.find(mt52IsXiv).rounds[0],taken=new Set(t.mt55Entries.map(x=>x.peg));
+                return t.mt55SectorPlan.pegs.find(p=>!taken.has(p));
+              });
+              if(!Number.isInteger(free))throw Error(name+' NO_FREE_TEST_STATION');
+              const station=page.locator('[data-mt55-id="'+id+'"][data-mt55-field="peg"]');
+              await station.fill(String(free));await station.press('Tab');
+              const reassigned=await page.evaluate(id=>{
+                const t=db.events.find(mt52IsXiv).rounds[0],r=t.mt55Entries.find(x=>x.competitorId===id);
+                return {peg:r.peg,sector:r.sector};
+              },id);
+              if(reassigned.peg!==free||!reassigned.sector)throw Error(name+' MANUAL_STATION_AUTOSAVE_'+JSON.stringify(reassigned));
+              const columns=await page.locator('#mt55Assignments th').allTextContents();
+              if(JSON.stringify(columns)!==JSON.stringify(['Lp.','Zawodnik','Stanowisko','Sektor']))
+                throw Error(name+' WRONG_STATION_COLUMNS_'+JSON.stringify(columns));
+              if(await page.locator('[data-mt55-field="weight"]').count()!==0)
+                throw Error(name+' WEIGHT_MUST_BE_OUTSIDE_STATION_TABLE');
+              const cssAppearance=await page.locator('#mt55Assignments [data-mt55-field="peg"]').first().evaluate(x=>getComputedStyle(x).appearance);
+              if(cssAppearance!=='textfield')throw Error(name+' NUMBER_STEPPERS_VISIBLE_'+cssAppearance);
+              await page.locator('[data-result-mode="edit"]').click();
+              if(await page.locator('#mt55Assignments').count()!==0||await page.locator('#mt55SectorPanels').count()!==1)
+                throw Error(name+' SEPARATE_WEIGHT_VIEW_MISSING');
+              if(await page.locator('.mt55-sector-card').count()!==6)throw Error(name+' SECTOR_CARDS_MISSING');
+              const input=page.locator('[data-mt55-id="'+id+'"][data-mt55-field="weight"]').first();
+              await input.fill('3715');await input.press('Tab');
+              const w=await page.evaluate(id=>db.events.find(mt52IsXiv).rounds[0].mt55Entries.find(x=>x.competitorId===id)?.weightG,id);
+              if(w!==3715)throw Error(name+' AUTOSAVE '+w);
+              const snapshot=await page.evaluate(()=>localStorage.getItem('matchthis-preview-MT-60'));
+              if(!snapshot)throw Error(name+' NO_SAVED_DATA');
+              await page.close();
+              page=await ctx.newPage();
+              page.on('pageerror',e=>errors.push(e.message));
+              await page.evaluate(snapshot=>localStorage.setItem('matchthis-preview-MT-60',snapshot),snapshot);
+              await page.setContent(html,{waitUntil:'load',timeout:60000});
+              const w2=await page.evaluate(id=>db.events.find(mt52IsXiv).rounds[0].mt55Entries.find(x=>x.competitorId===id)?.weightG,id);
+              if(w2!==3715)throw Error(name+' PERSISTENCE '+w2);
+              if(errors.length)throw Error(name+' JS_ERRORS '+errors.join('; '));
+              await ctx.close();
+              console.log(name,'LIVE_MT60_VERSION_STATION_ONLY_SECTOR_WEIGHT_AUTOSAVE_PASS');
+            }finally{await browser.close()}
+          }
+          JS
+      - name: Verify unauthenticated viewer receives only published draw by sector
+        run: |
+          set -euo pipefail
+          cd /tmp/mt60-live
+          node --input-type=module <<'JS'
+          import {chromium,firefox} from 'playwright';
+          import fs from 'node:fs';
+          const base='https://matchthis.lowcymethodowcy.smallhost.pl/';
+          const admin=fs.readFileSync(process.env.GITHUB_WORKSPACE+'/matchthis/MatchThis_MT-60.html','utf8');
+          const viewer=fs.readFileSync(process.env.GITHUB_WORKSPACE+'/matchthis/MatchThis_MT-60_OGLADACZ.html','utf8');
+          for(const [name,engine] of [['Chromium',chromium],['Firefox',firefox]]){
+           const browser=await engine.launch({headless:true});
+           try{
+            const ctx=await browser.newContext({viewport:{width:1366,height:900}});
+            await ctx.addInitScript(()=>{
+             const store={};
+             const fake={getItem:k=>Object.hasOwn(store,k)?store[k]:null,
+              setItem:(k,v)=>{store[k]=String(v)},removeItem:k=>{delete store[k]},
+              clear:()=>{for(const k of Object.keys(store))delete store[k]},
+              key:i=>Object.keys(store)[i]||null,get length(){return Object.keys(store).length}};
+             Object.defineProperty(window,'localStorage',{configurable:true,value:fake});
+            });
+            let page=await ctx.newPage();
+            const errors=[];page.on('pageerror',e=>errors.push(e.message));
+            const response=await page.goto(base,{waitUntil:'domcontentloaded',timeout:45000});
+            if(response.status()!==200||await page.title()!=='MatchThis MT-60')throw Error(name+' LIVE_VERSION');
+            await page.route('**/mt60-draws.php*',async route=>{
+             const request=route.request();
+             if(request.url().includes('?token=1'))
+              await route.fulfill({status:200,contentType:'application/json',body:'{"csrf":"test"}'});
+             else if(request.method()==='POST'){
+              globalThis.lastPost=JSON.parse(request.postData());
+              await route.fulfill({status:200,contentType:'application/json',body:'{"ok":true}'});
+             }else await route.fulfill({status:200,contentType:'application/json',body:'{"draws":[]}'});
+            });
+            await page.setContent(admin,{waitUntil:'load',timeout:60000});
+            await page.evaluate(()=>{const e=db.events.find(mt52IsXiv);page='event';selectedId=e.id;roundIndex=0;resultMode='draw';render()});
+            await page.locator('#sectors').fill('6');
+            await page.locator('[data-action="draw"]').click();
+            const meta=await page.evaluate(()=>({id:db.events.find(mt52IsXiv).id,n:db.events.find(mt52IsXiv).rounds[0].mt55Entries.length}));
+            if(meta.n!==71)throw Error(name+' MISSING_DRAW');
+            await page.locator('[data-result-mode="edit"]').click();
+            const card=page.locator('.mt55-sector-card').first();
+            const sizes=await card.evaluate(el=>{const wrap=el.querySelector('.tablewrap');
+             return {client:wrap.clientHeight,scroll:wrap.scrollHeight,num:el.querySelector('tbody td').getBoundingClientRect().width};
+            });
+            if(sizes.scroll>sizes.client+2||sizes.num>50)throw Error(name+' WEIGHT_TABLE_OVERFLOW_'+JSON.stringify(sizes));
+            await page.locator('[data-result-mode="draw"]').click();
+            await page.locator('[data-action="toggleDrawPublication"]').click();
+            await page.waitForFunction(()=>db.events.find(mt52IsXiv).rounds[0].drawPublished);
+            if(!globalThis.lastPost||globalThis.lastPost.action!=='publish'||globalThis.lastPost.rows.length!==71)
+             throw Error(name+' ADMIN_PUBLISH_NOT_SENT');
+            const item={eventId:meta.id,roundIndex:0,eventName:'XIV Puchar',tourName:'Tura 1',date:'2026-11-28',rows:globalThis.lastPost.rows};
+            await page.close();
+            page=await ctx.newPage();page.on('pageerror',e=>errors.push(e.message));
+            await page.route('**/mt60-draws.php*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({draws:[item]})}));
+            await page.goto(base,{waitUntil:'domcontentloaded',timeout:45000});
+            await page.setContent(viewer,{waitUntil:'load',timeout:60000});
+            await page.evaluate(()=>{const e=db.events.find(mt52IsXiv);page='event';selectedId=e.id;roundIndex=0;resultMode='sectors';render()});
+            await page.waitForFunction(()=>document.querySelectorAll('.mt60-draw-card').length===6,{timeout:10000});
+            const count=await page.locator('.mt60-draw-card tbody tr').count();
+            if(count!==71||await page.locator('[data-action="pdfAllSectors"]').count()!==0)
+             throw Error(name+' PUBLIC_VIEWER_INCORRECT');
+            if(errors.length)throw Error(name+' JS_ERRORS '+errors.join(';'));
+            await ctx.close();
+            console.log('MT60_PUBLIC_VIEWER_PUBLISHED_SECTORS_PASS',name,count,JSON.stringify(sizes));
+           }finally{await browser.close()}
+          }
+          JS
+      - name: Package all verified MT60 HTML roles
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: MatchThis_MT-60_HTML
+          path: |
+            matchthis/MatchThis_MT-60.html
+            matchthis/MatchThis_MT-60_SEDZIA.html
+            matchthis/MatchThis_MT-60_OGLADACZ.html
+          if-no-files-found: error
+      - name: Rollback MatchThis to MT59 if live checks fail
+        if: failure() && steps.deploy.outcome != 'skipped'
+        run: bash matchthis/rollback-mt60-small2.sh
