@@ -378,7 +378,7 @@ jobs:
             await page.locator('[data-action="toggleDrawPublication"]').click();
             await page.waitForFunction(()=>db.events.find(mt52IsXiv).rounds[0].drawPublished);
             if(!globalThis.lastPost||globalThis.lastPost.action!=='publish'||globalThis.lastPost.rows.length!==71)
-             throw Error(name+' ADMIN_PUBLISH_NOT_SENT');
+             throw Error(name+' ADMIN_PUBLISH_NOT_SENT '+JSON.stringify({action:globalThis.lastPost?.action,rows:globalThis.lastPost?.rows?.length,fields:globalThis.lastPost?Object.keys(globalThis.lastPost):[]}));
             const item={eventId:meta.id,roundIndex:0,eventName:'XIV Puchar',tourName:'Tura 1',date:'2026-11-28',rows:globalThis.lastPost.rows};
             await page.close();
             page=await ctx.newPage();page.on('pageerror',e=>errors.push(e.message));
