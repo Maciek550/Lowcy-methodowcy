@@ -209,7 +209,7 @@ jobs:
           echo MT60_AUTH_API_NO_DATABASE_OR_PASSWORD_CHANGES
           REMOTE
           url=https://matchthis.lowcymethodowcy.smallhost.pl
-          curl -fsSL --max-time 25 "$url/mt60-draws.php" -o /tmp/mt60-public.json
+          curl -fsSL --retry 4 --retry-all-errors --retry-delay 3 --connect-timeout 10 --max-time 25 "$url/mt60-draws.php" -o /tmp/mt60-public.json
           python3 - <<'PY'
           import json
           doc=json.load(open('/tmp/mt60-public.json'))
