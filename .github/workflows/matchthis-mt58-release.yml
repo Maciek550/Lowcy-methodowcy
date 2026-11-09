@@ -1,0 +1,175 @@
+name: MatchThis MT58 DERLAGA identity fix on SMALL2
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt58-release.yml']
+permissions: {contents: read}
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rebuild guarded MT57 deploy baseline
+        run: |
+          set -euo pipefail
+          for v in 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55; do python3 "matchthis/build-mt$v.py";done
+          python3 matchthis/build-mt52-release-scripts.py
+          python3 matchthis/build-mt54-release-scripts.py
+          python3 matchthis/build-mt55-release-scripts.py
+          python3 matchthis/build-mt57-release-scripts.py
+      - name: Generate MT58 judge/viewer from their MT57 originals, validate three roles and rollback
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,re,subprocess
+          root=Path('matchthis')
+          expected='2c6910834afb00abb369c31da33704b27841ad8a74a2c5aee65878fd95a2214e'
+          main=(root/'MatchThis_MT-58.html').read_text('utf8')
+          assert hashlib.sha256(main.encode()).hexdigest()==expected,'Not the exact reviewed MT58 file'
+          expected_old={
+            '':'5330d4741e0315fdcbda67717dee8f35297a015b9d5250f0d4f5b4808f9f5d7c',
+            '_SEDZIA':'2d4b1aa112c05897deddea7d40e932a0e692fde61d21ef32fd5c2c058c8db2de',
+            '_OGLADACZ':'e08ed407f0fcd7334c17fa8435600f42d0ec507d9ada84829416dc4a2938aff3'
+          }
+          def resolver(s):
+            start=s.index('function resolveCompetitor(name){')
+            end=s.index('function saveSelectedRoster(){',start)
+            return s[start:end]
+          updated=resolver(main)
+          for suffix,sha in expected_old.items():
+            previous=(root/f'MatchThis_MT-57{suffix}.html').read_text('utf8')
+            assert hashlib.sha256(previous.encode()).hexdigest()==sha,(suffix,'MT57 source changed')
+            if suffix:
+              old=resolver(previous)
+              assert 'Dwie osoby o nazwie' in old
+              newer=previous.replace(old,updated,1)
+              pairs=[
+                ('<title>MatchThis MT-57</title>','<title>MatchThis MT-58</title>'),
+                ('<body data-version="MT-57">','<body data-version="MT-58">'),
+                ('<span class="mt-build-badge" aria-label="Wersja MT-57">MT-57</span>','<span class="mt-build-badge" aria-label="Wersja MT-58">MT-58</span>'),
+                ('<div class="version" id="appversion">MT-57</div>','<div class="version" id="appversion">MT-58</div>'),
+                ("const APP_VERSION='MT-57';","const APP_VERSION='MT-58';"),
+                ("const STORAGE_KEY='matchthis-preview-MT-57';","const STORAGE_KEY='matchthis-preview-MT-58';\nconst MT57_STORAGE_KEY='matchthis-preview-MT-57';"),
+                ("console.error('MatchThis MT-57:","console.error('MatchThis MT-58:"),
+                ("console.warn('MatchThis MT-57:","console.warn('MatchThis MT-58:")
+              ]
+              for a,b in pairs:
+                assert newer.count(a)==1,(suffix,a,newer.count(a))
+                newer=newer.replace(a,b,1)
+              migration='localStorage.getItem(MT56_STORAGE_KEY)||'
+              if migration in newer:
+                assert newer.count(migration)==1
+                newer=newer.replace(migration,'localStorage.getItem(MT57_STORAGE_KEY)||'+migration,1)
+              (root/f'MatchThis_MT-58{suffix}.html').write_text(newer,'utf8')
+            else: newer=main
+            for t in ('<title>MatchThis MT-58</title>',"const APP_VERSION='MT-58'",'data-version="MT-58"','aria-label="Wersja MT-58">MT-58'):
+              assert t in newer,(suffix,t)
+            for script in re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',newer,re.S):
+              Path('/tmp/mt58-check.js').write_text(script)
+              subprocess.run(['node','--check','/tmp/mt58-check.js'],check=True)
+            print('MT58_ROLE_VERSION_JS_OK',suffix)
+          # Upgrade the already guarded MT57 release scripts: MT57 becomes MT58,
+          # while their previous MT55 baseline becomes MT57, preserving rollbacks.
+          for kind in ('deploy','rollback'):
+            script=(root/f'{kind}-mt57-small2.sh').read_text('utf8')
+            for old,new in (('MT-57','MT-58'),('MT57','MT58'),('mt57','mt58'),('mt-57','mt-58'),
+                            ('MT-55','MT-57'),('MT55','MT57'),('mt55','mt57'),('mt-55','mt-57')):
+              script=script.replace(old,new)
+            assert 'index-MT57.backup' in script
+            assert 'matchthis-independent/mt-58' in script
+            assert 'MatchThis_MT-58_OGLADACZ.html' in script
+            (root/f'{kind}-mt58-small2.sh').write_text(script,'utf8')
+          print('MT58_EXACT_ADMIN_HASH_AND_THREE_ROLES_AND_ROLLBACK_PRECHECK_PASS')
+          PY
+          bash -n matchthis/deploy-mt58-small2.sh
+          bash -n matchthis/rollback-mt58-small2.sh
+      - name: Deploy only separate MatchThis HTML and protected role templates to SMALL2
+        id: deploy
+        run: bash matchthis/deploy-mt58-small2.sh
+      - name: Install real browsers
+        run: |
+          mkdir -p /tmp/mt58-live && cd /tmp/mt58-live
+          npm init -y >/dev/null
+          npm install --silent playwright
+          npx playwright install --with-deps chromium firefox
+      - name: Verify live version and duplicate DERLAGA regression on Chromium and Firefox
+        run: |
+          set -euo pipefail
+          cd /tmp/mt58-live
+          node --input-type=module <<'JS'
+          import {chromium,firefox} from 'playwright';
+          import fs from 'node:fs';
+          const origin='https://matchthis.lowcymethodowcy.smallhost.pl/';
+          const html=fs.readFileSync(process.env.GITHUB_WORKSPACE+'/matchthis/MatchThis_MT-58.html','utf8');
+          for(const [name,engine] of [['Chromium',chromium],['Firefox',firefox]]){
+            const browser=await engine.launch({headless:true});
+            try{
+              const ctx=await browser.newContext({viewport:{width:1366,height:900}});
+              await ctx.addInitScript(()=>{
+                const store={};
+                Object.defineProperty(window,'localStorage',{configurable:true,value:{
+                  getItem:k=>Object.hasOwn(store,k)?store[k]:null,
+                  setItem:(k,v)=>{store[k]=String(v)},removeItem:k=>{delete store[k]},
+                  clear:()=>{for(const k of Object.keys(store))delete store[k]},
+                  key:i=>Object.keys(store)[i]||null,get length(){return Object.keys(store).length}
+                }});
+              });
+              const page=await ctx.newPage();
+              const errors=[];page.on('pageerror',e=>errors.push(e.message));
+              const resp=await page.goto(origin,{waitUntil:'domcontentloaded',timeout:45000});
+              if(resp.status()!==200||await page.title()!=='MatchThis MT-58'||await page.locator('#appversion').innerText()!=='MT-58')
+                throw Error(name+' PUBLIC_VERSION');
+              const base=await page.evaluate(()=>({
+                xiv:db.events.filter(mt52IsXiv).length,
+                slots:db.events.find(mt52IsXiv)?.entrantIds.length,
+                dates:db.events.find(mt52IsXiv)?.rounds.map(t=>t.date),
+                archives:db.cycles.length
+              }));
+              if(base.xiv!==1||base.slots!==72||JSON.stringify(base.dates)!==JSON.stringify(['2026-11-28','2026-11-29']))
+                throw Error(name+' PUBLIC_DATA '+JSON.stringify(base));
+              await page.setContent(html,{waitUntil:'load',timeout:60000});
+              const id=await page.evaluate(()=>{
+                const event=db.events.find(mt52IsXiv);
+                const ids=event.entrantIds.filter(id=>norm(fullName(findPlayer(id)))==='derlaga jakub');
+                if(ids.length!==1)throw Error('DERLAGA_NOT_SINGLE_ENTRANT');
+                const duplicate='mt58-test-extra-derlaga';
+                db.players.push({id:duplicate,lastName:'DERLAGA',firstName:'JAKUB',club:'',archived:false,aliases:['DERLAGA JAKUB']});
+                page='event';selectedId=event.id;roundIndex=0;resultMode='draw';
+                if(resolveCompetitor('DERLAGA JAKUB')!==ids[0])throw Error('DUPLICATE_FALSE_POSITIVE');
+                save();render();return ids[0];
+              });
+              await page.locator('[data-action="draw"]').click();
+              const draw=await page.evaluate(()=>{
+                const t=db.events.find(mt52IsXiv).rounds[0];
+                return t.mt55Entries.filter(x=>norm(x.competitorName)==='derlaga jakub').map(x=>({id:x.competitorId,peg:x.peg,sector:x.sector}));
+              });
+              if(draw.length!==1||draw[0].id!==id||!draw[0].peg||!draw[0].sector)throw Error(name+' DRAW '+JSON.stringify(draw));
+              const input=page.locator('[data-mt55-id="'+id+'"][data-mt55-field="weight"]').first();
+              await input.fill('3715');await input.press('Tab');
+              const w=await page.evaluate(id=>db.events.find(mt52IsXiv).rounds[0].mt55Entries.find(x=>x.competitorId===id)?.weightG,id);
+              if(w!==3715)throw Error(name+' AUTOSAVE '+w);
+              await page.setContent(html,{waitUntil:'load',timeout:60000});
+              const w2=await page.evaluate(id=>db.events.find(mt52IsXiv).rounds[0].mt55Entries.find(x=>x.competitorId===id)?.weightG,id);
+              if(w2!==3715)throw Error(name+' PERSISTENCE '+w2);
+              if(errors.length)throw Error(name+' JS_ERRORS '+errors.join('; '));
+              await ctx.close();
+              console.log(name,'LIVE_MT58_VERSION_72_ENTRANTS_DRAW_DUPLICATE_SAVE_RELOAD_PASS');
+            }finally{await browser.close()}
+          }
+          JS
+      - name: Package all verified MT58 HTML roles
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: MatchThis_MT-58_HTML
+          path: |
+            matchthis/MatchThis_MT-58.html
+            matchthis/MatchThis_MT-58_SEDZIA.html
+            matchthis/MatchThis_MT-58_OGLADACZ.html
+          if-no-files-found: error
+      - name: Rollback only MatchThis to MT57 when live deployment verification fails
+        if: failure() && steps.deploy.outcome != 'skipped'
+        run: bash matchthis/rollback-mt58-small2.sh
