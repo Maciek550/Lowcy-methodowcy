@@ -78,5 +78,15 @@ jobs:
             scrollY:window.scrollY,
             pubBlockVisible:(()=>{const x=document.querySelector('.mt60-published-draw');return x?getComputedStyle(x).display:'absent'})()
           }))));
+          const finalCount=await page.locator('.mt60-draw-card tbody tr').count();
+          if(finalCount!==71)throw Error('REAL_PUBLIC_UI_VISIBLE_ROWS_'+finalCount);
+          await page.screenshot({path:'/tmp/mt60-viewer/live-real-clicks-tura2.png',fullPage:true});
+          console.log('REAL_VIEWER_SCREENSHOT_SAVED',finalCount);
           await browser.close();
           JS
+      - name: Preserve screenshot of actual public viewer (not a mock)
+        uses: actions/upload-artifact@v4
+        with:
+          name: MatchThis_MT60_real_viewer_screenshot
+          path: /tmp/mt60-viewer/live-real-clicks-tura2.png
+          if-no-files-found: error
