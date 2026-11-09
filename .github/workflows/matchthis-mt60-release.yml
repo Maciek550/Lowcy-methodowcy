@@ -362,7 +362,9 @@ jobs:
               await route.fulfill({status:200,contentType:'application/json',body:'{"ok":true}'});
              }else await route.fulfill({status:200,contentType:'application/json',body:'{"draws":[]}'});
             });
-            await page.setContent(admin.replace("const remote=['https:','http:'].includes(location.protocol)",'const remote=true'),{waitUntil:'load',timeout:60000});
+            await page.route('**/mt60-ci-blank.html',route=>route.fulfill({status:200,contentType:'text/html',body:'<!doctype html><title>Isolated CI page</title>'}));
+            await page.goto(base+'mt60-ci-blank.html',{waitUntil:'domcontentloaded'});
+            await page.setContent(admin,{waitUntil:'load',timeout:60000});
             await page.evaluate(()=>{const e=db.events.find(mt52IsXiv);page='event';selectedId=e.id;roundIndex=0;resultMode='draw';render()});
             await page.locator('#sectors').fill('6');
             await page.locator('[data-action="draw"]').click();
