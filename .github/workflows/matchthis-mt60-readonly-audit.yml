@@ -1,0 +1,63 @@
+name: MatchThis MT60 postrelease read-only production audit
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt60-readonly-audit.yml']
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check real public HTML, publication API and anonymity without writing
+        run: |
+          python3 - <<'PY'
+          import urllib.request, urllib.error, json, hashlib, re
+          base='https://matchthis.lowcymethodowcy.smallhost.pl'
+          def get(path):
+              request=urllib.request.Request(base+path,headers={'User-Agent':'MatchThis-production-readonly-audit/1.0','Cache-Control':'no-cache'})
+              try:
+                  with urllib.request.urlopen(request,timeout=25) as r:
+                      return r.status,r.headers, r.read()
+              except urllib.error.HTTPError as ex:
+                  return ex.code,ex.headers,ex.read()
+          status,headers,html=get('/')
+          assert status==200,('PUBLIC_VIEW_STATUS',status)
+          expected='7e0ba35366add30dc791f5c750ce9d201fc85a8d9969243ca64ca129cae88aeb'
+          current=hashlib.sha256(html).hexdigest()
+          assert current==expected,('PUBLIC_HTML_VERSION_HASH_MISMATCH',current)
+          text=html.decode('utf8')
+          assert '<title>MatchThis MT-60</title>' in text
+          assert 'id="appversion">MT-60' in text
+          assert 'data-version="MT-60"' in text
+          assert 'mt60PublicDrawTable' in text
+          print('MT60_LIVE_PUBLIC_HTML_EXACT_SHA_VERSION_PASS')
+          status,headers,body=get('/mt60-draws.php')
+          assert status==200,('ANON_GET_API_STATUS',status)
+          assert 'application/json' in headers.get('content-type','')
+          assert 'no-store' in headers.get('cache-control','')
+          payload=json.loads(body)
+          assert isinstance(payload.get('draws'),list)
+          draws=payload['draws']
+          print('LIVE_PUBLISHED_ROUND_COUNT',len(draws))
+          for item in draws:
+              assert isinstance(item,dict)
+              rows=item.get('rows',[])
+              assert isinstance(rows,list)
+              pegs=[r.get('peg') for r in rows]
+              assert len(pegs)==len(set(pegs)),('DUPLICATE_PEGS',item.get('eventId'))
+              assert all(isinstance(p,int) and p>0 for p in pegs)
+              print('PUBLIC_ROUND',json.dumps({'event':item.get('eventName'),'tour':item.get('tourName'),'date':item.get('date'),'count':len(rows),'sectors':sorted(set(r.get('sector') for r in rows))},ensure_ascii=False))
+          xiv=[x for x in draws if 'XIV PUCHAR' in str(x.get('eventName','')).upper()]
+          print('XIV_REAL_PUBLISHED_ROUNDS',len(xiv))
+          if not xiv:
+              print('MT60_REAL_XIV_DRAW_NOT_PUBLISHED: a verified public empty state is NOT proof of user publication')
+          status,headers,body=get('/mt60-draws.php?token=1')
+          assert status==403,('ANONYMOUS_CSRF_MUST_BE_FORBIDDEN',status)
+          print('MT60_ANONYMOUS_PUBLISH_TOKEN_DENIED_PASS')
+          status,headers,body=get('/panel.php')
+          assert status in (302,303),('ANONYMOUS_PANEL_REDIRECT',status)
+          print('MT60_ANONYMOUS_PANEL_RESTRICTED_PASS')
+          print('MT60_POSTRELEASE_READONLY_AUDIT_COMPLETED')
+          PY
