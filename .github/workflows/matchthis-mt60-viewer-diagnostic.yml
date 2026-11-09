@@ -1,0 +1,61 @@
+name: MatchThis MT60 real anonymous viewer diagnostic
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt60-viewer-diagnostic.yml']
+permissions: {contents: read}
+jobs:
+  viewer:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Playwright for real live browser
+        run: |
+          mkdir -p /tmp/mt60-viewer && cd /tmp/mt60-viewer
+          npm init -y >/dev/null
+          npm install --silent playwright
+          npx playwright install --with-deps chromium
+      - name: Inspect anonymous live viewer, published data and actual DOM without modifying server
+        run: |
+          cd /tmp/mt60-viewer
+          node --input-type=module <<'JS'
+          import {chromium} from 'playwright';
+          const base='https://matchthis.lowcymethodowcy.smallhost.pl/';
+          const browser=await chromium.launch();
+          const context=await browser.newContext({viewport:{width:1465,height:880}});
+          const page=await context.newPage();const errors=[];
+          page.on('pageerror',e=>errors.push(e.message));
+          page.on('console',m=>{if(m.type()==='warning'||m.type()==='error')console.log('JS_CONSOLE',m.text().slice(0,200))});
+          const resp=await page.goto(base,{waitUntil:'networkidle',timeout:50000});
+          console.log('HTML_STATUS',resp.status(),'TITLE',await page.title());
+          const api=await page.evaluate(async()=>{
+            const r=await fetch('/mt60-draws.php',{cache:'no-store'});
+            const d=await r.json();
+            return {status:r.status,draws:d.draws.map(x=>({eventId:x.eventId,roundIndex:x.roundIndex,eventName:x.eventName,rows:x.rows.length,sectors:[...new Set(x.rows.map(y=>y.sector))]}))};
+          });
+          console.log('SERVER',JSON.stringify(api));
+          const diag=await page.evaluate(()=>{
+            const xiv=db.events.filter(mt52IsXiv);
+            return {roleMode,events:xiv.map(e=>({id:e.id,name:e.name,rounds:getRounds(e).map(t=>({id:t.id,name:t.name,date:t.date}))})),
+              storedKeys:[...mt60PublicDraws.keys()],page,selectedId,roundIndex,resultMode};
+          });
+          console.log('INITIAL_VIEWER',JSON.stringify(diag));
+          const result=await page.evaluate(()=>{
+            const e=db.events.find(mt52IsXiv);
+            if(!e)return {error:'xiv not found'};
+            page='event';selectedId=e.id;roundIndex=1;resultMode='round';render();
+            return {html:document.querySelector('#app')?.innerHTML.slice(0,120)||'',
+              publishedDrawHtmlLength:mt60PublicDrawTable(e,getRounds(e)[1]).length,
+              pubCards:document.querySelectorAll('.mt60-draw-card').length,
+              pubRows:[...document.querySelectorAll('.mt60-draw-card tbody tr')].length,
+              page,roundIndex,selectedId};
+          });
+          console.log('TURA2_ROUND_RENDER',JSON.stringify(result));
+          await page.screenshot({path:'/tmp/mt60-viewer/live-viewer-tura2.png',fullPage:true});
+          const sectors=await page.evaluate(()=>{
+            resultMode='sectors';render();
+            return {pubCards:document.querySelectorAll('.mt60-draw-card').length,
+              pubRows:[...document.querySelectorAll('.mt60-draw-card tbody tr')].length};
+          });
+          console.log('TURA2_SECTORS_RENDER',JSON.stringify(sectors),'PAGE_ERRORS',JSON.stringify(errors));
+          await browser.close();
+          JS
