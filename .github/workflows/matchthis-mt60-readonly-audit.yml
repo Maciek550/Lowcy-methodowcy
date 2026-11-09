@@ -15,10 +15,13 @@ jobs:
           python3 - <<'PY'
           import urllib.request, urllib.error, json, hashlib, re
           base='https://matchthis.lowcymethodowcy.smallhost.pl'
-          def get(path):
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+          def get(path, follow_redirects=True):
               request=urllib.request.Request(base+path,headers={'User-Agent':'MatchThis-production-readonly-audit/1.0','Cache-Control':'no-cache'})
               try:
-                  with urllib.request.urlopen(request,timeout=25) as r:
+                  with (urllib.request.urlopen(request,timeout=25) if follow_redirects else urllib.request.build_opener(NoRedirect()).open(request,timeout=25)) as r:
                       return r.status,r.headers, r.read()
               except urllib.error.HTTPError as ex:
                   return ex.code,ex.headers,ex.read()
@@ -56,8 +59,12 @@ jobs:
           status,headers,body=get('/mt60-draws.php?token=1')
           assert status==403,('ANONYMOUS_CSRF_MUST_BE_FORBIDDEN',status)
           print('MT60_ANONYMOUS_PUBLISH_TOKEN_DENIED_PASS')
-          status,headers,body=get('/panel.php')
+          status,headers,body=get('/panel.php',follow_redirects=False)
           assert status in (302,303),('ANONYMOUS_PANEL_REDIRECT',status)
           print('MT60_ANONYMOUS_PANEL_RESTRICTED_PASS')
-          print('MT60_POSTRELEASE_READONLY_AUDIT_COMPLETED')
+          print('MT60_POSTRELEASE_READONLY_TECHNICAL_AUDIT_COMPLETED')
+          if not xiv:
+              print('::error::XIV Puchar - rzeczywiste losowanie nadal nie zostało opublikowane; wymagane zatwierdzenie przez administratora')
+              raise SystemExit(2)
+          print('MT60_PUBLICATION_ACCEPTANCE_PASS')
           PY
