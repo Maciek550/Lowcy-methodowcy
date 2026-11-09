@@ -31,7 +31,7 @@ for suffix in ('','_SEDZIA','_OGLADACZ'):
   ):new=once(new,before,after)
   if 'localStorage.getItem(MT58_STORAGE_KEY)||' in new:
    new=once(new,'localStorage.getItem(MT58_STORAGE_KEY)||','localStorage.getItem(MT59_STORAGE_KEY)||localStorage.getItem(MT58_STORAGE_KEY)||')
-  new=once(new,'function renderSectorsView(e,t){',viewer+'function renderSectorsView(e,t){')
+  new=once(new,'function renderSectorsView(e,t){','\n'+viewer+'function renderSectorsView(e,t){')
   new=once(new,'function renderSectorsView(e,t){\n let ranked=[];',
     'function renderSectorsView(e,t){\n const published=mt60PublicDrawTable(e,t);\n let ranked=[];')
   start=new.index('function renderSectorsView(e,t){')
@@ -49,7 +49,7 @@ for suffix in ('','_SEDZIA','_OGLADACZ'):
   new=once(new,marker,'if(!rows.length&&published)return published;\n return published+'+chr(96)+'<section class="panel"><div class="result-title"><h2>Cała tura')
   start=new.index('function toggleDrawPublication(){')
   end=new.index('function previewPublishedDraw(){',start)
-  new=new[:start]+publication+new[end:]
+  new=new[:start]+'\n'+publication+new[end:]
   new=once(new,"case 'toggleDrawPublication':toggleDrawPublication();break;",
     "case 'toggleDrawPublication':toggleDrawPublication();break;case 'mt60RefreshPublicDraw':mt60RefreshPublicDraws();break;")
   new=once(new,'Ten lokalny plik nie publikuje nic w internecie.',
