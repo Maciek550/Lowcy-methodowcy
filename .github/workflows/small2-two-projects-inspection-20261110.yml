@@ -37,5 +37,19 @@ jobs:
           find "$HOME/.private-lowcy-archives" -maxdepth 3 -type f -name '*zip' -exec stat -f '%Sp %z %N' {} \; 2>/dev/null || true
           echo AUDIT_MATCHTHIS_STORAGE_CODE
           find "$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html" -maxdepth 2 -type f -name '*.php' -exec grep -nE 'sqlite:|new PDO|file_put_contents|fopen|__DIR__|dbname' {} \; | head -n 65
+          echo AUDIT_CURRENT_FULL_BACKUPS
+          for project in lowcy matchthis; do
+            vault="$HOME/.private-project-backups/$project"
+            if [ ! -d "$vault" ]; then echo "FULL_BACKUP_MISSING_VAULT $project"; exit 20; fi
+            latest=$(find "$vault" -mindepth 2 -maxdepth 2 -type f -name backup.tar.gz | sort | tail -1)
+            if [ -z "$latest" ] || [ ! -s "$latest" ]; then echo "FULL_BACKUP_MISSING_ARCHIVE $project"; exit 21; fi
+            dir=$(dirname "$latest")
+            count=$(find "$vault" -mindepth 2 -maxdepth 2 -type f -name backup.tar.gz | wc -l | tr -d ' ')
+            echo "FULL_BACKUP_CURRENT $project count=$count bytes=$(stat -f '%z' "$latest")"
+            (cd "$dir" && sha256sum -c SHA256SUMS)
+            gzip -t "$latest"
+            tar -tzf "$latest" >/dev/null
+            echo "FULL_BACKUP_VERIFIED $project"
+          done
           echo AUDIT_COMPLETE
           REMOTE
