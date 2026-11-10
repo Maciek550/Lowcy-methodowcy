@@ -102,5 +102,6 @@ jobs:
           assert j.get('ok') is True and j.get('version')=='S1',j
           print('SMALL2_S1_PUBLIC_HEALTH_UNCHANGED')
           PY
-          curl -fsSL -m 20 'https://matchthis.lowcymethodowcy.smallhost.pl/' | grep -q 'MT-70'
+          curl -fsSL -m 20 'https://matchthis.lowcymethodowcy.smallhost.pl/' -o /tmp/matchthis-small2.html
+          grep -q 'MT-70' /tmp/matchthis-small2.html
           echo 'MATCHTHIS_MT70_PUBLIC_UNCHANGED'
