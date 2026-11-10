@@ -1,0 +1,44 @@
+name: MatchThis MT71 offline full-role SHA-verified build
+'on':
+  push:
+    branches:
+      - matchthis-mt23-independent-small2-20261106
+    paths:
+      - .github/workflows/matchthis-mt71-verify.yml
+      - matchthis/build-mt71-results.py
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download exact three HTML files from last successful MT70 deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt70
+          gh run download 42784030538 -R Maciek550/Lowcy-methodowcy -n MatchThis_MT-70_verified -D /tmp/mt70
+          for role in '' '_OGLADACZ' '_SEDZIA'; do
+            test -f "/tmp/mt70/MatchThis_MT-70${role}.html"
+            cp "/tmp/mt70/MatchThis_MT-70${role}.html" "matchthis/MatchThis_MT-70${role}.html"
+          done
+      - name: Build MT71 three roles with exact reproducible output hashes
+        run: |
+          set -euo pipefail
+          python3 matchthis/build-mt71-results.py
+          test "$(sha256sum matchthis/MatchThis_MT-71.html | cut -d' ' -f1)" = 221d744077e7a633937a5a428681d9aebb7d293fde8cfdb98a290a63301559e6
+          test "$(sha256sum matchthis/MatchThis_MT-71_OGLADACZ.html | cut -d' ' -f1)" = 74118fde6cf5cf01e2b3a05141be5d11020797fa223a262f2367366baa3ee438
+          test "$(sha256sum matchthis/MatchThis_MT-71_SEDZIA.html | cut -d' ' -f1)" = 447e293fc0ccb11b2fedfbc964ff6f3c04f29a5c8a45da115c5bd107e07d14f6
+          echo MT71_THREE_ROLES_REBUILT_EXACTLY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MatchThis_MT-71_three_roles_verified
+          path: |
+            matchthis/MatchThis_MT-71.html
+            matchthis/MatchThis_MT-71_OGLADACZ.html
+            matchthis/MatchThis_MT-71_SEDZIA.html
+          if-no-files-found: error
