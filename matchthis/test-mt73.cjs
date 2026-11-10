@@ -76,6 +76,22 @@ const clone=x=>JSON.parse(JSON.stringify(x));
    assert.deepEqual(errors,[]);
    await browser.close();console.log('MT73_REAL_UI_SAVE_RELOAD_SECOND_DEVICE_JUDGE_AUTH_CONFLICT_OFFLINE_VIEWER_PASS',label);
   }
+  // First administrator imports the existing browser, later stale copies are archived only.
+  fs.writeFileSync(fixture+'/.mt41-private/state-mt73.json',JSON.stringify({revision:1,seeded:true,data:seed}));
+  const mb=await chromium.launch({headless:true});browsers.push(mb);
+  for(const number of [1,2]){
+   const mc=await mb.newContext(),legacy=clone(seed);legacy.events.push({...clone(seed.events[0]),id:'legacy-'+number,name:'LEGACY '+number});
+   await mc.addInitScript(value=>localStorage.setItem('matchthis-preview-MT-72',JSON.stringify(value)),legacy);
+   await mc.request.post(base+'/login.php',{form:{username:'admin',password:'fixture-only-password'}});
+   const mp=await mc.newPage();await mp.goto(base+'/panel.php');await mp.waitForFunction(()=>document.getElementById('mt73-sync').textContent.includes('Dane z serwera'));
+   const ms=await (await mc.request.get(base+'/mt73-state.php')).json();
+   assert(ms.state.data.events.some(e=>e.id==='legacy-1'));assert(!ms.state.data.events.some(e=>e.id==='legacy-2'));
+   assert(await mp.evaluate(()=>!!localStorage.getItem('matchthis-preview-MT-72')));
+   await mc.close();
+  }
+  const archives=fs.readdirSync(fixture+'/.mt41-private/mt73-history').map(n=>JSON.parse(fs.readFileSync(fixture+'/.mt41-private/mt73-history/'+n)));
+  assert(archives.some(a=>a.kind==='legacy-original'&&a.data.events.some(e=>e.id==='legacy-2')));
+  await mb.close();console.log('MT73_LEGACY_IMPORT_AND_SECOND_BROWSER_ARCHIVE_PASS');
   // Actual restoration into the isolated fixture store: read bytes from archive, validate roundtrip.
   const original=fs.readFileSync(fixture+'/.mt41-private/state-mt73.json');cp.execFileSync('tar',['-czf','/tmp/mt73-test-backup.tar.gz','-C',fixture,'.mt41-private']);
   const restored='/tmp/mt73-restore';fs.mkdirSync(restored,{recursive:true});cp.execFileSync('tar',['-xzf','/tmp/mt73-test-backup.tar.gz','-C',restored]);assert(fs.readFileSync(restored+'/.mt41-private/state-mt73.json').equals(original));
