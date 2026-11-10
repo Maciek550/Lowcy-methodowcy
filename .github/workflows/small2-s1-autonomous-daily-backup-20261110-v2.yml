@@ -29,11 +29,11 @@ jobs:
           export SSHPASS="$SSH_PASSWORD"
           opts=(-o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=20)
           remote=lowcymethodowcy@s3.small.pl
-          sshpass -e scp "${opts[@]}" deploy/small2-s1-daily-backup-20261110-v2.sh "$remote:.config/lowcy-small2/daily-backup-s1-20261110.sh.upload"
+          sshpass -e scp "${opts[@]}" deploy/small2-s1-daily-backup-20261110-v2.sh "$remote:.config/lowcy-small2/daily-backup-s1-20261110-v2.sh.upload"
           sshpass -e ssh "${opts[@]}" "$remote" 'sh -s' <<'REMOTE'
           set -eu
           umask 077
-          dest="$HOME/.config/lowcy-small2/daily-backup-s1-20261110.sh"
+          dest="$HOME/.config/lowcy-small2/daily-backup-s1-20261110-v2.sh"
           upload="$dest.upload"
           test -s "$upload"
           sh -n "$upload"
@@ -53,11 +53,11 @@ jobs:
           sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=20 lowcymethodowcy@s3.small.pl 'sh -s' <<'REMOTE'
           set -eu
           umask 077
-          script="$HOME/.config/lowcy-small2/daily-backup-s1-20261110.sh"
+          script="$HOME/.config/lowcy-small2/daily-backup-s1-20261110-v2.sh"
           test -x "$script"
           for cmd in node pg_dump pg_restore zip unzip sha256sum mktemp; do command -v "$cmd" || echo "MISSING_TOOL $cmd"; done
           "$script"
-          latest="$(ls -1dt "$HOME"/backups/local/20* | head -n 1)"
+          latest="$(ls -1dt "$HOME"/.private-lowcy-archives/s1-daily/20* | head -n 1)"
           test -s "$latest/backup-S1.zip"
           test -s "$latest/SHA256SUMS"
           cd "$latest"
@@ -74,7 +74,7 @@ jobs:
           umask 077
           folder="$HOME/.config/lowcy-small2"
           croncopy="$folder/crontab-pre-autonomous-backup-20261110.txt"
-          script="$folder/daily-backup-s1-20261110.sh"
+          script="$folder/daily-backup-s1-20261110-v2.sh"
           test -x "$script"
           if [ ! -e "$croncopy" ];then
             crontab -l > "$croncopy" 2>/dev/null || : > "$croncopy"
