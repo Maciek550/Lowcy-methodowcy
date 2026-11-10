@@ -4,6 +4,7 @@ const {chromium,firefox}=require('playwright');
 const D=path.resolve('matchthis'), fixture=path.resolve('/tmp/mt73-fixture'),base='http://127.0.0.1:8873';
 fs.mkdirSync(fixture+'/.mt41-private',{recursive:true});fs.mkdirSync(fixture+'/role-pages',{recursive:true});
 for(const name of ['mt73-store.php','mt73-state.php'])fs.copyFileSync(D+'/'+name,fixture+'/'+name);
+fs.writeFileSync(fixture+'/mt73-state.php',fs.readFileSync(D+'/mt73-state.php','utf8').replace("'https://'","'http://'"));
 fs.writeFileSync(fixture+'/.mt41-private/mt41-auth.php',fs.readFileSync(D+'/mt41-auth.php','utf8').replace("'secure'=>true","'secure'=>false"));
 fs.copyFileSync(D+'/mt41-login.php',fixture+'/login.php');
 fs.copyFileSync(D+'/mt60-draws.php',fixture+'/mt60-draws.php');
@@ -14,10 +15,11 @@ fs.copyFileSync(D+'/MT73_SEED.html',fixture+'/seed.html');
 fs.writeFileSync(fixture+'/panel.php',fs.readFileSync(D+'/mt41-panel.php','utf8').replaceAll('mt41-admin.php','mt73-admin.php').replaceAll('mt41-sedzia.php','mt73-sedzia.php'));
 cp.execFileSync('php',['-r',`$u=['admin'=>['role'=>'admin','hash'=>password_hash('fixture-only-password',PASSWORD_DEFAULT)],'judge'=>['role'=>'judge','hash'=>password_hash('fixture-only-password',PASSWORD_DEFAULT)]];file_put_contents($argv[1],'<?php if(!defined("MATCHTHIS_AUTH_INTERNAL")){http_response_code(404);exit;}return '.var_export($u,true).';');`,fixture+'/.mt41-private/users.php']);
 const server=cp.spawn('php',['-S','127.0.0.1:8873','-t',fixture],{stdio:'ignore'});
+const browsers=[];
 const clone=x=>JSON.parse(JSON.stringify(x));
 (async()=>{
  try{
-  const b=await chromium.launch({headless:true});const p=await b.newPage();
+  const b=await chromium.launch({headless:true});browsers.push(b);const p=await b.newPage();
   await p.goto(base+'/seed.html');await p.waitForFunction(()=>window.__MT73_SEED?.events?.length>0);
   const seed=await p.evaluate(()=>window.__MT73_SEED);assert.equal(seed.events.length,14);assert.equal(seed.cycles.length,2);
   const traper=seed.events.find(e=>e.id==='mt2026-traper-cup-kobialka');
@@ -29,7 +31,7 @@ const clone=x=>JSON.parse(JSON.stringify(x));
   for(const [label,engine] of [['Chromium',chromium],['Firefox',firefox]]){
    fs.writeFileSync(fixture+'/.mt41-private/state-mt73.json',JSON.stringify({revision:1,seeded:true,data:seed}));
    const browser=await engine.launch({headless:true}),admin=await browser.newContext(),judge=await browser.newContext(),viewer=await browser.newContext();
-   const errors=[];
+   browsers.push(browser);const errors=[];
    async function open(context,user){const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
     if(user)await context.request.post(base+'/login.php',{form:{username:user,password:'fixture-only-password'}});
     await page.goto(base+(user?'/panel.php':'/'));await page.waitForFunction(()=>document.getElementById('mt73-sync').textContent.includes('Dane z serwera'));
@@ -78,5 +80,5 @@ const clone=x=>JSON.parse(JSON.stringify(x));
   const original=fs.readFileSync(fixture+'/.mt41-private/state-mt73.json');cp.execFileSync('tar',['-czf','/tmp/mt73-test-backup.tar.gz','-C',fixture,'.mt41-private']);
   const restored='/tmp/mt73-restore';fs.mkdirSync(restored,{recursive:true});cp.execFileSync('tar',['-xzf','/tmp/mt73-test-backup.tar.gz','-C',restored]);assert(fs.readFileSync(restored+'/.mt41-private/state-mt73.json').equals(original));
   console.log('MT73_BACKUP_RESTORE_STATE_BYTE_IDENTICAL_PASS');
- }finally{server.kill();}
+ }finally{for(const browser of browsers)await browser.close().catch(()=>{});server.kill();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

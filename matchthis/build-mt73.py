@@ -47,7 +47,7 @@ for role,sha in base.items():
  end='mtNavInit();\nrender();\nmt60RefreshPublicDraws();'
  assert s.count(end)==1
  s=s.replace(end,correction.replace('RECORDS',json.dumps(fixes,ensure_ascii=False))+'\nawait mt73Start();\n'+end+"\n})().catch(e=>{document.getElementById('mt73-sync').textContent=e.message;document.getElementById('contentShell').inert=true;});")
- s=s.replace('<div class="shell" id="contentShell">','<div id="mt73-savebar" style="padding:6px 14px;background:#f3f5f6;font-size:13px" role="status"><span id="mt73-sync">Łączenie z serwerem…</span> <button id="mt73-retry" type="button" hidden>Ponów zapis</button><span id="mt73-migration"></span></div><div class="shell" id="contentShell">')
+ s=s.replace('<div class="shell" id="contentShell">','<div id="mt73-savebar" style="padding:6px 14px;background:#f3f5f6;font-size:13px" role="status"><span id="mt73-sync">Łączenie z serwerem…</span> <button id="mt73-retry" type="button" hidden>Ponów zapis</button><button id="mt73-use-server" type="button" hidden>Wczytaj aktualne dane</button><span id="mt73-migration"></span></div><div class="shell" id="contentShell">')
  s=s.replace('Wyniki zapisane w przeglądarce','Wyniki przekazane do zapisu na serwerze').replace('Wagi zapisane lokalnie w tej przeglądarce. Brak centralnego zapisu na serwerze.','Wagi przekazane do zapisu na serwerze.')
  # Suppress stale success claims until server confirmation is visible in the persistent status bar.
  s=s.replace("function alertMsg(msg,good=false){", "function alertMsg(msg,good=false){if(good&&(mt73Queued||mt73Busy)){msg+=' · Trwa zapis na serwerze';}")

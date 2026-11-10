@@ -30,7 +30,7 @@ async function mt73Flush(){
    if(mt73Queued)mt73QueueLocal();else{try{localStorage.removeItem(mt73Outbox)}catch(_){}mt73Status('Zapisano na serwerze · '+new Date().toLocaleTimeString('pl-PL'));}
   }
   mt73Failed=false;document.getElementById('contentShell').inert=false;document.getElementById('mt73-retry').hidden=true;
- }catch(e){mt73Queued=true;mt73Failed=true;mt73QueueLocal();mt73Freeze(e.status===409?e.message:'Nie zapisano na serwerze. '+e.message);}
+ }catch(e){mt73Queued=true;mt73Failed=true;mt73QueueLocal();mt73Freeze(e.status===409?e.message:'Nie zapisano na serwerze. '+e.message);if(e.status===409)document.getElementById('mt73-use-server').hidden=false;}
  finally{mt73Busy=false;}
 }
 function mt73Legacy(){
@@ -62,6 +62,7 @@ async function mt73Start(){
  let pending=null;try{pending=JSON.parse(localStorage.getItem(mt73Outbox)||'null')}catch(_){}
  if(pending?.base&&pending?.data){mt73Base=pending.base;db=pending.data;mt73Queued=true;await mt73Flush();}
  else mt73Status('Dane z serwera · zapis automatyczny');
+ document.getElementById('mt73-use-server').onclick=()=>{if(confirm('Twoja wersja konfliktu jest zachowana na serwerze. Wczytać teraz aktualne dane wspólne?')){localStorage.removeItem(mt73Outbox);mt73Queued=false;location.reload();}};
  document.getElementById('mt73-retry').onclick=()=>{mt73Queued=true;mt73Flush();};
  window.addEventListener('online',()=>{if(mt73Queued)mt73Flush();});
  window.addEventListener('beforeunload',e=>{if(mt73Queued||mt73Busy){e.preventDefault();e.returnValue='';}});
