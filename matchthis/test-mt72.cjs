@@ -30,7 +30,7 @@ const roles=['','_OGLADACZ','_SEDZIA'];
     assert(stats.flagged>0,'Source flags must remain intact');
     await page.evaluate(()=>{
       const e=db.events.find(e=>e.id==='mt2026-traper-cup-kobialka');
-      assert(e);
+      if(!e)throw Error('Missing target event');
       selectedId=e.id;roundIndex=0;page='event';resultMode='sectors';render();
     });
     for(const mode of ['round','sectors']){
