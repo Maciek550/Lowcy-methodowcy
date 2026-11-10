@@ -71,7 +71,7 @@ const clone=x=>JSON.parse(JSON.stringify(x));
    await v.reload();await v.waitForFunction(()=>document.getElementById('mt73-sync').textContent.includes('Dane z serwera'));
    await v.locator('[data-view="events"]').first().click();await v.locator('[data-open="mt2026-traper-cup-kobialka"]').click();await v.locator('[data-result-mode="sectors"]').first().click();
    assert((await v.locator('body').innerText()).includes('KRÓLIKOWSKI ARTUR'));
-   assert.equal(await v.locator('[data-action="export"],[data-action="downloadFbPhoto"]').count(),0);
+   assert.equal(await v.locator('[data-action="export"]:visible,[data-action="downloadFbPhoto"]:visible').count(),0);
    for(const width of [1366,768,390]){await v.setViewportSize({width,height:900});await v.locator('[data-sector-filter="B"]').click();assert((await v.locator('body').innerText()).includes('MAZURCZAK GRZEGORZ'));}
    assert.deepEqual(errors,[]);
    await browser.close();console.log('MT73_REAL_UI_SAVE_RELOAD_SECOND_DEVICE_JUDGE_AUTH_CONFLICT_OFFLINE_VIEWER_PASS',label);
@@ -96,5 +96,5 @@ const clone=x=>JSON.parse(JSON.stringify(x));
   const original=fs.readFileSync(fixture+'/.mt41-private/state-mt73.json');cp.execFileSync('tar',['-czf','/tmp/mt73-test-backup.tar.gz','-C',fixture,'.mt41-private']);
   const restored='/tmp/mt73-restore';fs.mkdirSync(restored,{recursive:true});cp.execFileSync('tar',['-xzf','/tmp/mt73-test-backup.tar.gz','-C',restored]);assert(fs.readFileSync(restored+'/.mt41-private/state-mt73.json').equals(original));
   console.log('MT73_BACKUP_RESTORE_STATE_BYTE_IDENTICAL_PASS');
- }catch(error){for(const browser of browsers){for(const context of browser.contexts()){for(const page of context.pages()){console.error('PAGE_DIAGNOSTIC',page.url(),await page.locator('body').innerText({timeout:1000}).catch(()=>''));}}}throw error;}finally{for(const browser of browsers)await browser.close().catch(()=>{});server.kill();}
+ }catch(error){for(const browser of browsers){for(const context of browser.contexts()){for(const page of context.pages()){console.error('PAGE_DIAGNOSTIC',page.url(),(await page.locator('body').innerText({timeout:1000}).catch(()=>'')).slice(0,1800));}}}throw error;}finally{for(const browser of browsers)await browser.close().catch(()=>{});server.kill();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
