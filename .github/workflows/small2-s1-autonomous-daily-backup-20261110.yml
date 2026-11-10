@@ -55,6 +55,7 @@ jobs:
           umask 077
           script="$HOME/.config/lowcy-small2/daily-backup-s1-20261110.sh"
           test -x "$script"
+          for cmd in node pg_dump pg_restore zip unzip sha256sum mktemp; do command -v "$cmd" || echo "MISSING_TOOL $cmd"; done
           "$script"
           latest="$(ls -1dt "$HOME"/backups/local/20* | head -n 1)"
           test -s "$latest/backup-S1.zip"
