@@ -18,7 +18,7 @@ jobs:
     - uses: actions/checkout@v4
     - name: Fetch exact SHA-verified MT71 three-role artifact
       env:
-        GH_TOKEN: ${${ github.token }}
+        GH_TOKEN: ${{ github.token }}
       run: |
         set -euo pipefail
         mkdir -p /tmp/mt71
