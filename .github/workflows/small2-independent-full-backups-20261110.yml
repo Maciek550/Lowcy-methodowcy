@@ -1,0 +1,85 @@
+name: SMALL2 independent complete backups installation 20261110
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/small2-independent-full-backups-20261110.yml']
+permissions: {contents: read}
+jobs:
+  backups:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      SSHPASS: ${{ secrets.SMALL2_SSH_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install and verify separate backups on SMALL2
+        run: |
+          set -euo pipefail
+          sudo apt-get -qq update
+          sudo apt-get -qq install -y sshpass
+          mkdir -p -m 700 "$HOME/.ssh"
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test "$(ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256 | awk '{print $2}')" = 'SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8'
+          opts=(-o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o ConnectTimeout=20)
+          remote=lowcymethodowcy@s3.small.pl
+          sshpass -e ssh "${opts[@]}" "$remote" 'umask 077; mkdir -p "$HOME/.config/independent-project-backups"; chmod 700 "$HOME/.config/independent-project-backups"'
+          sshpass -e scp "${opts[@]}" deploy/small2-independent-full-backups-20261110.sh "$remote:.config/independent-project-backups/full-backup-20261110.sh.upload"
+          sshpass -e ssh "${opts[@]}" "$remote" 'sh -s' <<'REMOTE'
+          set -eu
+          umask 077
+          folder="$HOME/.config/independent-project-backups"
+          mkdir -p "$folder"
+          chmod 700 "$folder"
+          script="$folder/full-backup-20261110.sh"
+          if [ -e "$script" ]; then cmp "$script.upload" "$script"; rm "$script.upload"; else mv "$script.upload" "$script"; fi
+          chmod 700 "$script"
+          sh -n "$script"
+          echo BEFORE_APPLICATION_HASHES
+          sha256sum "$HOME/lowcy-small2-20261023/server.cjs" "$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html/index.html" > "$folder/apps-before.sha256"
+          "$script" lowcy
+          "$script" matchthis
+          sha256sum -c "$folder/apps-before.sha256"
+          echo MATCHTHIS_BROWSER_SAVE_INSPECTION
+          node - "$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html/role-pages/mt70-admin.php" <<'NODE'
+          const fs=require('fs');const s=fs.readFileSync(process.argv[2],'utf8');
+          const m=s.match(/function save\(\)[\s\S]{0,1100}/);console.log(m?m[0]:'SAVE_FUNCTION_NOT_FOUND');
+          console.log('FETCH_TARGETS',JSON.stringify([...s.matchAll(/fetch\(\s*['"]([^'"]+)/g)].map(x=>x[1])));
+          NODE
+          croncopy="$folder/crontab-before-20261110.txt"
+          if [ ! -e "$croncopy" ]; then crontab -l > "$croncopy" 2>/dev/null || : > "$croncopy"; fi
+          current=$(mktemp "$folder/.cron.XXXXXXXX")
+          crontab -l > "$current" 2>/dev/null || : > "$current"
+          for project in lowcy matchthis; do
+            case "$project" in lowcy) minute=30;; matchthis) minute=45;; esac
+            if ! grep -Fq "$script $project" "$current"; then
+              printf '%s 3 * * * /bin/sh %s %s >> %s/.private-project-backups/%s-daily.log 2>&1\n' "$minute" "$script" "$project" "$HOME" "$project" >> "$current"
+            fi
+          done
+          crontab "$current"
+          rm "$current"
+          for project in lowcy matchthis; do test "$(crontab -l | grep -Fc "$script $project")" = 1; done
+          echo TWO_INDEPENDENT_BACKUP_SCHEDULES_VERIFIED
+          crontab -l | grep -F "$script"
+          echo SERVER_BACKUP_FINISHED
+          REMOTE
+      - name: Verify both live applications and anonymous access boundaries
+        run: |
+          python3 - <<'PY'
+          import urllib.request,urllib.error,json,hashlib
+          low='https://lowcymethodowcy.smallhost.pl'
+          mt='https://matchthis.lowcymethodowcy.smallhost.pl'
+          def get(url):
+            try:
+              with urllib.request.urlopen(url,timeout=30) as r:return r.status,r.read(),r.url
+            except urllib.error.HTTPError as e:return e.code,e.read(),e.url
+          status,b,_=get(low+'/health');j=json.loads(b)
+          assert status==200 and j.get('ok') and j.get('version')=='S1'
+          status,b,_=get(mt+'/')
+          assert status==200 and hashlib.sha256(b).hexdigest()=='ef6f8b5839f56f44fba6fff47eaf26d09714d7861ef7285199167dde94db9ee0'
+          status,b,_=get(mt+'/mt60-draws.php')
+          assert status==200 and isinstance(json.loads(b).get('draws'),list)
+          assert get(mt+'/mt60-draws.php?token=1')[0]==403
+          assert get(mt+'/.mt41-private/users.php')[0] in (403,404)
+          assert get(mt+'/.mt41-private/mt60-published-draws.json')[0] in (403,404)
+          print('LOWCY_S1_MATCHTHIS_MT70_HEALTH_AND_PRIVATE_ACCESS_PASS')
+          PY
