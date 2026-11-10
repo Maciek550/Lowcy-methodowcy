@@ -1,0 +1,75 @@
+name: MatchThis MT72 three role isolated validation
+'on':
+  push:
+    branches:
+    - matchthis-mt23-independent-small2-20261106
+    paths:
+    - .github/workflows/matchthis-mt72-verify.yml
+    - matchthis/build-mt72.py
+    - matchthis/test-mt72.cjs
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v4
+    - name: Fetch exact SHA-verified MT71 three-role artifact
+      env:
+        GH_TOKEN: ${${ github.token }}
+      run: |
+        set -euo pipefail
+        mkdir -p /tmp/mt71
+        gh run download 42805041550 -R Maciek550/Lowcy-methodowcy -n MatchThis_MT-71_three_roles_verified -D /tmp/mt71
+        for role in '' '_OGLADACZ' '_SEDZIA'; do
+          source_file="$(find /tmp/mt71 -type f -name "MatchThis_MT-71$role.html" -print -quit)"
+          test -n "$source_file" && test -f "$source_file"
+          cp "$source_file" "matchthis/MatchThis_MT-71$role.html"
+        done
+    - name: Build SHA-locked MT72 and verify release numbers, syntax and source data
+      run: |
+        set -euo pipefail
+        python3 matchthis/build-mt72.py
+        test "$(sha256sum matchthis/MatchThis_MT-72.html | awk '{print $1}')" = 8bc8f99c4e6559cb123178aa4c0e017b6c3cc8772147d66b9ce9c37985bee660
+        test "$(sha256sum matchthis/MatchThis_MT-72_OGLADACZ.html | awk '{print $1}')" = eea8eec389f8f4a586444765740965180a244a3b3a6833f5742e59681400a845
+        test "$(sha256sum matchthis/MatchThis_MT-72_SEDZIA.html | awk '{print $1}')" = 0896badb55553196778b48a294439a32445aeb7a7b6140afff2ffdfc8d145fac
+        python3 - <<'PY'
+        from pathlib import Path
+        import hashlib
+        for suffix in ('','_OGLADACZ','_SEDZIA'):
+          b=Path(f'matchthis/MatchThis_MT-71{suffix}.html').read_text('utf8')
+          n=Path(f'matchthis/MatchThis_MT-72{suffix}.html').read_text('utf8')
+          for marker in ('const MATCHTHIS_ARCHIVE_2026=','const MATCHTHIS_ARCHIVE_2025_MEGA_V='):
+            a=b.split(marker,1)[1].split(';\n',1)[0]
+            z=n.split(marker,1)[1].split(';\n',1)[0]
+            assert a==z,(suffix,marker)
+          assert 'nameNeedsReview' in n
+          assert '<title>MatchThis MT-72</title>' in n
+          assert "const MT71_STORAGE_KEY='matchthis-preview-MT-71';" in n
+        print('MT72_HISTORICAL_DATA_UNTOUCHED_ALL_ROLES')
+        PY
+    - name: Chromium and Firefox real local browser click, save and reload tests
+      run: |
+        set -euo pipefail
+        mkdir -p /tmp/mt72-test
+        cd /tmp/mt72-test
+        npm init -y >/dev/null
+        npm install --silent playwright
+        npx playwright install --with-deps chromium firefox
+        cd "$GITHUB_WORKSPACE/matchthis"
+        python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/mt72-http.log 2>&1 &
+        echo $! >/tmp/mt72-http.pid
+        trap 'kill "$(cat /tmp/mt72-http.pid)" 2>/dev/null || true' EXIT
+        sleep 2
+        NODE_PATH=/tmp/mt72-test/node_modules node test-mt72.cjs
+    - uses: actions/upload-artifact@v4
+      if: success()
+      with:
+        name: MatchThis_MT-72_three_roles_verified
+        path: |
+          matchthis/MatchThis_MT-72.html
+          matchthis/MatchThis_MT-72_OGLADACZ.html
+          matchthis/MatchThis_MT-72_SEDZIA.html
+        if-no-files-found: error
