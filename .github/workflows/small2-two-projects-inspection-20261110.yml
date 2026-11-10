@@ -1,0 +1,41 @@
+name: SMALL2 two independent projects read-only inspection 20261110
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/small2-two-projects-inspection-20261110.yml']
+permissions: {contents: read}
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      SSHPASS: ${{ secrets.SMALL2_SSH_PASSWORD }}
+    steps:
+      - name: Inspect server configuration without changing applications
+        run: |
+          set -euo pipefail
+          sudo apt-get -qq update
+          sudo apt-get -qq install -y sshpass
+          mkdir -p -m 700 "$HOME/.ssh"
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test "$(ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256 | awk '{print $2}')" = 'SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8'
+          sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o ConnectTimeout=20 lowcymethodowcy@s3.small.pl 'sh -s' <<'REMOTE'
+          set -eu
+          echo AUDIT_SERVER_TIME
+          date '+%Y-%m-%dT%H:%M:%S %Z %z'
+          echo AUDIT_DISK
+          df -h "$HOME"
+          echo AUDIT_CRON
+          crontab -l 2>/dev/null | sed -E 's#(https?://)[^ ]+#URL_REDACTED#g' || true
+          echo AUDIT_APP_DIRECTORIES
+          for d in "$HOME/lowcy-small2-20261023" "$HOME/matchthis-independent" "$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html" "$HOME/.private-lowcy-archives"; do
+          test ! -d "$d" || du -sh "$d"
+          done
+          echo AUDIT_MATCHTHIS_PRIVATE_FILE_NAMES
+          find "$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html/.mt41-private" -maxdepth 2 -type f -exec stat -f '%Sp %z %N' {} \; 2>/dev/null || true
+          echo AUDIT_BACKUP_FILES
+          find "$HOME/.private-lowcy-archives" -maxdepth 3 -type f -name '*zip' -exec stat -f '%Sp %z %N' {} \; 2>/dev/null || true
+          echo AUDIT_MATCHTHIS_STORAGE_CODE
+          find "$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html" -maxdepth 2 -type f -name '*.php' -exec grep -nE 'sqlite:|new PDO|file_put_contents|fopen|__DIR__|dbname' {} \; | head -n 65
+          echo AUDIT_COMPLETE
+          REMOTE
