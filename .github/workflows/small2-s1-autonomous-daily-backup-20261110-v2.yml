@@ -1,0 +1,106 @@
+name: SMALL2 S1 autonomous daily backup v2 private vault verified
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/small2-s1-autonomous-daily-backup-20261110-v2.yml']
+permissions: {contents: read}
+jobs:
+  install:
+    runs-on: ubuntu-24.04
+    env:
+      SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify isolated backup script and pin SSH host identity
+        run: |
+          set -euo pipefail
+          test -n "$SSH_PASSWORD"
+          test -s deploy/small2-s1-daily-backup-20261110-v2.sh
+          sh -n deploy/small2-s1-daily-backup-20261110-v2.sh
+          grep -q 'SMALL2_S1_AUTONOMOUS_BACKUP_OK' deploy/small2-s1-daily-backup-20261110-v2.sh
+          sudo apt-get -qq update
+          sudo apt-get -qq install -y sshpass
+          mkdir -p -m 700 "$HOME/.ssh"
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test "$(ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256 | awk '{print $2}')" = 'SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8'
+      - name: Install new private SMALL2 backup script without touching running sites
+        run: |
+          set -euo pipefail
+          export SSHPASS="$SSH_PASSWORD"
+          opts=(-o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=20)
+          remote=lowcymethodowcy@s3.small.pl
+          sshpass -e scp "${opts[@]}" deploy/small2-s1-daily-backup-20261110-v2.sh "$remote:.config/lowcy-small2/daily-backup-s1-20261110.sh.upload"
+          sshpass -e ssh "${opts[@]}" "$remote" 'sh -s' <<'REMOTE'
+          set -eu
+          umask 077
+          dest="$HOME/.config/lowcy-small2/daily-backup-s1-20261110.sh"
+          upload="$dest.upload"
+          test -s "$upload"
+          sh -n "$upload"
+          if [ -e "$dest" ];then
+            cmp "$dest" "$upload" >/dev/null || { echo 'EXISTING_SCRIPT_DIFFERENT_DO_NOT_OVERWRITE';exit 14; }
+            rm "$upload"
+          else
+            mv "$upload" "$dest"
+          fi
+          chmod 700 "$dest"
+          echo "SMALL2_DAILY_BACKUP_SCRIPT_INSTALLED"
+          REMOTE
+      - name: Perform first actual local Postgres backup and verify compressed archive
+        run: |
+          set -euo pipefail
+          export SSHPASS="$SSH_PASSWORD"
+          sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=20 lowcymethodowcy@s3.small.pl 'sh -s' <<'REMOTE'
+          set -eu
+          umask 077
+          script="$HOME/.config/lowcy-small2/daily-backup-s1-20261110.sh"
+          test -x "$script"
+          for cmd in node pg_dump pg_restore zip unzip sha256sum mktemp; do command -v "$cmd" || echo "MISSING_TOOL $cmd"; done
+          "$script"
+          latest="$(ls -1dt "$HOME"/backups/local/20* | head -n 1)"
+          test -s "$latest/backup-S1.zip"
+          test -s "$latest/SHA256SUMS"
+          cd "$latest"
+          sha256sum -c SHA256SUMS
+          unzip -t -qq backup-S1.zip >/dev/null
+          echo "SMALL2_DAILY_FIRST_BACKUP_RESTORE_ARCHIVE_VERIFIED"
+          REMOTE
+      - name: Schedule one daily backup preserving all previous crontab entries
+        run: |
+          set -euo pipefail
+          export SSHPASS="$SSH_PASSWORD"
+          sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=20 lowcymethodowcy@s3.small.pl 'sh -s' <<'REMOTE'
+          set -eu
+          umask 077
+          folder="$HOME/.config/lowcy-small2"
+          croncopy="$folder/crontab-pre-autonomous-backup-20261110.txt"
+          script="$folder/daily-backup-s1-20261110.sh"
+          test -x "$script"
+          if [ ! -e "$croncopy" ];then
+            crontab -l > "$croncopy" 2>/dev/null || : > "$croncopy"
+            chmod 600 "$croncopy"
+          fi
+          line="17 3 * * * /bin/sh $script >> $HOME/.private-lowcy-archives/s1-daily-backup.log 2>&1"
+          current="$(mktemp "$folder/.current-cron.XXXXXXXX")"
+          crontab -l > "$current" 2>/dev/null || : > "$current"
+          if ! grep -Fq "$script" "$current";then
+            printf '%s\n' "$line" >> "$current"
+            crontab "$current"
+          fi
+          rm -f "$current"
+          count="$(crontab -l | grep -Fc "$script" || true)"
+          test "$count" = 1
+          echo "SMALL2_INDEPENDENT_DAILY_BACKUP_CRON_INSTALLED"
+          REMOTE
+      - name: No changes to Railway or MatchThis, verify SMALL2 S1 health and no regression
+        run: |
+          set -euo pipefail
+          curl -fsSL -m 20 'https://lowcymethodowcy.smallhost.pl/health' -o /tmp/lowcy.json
+          python3 - <<'PY'
+          import json
+          j=json.load(open('/tmp/lowcy.json'))
+          assert j.get('ok') is True and j.get('version')=='S1',j
+          print('SMALL2_S1_PUBLIC_HEALTH_UNCHANGED')
+          PY
+          curl -fsSL -m 20 'https://matchthis.lowcymethodowcy.smallhost.pl/' | grep -q 'MT-70'
+          echo 'MATCHTHIS_MT70_PUBLIC_UNCHANGED'
