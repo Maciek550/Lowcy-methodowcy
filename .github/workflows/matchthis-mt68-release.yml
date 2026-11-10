@@ -300,6 +300,7 @@ jobs:
               const sectors=new Map(groups.flatMap(g=>g.pegs.map(p=>[p,g.sector])));
               t.mt55SectorPlan={pegs,sectors:6,sizes:groups.map(g=>g.pegs.length)};
               t.mt55Entries=people.map((p,i)=>({competitorId:p.id,competitorName:fullName(p),peg:i+1,sector:sectors.get(i+1),weightG:null}));
+              render(); // rebuild export tile after preparing the isolated draw
               const record=[];const ctx=CanvasRenderingContext2D.prototype;
               const original=ctx.fillText;
               ctx.fillText=function(text,...args){record.push(String(text));return original.call(this,text,...args)};
