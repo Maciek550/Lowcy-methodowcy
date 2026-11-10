@@ -40,7 +40,7 @@ const clone=x=>JSON.parse(JSON.stringify(x));
    async function state(context){const r=await context.request.get(base+'/mt73-state.php');assert.equal(r.status(),200);return await r.json();}
    async function post(context,body,token){const r=await context.request.post(base+'/mt73-state.php',{data:body,headers:{'X-MT-CSRF':token}});return {status:r.status(),body:await r.json()};}
    // Actual UI create -> server -> separate browser context -> reload.
-   await a.locator('[data-view="newEvent"]').first().click();await a.locator('#createEvent [name="name"]').fill('TEST ZAPISU '+label);
+   await a.locator('[data-view="events"]').first().click();await a.locator('[data-view="newEvent"]').first().click();await a.locator('#createEvent [name="name"]').fill('TEST ZAPISU '+label);
    await a.locator('#createEvent [type="submit"]').click();await a.waitForFunction(()=>document.getElementById('mt73-sync').textContent.startsWith('Zapisano'));
    let s=await state(admin);assert(s.state.data.events.some(e=>e.name==='TEST ZAPISU '+label));await a.reload();await a.waitForFunction(()=>document.getElementById('mt73-sync').textContent.includes('Dane z serwera'));
    const fresh=await browser.newContext();const f=await open(fresh,'admin');await f.locator('[data-view="events"]').first().click();assert((await f.locator('body').innerText()).includes('TEST ZAPISU '+label));
@@ -63,7 +63,7 @@ const clone=x=>JSON.parse(JSON.stringify(x));
    // Network failure preserves queue and recovery performs a real server write.
    await a.reload();await a.waitForFunction(()=>document.getElementById('mt73-sync').textContent.includes('Dane z serwera'));
    await a.route('**/mt73-state.php',route=>route.request().method()==='POST'?route.abort():route.continue());
-   await a.locator('[data-view="newEvent"]').first().click();await a.locator('#createEvent [name="name"]').fill('OFFLINE '+label);await a.locator('#createEvent [type="submit"]').click();
+   await a.locator('[data-view="events"]').first().click();await a.locator('[data-view="newEvent"]').first().click();await a.locator('#createEvent [name="name"]').fill('OFFLINE '+label);await a.locator('#createEvent [type="submit"]').click();
    await a.waitForFunction(()=>document.getElementById('mt73-sync').textContent.includes('Nie zapisano'));assert(await a.evaluate(()=>!!localStorage.getItem('matchthis-server-pending-v1')));
    await a.unroute('**/mt73-state.php');await a.locator('#mt73-retry').click();await a.waitForFunction(()=>document.getElementById('mt73-sync').textContent.startsWith('Zapisano'));
    assert((await state(admin)).state.data.events.some(e=>e.name==='OFFLINE '+label));
