@@ -1,0 +1,37 @@
+name: MatchThis MT73 server persistence real browser validation
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt73-validate.yml','matchthis/build-mt73.py','matchthis/mt73-*','matchthis/test-mt73.cjs']
+permissions: {contents: read, actions: read}
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch exact MT72 production baseline
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download 42829597892 -R Maciek550/Lowcy-methodowcy -n MatchThis_MT-72_three_roles_verified -D /tmp/mt72-base
+          for role in '' '_OGLADACZ' '_SEDZIA'; do
+            cp "$(find /tmp/mt72-base -name "MatchThis_MT-72$role.html" -print -quit)" "matchthis/MatchThis_MT-72$role.html"
+          done
+          python3 matchthis/build-mt73.py
+          php -l matchthis/mt73-store.php
+          php -l matchthis/mt73-state.php
+      - name: Install both browser engines
+        run: |
+          npm install --prefix /tmp/mt73-test --silent playwright
+          cd /tmp/mt73-test
+          npx playwright install --with-deps chromium firefox
+      - name: Real PHP server and browser persistence regression tests
+        run: NODE_PATH=/tmp/mt73-test/node_modules node matchthis/test-mt73.cjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MatchThis_MT73_SERVER_TESTED
+          path: |
+            matchthis/MatchThis_MT-73*.html
+            matchthis/mt73-seed.json
+          if-no-files-found: error
