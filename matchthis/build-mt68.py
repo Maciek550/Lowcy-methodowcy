@@ -2,11 +2,12 @@ from pathlib import Path
 import hashlib,re,subprocess
 D=Path(__file__).resolve().parent
 BASE={
- '':'', '_OGLADACZ':'', '_SEDZIA':''
+ '':'4e69149e79963b612cd2231bfb847baf6c09733fa7f3123ac64122403468c5de',
+ '_OGLADACZ':'4648a958fb0ecfb60c4071df624f7b22fbec9192850974412c48ef7473036032',
+ '_SEDZIA':'99e68bade439598aac7400274a1affe76a172974b7ba26d89b77ac32a864efc9'
 }
-for suffix in BASE:
-    b=(D/'home/runner/work/Lowcy-methodowcy/Lowcy-methodowcy/matchthis'/f'MatchThis_MT-67{suffix}.html').read_bytes()
-    BASE[suffix]=hashlib.sha256(b).hexdigest()
+SOURCE=D/'home/runner/work/Lowcy-methodowcy/Lowcy-methodowcy/matchthis'
+if not SOURCE.is_dir():SOURCE=D
 
 def one(s,a,b):
     count=s.count(a)
@@ -53,7 +54,7 @@ css='''<style id="mt68-readable-round-labels">
 </style>'''
 
 for suffix,sha in BASE.items():
-    filename=D/'home/runner/work/Lowcy-methodowcy/Lowcy-methodowcy/matchthis'/f'MatchThis_MT-67{suffix}.html'
+    filename=SOURCE/f'MatchThis_MT-67{suffix}.html'
     s=filename.read_text('utf8')
     assert hashlib.sha256(s.encode()).hexdigest()==sha
     # Unique release version everywhere, keep all prior localStorage keys for migration.
