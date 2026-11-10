@@ -23,8 +23,9 @@ jobs:
           mkdir -p /tmp/mt70
           gh run download 42784030538 -R Maciek550/Lowcy-methodowcy -n MatchThis_MT-70_verified -D /tmp/mt70
           for role in '' '_OGLADACZ' '_SEDZIA'; do
-            test -f "/tmp/mt70/MatchThis_MT-70${role}.html"
-            cp "/tmp/mt70/MatchThis_MT-70${role}.html" "matchthis/MatchThis_MT-70${role}.html"
+            source_file="$(find /tmp/mt70 -type f -name "MatchThis_MT-70${role}.html" -print -quit)"
+            test -n "$source_file" && test -f "$source_file"
+            cp "$source_file" "matchthis/MatchThis_MT-70${role}.html"
           done
       - name: Build MT71 three roles with exact reproducible output hashes
         run: |
