@@ -1,0 +1,78 @@
+name: MatchThis MT72 isolated SMALL2 three-role release with rollback
+'on':
+  push:
+    branches:
+      - matchthis-mt23-independent-small2-20261106
+    paths:
+      - .github/workflows/matchthis-mt72-release.yml
+permissions:
+  contents: read
+  actions: read
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    env:
+      SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Retrieve successful browser-tested exact MT72 HTML artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt72-artifact
+          gh run download 42829597892 -R Maciek550/Lowcy-methodowcy -n MatchThis_MT-72_three_roles_verified -D /tmp/mt72-artifact
+          for role in '' '_OGLADACZ' '_SEDZIA'; do
+            source_file="$(find /tmp/mt72-artifact -type f -name "MatchThis_MT-72$role.html" -print -quit)"
+            test -n "$source_file" && test -f "$source_file"
+            cp "$source_file" "matchthis/MatchThis_MT-72$role.html"
+          done
+          test "$(sha256sum matchthis/MatchThis_MT-72.html | awk '{print $1}')" = 8bc8f99c4e6559cb123178aa4c0e017b6c3cc8772147d66b9ce9c37985bee660
+          test "$(sha256sum matchthis/MatchThis_MT-72_OGLADACZ.html | awk '{print $1}')" = eea8eec389f8f4a586444765740965180a244a3b3a6833f5742e59681400a845
+          test "$(sha256sum matchthis/MatchThis_MT-72_SEDZIA.html | awk '{print $1}')" = 0896badb55553196778b48a294439a32445aeb7a7b6140afff2ffdfc8d145fac
+          bash -n matchthis/deploy-mt72-small2.sh
+          echo MT72_THREE_ROLE_HASH_AND_DEPLOY_SCRIPT_VALID
+      - name: Prepare two real browsers before changing production
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt72-live-test
+          cd /tmp/mt72-live-test
+          npm init -y >/dev/null
+          npm install --silent playwright
+          npx playwright install --with-deps chromium firefox
+      - name: Snapshot published draws and ensure existing public site remains MT70
+        run: |
+          set -euo pipefail
+          url=https://matchthis.lowcymethodowcy.smallhost.pl
+          curl -fsSL --max-time 30 "$url/" -o /tmp/mt72-before.html
+          test "$(sha256sum /tmp/mt72-before.html | awk '{print $1}')" = ef6f8b5839f56f44fba6fff47eaf26d09714d7861ef7285199167dde94db9ee0
+          curl -fsSL --max-time 30 "$url/mt60-draws.php" -o /tmp/mt72-before-draws.json
+          node -e 'const x=require("/tmp/mt72-before-draws.json");if(!Array.isArray(x.draws))process.exit(1)'
+          echo MT72_BEFORE_VERSION_AND_DRAWS_SNAPSHOT_OK
+      - name: Deploy only MatchThis three MT72 HTML roles with guarded backup and rollback
+        id: deploy
+        run: |
+          set -euo pipefail
+          bash matchthis/deploy-mt72-small2.sh
+      - name: Test actual production viewer in Chromium and Firefox
+        run: |
+          set -euo pipefail
+          NODE_PATH=/tmp/mt72-live-test/node_modules node matchthis/test-mt72-live.cjs
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/mt60-draws.php -o /tmp/mt72-after-draws.json
+          cmp -s /tmp/mt72-before-draws.json /tmp/mt72-after-draws.json
+          echo MT72_LIVE_BROWSER_TESTS_AND_PUBLISHED_DRAW_BYTES_UNCHANGED
+      - name: Publish regression proof HTML artifacts
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: MatchThis_MT72_PRODUCTION_VERIFIED
+          path: |
+            matchthis/MatchThis_MT-72.html
+            matchthis/MatchThis_MT-72_OGLADACZ.html
+            matchthis/MatchThis_MT-72_SEDZIA.html
+          if-no-files-found: error
+      - name: If any post-activation check fails restore exact MT70 viewer and authenticated router
+        if: failure() && steps.deploy.outcome == 'success'
+        run: |
+          set -euo pipefail
+          bash matchthis/deploy-mt72-small2.sh rollback
