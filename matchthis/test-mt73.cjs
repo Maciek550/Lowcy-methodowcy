@@ -19,7 +19,7 @@ const browsers=[];
 const clone=x=>JSON.parse(JSON.stringify(x));
 (async()=>{
  try{
-  const b=await chromium.launch({headless:true});browsers.push(b);const p=await b.newPage();
+  const b=await chromium.launch({headless:true});browsers.push(b);const p=await b.newPage();p.setDefaultTimeout(15000);
   await p.goto(base+'/seed.html');await p.waitForFunction(()=>window.__MT73_SEED?.events?.length>0);
   const seed=await p.evaluate(()=>window.__MT73_SEED);assert.equal(seed.events.length,14);assert.equal(seed.cycles.length,2);
   const traper=seed.events.find(e=>e.id==='mt2026-traper-cup-kobialka');
@@ -32,7 +32,7 @@ const clone=x=>JSON.parse(JSON.stringify(x));
    fs.writeFileSync(fixture+'/.mt41-private/state-mt73.json',JSON.stringify({revision:1,seeded:true,data:seed}));
    const browser=await engine.launch({headless:true}),admin=await browser.newContext(),judge=await browser.newContext(),viewer=await browser.newContext();
    browsers.push(browser);const errors=[];
-   async function open(context,user){const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
+   async function open(context,user){context.setDefaultTimeout(15000);const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
     if(user)await context.request.post(base+'/login.php',{form:{username:user,password:'fixture-only-password'}});
     await page.goto(base+(user?'/panel.php':'/'));await page.waitForFunction(()=>document.getElementById('mt73-sync').textContent.includes('Dane z serwera'));
     assert.equal(await page.title(),'MatchThis MT-73');assert.equal(await page.locator('#appversion').innerText(),'MT-73');return page;}
@@ -83,7 +83,7 @@ const clone=x=>JSON.parse(JSON.stringify(x));
    const mc=await mb.newContext(),legacy=clone(seed);legacy.events.push({...clone(seed.events[0]),id:'legacy-'+number,name:'LEGACY '+number});
    await mc.addInitScript(value=>localStorage.setItem('matchthis-preview-MT-72',JSON.stringify(value)),legacy);
    await mc.request.post(base+'/login.php',{form:{username:'admin',password:'fixture-only-password'}});
-   const mp=await mc.newPage();await mp.goto(base+'/panel.php');await mp.waitForFunction(()=>document.getElementById('mt73-sync').textContent.includes('Dane z serwera'));
+   const mp=await mc.newPage();mp.setDefaultTimeout(15000);await mp.goto(base+'/panel.php');await mp.waitForFunction(()=>document.getElementById('mt73-sync').textContent.includes('Dane z serwera'));
    const ms=await (await mc.request.get(base+'/mt73-state.php')).json();
    assert(ms.state.data.events.some(e=>e.id==='legacy-1'));assert(!ms.state.data.events.some(e=>e.id==='legacy-2'));
    assert(await mp.evaluate(()=>!!localStorage.getItem('matchthis-preview-MT-72')));
@@ -96,5 +96,5 @@ const clone=x=>JSON.parse(JSON.stringify(x));
   const original=fs.readFileSync(fixture+'/.mt41-private/state-mt73.json');cp.execFileSync('tar',['-czf','/tmp/mt73-test-backup.tar.gz','-C',fixture,'.mt41-private']);
   const restored='/tmp/mt73-restore';fs.mkdirSync(restored,{recursive:true});cp.execFileSync('tar',['-xzf','/tmp/mt73-test-backup.tar.gz','-C',restored]);assert(fs.readFileSync(restored+'/.mt41-private/state-mt73.json').equals(original));
   console.log('MT73_BACKUP_RESTORE_STATE_BYTE_IDENTICAL_PASS');
- }finally{for(const browser of browsers)await browser.close().catch(()=>{});server.kill();}
+ }catch(error){for(const browser of browsers){for(const context of browser.contexts()){for(const page of context.pages()){console.error('PAGE_DIAGNOSTIC',page.url(),await page.locator('body').innerText({timeout:1000}).catch(()=>''));}}}throw error;}finally{for(const browser of browsers)await browser.close().catch(()=>{});server.kill();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
