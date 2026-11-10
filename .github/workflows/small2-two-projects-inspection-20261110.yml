@@ -53,3 +53,27 @@ jobs:
           done
           echo AUDIT_COMPLETE
           REMOTE
+
+
+      - name: MatchThis exported draw fingerprint compare (read-only)
+        run: |
+          python3 - <<'PY'
+          import json,hashlib,urllib.request
+          url='https://matchthis.lowcymethodowcy.smallhost.pl/mt60-draws.php'
+          with urllib.request.urlopen(url,timeout=30) as response:
+            assert response.status==200
+            published=json.load(response).get('draws',[])
+          assert isinstance(published,list)
+          expected={0:'333b54b2b8d5fccefebea13aa14a20e64f391fac564123c0c7ef344613fa3b68',
+                    1:'b1104022ee45233164954348252308efeea9ea34dfc54c9dd73f64d93b9f0a9f'}
+          target='mt2026-xiv-puchar-matchthis-28-29-nov'
+          for ri,digest in expected.items():
+            found=[x for x in published if x.get('eventId')==target and x.get('roundIndex')==ri]
+            assert len(found)==1,('PUBLISHED_ROUND_MISSING_OR_AMBIGUOUS',ri,len(found))
+            rows=found[0].get('rows')
+            assert isinstance(rows,list)
+            subset=sorted([{'competitorId':r['competitorId'],'competitorName':r['competitorName'],'peg':r['peg'],'sector':r['sector']} for r in rows],key=lambda x:x['competitorId'])
+            result=hashlib.sha256(json.dumps(subset,ensure_ascii=False,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+            print('MT70_XIV_TOUR_PUBLISHED_COMPARE',ri+1,'rows',len(rows),'equal_to_browser_export',result==digest)
+          print('MATCHTHIS_LIVE_DRAW_COMPARE_READONLY_COMPLETE')
+          PY
