@@ -1,0 +1,84 @@
+name: SMALL2 independent from Railway read-only audit
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/small2-railway-independence-readonly-20261110.yml']
+permissions: {contents: read}
+jobs:
+  independent:
+    runs-on: ubuntu-24.04
+    env:
+      SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+    steps:
+      - name: Pinned-host read-only audit of SMALL2 and private backups
+        run: |
+          set -euo pipefail
+          test -n "$SSH_PASSWORD"
+          sudo apt-get -qq update
+          sudo apt-get -qq install -y sshpass
+          mkdir -p -m 700 "$HOME/.ssh"
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test "$(ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256 | awk '{print $2}')" = 'SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8'
+          export SSHPASS="$SSH_PASSWORD"
+          sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=20 lowcymethodowcy@s3.small.pl 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          echo "SMALL2_AUDIT_STARTED_READONLY"
+          cfg="$HOME/.config/lowcy-small2/runtime.json"
+          test -s "$cfg" || { echo "SMALL2_RUNTIME_MISSING"; exit 21; }
+          node - "$cfg" <<'NODE'
+          const fs=require('fs');
+          const cfg=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
+          const db=new URL(cfg.DATABASE_URL||'postgres://none:none@invalid.invalid/invalid');
+          if(db.hostname!=='pgsql3.small.pl'||db.pathname!=='/p1828_lowcy_kop')throw Error('SMALL2_DB_IS_NOT_LOCAL_SMALL2');
+          console.log('SMALL2_DB_INDEPENDENT_OF_RAILWAY',db.hostname,db.pathname);
+          console.log('SMALL2_RUNTIME_KEY_COUNT',Object.keys(cfg).length);
+          const suspicious=Object.keys(cfg).filter(x=>/railway/i.test(x));
+          console.log('SMALL2_RUNTIME_RAILWAY_KEY_COUNT',suspicious.length);
+          NODE
+          if test -s "$HOME/lowcy-small2-20261023/server.cjs";then
+            echo "SMALL2_OWN_APP_SOURCE_PRESENT"
+          else echo "SMALL2_APP_SOURCE_NOT_FOUND";exit 22;fi
+          if test -s "$HOME/lowcy-small2-20261023/backup-db.cjs";then
+            echo "SMALL2_BACKUP_SOURCE_PRESENT"
+          else echo "SMALL2_BACKUP_SOURCE_MISSING";fi
+          for dir in "$HOME/backups/local" "$HOME/.private-lowcy-archives";do
+            if test -d "$dir";then
+              find "$dir" -maxdepth 2 -type f -printf '%T@ %s %f\n' | sort -nr | head -n 6 | awk '{print "SMALL2_BACKUP_FILE", $2, $3}'
+              echo "SMALL2_BACKUP_DIR_PRESENT"
+            else
+              echo "SMALL2_BACKUP_DIR_ABSENT $(basename "$dir")"
+            fi
+          done
+          package="$HOME/.private-lowcy-archives/Lowcy_S1_SMALL2_PELNA_KOPIA_20261105.zip"
+          if test -s "$package";then
+            bytes="$(wc -c < "$package" | tr -d ' ')"
+            echo "SMALL2_PRIVATE_RESCUE_ZIP_EXISTS_BYTES=$bytes"
+            unzip -t -qq "$package" >/dev/null && echo "SMALL2_PRIVATE_RESCUE_ZIP_INTEGRITY_PASS"
+          else
+            echo "SMALL2_PRIVATE_RESCUE_ZIP_MISSING"
+          fi
+          cron="$(crontab -l 2>/dev/null || true)"
+          if test -n "$cron";then
+            echo "SMALL2_USER_CRON_ENTRY_COUNT=$(printf '%s\n' "$cron" | grep -cE '^[[:space:]]*[^#[:space:]]' || true)"
+            if printf '%s\n' "$cron" | grep -E '^[[:space:]]*[^#]' | grep -Eqi 'lowcy.*(backup|pg_dump)|backup-db\.cjs|lowcy-db-backup';then
+              echo 'SMALL2_LOCAL_AUTOMATIC_BACKUP_CRON_PRESENT'
+            else echo 'SMALL2_LOCAL_AUTOMATIC_BACKUP_CRON_ABSENT';fi
+          else echo "SMALL2_USER_CRONTAB_EMPTY";fi
+          echo 'SMALL2_CONFIGURED_DOMAINS_START'
+          devil www list 2>/dev/null | grep -E 'lowcymethodowcy.smallhost.pl|matchthis.lowcymethodowcy.smallhost.pl' || true
+          echo 'SMALL2_CONFIGURED_DOMAINS_END'
+          echo 'SMALL2_READONLY_AUDIT_COMPLETED'
+          REMOTE
+      - name: Verify public local services on their own SMALL2 URLs
+        run: |
+          set -euo pipefail
+          curl -fsSL -m 18 -o /tmp/lowcy-health.json -w 'LOWCY_SMALL2_HEALTH_STATUS=%{http_code}\n' 'https://lowcymethodowcy.smallhost.pl/health'
+          python3 - <<'PY'
+          import json
+          v=json.load(open('/tmp/lowcy-health.json'))
+          print('LOWCY_SMALL2_HEALTH_RESPONSE',json.dumps({k:v[k] for k in ('ok','version','migration') if k in v}))
+          PY
+          code="$(curl -LsS -m 18 -o /tmp/matchthis.html -w '%{http_code}' 'https://matchthis.lowcymethodowcy.smallhost.pl/')"
+          test "$code" = '200'
+          grep -q 'MT-70' /tmp/matchthis.html
+          echo 'MATCHTHIS_SMALL2_PUBLIC_VERSION_MT70_PASS'
