@@ -1,0 +1,100 @@
+name: MatchThis MT75 isolated SMALL2 central persistence release with rollback
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-mt75-release.yml]
+permissions: {contents: read, actions: read}
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use exact tested MT75 artifact and check deployment script
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt75artifact
+          gh run download 43396689592 -R Maciek550/Lowcy-methodowcy -n MatchThis_MT75_PREDEPLOY_VALIDATED -D /tmp/mt75artifact
+          for role in '' '_OGLADACZ' '_SEDZIA'; do
+            cp "$(find /tmp/mt75artifact -name "MatchThis_MT-75$role.html" -print -quit)" "matchthis/MatchThis_MT-75$role.html"
+          done
+          cp "$(find /tmp/mt75artifact -name mt75-seed.json -print -quit)" matchthis/mt75-seed.json
+          bash -n matchthis/deploy-mt75-small2.sh
+          php -l matchthis/mt73-store.php
+          php -l matchthis/mt73-state.php
+          php -l matchthis/mt73-install-state.php
+      - name: Prepare both browsers for real production viewer smoke
+        run: |
+          npm install --prefix /tmp/mt75-live-test --silent playwright
+          cd /tmp/mt75-live-test
+          npx playwright install --with-deps chromium firefox
+      - name: Snapshot currently published draws and check Łowcy health
+        run: |
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/mt60-draws.php -o /tmp/mt75-draws-before.json
+          curl -fsSL --max-time 30 https://lowcymethodowcy.smallhost.pl/health
+      - name: Deploy exact tested MT75 only to independent MatchThis SMALL2
+        id: deploy
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: bash matchthis/deploy-mt75-small2.sh
+      - name: Real production browser UI, live server read, preserved published draws and Łowcy health
+        run: |
+          cat > /tmp/mt75-live-test/test.cjs <<'NODE'
+          const {chromium,firefox}=require('playwright');
+          const assert=require('node:assert/strict');
+          (async()=>{
+            for(const engine of [chromium,firefox]){
+              const b=await engine.launch();
+              try{
+                const p=await b.newPage({viewport:{width:1366,height:900}});
+                const errors=[];p.on('pageerror',e=>errors.push(String(e)));
+                p.setDefaultTimeout(20000);
+                await p.goto('https://matchthis.lowcymethodowcy.smallhost.pl/');
+                await p.waitForFunction(()=>document.querySelector('#mt73-sync')?.textContent.includes('Dane z serwera'));
+                assert.equal(await p.title(),'MatchThis MT-75');
+                assert.equal(await p.locator('#appversion').innerText(),'MT-75');
+                assert.equal(await p.locator('body').getAttribute('data-version'),'MT-75');
+                const result=await p.evaluate(()=>{
+                  const e=db.events.find(x=>x.id==='mt2025-mega_final_2025');
+                  const r=e.rounds[1].results;
+                  return {count:r.length,valid:r.filter(x=>x.sector&&x.peg).length,sectors:[...new Set(r.map(x=>x.sector))].sort()};
+                });
+                assert.equal(result.count,54);assert.equal(result.valid,54);assert.deepEqual(result.sectors,['A','B','C','D','E','F']);
+                await p.locator('[data-view="archive"]').first().click();
+                const fold=p.locator('details[data-year="2025"]');
+                if(await fold.getAttribute('open')===null)await fold.locator('summary').click();
+                await p.locator('[data-open="mt2025-mega_final_2025"]').first().click();
+                await p.locator('[data-round="1"]').first().click();
+                await p.locator('[data-result-mode="sectors"]').first().click();
+                for(const name of ['SOBUSIAK KAMIL','PASTUSZKA TOMASZ','KURCZYŃSKI MARIUSZ'])assert((await p.locator('body').innerText()).includes(name));
+                for(const width of [1366,768,390]){await p.setViewportSize({width,height:900});assert(await p.locator('#appversion').isVisible());}
+                await p.reload();
+                await p.waitForFunction(()=>document.querySelector('#mt73-sync')?.textContent.includes('Dane z serwera'));
+                assert.equal((await p.evaluate(()=>db.events.find(x=>x.id==='mt2025-mega_final_2025').rounds[1].results.filter(x=>x.sector&&x.peg).length)),54);
+                assert.equal(await p.locator('[data-action="downloadOverallPdf"]:visible,[data-action="export"]:visible').count(),0);
+                assert.deepEqual(errors,[]);
+                console.log('MT75_LIVE_SMALL2_VIEWER_SERVER_STATE_BROWSER_PASS',engine.name());
+              }finally{await b.close();}
+            }
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+          NODE_PATH=/tmp/mt75-live-test/node_modules node /tmp/mt75-live-test/test.cjs
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/mt60-draws.php -o /tmp/mt75-draws-after.json
+          cmp /tmp/mt75-draws-before.json /tmp/mt75-draws-after.json
+          curl -fsSL --max-time 30 https://lowcymethodowcy.smallhost.pl/health
+          echo MT75_PRODUCTION_SMOKE_AND_UNCHANGED_PUBLISHED_DRAWS_PASS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MatchThis_MT75_PRODUCTION_VERIFIED
+          path: |
+            matchthis/MatchThis_MT-75.html
+            matchthis/MatchThis_MT-75_OGLADACZ.html
+            matchthis/MatchThis_MT-75_SEDZIA.html
+          if-no-files-found: error
+      - name: Roll back MatchThis routes to MT74 if production verification fails
+        if: failure() && steps.deploy.outcome == 'success'
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: bash matchthis/deploy-mt75-small2.sh rollback
