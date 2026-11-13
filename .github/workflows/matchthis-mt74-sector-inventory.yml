@@ -1,0 +1,66 @@
+name: MatchThis MT74 SMALL2 read-only sector and server-state inventory
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-mt74-sector-inventory.yml]
+permissions: {contents: read}
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Inspect exact production files and authoritative state without writes
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: |
+          set -euo pipefail
+          sudo apt-get -qq update
+          sudo apt-get -qq install -y sshpass
+          mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test "$(ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256 | awk '{print $2}')" = 'SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8'
+          export SSHPASS="$SSH_PASSWORD"
+          sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15 lowcymethodowcy@s3.small.pl 'python3 -' <<'PY'
+          import json, pathlib, hashlib
+          web=pathlib.Path.home()/'domains/matchthis.lowcymethodowcy.smallhost.pl/public_html'
+          html=(web/'index.html').read_text(encoding='utf8')
+          sha=hashlib.sha256(html.encode('utf8')).hexdigest()
+          expected='2595a4fad3fa4a2b5457a345e65f896171b4ca95578d246ec0e599ad537aa4a6'
+          print('PRODUCTION_PUBLIC_HTML_SHA256',sha)
+          print('EXACT_MT74_PUBLIC_VIEW',sha==expected)
+          if sha!=expected: raise SystemExit('Unexpected production version: audit halted')
+          def inventory(events,label):
+              totals=[0,0,0]
+              for e in events:
+                  for r in e.get('rounds',[]):
+                      rows=r.get('results',[])
+                      badS=sum(not x.get('sector') for x in rows)
+                      badP=sum(not x.get('peg') for x in rows)
+                      totals[0]+=len(rows);totals[1]+=badS;totals[2]+=badP
+                      if badS or badP:
+                          print('MISSING',json.dumps({'dataset':label,'event':e.get('name'),'round':r.get('name'),'results':len(rows),'noSector':badS,'noPeg':badP},ensure_ascii=False))
+              print('TOTAL',label,'rows',*totals)
+          for marker in ['const MT44_MISSING_2025=','const MATCHTHIS_ARCHIVE_2026=']:
+              p=html.find(marker)
+              if p<0:raise SystemExit('Dataset marker missing: '+marker)
+              obj,n=json.JSONDecoder().raw_decode(html[p+len(marker):])
+              inventory(obj['data'].get('events',[]),marker)
+              for cycle in obj['data'].get('cycles',[]):
+                  periods=cycle.get('tours',[])
+                  for t in periods:
+                      rs=t.get('results',[])
+                      ms=sum(not x.get('sector') for x in rs)
+                      mp=sum(not x.get('peg') for x in rs)
+                      print('CYCLE_TOUR',json.dumps({'cycle':cycle.get('name'),'tour':t.get('name'),'results':len(rs),'noSector':ms,'noPeg':mp},ensure_ascii=False))
+          private=web/'.mt41-private/state-mt73.json'
+          backend=web/'mt73-state.php'
+          print('SERVER_PERSISTENCE_ENDPOINT_INSTALLED',backend.is_file())
+          print('SERVER_PERSISTENCE_STORE_INSTALLED',private.is_file())
+          if private.is_file():
+              state=json.loads(private.read_text(encoding='utf8'))
+              print('SERVER_STATE_REVISION',state.get('revision'))
+              print('SERVER_STATE_SEEDED',state.get('seeded'))
+              print('SERVER_STATE_LAST_UPDATED',state.get('updatedAt'))
+              inventory(state['data'].get('events',[]),'SERVER_AUTHORITATIVE')
+          print('READ_ONLY_INVENTORY_COMPLETE_NO_DATA_MODIFICATIONS')
+          PY
