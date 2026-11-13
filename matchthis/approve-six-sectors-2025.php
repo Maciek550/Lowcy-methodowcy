@@ -34,7 +34,8 @@ try {
         $id=$event['id']; if (!isset($targets[$id])) continue;
         if (isset($seen[$id])) throw new RuntimeException('Duplicate target event');
         $seen[$id]=true;
-        foreach ($event['rounds']??[] as &$tour) {
+        if (!isset($event['rounds']) || !is_array($event['rounds'])) throw new RuntimeException('Missing target rounds');
+        foreach ($event['rounds'] as &$tour) {
             $rid=$tour['id']??'';
             if (!isset($targets[$id][$rid]) || isset($seen[$id.'/'.$rid]))
                 throw new RuntimeException('Unexpected or duplicate tour '.$rid);
