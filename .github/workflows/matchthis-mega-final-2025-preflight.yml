@@ -1,0 +1,21 @@
+name: MatchThis mega final 2025 T1 source-to-server name match preflight
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-mega-final-2025-preflight.yml]
+permissions: {contents: read}
+jobs:
+  preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Confirm exact 54 source names against REAL SMALL2 state without modifying server
+        run: |
+          set -euo pipefail
+          python3 -m py_compile matchthis/import-mega-final-2025-t1.py
+          mkdir -p /tmp/mt-final/test-webroot/.mt41-private
+          cp matchthis/mt73-store.php /tmp/mt-final/test-webroot/mt73-store.php
+          curl -fsSL --max-time 25 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/mt-final/test-webroot/.mt41-private/state-mt73.json
+          python3 matchthis/import-mega-final-2025-t1.py preview /tmp/mt-final/test-webroot matchthis/mega-final-2025-t1-confirmed-54.json
+          echo MT2025_FINAL_54_IDENTITIES_EXACT_PRECHECK_PASS
