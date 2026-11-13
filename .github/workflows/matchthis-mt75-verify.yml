@@ -1,0 +1,57 @@
+name: MatchThis MT75 SERVER persistence and sectors isolated preflight
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-mt75-verify.yml]
+permissions: {contents: read, actions: read}
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build MT73 server baseline then patch deployed MT74 verified sector pairs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt72 /tmp/mt74
+          gh run download 42829597892 -R Maciek550/Lowcy-methodowcy -n MatchThis_MT-72_three_roles_verified -D /tmp/mt72
+          gh run download 43393857188 -R Maciek550/Lowcy-methodowcy -n MatchThis_MT74_PRODUCTION_VERIFIED -D /tmp/mt74
+          for role in '' '_OGLADACZ' '_SEDZIA'; do
+            cp "$(find /tmp/mt72 -name "MatchThis_MT-72$role.html" -print -quit)" "matchthis/MatchThis_MT-72$role.html"
+            cp "$(find /tmp/mt74 -name "MatchThis_MT-74$role.html" -print -quit)" "matchthis/MatchThis_MT-74$role.html"
+          done
+          python3 matchthis/build-mt73.py
+          python3 matchthis/build-mt75.py
+          php -l matchthis/mt73-state.php
+          php -l matchthis/mt73-store.php
+          php -l matchthis/mt73-install-state.php
+      - name: Generate exact three-role server and final-sector regression tests
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('matchthis/test-mt73.cjs')
+          s=p.read_text()
+          s=s.replace('MT73','MT75').replace('MT-73','MT-75').replace('mt73-seed.json','mt75-seed.json')
+          needle='assert.equal(seed.events.length,14);assert.equal(seed.cycles.length,2);'
+          assert s.count(needle)==1
+          check="""const final=seed.events.find(e=>e.id==='mt2025-mega_final_2025').rounds[1].results;assert.equal(final.length,54);assert.equal(final.filter(r=>r.sector&&r.peg).length,54);const pegs=final.map(r=>r.peg);assert.equal(new Set(pegs).size,54);for(const r of final)assert.equal(r.sector,String.fromCharCode(65+Math.floor((r.peg-1)/9)));"""
+          s=s.replace(needle,needle+check)
+          Path('matchthis/test-mt75.cjs').write_text(s)
+          PY
+          node --check matchthis/test-mt75.cjs
+      - name: Install Chromium and Firefox
+        run: |
+          npm install --prefix /tmp/mt75-test --silent playwright
+          cd /tmp/mt75-test
+          npx playwright install --with-deps chromium firefox
+      - name: Test real PHP server save and reload, roles, 54 exact sectors, rollback-safe seed
+        run: NODE_PATH=/tmp/mt75-test/node_modules node matchthis/test-mt75.cjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MatchThis_MT75_PREDEPLOY_VALIDATED
+          path: |
+            matchthis/MatchThis_MT-75*.html
+            matchthis/mt75-seed.json
+          if-no-files-found: error
