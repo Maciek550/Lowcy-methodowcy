@@ -1,0 +1,59 @@
+name: MatchThis MT78 Foto FB all entry points regression
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-mt78-all-fb-flows.yml]
+permissions: {contents: read, actions: read}
+jobs:
+  all-flows:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+      - name: Exact MT78 deployed ADMIN HTML and live SMALL2 read-only data
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          node --check matchthis/test-mt78-all-fb-flows.cjs
+          mkdir -p /tmp/fb-fixture
+          gh run download 43424459703 -R Maciek550/Lowcy-methodowcy -n MatchThis_MT78_FOTO_FB_DEPLOYED_AND_TESTED -D /tmp/fb-fixture
+          cp /tmp/fb-fixture/MatchThis_MT-78.html /tmp/fb-fixture/index.html
+          test "$(sha256sum /tmp/fb-fixture/index.html|awk '{print $1}')" = 1218a11dc52da24543420c0fffb5d89c9ab222156c77fc92e55fd99905564e0c
+          curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/fb-fixture/public.json
+          python3 - <<'PY'
+          import json
+          s=json.load(open('/tmp/fb-fixture/public.json'))
+          e=next(e for e in s['data']['events'] if e['id']=='mt2025-mega_final_2025')
+          assert all(len(t['results'])==54 for t in e['rounds'])
+          assert all(any(r['competitorName']=='PEIL ANNA' for r in t['results']) for t in e['rounds'])
+          print('CURRENT_REAL_SMALL2_FINAL_DATA_LOADED',s['revision'])
+          PY
+          cat > /tmp/fb-fixture/mt73-state.php <<'PHP'
+          <?php
+          header('Content-Type: application/json; charset=utf-8');
+          header('Cache-Control: no-store');
+          $r=json_decode(file_get_contents(__DIR__.'/public.json'),true);
+          if(isset($_GET['public'])){echo json_encode($r,JSON_UNESCAPED_UNICODE);return;}
+          echo json_encode(['role'=>'admin','csrf'=>'testonly','state'=>['revision'=>$r['revision'],'seeded'=>false,'updatedAt'=>'test','data'=>$r['data']]],JSON_UNESCAPED_UNICODE);
+          PHP
+          cat > /tmp/fb-fixture/mt60-draws.php <<'PHP'
+          <?php header('Content-Type: application/json'); echo '{"draws":[]}';
+          PHP
+          php -S 127.0.0.1:8898 -t /tmp/fb-fixture >/tmp/fb-fixture-php.log 2>&1 &
+          curl --retry 6 --retry-connrefused --retry-delay 1 -fsS http://127.0.0.1:8898/mt73-state.php -o /tmp/fb-fixture/handshake.json
+      - name: Install Chromium and Firefox
+        run: |
+          npm install --prefix /tmp/fb-flow-browser --silent playwright
+          cd /tmp/fb-flow-browser
+          npx playwright install --with-deps chromium firefox
+      - name: Test both tournament Foto FB and four pages of overall JPG actual downloads
+        run: |
+          NODE_PATH=/tmp/fb-flow-browser/node_modules node matchthis/test-mt78-all-fb-flows.cjs
+          echo MT78_FOTOFB_ALL_DOWNLOAD_PATHS_REGRESSION_PASS
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: MT78_FOTO_FB_ALL_ENTRY_PATHS_DIAGNOSTICS
+          path: /tmp/fb-exhaustive/*.jpg
+          if-no-files-found: warn
