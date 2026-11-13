@@ -87,12 +87,12 @@ set -Eeuo pipefail
 web="$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html"
 stage="$HOME/matchthis-independent/mt-75"
 backup="$stage/rollback-mt74"
-test ! -e "$backup"
+test ! -e "$backup" || test "$(sha256sum "$backup/index.html"|cut -d\u0027 \u0027 -f1)" = 2595a4fad3fa4a2b5457a345e65f896171b4ca95578d246ec0e599ad537aa4a6
 test "$(sha256sum "$web/index.html"|cut -d' ' -f1)" = 2595a4fad3fa4a2b5457a345e65f896171b4ca95578d246ec0e599ad537aa4a6
 test "$(sha256sum "$stage/MatchThis_MT-75.html"|cut -d' ' -f1)" = bffd09ff07c8771ff3a359f180d0b4fe930295bc3a10f079b5ecbf27a711fac0
 test "$(sha256sum "$stage/MatchThis_MT-75_OGLADACZ.html"|cut -d' ' -f1)" = db6b74cb6bbe139efac93197842ae3da97131b7af486b586e88408e39455875a
 test "$(sha256sum "$stage/MatchThis_MT-75_SEDZIA.html"|cut -d' ' -f1)" = d7c9e4ef9737f9651fe1c7697aa9eed69647235b19a81e6252b1756a42cf5147
-mkdir -m 700 "$backup"
+mkdir -p -m 700 "$backup"
 cp -p "$web/index.html" "$backup/index.html"
 cp -p "$web/panel.php" "$backup/panel.php"
 cp -p "$web/role-pages/mt74-admin.php" "$backup/mt74-admin.php"
