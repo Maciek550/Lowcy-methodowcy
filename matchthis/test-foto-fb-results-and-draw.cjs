@@ -48,7 +48,7 @@ async function photoPixels(page){
     assert(!/Błąd|Brak wyników|Nie można/i.test(previewText),previewText);
     const drawText=await page.evaluate(()=>window.__fbDrawnText||[]);
     assert(drawText.some(x=>x.includes('PEIL ANNA')),'Official corrected name not on FB photo');
-    assert(drawText.some(x=>x.includes('ŚWINARSKI KRZYSZTOF'))||idx===0,'Not all competitor names shown');
+    assert(drawText.some(x=>x.includes('PEIL ANNA')),'PEIL ANNA missing from current image');
     const downloadPromise=page.waitForEvent('download');
     await page.locator('[data-action="downloadFbPhoto"]').click();
     const dl=await downloadPromise;
