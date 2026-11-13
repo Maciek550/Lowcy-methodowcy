@@ -1,0 +1,60 @@
+name: MatchThis Foto FB reproduction on actual published 2025 final - test only
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-fb-diagnose.yml]
+permissions: {contents: read, actions: read}
+jobs:
+  reproduce:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create isolated admin page serving exact current SMALL2 data (NO server modification)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          node --check matchthis/test-foto-fb-results-and-draw.cjs
+          mkdir -p /tmp/fb-verify
+          gh run download 43410715434 -R Maciek550/Lowcy-methodowcy -n MatchThis_MT77_VERIFIED_3_ROLE_HTML -D /tmp/fb-verify
+          cp "$(find /tmp/fb-verify -name 'MatchThis_MT-77.html' -print -quit)" /tmp/fb-verify/index.html
+          test "$(sha256sum /tmp/fb-verify/index.html|awk '{print $1}')" = ea61426e32455b591c5c464e7de93118a10e485daa412137095f131d37dcecd3
+          curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/fb-verify/public.json
+          python3 - <<'PY'
+          import json
+          p='/tmp/fb-verify/public.json'
+          s=json.load(open(p))
+          assert s['revision']>=9
+          e=next(x for x in s['data']['events'] if x['id']=='mt2025-mega_final_2025')
+          assert [sum(bool(r.get('peg')) for r in t['results']) for t in e['rounds']]==[54,54]
+          for t in e['rounds']:assert any(r['competitorName']=='PEIL ANNA' for r in t['results'])
+          print('FB_FIXTURE_USING_LIVE_SMALL2_POST_NAME_CORRECTION',s['revision'])
+          PY
+          cat > /tmp/fb-verify/mt73-state.php <<'PHP'
+          <?php
+          header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');
+          $r=json_decode(file_get_contents(__DIR__.'/public.json'),true);
+          if(isset($_GET['public'])){echo json_encode($r,JSON_UNESCAPED_UNICODE);return;}
+          echo json_encode(['role'=>'admin','csrf'=>'testonly','state'=>['revision'=>$r['revision'],'seeded'=>false,'updatedAt'=>'test','data'=>$r['data']]],JSON_UNESCAPED_UNICODE);
+          PHP
+          cat > /tmp/fb-verify/mt60-draws.php <<'PHP'
+          <?php header('Content-Type: application/json'); echo '{"draws":[]}';
+          PHP
+          php -S 127.0.0.1:8896 -t /tmp/fb-verify >/tmp/fb-php.log 2>&1 &
+          curl --retry 6 --retry-connrefused --retry-delay 1 -fsS http://127.0.0.1:8896/mt73-state.php -o /tmp/fb-verify/handshake.json
+      - name: Install Chromium and Firefox real browser engines
+        run: |
+          npm install --prefix /tmp/fb-browser --silent playwright
+          cd /tmp/fb-browser
+          npx playwright install --with-deps chromium firefox
+      - name: Test Foto FB dropdown, draw result canvas, and real downloaded JPG in both engines
+        run: |
+          NODE_PATH=/tmp/fb-browser/node_modules node matchthis/test-foto-fb-results-and-draw.cjs
+          file /tmp/fb-proofs/*.jpg
+          echo MT77_FOTO_FB_JPG_GENERATION_REPRODUCTION_COMPLETED
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MT77_FOTO_FB_JPG_DIAGNOSIS
+          path: /tmp/fb-proofs/*.jpg
+          if-no-files-found: warn
