@@ -1,0 +1,88 @@
+name: MatchThis MT76 SMALL2 live sector UI release
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-mt76-release.yml]
+permissions: {contents: read, actions: read}
+jobs:
+  deploy-and-verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Retrieve only already browser-tested exact MT76 release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt76-verified
+          gh run download 43407715571 -R Maciek550/Lowcy-methodowcy -n MatchThis_MT76_SECTOR_UI_PRETESTED -D /tmp/mt76-verified
+          for role in '' '_OGLADACZ' '_SEDZIA'; do
+            cp "$(find /tmp/mt76-verified -name "MatchThis_MT-76$role.html" -print -quit)" "matchthis/MatchThis_MT-76$role.html"
+          done
+          test "$(sha256sum matchthis/MatchThis_MT-76.html|awk '{print $1}')" = 7c48d3b7bd8400dc432e563697f77fbc7ea6ee5c724fc6191c35bd9003843522
+          test "$(sha256sum matchthis/MatchThis_MT-76_OGLADACZ.html|awk '{print $1}')" = 2ac2deb60ef64860b141d8048442b02dc8a1e0584efe384ef161f160eb642b28
+          test "$(sha256sum matchthis/MatchThis_MT-76_SEDZIA.html|awk '{print $1}')" = e7cba2388d827f2698e5848dfb9ee1a7a91bc405dbeac86dcb69e8a15d6dab31
+          bash -n matchthis/deploy-mt76-small2.sh
+          node --check matchthis/test-mt76-live.cjs
+          echo MT76_EXACT_PRETESTED_THREE_ROLES_AND_SAFE_DEPLOY_SCRIPT_PASS
+      - name: Install Chromium and Firefox for live production clicks
+        run: |
+          npm install --prefix /tmp/mt76-browser --silent playwright
+          cd /tmp/mt76-browser
+          npx playwright install --with-deps chromium firefox
+      - name: Snapshot published draws and server state; ensure exact MT75 currently on SMALL2
+        run: |
+          set -euo pipefail
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/ -o /tmp/mt76-before.html
+          test "$(sha256sum /tmp/mt76-before.html|awk '{print $1}')" = db6b74cb6bbe139efac93197842ae3da97131b7af486b586e88408e39455875a
+          curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/mt76-state-before.json
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/mt60-draws.php -o /tmp/mt76-draws-before.json
+          curl -fsSL --max-time 30 https://lowcymethodowcy.smallhost.pl/health
+          python3 - <<'PY'
+          import json
+          p=json.load(open('/tmp/mt76-state-before.json'))
+          assert p['revision']>=2
+          for id in ('mt2025-champions_2025','mt2025-mega_final_2025'):
+           e=next(x for x in p['data']['events'] if x['id']==id)
+           assert [t['sectorCount'] for t in e['rounds']]==[6,6]
+          print('MT76_PREDEPLOY_4_APPROVED_SECTOR_COUNTS_AND_SERVER_HEALTH_PASS')
+          PY
+      - name: Upload three MT76 role pages with server backup and guarded switch; no data mutations
+        id: deploy
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: bash matchthis/deploy-mt76-small2.sh
+      - name: Live click-through of Champions League and final sectors on SMALL2 in BOTH browsers
+        run: |
+          NODE_PATH=/tmp/mt76-browser/node_modules node matchthis/test-mt76-live.cjs
+      - name: Independently verify actual published MT76, unmodified result data, draws, Łowcy
+        run: |
+          set -euo pipefail
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/ -o /tmp/mt76-after.html
+          test "$(sha256sum /tmp/mt76-after.html|awk '{print $1}')" = 2ac2deb60ef64860b141d8048442b02dc8a1e0584efe384ef161f160eb642b28
+          curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/mt76-state-after.json
+          cmp /tmp/mt76-state-before.json /tmp/mt76-state-after.json
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/mt60-draws.php -o /tmp/mt76-draws-after.json
+          cmp /tmp/mt76-draws-before.json /tmp/mt76-draws-after.json
+          test "$(curl -sS -o /dev/null -w '%{http_code}' https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php)" = 401
+          curl -fsSL --max-time 30 https://lowcymethodowcy.smallhost.pl/health
+          echo MT76_PRODUCTION_3_ROLES_REAL_BROWSERS_DATA_AND_LOWCY_PASS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MatchThis_MT76_DEPLOYED_THREE_ROLE_HTML
+          path: |
+            matchthis/MatchThis_MT-76.html
+            matchthis/MatchThis_MT-76_OGLADACZ.html
+            matchthis/MatchThis_MT-76_SEDZIA.html
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MT76_SMALL2_LIVE_CHAMPIONS_SECTORS_SCREENSHOTS
+          path: /tmp/mt76-proofs/MT76_Champions_*.png
+          if-no-files-found: error
+      - name: Restore MT75 routes only if any live production verification fails
+        if: failure() && steps.deploy.outcome == 'success'
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: bash matchthis/deploy-mt76-small2.sh rollback
