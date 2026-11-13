@@ -1,0 +1,69 @@
+name: MatchThis MT75 production sectors regression (READ ONLY)
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-mt75-live-sectors-regression.yml]
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pin SMALL2 host and check actual server state read-only
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: |
+          set -euo pipefail
+          sudo apt-get -qq update
+          sudo apt-get -qq install -y sshpass
+          mkdir -p "$HOME/.ssh";chmod 700 "$HOME/.ssh"
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test "$(ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256 | awk '{print $2}')" = 'SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8'
+          export SSHPASS="$SSH_PASSWORD"
+          sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15 lowcymethodowcy@s3.small.pl 'python3 -' <<'PY'
+          import json,pathlib,hashlib,collections
+          root=pathlib.Path.home()/'domains/matchthis.lowcymethodowcy.smallhost.pl/public_html'
+          expected='db6b74cb6bbe139efac93197842ae3da97131b7af486b586e88408e39455875a'
+          actual=hashlib.sha256((root/'index.html').read_bytes()).hexdigest()
+          assert actual==expected,('UNEXPECTED_LIVE_HTML_BASELINE',actual)
+          state=json.loads((root/'.mt41-private/state-mt73.json').read_text(encoding='utf8'))
+          assert state['revision']>=1
+          db=state['data']
+          assert len(db['events'])>=14 and len(db['cycles'])>=2
+          missing=[];absent=0;records=0;duplicate=[]
+          for event,field in [(e,'rounds') for e in db['events']]+[(e,'tours') for e in db['cycles']]:
+              for tour in event.get(field,[]):
+                  pegs=set()
+                  for row in tour.get('results',[]):
+                      records+=1
+                      peg=row.get('peg');sector=row.get('sector')
+                      if peg and sector:
+                          assert isinstance(peg,int) and peg>0 and isinstance(sector,str) and len(sector)==1
+                          if peg in pegs:duplicate.append((event['id'],tour['id'],peg))
+                          pegs.add(peg)
+                      elif row.get('absent') is True or row.get('noStartFirstRound') is True:
+                          absent+=1
+                      else:
+                          missing.append((event['id'],tour['id'],row['competitorName'],row.get('weightG')))
+          assert not duplicate,('DUPLICATE_STANDS',duplicate)
+          assert records>=1911,('RECORDS_LOST',records)
+          assert len(missing)<=175,('NEW_UNEXPLAINED_MISSING_ASSIGNMENTS',len(missing))
+          final=next(e for e in db['events'] if e['id']=='mt2025-mega_final_2025')
+          final2=final['rounds'][1]['results']
+          assert len(final2)==54
+          assert len({r['peg'] for r in final2})==54
+          assert all(r['sector']==chr(65+(r['peg']-1)//9) for r in final2)
+          assert len([r for r in missing if r[0]=='mt2025-mega_final_2025' and r[1]==final['rounds'][1]['id']])==0
+          print('MT75_LIVE_SERVER_SECTOR_REGRESSION_PASS')
+          print('REVISION',state['revision'],'ALL_ROWS',records,'ABSENCES_WITHOUT_PEG',absent,'UNVERIFIED_SOURCE_ASSIGNMENTS',len(missing),'FINAL_54',len(final2))
+          print('READ_ONLY_NO_DATA_OR_ROUTES_MODIFIED')
+          PY
+      - name: Verify public centralized results and protected write endpoint
+        run: |
+          set -euo pipefail
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1 -o /tmp/mt75-public.json
+          node -e 'const p=require("/tmp/mt75-public.json");const e=p.data.events.find(x=>x.id==="mt2025-mega_final_2025");if(!e||e.rounds[1].results.length!==54||e.rounds[1].results.some(r=>!r.sector||!r.peg))process.exit(1);console.log("MT75_LIVE_PUBLIC_54_FINALS_PASS")'
+          test "$(curl -sS -o /dev/null -w '%{http_code}' https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php)" = 401
+          curl -fsSL --max-time 30 https://lowcymethodowcy.smallhost.pl/health
