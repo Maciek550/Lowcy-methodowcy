@@ -45,10 +45,10 @@ jobs:
           new=json.load(open(base/'test-webroot/.mt41-private/state-mt73.json'))
           a=next(e for e in old['data']['events'] if e['id']=='mt2025-mega_final_2025')
           for t in a['rounds']:
-           r=next(r for r in t['results'] if r['competitorId']=='mt2025-mega_final_2025-person-51')
+           r=next(r for r in t['results'] if r['competitorId']=='mt2025-float_king_2025-person-60')
            assert r['competitorName']=='PEL ANNA'
            r['competitorName']='PEIL ANNA'
-          p=next(p for p in old['data']['players'] if p['id']=='mt2025-mega_final_2025-person-51')
+          p=next(p for p in old['data']['players'] if p['id']=='mt2025-float_king_2025-person-60')
           assert p['lastName']=='PEL'
           p['lastName']='PEIL';p['aliases'].append('PEIL ANNA')
           assert old['data']==new['data'],'Unrequested data mutation'
@@ -106,10 +106,10 @@ jobs:
           assert after['revision']==before['revision']+1
           e=next(e for e in before['data']['events'] if e['id']=='mt2025-mega_final_2025')
           for t in e['rounds']:
-           rows=[r for r in t['results'] if r['competitorId']=='mt2025-mega_final_2025-person-51']
+           rows=[r for r in t['results'] if r['competitorId']=='mt2025-float_king_2025-person-60']
            assert len(rows)==1 and rows[0]['competitorName']=='PEL ANNA'
            rows[0]['competitorName']='PEIL ANNA'
-          player=next(p for p in before['data']['players'] if p['id']=='mt2025-mega_final_2025-person-51')
+          player=next(p for p in before['data']['players'] if p['id']=='mt2025-float_king_2025-person-60')
           assert player['lastName']=='PEL'
           player['lastName']='PEIL';player['aliases'].append('PEIL ANNA')
           assert before['data']==after['data'],'Unrelated competition data changed'
@@ -123,3 +123,5 @@ jobs:
           curl -fsSL --max-time 30 https://lowcymethodowcy.smallhost.pl/health
 
 # Retry after relaxing legacy entrantIds check; preserve strict per-result person IDs.
+
+# Final rerun: real reconciled competitor IDs confirmed by read-only SMALL2 inventory.
