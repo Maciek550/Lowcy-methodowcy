@@ -1,0 +1,102 @@
+name: MatchThis MT75 guarded route-only reactivation on SMALL2
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-mt75-reactivate.yml]
+permissions: {contents: read}
+jobs:
+  activate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate server-preserving reactivation and rollback scripts
+        run: |
+          set -euo pipefail
+          bash -n matchthis/reactivate-mt75-small2.sh
+          grep -Fq 'MT75_RESUME_READONLY_STATE_54_VERIFIED' matchthis/reactivate-mt75-small2.sh
+          grep -Fq 'MT75_ROLLBACK_MT74_ROUTES_SERVER_DATA_PRESERVED' matchthis/reactivate-mt75-small2.sh
+      - name: Install Firefox and Chromium for actual production smoke
+        run: |
+          npm install --prefix /tmp/mt75-live-final --silent playwright
+          cd /tmp/mt75-live-final
+          npx playwright install --with-deps chromium firefox
+      - name: Snapshot published draws and check unrelated Łowcy production health
+        run: |
+          set -euo pipefail
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/mt60-draws.php -o /tmp/mt75-draws-before.json
+          curl -fsSL --max-time 30 https://lowcymethodowcy.smallhost.pl/health
+      - name: Activate exact previously installed MT75 routes without touching private data
+        id: activate
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: bash matchthis/reactivate-mt75-small2.sh
+      - name: Verify live UI in Chromium and Firefox and server persistence on reload
+        run: |
+          cat > /tmp/mt75-live-final/verify.cjs <<'NODE'
+          'use strict';
+          const {chromium,firefox}=require('playwright');
+          const assert=require('node:assert/strict');
+          const base='https://matchthis.lowcymethodowcy.smallhost.pl/';
+          (async()=>{
+            for(const engine of [chromium,firefox]){
+              const browser=await engine.launch();
+              try{
+                const page=await browser.newPage({viewport:{width:1366,height:900}});
+                const errors=[];page.on('pageerror',e=>errors.push(String(e)));
+                page.setDefaultTimeout(20000);
+                await page.goto(base);
+                await page.waitForFunction(()=>document.querySelector('#mt73-sync')?.textContent.includes('Dane z serwera'));
+                assert.equal(await page.title(),'MatchThis MT-75');
+                assert.equal(await page.locator('#appversion').innerText(),'MT-75');
+                assert.equal(await page.locator('body').getAttribute('data-version'),'MT-75');
+                async function verifyServer(){
+                  const resp=await page.request.get(base+'mt73-state.php?public=1',{headers:{'Cache-Control':'no-cache'}});
+                  assert.equal(resp.status(),200);
+                  const payload=await resp.json();
+                  assert(payload.revision>=1);
+                  const event=payload.data.events.find(x=>x.id==='mt2025-mega_final_2025');
+                  assert(event);
+                  const rows=event.rounds[1].results;
+                  assert.equal(rows.length,54);
+                  assert.equal(rows.filter(x=>x.sector&&x.peg).length,54);
+                  assert.equal(new Set(rows.map(x=>x.peg)).size,54);
+                  assert.deepEqual([...new Set(rows.map(x=>x.sector))].sort(),['A','B','C','D','E','F']);
+                  return payload.revision;
+                }
+                const revision=await verifyServer();
+                await page.locator('[data-view="archive"]').first().click();
+                const fold=page.locator('details[data-year="2025"]');
+                if(await fold.getAttribute('open')===null)await fold.locator('summary').click();
+                await page.locator('[data-open="mt2025-mega_final_2025"]').first().click();
+                await page.locator('[data-round="1"]').first().click();
+                await page.locator('[data-result-mode="sectors"]').first().click();
+                const body=await page.locator('body').innerText();
+                for(const name of ['SOBUSIAK KAMIL','PASTUSZKA TOMASZ','KURCZYŃSKI MARIUSZ'])assert(body.includes(name),name);
+                for(const width of [1366,768,390]){
+                  await page.setViewportSize({width,height:900});
+                  assert(await page.locator('#appversion').isVisible());
+                }
+                await page.reload();
+                await page.waitForFunction(()=>document.querySelector('#mt73-sync')?.textContent.includes('Dane z serwera'));
+                assert.equal(await verifyServer(),revision);
+                assert.equal(await page.locator('[data-action="downloadOverallPdf"]:visible,[data-action="export"]:visible').count(),0);
+                assert.deepEqual(errors,[]);
+                console.log('MT75_LIVE_SMALL2_VIEWER_SERVER_STATE_BROWSER_PASS',engine.name(),revision);
+              }finally{await browser.close();}
+            }
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+          NODE_PATH=/tmp/mt75-live-final/node_modules node /tmp/mt75-live-final/verify.cjs
+      - name: Confirm published draws remain byte-identical and Łowcy remain healthy
+        run: |
+          set -euo pipefail
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/mt60-draws.php -o /tmp/mt75-draws-after.json
+          cmp /tmp/mt75-draws-before.json /tmp/mt75-draws-after.json
+          curl -fsSL --max-time 30 https://lowcymethodowcy.smallhost.pl/health
+          echo MT75_LIVE_PUBLISHED_DRAWS_UNCHANGED_LOWCY_HEALTHY
+      - name: Roll back ONLY MatchThis routes to known MT74 on any failed activation or smoke
+        if: failure() && steps.activate.outcome != 'skipped'
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: bash matchthis/reactivate-mt75-small2.sh rollback
