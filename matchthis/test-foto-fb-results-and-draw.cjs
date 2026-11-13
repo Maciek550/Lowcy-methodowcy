@@ -47,6 +47,8 @@ async function photoPixels(page){
     const previewText=await page.locator('#fbPreviewStatus').innerText();
     assert(!/Błąd|Brak wyników|Nie można/i.test(previewText),previewText);
     const drawText=await page.evaluate(()=>window.__fbDrawnText||[]);
+    console.log('FB_DIAG',engine.name(),'round',idx,'selected sector',await page.locator('#fbSector').inputValue(),'preview',previewText,'drawn',drawText.filter(v=>/ANNA|SEKTOR|BRAK|ZWYCIĘ|WYNIKI/i.test(v)).slice(-30),'count',drawText.length);
+    await page.screenshot({path:path.join(imageDir,'PREVIEW_DIAG_T'+(idx+1)+'_'+engine.name()+'.png'),fullPage:true});
     assert(drawText.some(x=>x.includes('PEIL ANNA')),'Official corrected name not on FB photo');
     assert(drawText.some(x=>x.includes('PEIL ANNA')),'PEIL ANNA missing from current image');
     const downloadPromise=page.waitForEvent('download');
