@@ -55,7 +55,7 @@ grep -Fq 'mt74-sedzia.php' "$web/panel.php"
 test ! -e "$web/mt73-state.php" || cmp -s "$web/mt73-state.php" "$stage/mt73-state.php"
 test ! -e "$web/mt73-store.php" || cmp -s "$web/mt73-store.php" "$stage/mt73-store.php"
 test ! -e "$web/.mt41-private/state-mt73.json"
-test ! -e "$stage/rollback-mt74"
+test ! -e "$stage/rollback-mt74" || test "$(sha256sum "$stage/rollback-mt74/index.html"|cut -d\u0027 \u0027 -f1)" = 2595a4fad3fa4a2b5457a345e65f896171b4ca95578d246ec0e599ad537aa4a6
 test ! -e "$web/role-pages/mt75-admin.php" && test ! -e "$web/role-pages/mt75-sedzia.php"
 mkdir -p "$stage";chmod 700 "$stage"
 echo MT75_PREDEPLOY_EXACT_MT74_AND_NO_PREVIOUS_SERVER_STATE_CONFIRMED
