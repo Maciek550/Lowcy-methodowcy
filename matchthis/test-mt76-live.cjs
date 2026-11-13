@@ -33,6 +33,10 @@ const {chromium,firefox}=require('playwright'),assert=require('node:assert/stric
             assert((await p.locator('.mt76-sector-pending').innerText()).includes('SEKTOR C'));
             await p.locator('[data-sector-filter="ALL"]').click();
             assert.equal(await p.locator('.mt76-sector-pending').count(),6);
+            if(id==='mt2025-champions_2025'&&round===0){
+              require('fs').mkdirSync('/tmp/mt76-proofs',{recursive:true});
+              await p.screenshot({path:'/tmp/mt76-proofs/MT76_Champions_'+engine.name()+'.png',fullPage:true});
+            }
             await p.setViewportSize({width:390,height:844});
             assert.equal(await p.locator('[data-approved-sectors="6"]').count(),1);
             await p.setViewportSize({width:1347,height:768});
