@@ -1,0 +1,176 @@
+name: MatchThis MEGA FINAL 2025 T1 - 54 approved pegs/sectors deploy SMALL2
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-mega-final-2025-t1-deploy.yml]
+permissions: {contents: read, actions: read}
+jobs:
+  deploy-test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pin released MT77 and snapshot actual SMALL2 state before modifications
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 -m py_compile matchthis/import-mega-final-2025-t1.py
+          node --check matchthis/test-mega-final-2025-t1-54.cjs
+          mkdir -p /tmp/final54
+          gh run download 43410715434 -R Maciek550/Lowcy-methodowcy -n MatchThis_MT77_VERIFIED_3_ROLE_HTML -D /tmp/final54
+          cp "$(find /tmp/final54 -name 'MatchThis_MT-77_OGLADACZ.html' -print -quit)" /tmp/final54/index.html
+          test "$(sha256sum /tmp/final54/index.html|awk '{print $1}')" = a74812f3f8dccb855ae59b5ae1731f195e08e346ff029cd4e73bdbd8af2cabab
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/ -o /tmp/final54/live-before.html
+          cmp /tmp/final54/index.html /tmp/final54/live-before.html
+          curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/final54/state-before.json
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/mt60-draws.php -o /tmp/final54/draws-before.json
+          curl -fsSL --max-time 30 https://lowcymethodowcy.smallhost.pl/health
+          python3 - <<'PY'
+          import json
+          s=json.load(open('/tmp/final54/state-before.json'))
+          assert s['revision']>=7
+          e=next(e for e in s['data']['events'] if e['id']=='mt2025-mega_final_2025')
+          assert e['rounds'][0]['sectorCount']==6 and e['rounds'][0]['date']=='2025-10-25'
+          assert len(e['rounds'][0]['results'])==54
+          assert sum(r.get('peg') is not None for r in e['rounds'][1]['results'])==54
+          print('MT77_SMALL2_FINAL_T1_EXACT_BASELINE_AND_T2_PRESERVED_PASS',s['revision'])
+          PY
+      - name: Copy current server state for full write-read-back-backup-idempotence test
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/final54/test-webroot/.mt41-private
+          cp matchthis/mt73-store.php /tmp/final54/test-webroot/mt73-store.php
+          cp /tmp/final54/state-before.json /tmp/final54/test-webroot/.mt41-private/state-mt73.json
+          script=matchthis/import-mega-final-2025-t1.py
+          manifest=matchthis/mega-final-2025-t1-confirmed-54.json
+          web=/tmp/final54/test-webroot
+          python3 "$script" preview "$web" "$manifest" | tee /tmp/final54/preview.json
+          python3 "$script" apply "$web" "$manifest" | tee /tmp/final54/applied.json
+          python3 "$script" verify "$web" "$manifest" | tee /tmp/final54/verified.json
+          python3 "$script" apply "$web" "$manifest" | tee /tmp/final54/again.json
+          python3 - <<'PY'
+          import json,copy,pathlib,unicodedata,re
+          p=pathlib.Path('/tmp/final54')
+          before=json.load(open(p/'state-before.json'))
+          after=json.load(open(p/'test-webroot/.mt41-private/state-mt73.json'))
+          manifest=json.load(open('matchthis/mega-final-2025-t1-confirmed-54.json'))
+          reports=[json.load(open(p/(x+'.json'))) for x in ('preview','applied','verified','again')]
+          assert [r['status'] for r in reports]==['PREVIEW','SAVED_AND_READ_BACK','VERIFIED','ALREADY_APPLIED']
+          assert reports[0]['wouldChange']==54 and reports[1]['changed']==54 and reports[3]['wouldChange']==0
+          assert after['revision']==before['revision']+1
+          backups=list((p/'test-webroot/.mt41-private/mt73-history').glob('before-mega-final-2025-t1-*.json'))
+          assert len(backups)==1 and json.load(open(backups[0]))==before
+          def norm(s):
+           s=unicodedata.normalize('NFKD',s.upper().replace('Ł','L'))
+           return re.sub('[^A-Z0-9]','', ''.join(c for c in s if not unicodedata.combining(c)))
+          aliases={norm('PELL ANNA'):norm('PEL ANNA'),norm('ŚWINIARSKI KRZYSZTOF'):norm('ŚWINARSKI KRZYSZTOF')}
+          original=copy.deepcopy(before['data'])
+          e=next(e for e in original['events'] if e['id']=='mt2025-mega_final_2025')
+          lookup={aliases.get(norm(x['sourceName']),norm(x['sourceName'])):(x['peg'],x['sector']) for x in manifest['assignments']}
+          for r in e['rounds'][0]['results']:
+           r['peg'],r['sector']=lookup[norm(r['competitorName'])]
+          assert original==after['data'],'UNAPPROVED_RESULT_CHANGE'
+          print('FINAL_2025_T1_54_EXACT_ONLY_FIELDS_WITH_FULL_BACKUP_AND_REPLAY_PASS')
+          PY
+          mkdir -p /tmp/final54/site
+          cp /tmp/final54/index.html /tmp/final54/site/index.html
+          cp /tmp/final54/test-webroot/.mt41-private/state-mt73.json /tmp/final54/site/state.json
+          cat > /tmp/final54/site/mt73-state.php <<'PHP'
+          <?php
+          header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');
+          echo file_get_contents(__DIR__.'/state.json');
+          PHP
+          cat > /tmp/final54/site/mt60-draws.php <<'PHP'
+          <?php
+          header('Content-Type: application/json; charset=utf-8');echo '{"draws":[]}';
+          PHP
+          php -S 127.0.0.1:8891 -t /tmp/final54/site >/tmp/final54/site.log 2>&1 &
+          curl --retry 6 --retry-connrefused --retry-delay 1 -fsS http://127.0.0.1:8891/mt73-state.php -o /tmp/final54/readback.json
+      - name: Install Chromium and Firefox browser engines
+        run: |
+          npm install --prefix /tmp/final54/browser --silent playwright
+          cd /tmp/final54/browser
+          npx playwright install --with-deps chromium firefox
+      - name: Run actual sector display, filter, reload and both rounds UI before deployment
+        run: NODE_PATH=/tmp/final54/browser/node_modules node matchthis/test-mega-final-2025-t1-54.cjs
+      - name: Deploy EXACT 54 photograph-verified stand and sector assignments to SMALL2
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$SSH_PASSWORD"
+          sudo apt-get -qq update
+          sudo apt-get -qq install -y sshpass
+          mkdir -p "$HOME/.ssh";chmod 700 "$HOME/.ssh"
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test "$(ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256 | awk '{print $2}')" = 'SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8'
+          export SSHPASS="$SSH_PASSWORD"
+          opts=(-o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15)
+          remote=lowcymethodowcy@s3.small.pl
+          sshpass -e ssh "${opts[@]}" "$remote" 'bash -s' <<'PRE'
+          set -euo pipefail
+          web="$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html"
+          test "$(sha256sum "$web/index.html"|awk '{print $1}')" = a74812f3f8dccb855ae59b5ae1731f195e08e346ff029cd4e73bdbd8af2cabab
+          test -f "$web/.mt41-private/state-mt73.json"
+          test ! -L "$web/.mt41-private/state-mt73.json"
+          test -f "$web/mt73-store.php"
+          mkdir -p "$HOME/matchthis-independent/mega-final-2025-t1"
+          chmod 700 "$HOME/matchthis-independent/mega-final-2025-t1"
+          echo SMALL2_MT77_EXACT_PREDEPLOY_GUARD_PASS
+          PRE
+          sshpass -e scp "${opts[@]}" matchthis/import-mega-final-2025-t1.py matchthis/mega-final-2025-t1-confirmed-54.json "$remote:matchthis-independent/mega-final-2025-t1/"
+          sshpass -e ssh "${opts[@]}" "$remote" 'bash -s' <<'APPLY'
+          set -euo pipefail
+          web="$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html"
+          dir="$HOME/matchthis-independent/mega-final-2025-t1"
+          python3 "$dir/import-mega-final-2025-t1.py" preview "$web" "$dir/mega-final-2025-t1-confirmed-54.json"
+          python3 "$dir/import-mega-final-2025-t1.py" apply "$web" "$dir/mega-final-2025-t1-confirmed-54.json"
+          python3 "$dir/import-mega-final-2025-t1.py" verify "$web" "$dir/mega-final-2025-t1-confirmed-54.json"
+          test "$(sha256sum "$web/index.html"|awk '{print $1}')" = a74812f3f8dccb855ae59b5ae1731f195e08e346ff029cd4e73bdbd8af2cabab
+          echo MT2025_FINAL_T1_54_ASSIGNMENTS_PERSISTED_AND_READ_BACK_ON_REAL_SMALL2
+          APPLY
+      - name: Independently prove central state delta is ONLY 54 approved fields
+        run: |
+          set -euo pipefail
+          curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/final54/state-after.json
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/mt60-draws.php -o /tmp/final54/draws-after.json
+          cmp /tmp/final54/draws-before.json /tmp/final54/draws-after.json
+          python3 - <<'PY'
+          import json,copy,unicodedata,re
+          old=json.load(open('/tmp/final54/state-before.json'))
+          new=json.load(open('/tmp/final54/state-after.json'))
+          m=json.load(open('matchthis/mega-final-2025-t1-confirmed-54.json'))
+          def norm(s):
+           s=unicodedata.normalize('NFKD',s.upper().replace('Ł','L'))
+           return re.sub('[^A-Z0-9]','', ''.join(c for c in s if not unicodedata.combining(c)))
+          aliases={norm('PELL ANNA'):norm('PEL ANNA'),norm('ŚWINIARSKI KRZYSZTOF'):norm('ŚWINARSKI KRZYSZTOF')}
+          lookup={aliases.get(norm(x['sourceName']),norm(x['sourceName'])):(x['peg'],x['sector']) for x in m['assignments']}
+          e=next(e for e in old['data']['events'] if e['id']=='mt2025-mega_final_2025')
+          for r in e['rounds'][0]['results']:r['peg'],r['sector']=lookup[norm(r['competitorName'])]
+          assert old['data']==new['data'],'Unexpected alteration outside peg/sector 54 fields'
+          assert new['revision']==old['revision']+1
+          e=next(e for e in new['data']['events'] if e['id']=='mt2025-mega_final_2025')
+          assert [sum(bool(x.get('peg')) for x in r['results']) for r in e['rounds']]==[54,54]
+          for r in e['rounds']:
+           assert len(set(x['peg'] for x in r['results']))==54
+           assert [sum(x['sector']==chr(65+i) for x in r['results']) for i in range(6)]==[9]*6
+          print('MT2025_FINAL_54_T1_54_T2_EACH_SIX_REAL_SECTORS_9_AND_OLD_RESULTS_IMMUTABLE_PASS',new['revision'])
+          PY
+      - name: Test REAL production page in Chromium and Firefox after save
+        env:
+          MT_FINAL_TEST_URL: https://matchthis.lowcymethodowcy.smallhost.pl/
+        run: NODE_PATH=/tmp/final54/browser/node_modules node matchthis/test-mega-final-2025-t1-54.cjs
+      - name: Confirm unrelated Łowcy and public read protection
+        run: |
+          curl -fsSL --max-time 30 https://lowcymethodowcy.smallhost.pl/health
+          test "$(curl -sS -o /dev/null -w '%{http_code}' https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php)" = 401
+          echo MT2025_FINAL_T1_54_REAL_SMALL2_PRODUCTION_BROWSER_AND_BACKUP_PASS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MatchThis_MEGA_FINAL_2025_T1_54_CONFIRMED_SOURCE
+          path: |
+            matchthis/mega-final-2025-t1-confirmed-54.json
+            matchthis/import-mega-final-2025-t1.py
+            matchthis/test-mega-final-2025-t1-54.cjs
+          if-no-files-found: error
