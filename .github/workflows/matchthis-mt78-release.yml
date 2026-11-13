@@ -1,0 +1,88 @@
+name: MatchThis MT78 Foto FB FIX deploy only to SMALL2 and verify live
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-mt78-release.yml]
+permissions: {contents: read, actions: read}
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download EXACT three pages whose actual JPG and six PNG ZIP passed two browsers
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt78-tested
+          gh run download 43423949661 -R Maciek550/Lowcy-methodowcy -n MatchThis_MT78_FOTO_FB_TESTED_THREE_ROLES -D /tmp/mt78-tested
+          for role in '' '_OGLADACZ' '_SEDZIA'; do
+            cp "$(find /tmp/mt78-tested -name "MatchThis_MT-78$role.html" -print -quit)" "matchthis/MatchThis_MT-78$role.html"
+          done
+          test "$(sha256sum matchthis/MatchThis_MT-78.html|awk '{print $1}')" = 1218a11dc52da24543420c0fffb5d89c9ab222156c77fc92e55fd99905564e0c
+          test "$(sha256sum matchthis/MatchThis_MT-78_OGLADACZ.html|awk '{print $1}')" = 3ebed336016c0af5ef51fc86b19bc7e7244ec95940ff68aae95b18742f0a4f45
+          test "$(sha256sum matchthis/MatchThis_MT-78_SEDZIA.html|awk '{print $1}')" = 53492a431e8aae5c1d6729b96d4111afdc2dfdc7e6671604faf171b98812d951
+          bash -n matchthis/deploy-mt78-small2.sh
+          node --check matchthis/test-mt78-live-viewer.cjs
+          echo MT78_DOWNLOADED_EXACT_PRETESTED_FOTO_FB_RELEASE_SHA_PASS
+      - name: Prepare real Firefox and Chromium browsers for live SMALL2 smoke
+        run: |
+          npm install --prefix /tmp/mt78-live --silent playwright
+          cd /tmp/mt78-live
+          npx playwright install --with-deps chromium firefox
+      - name: Verify precise MT77 live baseline, final 54 sector rows, PEIL corrected and unrelated Łowcy
+        run: |
+          set -euo pipefail
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/ -o /tmp/mt78-before.html
+          test "$(sha256sum /tmp/mt78-before.html|awk '{print $1}')" = a74812f3f8dccb855ae59b5ae1731f195e08e346ff029cd4e73bdbd8af2cabab
+          curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/mt78-state-before.json
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/mt60-draws.php -o /tmp/mt78-draws-before.json
+          curl -fsSL --max-time 30 https://lowcymethodowcy.smallhost.pl/health
+          python3 - <<'PY'
+          import json
+          s=json.load(open('/tmp/mt78-state-before.json'))
+          assert s['revision']>=9
+          e=next(e for e in s['data']['events'] if e['id']=='mt2025-mega_final_2025')
+          assert [sum(bool(r.get('peg') and r.get('sector')) for r in t['results']) for t in e['rounds']]==[54,54]
+          assert [t['sectorCount'] for t in e['rounds']]==[6,6]
+          assert all(any(r['competitorName']=='PEIL ANNA' for r in t['results']) for t in e['rounds'])
+          assert all(any(r['competitorName']=='ŚWINARSKI KRZYSZTOF' for r in t['results']) for t in e['rounds'])
+          print('MT78_SMALL2_CURRENT_FINAL_DATA_AND_MT77_BASELINE_PASS',s['revision'])
+          PY
+      - name: Guarded upload MT78 on independent SMALL2 with MT77 backup, no central state modifications
+        id: deploy
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: bash matchthis/deploy-mt78-small2.sh
+      - name: Test actual public SMALL2 MT78 in Chromium Firefox with real clicks and reload
+        run: NODE_PATH=/tmp/mt78-live/node_modules node matchthis/test-mt78-live-viewer.cjs
+      - name: Prove database and published draws are unmodified, admin routes protected and Łowcy healthy
+        run: |
+          set -euo pipefail
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/ -o /tmp/mt78-after.html
+          test "$(sha256sum /tmp/mt78-after.html|awk '{print $1}')" = 3ebed336016c0af5ef51fc86b19bc7e7244ec95940ff68aae95b18742f0a4f45
+          curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/mt78-state-after.json
+          cmp /tmp/mt78-state-before.json /tmp/mt78-state-after.json
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/mt60-draws.php -o /tmp/mt78-draws-after.json
+          cmp /tmp/mt78-draws-before.json /tmp/mt78-draws-after.json
+          test "$(curl -sS -o /dev/null -w '%{http_code}' https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php)" = 401
+          for role in mt78-admin.php mt78-sedzia.php; do
+            status="$(curl -sS -o /dev/null -w '%{http_code}' "https://matchthis.lowcymethodowcy.smallhost.pl/role-pages/$role")"
+            test "$status" = 404 || test "$status" = 403
+          done
+          curl -fsSL --max-time 30 https://lowcymethodowcy.smallhost.pl/health
+          echo MT78_PRODUCTION_FINAL_UI_DATA_IMMUTABLE_ADMIN_PROTECTED_LOWCY_HEALTHY_PASS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MatchThis_MT78_FOTO_FB_DEPLOYED_AND_TESTED
+          path: |
+            matchthis/MatchThis_MT-78.html
+            matchthis/MatchThis_MT-78_OGLADACZ.html
+            matchthis/MatchThis_MT-78_SEDZIA.html
+          if-no-files-found: error
+      - name: Rollback MT78 routes to exact previous MT77 when production regression fails
+        if: failure() && steps.deploy.outcome == 'success'
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: bash matchthis/deploy-mt78-small2.sh rollback
