@@ -103,6 +103,7 @@ cp -p "$stage/mt73-store.php" "$web/mt73-store.php"
 cp -p "$stage/mt73-state.php" "$web/mt73-state.php"
 php -l "$web/mt73-state.php" >/dev/null
 php -l "$web/mt73-store.php" >/dev/null
+cp -p "$stage/mt75-seed.json" "$stage/mt73-seed.json"
 php "$stage/mt73-install-state.php" "$web" "$stage"
 python3 - "$web" <<'PY'
 import json,sys,pathlib
