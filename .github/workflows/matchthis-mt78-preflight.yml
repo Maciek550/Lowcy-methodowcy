@@ -1,0 +1,93 @@
+name: MatchThis MT78 Foto FB real JPG and six PNG ZIP preflight
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-mt78-preflight.yml]
+permissions: {contents: read, actions: read}
+jobs:
+  preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build exactly pinned MT77 role pages into MT78 and validate JS
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt77-source
+          gh run download 43410715434 -R Maciek550/Lowcy-methodowcy -n MatchThis_MT77_VERIFIED_3_ROLE_HTML -D /tmp/mt77-source
+          for role in '' '_OGLADACZ' '_SEDZIA';do
+            cp "$(find /tmp/mt77-source -name "MatchThis_MT-77$role.html" -print -quit)" "matchthis/MatchThis_MT-77$role.html"
+          done
+          python3 matchthis/build-mt78.py
+          node --check matchthis/test-foto-fb-results-and-draw.cjs
+          echo MT78_EXACT_THREE_ROLES_VERSION_AND_JS_CHECK_PASS
+      - name: Reproduce admin export with current REAL SMALL2 shared data, no production writes
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/fb-verify
+          cp matchthis/MatchThis_MT-78.html /tmp/fb-verify/index.html
+          curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/fb-verify/public.json
+          python3 - <<'PY'
+          import json
+          r=json.load(open('/tmp/fb-verify/public.json'))
+          assert r['revision']>=9
+          ev=next(e for e in r['data']['events'] if e['id']=='mt2025-mega_final_2025')
+          assert [sum(bool(x.get('sector')) for x in t['results']) for t in ev['rounds']]==[54,54]
+          assert all(any(x['competitorName']=='PEIL ANNA' for x in t['results']) for t in ev['rounds'])
+          print('MT78_ACTUAL_SMALL2_PUBLIC_STATE_BASELINE_PASS',r['revision'])
+          PY
+          cat > /tmp/fb-verify/mt73-state.php <<'PHP'
+          <?php
+          header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');
+          $r=json_decode(file_get_contents(__DIR__.'/public.json'),true);
+          if(isset($_GET['public'])){echo json_encode($r,JSON_UNESCAPED_UNICODE);return;}
+          echo json_encode(['role'=>'admin','csrf'=>'testonly','state'=>['revision'=>$r['revision'],'seeded'=>false,'updatedAt'=>'test','data'=>$r['data']]],JSON_UNESCAPED_UNICODE);
+          PHP
+          cat > /tmp/fb-verify/mt60-draws.php <<'PHP'
+          <?php header('Content-Type: application/json'); echo '{"draws":[]}';
+          PHP
+          php -S 127.0.0.1:8896 -t /tmp/fb-verify >/tmp/fb-php.log 2>&1 &
+          curl --retry 6 --retry-connrefused --retry-delay 1 -fsS http://127.0.0.1:8896/mt73-state.php -o /tmp/fb-verify/handshake.json
+      - name: Install real Chromium and Firefox
+        run: |
+          npm install --prefix /tmp/fb-browser --silent playwright
+          cd /tmp/fb-browser
+          npx playwright install --with-deps chromium firefox
+      - name: Verify FB JPG previews and actual JPEG downloads, draw PNG ZIP of SIX sectors
+        env:
+          FB_EXPECT_VERSION: MT-78
+          FB_EXPECT_DRAW: "1"
+        run: |
+          NODE_PATH=/tmp/fb-browser/node_modules node matchthis/test-foto-fb-results-and-draw.cjs
+          python3 - <<'PY'
+          import glob,zipfile,pathlib,struct
+          jpg=glob.glob('/tmp/fb-proofs/*.jpg')
+          zips=glob.glob('/tmp/fb-proofs/*.zip')
+          assert len(jpg)==4,(len(jpg),jpg)
+          assert len(zips)==2,(len(zips),zips)
+          for z in zips:
+            with zipfile.ZipFile(z) as file:
+              names=file.namelist()
+              assert len(names)==6 and len(set(names))==6
+              assert all(n.startswith('SEKTOR_') and n.endswith('_LOSOWANIE_FB.png') for n in names)
+              for n in names:
+                b=file.read(n)
+                assert b.startswith(b'\x89PNG\r\n\x1a\n')
+                assert struct.unpack('>II',b[16:24])==(2160,2700)
+          print('MT78_REAL_BROWSER_SECTOR_JPG_AND_6_INDEPENDENT_FULL_RES_PNG_ZIP_PASS')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MatchThis_MT78_FOTO_FB_TESTED_THREE_ROLES
+          path: |
+            matchthis/MatchThis_MT-78.html
+            matchthis/MatchThis_MT-78_OGLADACZ.html
+            matchthis/MatchThis_MT-78_SEDZIA.html
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MatchThis_MT78_FOTO_FB_ACTUAL_GENERATED_PHOTOS
+          path: /tmp/fb-proofs/*.jpg
+          if-no-files-found: error
