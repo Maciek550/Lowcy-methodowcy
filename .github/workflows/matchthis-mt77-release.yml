@@ -1,0 +1,109 @@
+name: MatchThis MT77 real results instead of empty sector cards - SMALL2
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-mt77-release.yml]
+permissions: {contents: read, actions: read}
+jobs:
+  validate-deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build from exactly tested and deployed MT76 without altering source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt76-original
+          gh run download 43408139729 -R Maciek550/Lowcy-methodowcy -n MatchThis_MT76_DEPLOYED_THREE_ROLE_HTML -D /tmp/mt76-original
+          for role in '' '_OGLADACZ' '_SEDZIA'; do
+            cp "$(find /tmp/mt76-original -name "MatchThis_MT-76$role.html" -print -quit)" "matchthis/MatchThis_MT-76$role.html"
+          done
+          python3 matchthis/build-mt77.py
+          test "$(sha256sum matchthis/MatchThis_MT-77.html|awk '{print $1}')" = cbfbc31174046eb563a4158072ad0b0ff84a2978636fddbf049bac23abf6b96d
+          test "$(sha256sum matchthis/MatchThis_MT-77_OGLADACZ.html|awk '{print $1}')" = 1e595d5d2be69d540685f27535543c97dad9c00c5caaf7a96c7d7b529691b6bb
+          test "$(sha256sum matchthis/MatchThis_MT-77_SEDZIA.html|awk '{print $1}')" = 985ddfcf11587c64043c38c6dfcb2412624332d415ac047a8653ed3f204682c6
+          bash -n matchthis/deploy-mt77-small2.sh
+          node --check matchthis/test-mt77-results.cjs
+          echo MT77_EXACT_BUILD_AND_SYNTAX_PASS
+      - name: Create realistic PHP fixture from LIVE approved public data - no server writes
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt77-fixture
+          cp matchthis/MatchThis_MT-77_OGLADACZ.html /tmp/mt77-fixture/index.html
+          curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/mt77-live-state-before.json
+          cp /tmp/mt77-live-state-before.json /tmp/mt77-fixture/state.json
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/mt60-draws.php -o /tmp/mt77-live-draws-before.json
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/ -o /tmp/mt77-live-before.html
+          test "$(sha256sum /tmp/mt77-live-before.html|awk '{print $1}')" = 2ac2deb60ef64860b141d8048442b02dc8a1e0584efe384ef161f160eb642b28
+          curl -fsSL --max-time 30 https://lowcymethodowcy.smallhost.pl/health
+          python3 - <<'PY'
+          import json
+          state=json.load(open('/tmp/mt77-live-state-before.json'))
+          assert state['revision']>=2
+          for id,count in [('mt2025-champions_2025',60),('mt2025-mega_final_2025',54)]:
+           e=next(e for e in state['data']['events'] if e['id']==id)
+           assert [t['sectorCount'] for t in e['rounds']]==[6,6]
+           assert all(len(t['results'])==count for t in e['rounds'])
+          print('MT77_LIVE_BASELINE_AND_ACTUAL_SOURCE_RESULTS_VERIFIED')
+          PY
+          cat > /tmp/mt77-fixture/mt73-state.php <<'PHP'
+          <?php
+          header('Content-Type: application/json; charset=utf-8');
+          header('Cache-Control: no-store');
+          echo file_get_contents(__DIR__.'/state.json');
+          PHP
+          cat > /tmp/mt77-fixture/mt60-draws.php <<'PHP'
+          <?php
+          header('Content-Type: application/json; charset=utf-8');
+          echo '{"draws":[]}';
+          PHP
+          php -S 127.0.0.1:8877 -t /tmp/mt77-fixture >/tmp/mt77-php.log 2>&1 &
+          curl --retry 6 --retry-connrefused --retry-delay 1 -fsS http://127.0.0.1:8877/mt73-state.php -o /tmp/mt77-fixture-state.json
+      - name: Install real Firefox and Chromium for interactive regression
+        run: |
+          npm install --prefix /tmp/mt77-browser --silent playwright
+          cd /tmp/mt77-browser
+          npx playwright install --with-deps chromium firefox
+      - name: Predeployment real-browser UI regression for 60 and 54 unassigned results, both rounds and reload
+        run: NODE_PATH=/tmp/mt77-browser/node_modules node matchthis/test-mt77-results.cjs
+      - name: Deploy all three role pages guarded to independent MatchThis SMALL2, data unchanged
+        id: deploy
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: bash matchthis/deploy-mt77-small2.sh
+      - name: Real production browser click test and reload in Chromium and Firefox
+        env:
+          MT77_TEST_URL: https://matchthis.lowcymethodowcy.smallhost.pl/
+        run: NODE_PATH=/tmp/mt77-browser/node_modules node matchthis/test-mt77-results.cjs
+      - name: Confirm no server state, published draws or Łowcy changes
+        run: |
+          set -euo pipefail
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/ -o /tmp/mt77-live-after.html
+          test "$(sha256sum /tmp/mt77-live-after.html|awk '{print $1}')" = 1e595d5d2be69d540685f27535543c97dad9c00c5caaf7a96c7d7b529691b6bb
+          curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/mt77-live-state-after.json
+          cmp /tmp/mt77-live-state-before.json /tmp/mt77-live-state-after.json
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/mt60-draws.php -o /tmp/mt77-live-draws-after.json
+          cmp /tmp/mt77-live-draws-before.json /tmp/mt77-live-draws-after.json
+          curl -fsSL --max-time 30 https://lowcymethodowcy.smallhost.pl/health
+          test "$(curl -sS -o /dev/null -w '%{http_code}' https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php)" = 401
+          echo MT77_PRODUCTION_REAL_BROWSERS_GENUINE_RESULTS_AND_UNCHANGED_SERVER_DATA_PASS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MatchThis_MT77_VERIFIED_3_ROLE_HTML
+          path: |
+            matchthis/MatchThis_MT-77.html
+            matchthis/MatchThis_MT-77_OGLADACZ.html
+            matchthis/MatchThis_MT-77_SEDZIA.html
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MT77_SMALL2_CHAMPIONS_REAL_RESULTS_SCREENSHOTS
+          path: /tmp/mt77-proof/*_SMALL2.png
+          if-no-files-found: error
+      - name: Roll back to MT76 role pages on any failed production verification
+        if: failure() && steps.deploy.outcome == 'success'
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: bash matchthis/deploy-mt77-small2.sh rollback
