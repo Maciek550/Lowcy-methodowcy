@@ -10,8 +10,8 @@ from pathlib import Path
 import copy,datetime,fcntl,json,os,secrets,sys
 
 EID='mt2025-mega_final_2025'
-PID='mt2025-mega_final_2025-person-51'
-OTHER='mt2025-mega_final_2025-person-36'
+PID='mt2025-float_king_2025-person-60'
+OTHER='mt2025-traper-cup-person-38'
 def require(ok,reason):
     if not ok: raise RuntimeError(reason)
 def read(p):return json.loads(p.read_text(encoding='utf8'))
@@ -37,7 +37,7 @@ def change(original):
         require(t['status']=='FINAL' and len(t['results'])==54,'Round structure changed')
         rows=[r for r in t['results'] if r['competitorId']==PID]
         require(len(rows)==1 and rows[0]['competitorName'] in ('PEL ANNA','PEIL ANNA'),'Wrong Anna result')
-        require(rows[0]['sourceName']=='PEL ANNA','Original provenance changed')
+        require(rows[0].get('sourceName') in (None,'PEL ANNA'),'Original provenance changed')
         require(rows[0]['sector'] in ('C','F') and type(rows[0]['peg']) is int,'Anna stand missing')
         actual=(rows[0]['sector'],rows[0]['peg'])
         require(actual==(('C',23) if t['id'].endswith('round1') else ('F',53)),
