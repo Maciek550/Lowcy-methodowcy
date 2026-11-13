@@ -1,0 +1,168 @@
+name: MatchThis - STASIAK LUKASZ approved T2 F60 SMALL2 final assignment
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-champions-stasiak-f60.yml]
+permissions: {contents: read, actions: read}
+jobs:
+  apply-and-verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check the exact record patch and browser regression syntax
+        run: |
+          set -euo pipefail
+          python3 -m py_compile matchthis/finalize-champions-t2-stasiak.py
+          node --check matchthis/test-champions-2025-complete-120.cjs
+      - name: Snapshot true MT77 production and full public MatchThis state before changes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/stasiak
+          gh run download 43410715434 -R Maciek550/Lowcy-methodowcy -n MatchThis_MT77_VERIFIED_3_ROLE_HTML -D /tmp/stasiak
+          cp "$(find /tmp/stasiak -name 'MatchThis_MT-77_OGLADACZ.html' -print -quit)" /tmp/stasiak/verified-index.html
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/ -o /tmp/stasiak/public-before.html
+          cmp /tmp/stasiak/verified-index.html /tmp/stasiak/public-before.html
+          curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/stasiak/state-before.json
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/mt60-draws.php -o /tmp/stasiak/draws-before.json
+          curl -fsSL --max-time 30 https://lowcymethodowcy.smallhost.pl/health
+          python3 - <<'PY'
+          import json
+          s=json.load(open('/tmp/stasiak/state-before.json'))
+          assert s['revision']>=6,s['revision']
+          e=next(e for e in s['data']['events'] if e['id']=='mt2025-champions_2025')
+          assert [len(t['results']) for t in e['rounds']]==[60,60]
+          assert [t['sectorCount'] for t in e['rounds']]==[6,6]
+          assert [sum(bool(r.get('peg')) for r in t['results']) for t in e['rounds']]==[60,59]
+          r=[r for r in e['rounds'][1]['results'] if r['competitorName']=='STASIAK ŁUKASZ']
+          assert len(r)==1 and r[0].get('peg') is None and r[0].get('sector') is None
+          assert r[0]['weightG']==0 and r[0]['officialPlace']==11
+          print('SMALL2_MT77_SINGLE_MISSING_STASIAK_F60_PRECHECK_PASS','revision',s['revision'])
+          PY
+      - name: Actual isolated save, reload, unique backup and idempotence test using SMALL2 current data
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/stasiak/test-webroot/.mt41-private
+          cp matchthis/mt73-store.php /tmp/stasiak/test-webroot/mt73-store.php
+          cp /tmp/stasiak/state-before.json /tmp/stasiak/test-webroot/.mt41-private/state-mt73.json
+          script=matchthis/finalize-champions-t2-stasiak.py
+          web=/tmp/stasiak/test-webroot
+          python3 "$script" preview "$web" | tee /tmp/stasiak/preview.json
+          python3 "$script" apply "$web" | tee /tmp/stasiak/applied.json
+          python3 "$script" verify "$web" | tee /tmp/stasiak/verified.json
+          python3 "$script" apply "$web" | tee /tmp/stasiak/repeated.json
+          python3 - <<'PY'
+          import json,pathlib
+          d=pathlib.Path('/tmp/stasiak')
+          before=json.load(open(d/'state-before.json'))
+          after=json.load(open(d/'test-webroot/.mt41-private/state-mt73.json'))
+          before_e=next(e for e in before['data']['events'] if e['id']=='mt2025-champions_2025')
+          row=next(r for r in before_e['rounds'][1]['results'] if r['competitorName']=='STASIAK ŁUKASZ')
+          row['peg'],row['sector']=60,'F'
+          assert before['data']==after['data'],'Nonapproved field changed'
+          assert after['revision']==before['revision']+1
+          reports=[json.load(open(d/(n+'.json'))) for n in ('preview','applied','verified','repeated')]
+          assert [r['status'] for r in reports]==['PREVIEW','SAVED_AND_READ_BACK','VERIFIED','ALREADY_APPLIED']
+          assert reports[0]['wouldChange']==1 and reports[1]['changed']==1 and reports[3]['changed']==0
+          backups=list((d/'test-webroot/.mt41-private/mt73-history').glob('before-champions-stasiak-f60-*.json'))
+          assert len(backups)==1 and json.load(open(backups[0]))['revision']==before['revision']
+          print('STASIAK_F60_COPY_SAVE_READ_BACK_EXACT_TWO_FIELDS_BACKUP_IDEMPOTENCE_PASS')
+          PY
+          mkdir -p /tmp/stasiak/site
+          cp /tmp/stasiak/public-before.html /tmp/stasiak/site/index.html
+          cp /tmp/stasiak/test-webroot/.mt41-private/state-mt73.json /tmp/stasiak/site/state.json
+          cat > /tmp/stasiak/site/mt73-state.php <<'PHP'
+          <?php
+          header('Content-Type: application/json; charset=utf-8');
+          header('Cache-Control: no-store');
+          echo file_get_contents(__DIR__.'/state.json');
+          PHP
+          cat > /tmp/stasiak/site/mt60-draws.php <<'PHP'
+          <?php
+          header('Content-Type: application/json; charset=utf-8');
+          echo '{"draws":[]}';
+          PHP
+          php -S 127.0.0.1:8882 -t /tmp/stasiak/site >/tmp/stasiak/php.log 2>&1 &
+          curl --retry 6 --retry-connrefused --retry-delay 1 -fsS http://127.0.0.1:8882/mt73-state.php -o /tmp/stasiak/test-readback.json
+      - name: Install actual Chromium and Firefox
+        run: |
+          npm install --prefix /tmp/stasiak/browser --silent playwright
+          cd /tmp/stasiak/browser
+          npx playwright install --with-deps chromium firefox
+      - name: Before deployment test T1 T2 sectors and F60 visible with real UI clicks in both engines
+        run: NODE_PATH=/tmp/stasiak/browser/node_modules node matchthis/test-champions-2025-complete-120.cjs
+      - name: Write just STASIAK two approved fields on independent MatchThis SMALL2 with backup
+        id: deploy
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$SSH_PASSWORD"
+          sudo apt-get -qq update
+          sudo apt-get -qq install -y sshpass
+          mkdir -p "$HOME/.ssh"; chmod 700 "$HOME/.ssh"
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test "$(ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256 | awk '{print $2}')" = 'SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8'
+          export SSHPASS="$SSH_PASSWORD"
+          options=(-o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15)
+          remote=lowcymethodowcy@s3.small.pl
+          sshpass -e ssh "${options[@]}" "$remote" 'bash -s' <<'CHECK'
+          set -euo pipefail
+          web="$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html"
+          test "$(sha256sum "$web/index.html"|awk '{print $1}')" = a74812f3f8dccb855ae59b5ae1731f195e08e346ff029cd4e73bdbd8af2cabab
+          test -f "$web/.mt41-private/state-mt73.json"
+          test ! -L "$web/.mt41-private/state-mt73.json"
+          test -f "$web/mt73-store.php"
+          mkdir -p "$HOME/matchthis-independent/champions-2025-stasiak-approved"
+          chmod 700 "$HOME/matchthis-independent/champions-2025-stasiak-approved"
+          echo STASIAK_F60_EXACT_MT77_SERVER_BASELINE_PASS
+          CHECK
+          sshpass -e scp "${options[@]}" matchthis/finalize-champions-t2-stasiak.py "$remote:matchthis-independent/champions-2025-stasiak-approved/"
+          sshpass -e ssh "${options[@]}" "$remote" 'bash -s' <<'APPLY'
+          set -euo pipefail
+          web="$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html"
+          script="$HOME/matchthis-independent/champions-2025-stasiak-approved/finalize-champions-t2-stasiak.py"
+          python3 -m py_compile "$script"
+          python3 "$script" preview "$web"
+          python3 "$script" apply "$web"
+          python3 "$script" verify "$web"
+          test "$(sha256sum "$web/index.html"|awk '{print $1}')" = a74812f3f8dccb855ae59b5ae1731f195e08e346ff029cd4e73bdbd8af2cabab
+          echo STASIAK_LUKASZ_F_60_SAVED_ON_SMALL2_AND_READ_BACK_PASS
+          APPLY
+      - name: Confirm exact two-field state delta, unchanged draw and all T1 T2 stand numbers
+        run: |
+          set -euo pipefail
+          curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/stasiak/state-after.json
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/mt60-draws.php -o /tmp/stasiak/draws-after.json
+          cmp /tmp/stasiak/draws-before.json /tmp/stasiak/draws-after.json
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/ -o /tmp/stasiak/public-after.html
+          cmp /tmp/stasiak/public-before.html /tmp/stasiak/public-after.html
+          python3 - <<'PY'
+          import json
+          old=json.load(open('/tmp/stasiak/state-before.json'))
+          new=json.load(open('/tmp/stasiak/state-after.json'))
+          assert new['revision']==old['revision']+1
+          e=next(e for e in old['data']['events'] if e['id']=='mt2025-champions_2025')
+          stasiak=next(r for r in e['rounds'][1]['results'] if r['competitorName']=='STASIAK ŁUKASZ')
+          assert stasiak.get('peg') is None and stasiak.get('sector') is None
+          stasiak['peg']=60;stasiak['sector']='F'
+          assert old['data']==new['data'],'Unapproved DB changes found'
+          e=next(e for e in new['data']['events'] if e['id']=='mt2025-champions_2025')
+          assert [sum(bool(r.get('peg') and r.get('sector')) for r in t['results']) for t in e['rounds']]==[60,60]
+          for t in e['rounds']:
+           assert len({r['peg'] for r in t['results']})==60
+           assert [sum(r['sector']==chr(65+i) for r in t['results']) for i in range(6)]==[10]*6
+          print('SMALL2_LIVE_STASIAK_F60_ONLY_TWO_FIELDS_ALL_120_PEGS_AND_SIX_SECTORS_PASS',new['revision'])
+          PY
+      - name: Check real live website after write with Chromium and Firefox, click F and reload
+        env:
+          MT_CL_TEST_URL: https://matchthis.lowcymethodowcy.smallhost.pl/
+        run: NODE_PATH=/tmp/stasiak/browser/node_modules node matchthis/test-champions-2025-complete-120.cjs
+      - name: No regression to independent Łowcy and authentication protection
+        run: |
+          set -euo pipefail
+          curl -fsSL --max-time 30 https://lowcymethodowcy.smallhost.pl/health
+          test "$(curl -sS -o /dev/null -w '%{http_code}' https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php)" = 401
+          echo CHAMPIONS_2025_120_OF_120_APPROVED_AND_TESTED_ON_SMALL2
