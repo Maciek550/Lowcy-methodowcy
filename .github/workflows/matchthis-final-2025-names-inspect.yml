@@ -1,0 +1,25 @@
+name: MatchThis inspect 2025 final exact two surnames read-only
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-final-2025-names-inspect.yml]
+permissions: {contents: read}
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: Inspect exact real published records without modification
+        run: |
+          set -euo pipefail
+          curl -fsSL --max-time 25 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/state.json
+          python3 - <<'PY'
+          import json
+          p=json.load(open('/tmp/state.json'))
+          e=next(x for x in p['data']['events'] if x['id']=='mt2025-mega_final_2025')
+          print('CURRENT_REVISION',p['revision'])
+          for i,t in enumerate(e['rounds'],1):
+            for r in t['results']:
+              if 'ANNA' in r['competitorName'] or 'WINARSKI' in r['competitorName'] or 'WINIARSKI' in r['competitorName']:
+                print('ROUND',i,'COMPETITOR',repr(r['competitorName']),'PEG',r.get('peg'),'SECTOR',r.get('sector'),'WEIGHT',r.get('weightG'),'OFFICIAL_PLACE',r.get('officialPlace'))
+          PY
