@@ -99,7 +99,8 @@ cp -p "$web/role-pages/mt74-admin.php" "$backup/mt74-admin.php"
 cp -p "$web/role-pages/mt74-sedzia.php" "$backup/mt74-sedzia.php"
 cp -p "$web/.mt41-private/mt60-published-draws.json" "$backup/mt60-published-draws.json"
 # Central state does not yet exist; never overwrite an existing store.
-test ! -e "$web/mt73-store.php" && test ! -e "$web/mt73-state.php"
+test ! -e "$web/mt73-store.php" || cmp -s "$web/mt73-store.php" "$stage/mt73-store.php"
+test ! -e "$web/mt73-state.php" || cmp -s "$web/mt73-state.php" "$stage/mt73-state.php"
 cp -p "$stage/mt73-store.php" "$web/mt73-store.php"
 cp -p "$stage/mt73-state.php" "$web/mt73-state.php"
 php -l "$web/mt73-state.php" >/dev/null
