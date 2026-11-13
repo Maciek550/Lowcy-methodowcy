@@ -1,0 +1,738 @@
+{
+  "eventId": "mt2025-champions_2025",
+  "sourceImages": {
+    "1": [
+      "obraz(20261113-104731).png",
+      "obraz(20261113-104736).png"
+    ],
+    "2": [
+      "obraz(20261113-104835).png",
+      "obraz(20261113-104842).png"
+    ]
+  },
+  "unconfirmed": [
+    {
+      "round": 2,
+      "competitorName": "STASIAK ŁUKASZ",
+      "proposedPeg": 60,
+      "proposedSector": "F",
+      "reason": "Stanowisko 60 niewidoczne na drugim zdjęciu II tury. Nie wdrażać bez osobnej akceptacji."
+    }
+  ],
+  "assignments": [
+    {
+      "round": 1,
+      "peg": 1,
+      "sector": "A",
+      "sourceName": "DVILIS SILVIUS"
+    },
+    {
+      "round": 1,
+      "peg": 2,
+      "sector": "A",
+      "sourceName": "JURKIEWICZ SŁAWOMIR"
+    },
+    {
+      "round": 1,
+      "peg": 3,
+      "sector": "A",
+      "sourceName": "ULEVICIUS ZYDRUNAS"
+    },
+    {
+      "round": 1,
+      "peg": 4,
+      "sector": "A",
+      "sourceName": "CZAPKA MARCIN"
+    },
+    {
+      "round": 1,
+      "peg": 5,
+      "sector": "A",
+      "sourceName": "BIEŃ PAWEŁ"
+    },
+    {
+      "round": 1,
+      "peg": 6,
+      "sector": "A",
+      "sourceName": "SOBOLEWSKI BARTŁOMIEJ"
+    },
+    {
+      "round": 1,
+      "peg": 7,
+      "sector": "A",
+      "sourceName": "SZCZĘSNY MARIUSZ"
+    },
+    {
+      "round": 1,
+      "peg": 8,
+      "sector": "A",
+      "sourceName": "MIELCZAREK JAKUB"
+    },
+    {
+      "round": 1,
+      "peg": 9,
+      "sector": "A",
+      "sourceName": "PRYMAS ROBERT"
+    },
+    {
+      "round": 1,
+      "peg": 10,
+      "sector": "A",
+      "sourceName": "ROGUSKA-JUREK ANNA"
+    },
+    {
+      "round": 1,
+      "peg": 11,
+      "sector": "B",
+      "sourceName": "KRZYCKI ARKADIUSZ"
+    },
+    {
+      "round": 1,
+      "peg": 12,
+      "sector": "B",
+      "sourceName": "KOŁAKOWSKI KONRAD"
+    },
+    {
+      "round": 1,
+      "peg": 13,
+      "sector": "B",
+      "sourceName": "KRĄCKOWSKI KAZIMIERZ"
+    },
+    {
+      "round": 1,
+      "peg": 14,
+      "sector": "B",
+      "sourceName": "WLAZŁO PAWEŁ"
+    },
+    {
+      "round": 1,
+      "peg": 15,
+      "sector": "B",
+      "sourceName": "BASAJ SŁAWOMIR"
+    },
+    {
+      "round": 1,
+      "peg": 16,
+      "sector": "B",
+      "sourceName": "MIŚKOWICZ MATEUSZ"
+    },
+    {
+      "round": 1,
+      "peg": 17,
+      "sector": "B",
+      "sourceName": "GODOŚ PAWEŁ"
+    },
+    {
+      "round": 1,
+      "peg": 18,
+      "sector": "B",
+      "sourceName": "PIETRUSZKA JACEK"
+    },
+    {
+      "round": 1,
+      "peg": 19,
+      "sector": "B",
+      "sourceName": "WITOS ARKADIUSZ"
+    },
+    {
+      "round": 1,
+      "peg": 20,
+      "sector": "B",
+      "sourceName": "TERLIKOWSKI ROMAN"
+    },
+    {
+      "round": 1,
+      "peg": 21,
+      "sector": "C",
+      "sourceName": "PIECZYWEK PRZEMYSŁAW"
+    },
+    {
+      "round": 1,
+      "peg": 22,
+      "sector": "C",
+      "sourceName": "ĆWIKŁA DANIEL"
+    },
+    {
+      "round": 1,
+      "peg": 23,
+      "sector": "C",
+      "sourceName": "ZIEMNIEWICZ DARIUSZ"
+    },
+    {
+      "round": 1,
+      "peg": 24,
+      "sector": "C",
+      "sourceName": "KOWALCZYK WOJCIECH"
+    },
+    {
+      "round": 1,
+      "peg": 25,
+      "sector": "C",
+      "sourceName": "KOWALSKI PAWEŁ"
+    },
+    {
+      "round": 1,
+      "peg": 26,
+      "sector": "C",
+      "sourceName": "CZUPRYNA PIOTR"
+    },
+    {
+      "round": 1,
+      "peg": 27,
+      "sector": "C",
+      "sourceName": "FLISEK ADAM"
+    },
+    {
+      "round": 1,
+      "peg": 28,
+      "sector": "C",
+      "sourceName": "KWAŚNIEWSKI MACIEJ"
+    },
+    {
+      "round": 1,
+      "peg": 29,
+      "sector": "C",
+      "sourceName": "KOWALSKI JAROSŁAW"
+    },
+    {
+      "round": 1,
+      "peg": 30,
+      "sector": "C",
+      "sourceName": "ANTOSIK ARTUR"
+    },
+    {
+      "round": 1,
+      "peg": 31,
+      "sector": "D",
+      "sourceName": "STEFANIUK RAFAŁ"
+    },
+    {
+      "round": 1,
+      "peg": 32,
+      "sector": "D",
+      "sourceName": "KORYTOWSKI ZBIGNIEW"
+    },
+    {
+      "round": 1,
+      "peg": 33,
+      "sector": "D",
+      "sourceName": "KOZICKI JAKUB"
+    },
+    {
+      "round": 1,
+      "peg": 34,
+      "sector": "D",
+      "sourceName": "PRASAŁ DOMINIK"
+    },
+    {
+      "round": 1,
+      "peg": 35,
+      "sector": "D",
+      "sourceName": "KUPISZ MAREK"
+    },
+    {
+      "round": 1,
+      "peg": 36,
+      "sector": "D",
+      "sourceName": "GÓRECKI KACPER"
+    },
+    {
+      "round": 1,
+      "peg": 37,
+      "sector": "D",
+      "sourceName": "FABISIAK MACIEJ"
+    },
+    {
+      "round": 1,
+      "peg": 38,
+      "sector": "D",
+      "sourceName": "KURCZYŃSKI MARIUSZ"
+    },
+    {
+      "round": 1,
+      "peg": 39,
+      "sector": "D",
+      "sourceName": "STRZELCZYK PAWEŁ"
+    },
+    {
+      "round": 1,
+      "peg": 40,
+      "sector": "D",
+      "sourceName": "WIŚNIEWSKI JAN"
+    },
+    {
+      "round": 1,
+      "peg": 41,
+      "sector": "E",
+      "sourceName": "SZCZĘSNY JACEK"
+    },
+    {
+      "round": 1,
+      "peg": 42,
+      "sector": "E",
+      "sourceName": "WOŁAMIN ANDRZEJ"
+    },
+    {
+      "round": 1,
+      "peg": 43,
+      "sector": "E",
+      "sourceName": "STASIAK ŁUKASZ"
+    },
+    {
+      "round": 1,
+      "peg": 44,
+      "sector": "E",
+      "sourceName": "BARTCZAK JAN"
+    },
+    {
+      "round": 1,
+      "peg": 45,
+      "sector": "E",
+      "sourceName": "JAROS ARTUR"
+    },
+    {
+      "round": 1,
+      "peg": 46,
+      "sector": "E",
+      "sourceName": "RADOMSKI KAZIMIERZ"
+    },
+    {
+      "round": 1,
+      "peg": 47,
+      "sector": "E",
+      "sourceName": "KULKA ARTUR"
+    },
+    {
+      "round": 1,
+      "peg": 48,
+      "sector": "E",
+      "sourceName": "CHYB ANDRZEJ"
+    },
+    {
+      "round": 1,
+      "peg": 49,
+      "sector": "E",
+      "sourceName": "KRAWIEC WŁODZIMIERZ"
+    },
+    {
+      "round": 1,
+      "peg": 50,
+      "sector": "E",
+      "sourceName": "KMIEĆ WŁODZIMIERZ"
+    },
+    {
+      "round": 1,
+      "peg": 51,
+      "sector": "F",
+      "sourceName": "SOBUSIAK KAMIL"
+    },
+    {
+      "round": 1,
+      "peg": 52,
+      "sector": "F",
+      "sourceName": "ŁAPACZ MATEUSZ"
+    },
+    {
+      "round": 1,
+      "peg": 53,
+      "sector": "F",
+      "sourceName": "PASTUSZKA TOMASZ"
+    },
+    {
+      "round": 1,
+      "peg": 54,
+      "sector": "F",
+      "sourceName": "ŚMIETANKA KAROL"
+    },
+    {
+      "round": 1,
+      "peg": 55,
+      "sector": "F",
+      "sourceName": "FIJOŁEK KRZYSZTOF"
+    },
+    {
+      "round": 1,
+      "peg": 56,
+      "sector": "F",
+      "sourceName": "DUDA ZBIGNIEW"
+    },
+    {
+      "round": 1,
+      "peg": 57,
+      "sector": "F",
+      "sourceName": "BEDNAREK ANDRZEJ"
+    },
+    {
+      "round": 1,
+      "peg": 58,
+      "sector": "F",
+      "sourceName": "BOROWICZ ZBIGNIEW"
+    },
+    {
+      "round": 1,
+      "peg": 59,
+      "sector": "F",
+      "sourceName": "KUCHARSKI SZYMON"
+    },
+    {
+      "round": 1,
+      "peg": 60,
+      "sector": "F",
+      "sourceName": "NIEWIADOMSKI ARTUR"
+    },
+    {
+      "round": 2,
+      "peg": 1,
+      "sector": "A",
+      "sourceName": "BOROWICZ ZBIGNIEW"
+    },
+    {
+      "round": 2,
+      "peg": 2,
+      "sector": "A",
+      "sourceName": "NIEWIADOMSKI ARTUR"
+    },
+    {
+      "round": 2,
+      "peg": 3,
+      "sector": "A",
+      "sourceName": "KOWALSKI PAWEŁ"
+    },
+    {
+      "round": 2,
+      "peg": 4,
+      "sector": "A",
+      "sourceName": "KORYTOWSKI ZBIGNIEW"
+    },
+    {
+      "round": 2,
+      "peg": 5,
+      "sector": "A",
+      "sourceName": "FIJOŁEK KRZYSZTOF"
+    },
+    {
+      "round": 2,
+      "peg": 6,
+      "sector": "A",
+      "sourceName": "ŚMIETANKA KAROL"
+    },
+    {
+      "round": 2,
+      "peg": 7,
+      "sector": "A",
+      "sourceName": "JAROS ARTUR"
+    },
+    {
+      "round": 2,
+      "peg": 8,
+      "sector": "A",
+      "sourceName": "KUCHARSKI SZYMON"
+    },
+    {
+      "round": 2,
+      "peg": 9,
+      "sector": "A",
+      "sourceName": "KUPISZ MAREK"
+    },
+    {
+      "round": 2,
+      "peg": 10,
+      "sector": "A",
+      "sourceName": "CZUPRYNA PIOTR"
+    },
+    {
+      "round": 2,
+      "peg": 11,
+      "sector": "B",
+      "sourceName": "BEDNAREK ANDRZEJ"
+    },
+    {
+      "round": 2,
+      "peg": 12,
+      "sector": "B",
+      "sourceName": "CZAPKA MARCIN"
+    },
+    {
+      "round": 2,
+      "peg": 13,
+      "sector": "B",
+      "sourceName": "BARTCZAK JAN"
+    },
+    {
+      "round": 2,
+      "peg": 14,
+      "sector": "B",
+      "sourceName": "ŁAPACZ MATEUSZ"
+    },
+    {
+      "round": 2,
+      "peg": 15,
+      "sector": "B",
+      "sourceName": "BASAJ SŁAWOMIR"
+    },
+    {
+      "round": 2,
+      "peg": 16,
+      "sector": "B",
+      "sourceName": "KURCZYŃSKI MARIUSZ"
+    },
+    {
+      "round": 2,
+      "peg": 17,
+      "sector": "B",
+      "sourceName": "SOBOLEWSKI BARTŁOMIEJ"
+    },
+    {
+      "round": 2,
+      "peg": 18,
+      "sector": "B",
+      "sourceName": "PRASAŁ DOMINIK"
+    },
+    {
+      "round": 2,
+      "peg": 19,
+      "sector": "B",
+      "sourceName": "PASTUSZKA TOMASZ"
+    },
+    {
+      "round": 2,
+      "peg": 20,
+      "sector": "B",
+      "sourceName": "RADOMSKI KAZIMIERZ"
+    },
+    {
+      "round": 2,
+      "peg": 21,
+      "sector": "C",
+      "sourceName": "KOWALCZYK WOJCIECH"
+    },
+    {
+      "round": 2,
+      "peg": 22,
+      "sector": "C",
+      "sourceName": "KWAŚNIEWSKI MACIEJ"
+    },
+    {
+      "round": 2,
+      "peg": 23,
+      "sector": "C",
+      "sourceName": "BIEŃ PAWEŁ"
+    },
+    {
+      "round": 2,
+      "peg": 24,
+      "sector": "C",
+      "sourceName": "WLAZŁO PAWEŁ"
+    },
+    {
+      "round": 2,
+      "peg": 25,
+      "sector": "C",
+      "sourceName": "TERLIKOWSKI ROMAN"
+    },
+    {
+      "round": 2,
+      "peg": 26,
+      "sector": "C",
+      "sourceName": "KOŁAKOWSKI KONRAD"
+    },
+    {
+      "round": 2,
+      "peg": 27,
+      "sector": "C",
+      "sourceName": "KULKA ARTUR"
+    },
+    {
+      "round": 2,
+      "peg": 28,
+      "sector": "C",
+      "sourceName": "SOBUSIAK KAMIL"
+    },
+    {
+      "round": 2,
+      "peg": 29,
+      "sector": "C",
+      "sourceName": "ANTOSIK ARTUR"
+    },
+    {
+      "round": 2,
+      "peg": 30,
+      "sector": "C",
+      "sourceName": "DVILIS SILVIUS"
+    },
+    {
+      "round": 2,
+      "peg": 31,
+      "sector": "D",
+      "sourceName": "WOŁAMIN ANDRZEJ"
+    },
+    {
+      "round": 2,
+      "peg": 32,
+      "sector": "D",
+      "sourceName": "ĆWIKŁA DANIEL"
+    },
+    {
+      "round": 2,
+      "peg": 33,
+      "sector": "D",
+      "sourceName": "KOWALSKI JAROSŁAW"
+    },
+    {
+      "round": 2,
+      "peg": 34,
+      "sector": "D",
+      "sourceName": "SZCZĘSNY JACEK"
+    },
+    {
+      "round": 2,
+      "peg": 35,
+      "sector": "D",
+      "sourceName": "DUDA ZBIGNIEW"
+    },
+    {
+      "round": 2,
+      "peg": 36,
+      "sector": "D",
+      "sourceName": "ZIEMNIEWICZ DARIUSZ"
+    },
+    {
+      "round": 2,
+      "peg": 37,
+      "sector": "D",
+      "sourceName": "JURKIEWICZ SŁAWOMIR"
+    },
+    {
+      "round": 2,
+      "peg": 38,
+      "sector": "D",
+      "sourceName": "KRĄCKOWSKI KAZIMIERZ"
+    },
+    {
+      "round": 2,
+      "peg": 39,
+      "sector": "D",
+      "sourceName": "PRYMAS ROBERT"
+    },
+    {
+      "round": 2,
+      "peg": 40,
+      "sector": "D",
+      "sourceName": "STRZELCZYK PAWEŁ"
+    },
+    {
+      "round": 2,
+      "peg": 41,
+      "sector": "E",
+      "sourceName": "WIŚNIEWSKI JAN"
+    },
+    {
+      "round": 2,
+      "peg": 42,
+      "sector": "E",
+      "sourceName": "CHYB ANDRZEJ"
+    },
+    {
+      "round": 2,
+      "peg": 43,
+      "sector": "E",
+      "sourceName": "GÓRECKI KACPER"
+    },
+    {
+      "round": 2,
+      "peg": 44,
+      "sector": "E",
+      "sourceName": "ROGUSKA-JUREK ANNA"
+    },
+    {
+      "round": 2,
+      "peg": 45,
+      "sector": "E",
+      "sourceName": "KRAWIEC WŁODZIMIERZ"
+    },
+    {
+      "round": 2,
+      "peg": 46,
+      "sector": "E",
+      "sourceName": "GODOŚ PAWEŁ"
+    },
+    {
+      "round": 2,
+      "peg": 47,
+      "sector": "E",
+      "sourceName": "KRZYCKI ARKADIUSZ"
+    },
+    {
+      "round": 2,
+      "peg": 48,
+      "sector": "E",
+      "sourceName": "PIETRUSZKA JACEK"
+    },
+    {
+      "round": 2,
+      "peg": 49,
+      "sector": "E",
+      "sourceName": "KOZICKI JAKUB"
+    },
+    {
+      "round": 2,
+      "peg": 50,
+      "sector": "E",
+      "sourceName": "WITOS ARKADIUSZ"
+    },
+    {
+      "round": 2,
+      "peg": 51,
+      "sector": "F",
+      "sourceName": "ULEVICIUS ZYDRUNAS"
+    },
+    {
+      "round": 2,
+      "peg": 52,
+      "sector": "F",
+      "sourceName": "FLISEK ADAM"
+    },
+    {
+      "round": 2,
+      "peg": 53,
+      "sector": "F",
+      "sourceName": "STEFANIUK RAFAŁ"
+    },
+    {
+      "round": 2,
+      "peg": 54,
+      "sector": "F",
+      "sourceName": "KMIEĆ WŁODZIMIERZ"
+    },
+    {
+      "round": 2,
+      "peg": 55,
+      "sector": "F",
+      "sourceName": "MIŚKOWICZ MATEUSZ"
+    },
+    {
+      "round": 2,
+      "peg": 56,
+      "sector": "F",
+      "sourceName": "PIECZYWEK PRZEMYSŁAW"
+    },
+    {
+      "round": 2,
+      "peg": 57,
+      "sector": "F",
+      "sourceName": "MIELCZAREK JAKUB"
+    },
+    {
+      "round": 2,
+      "peg": 58,
+      "sector": "F",
+      "sourceName": "SZCZĘSNY MARIUSZ"
+    },
+    {
+      "round": 2,
+      "peg": 59,
+      "sector": "F",
+      "sourceName": "FABISIAK MACIEJ"
+    }
+  ]
+}
