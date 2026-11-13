@@ -1,0 +1,282 @@
+{
+  "eventId": "mt2025-mega_final_2025",
+  "roundId": "mt2025-mega_final_2025-round1",
+  "date": "2025-10-25",
+  "source": "Organizer-provided two original sector/peg sheets 2026-11-13",
+  "sourceImages": [
+    "obraz(20261113-115036).png",
+    "obraz(20261113-115042).png"
+  ],
+  "assignments": [
+    {
+      "peg": 1,
+      "sector": "A",
+      "sourceName": "KURCZYŃSKI MARIUSZ"
+    },
+    {
+      "peg": 2,
+      "sector": "A",
+      "sourceName": "GRZYBOWSKI MACIEJ"
+    },
+    {
+      "peg": 3,
+      "sector": "A",
+      "sourceName": "KUPISZ MAREK"
+    },
+    {
+      "peg": 4,
+      "sector": "A",
+      "sourceName": "KOWALCZYK WOJCIECH"
+    },
+    {
+      "peg": 5,
+      "sector": "A",
+      "sourceName": "NIEWIADOMSKI ARTUR"
+    },
+    {
+      "peg": 6,
+      "sector": "A",
+      "sourceName": "CHYB ANDRZEJ"
+    },
+    {
+      "peg": 7,
+      "sector": "A",
+      "sourceName": "JASIŃSKA MAGDALENA"
+    },
+    {
+      "peg": 8,
+      "sector": "A",
+      "sourceName": "RADZISZEWSKI PAWEŁ"
+    },
+    {
+      "peg": 9,
+      "sector": "A",
+      "sourceName": "WASILEWSKI WOJCIECH"
+    },
+    {
+      "peg": 10,
+      "sector": "B",
+      "sourceName": "DOBROWOLSKI PIOTR"
+    },
+    {
+      "peg": 11,
+      "sector": "B",
+      "sourceName": "BARTCZAK JAN"
+    },
+    {
+      "peg": 12,
+      "sector": "B",
+      "sourceName": "STASIAK ŁUKASZ"
+    },
+    {
+      "peg": 13,
+      "sector": "B",
+      "sourceName": "DOBOSZ HENRYK"
+    },
+    {
+      "peg": 14,
+      "sector": "B",
+      "sourceName": "BOROWICZ ZBIGNIEW"
+    },
+    {
+      "peg": 15,
+      "sector": "B",
+      "sourceName": "PAMIĘTA JAKUB"
+    },
+    {
+      "peg": 16,
+      "sector": "B",
+      "sourceName": "WYSOCKI FRANCISZEK"
+    },
+    {
+      "peg": 17,
+      "sector": "B",
+      "sourceName": "ĆWIKŁA DANIEL"
+    },
+    {
+      "peg": 18,
+      "sector": "B",
+      "sourceName": "PIECZYWEK PRZEMYSŁAW"
+    },
+    {
+      "peg": 19,
+      "sector": "C",
+      "sourceName": "MAZURCZAK GRZEGORZ"
+    },
+    {
+      "peg": 20,
+      "sector": "C",
+      "sourceName": "ŁAPACZ MATEUSZ"
+    },
+    {
+      "peg": 21,
+      "sector": "C",
+      "sourceName": "TERLIKOWSKI ROMAN"
+    },
+    {
+      "peg": 22,
+      "sector": "C",
+      "sourceName": "ZIEMNIEWICZ DARIUSZ"
+    },
+    {
+      "peg": 23,
+      "sector": "C",
+      "sourceName": "PELL ANNA"
+    },
+    {
+      "peg": 24,
+      "sector": "C",
+      "sourceName": "LEBENSZTEJN BARTOSZ"
+    },
+    {
+      "peg": 25,
+      "sector": "C",
+      "sourceName": "BŁAŻEJEWSKI PAWEŁ"
+    },
+    {
+      "peg": 26,
+      "sector": "C",
+      "sourceName": "STEFANIAK RAFAŁ"
+    },
+    {
+      "peg": 27,
+      "sector": "C",
+      "sourceName": "SOBOLEWSKI BARTŁOMIEJ"
+    },
+    {
+      "peg": 28,
+      "sector": "D",
+      "sourceName": "CELEJ ADRIAN"
+    },
+    {
+      "peg": 29,
+      "sector": "D",
+      "sourceName": "RZEPCZYŃSKI MARCIN"
+    },
+    {
+      "peg": 30,
+      "sector": "D",
+      "sourceName": "KOWALSKI JAROSŁAW"
+    },
+    {
+      "peg": 31,
+      "sector": "D",
+      "sourceName": "BOLEK KAMIL"
+    },
+    {
+      "peg": 32,
+      "sector": "D",
+      "sourceName": "PASTUSZKA TOMASZ"
+    },
+    {
+      "peg": 33,
+      "sector": "D",
+      "sourceName": "GÓRECKI KACPER"
+    },
+    {
+      "peg": 34,
+      "sector": "D",
+      "sourceName": "KUCHARSKI SZYMON"
+    },
+    {
+      "peg": 35,
+      "sector": "D",
+      "sourceName": "SOBUSIAK KAMIL"
+    },
+    {
+      "peg": 36,
+      "sector": "D",
+      "sourceName": "STANIAK MARIUSZ"
+    },
+    {
+      "peg": 37,
+      "sector": "E",
+      "sourceName": "FURMAŃCZYK DAMIAN"
+    },
+    {
+      "peg": 38,
+      "sector": "E",
+      "sourceName": "BALIK NORBERT"
+    },
+    {
+      "peg": 39,
+      "sector": "E",
+      "sourceName": "WOŁAMIN ANDRZEJ"
+    },
+    {
+      "peg": 40,
+      "sector": "E",
+      "sourceName": "KUCHCIAK KONRAD"
+    },
+    {
+      "peg": 41,
+      "sector": "E",
+      "sourceName": "KOWALSKI MARCIN"
+    },
+    {
+      "peg": 42,
+      "sector": "E",
+      "sourceName": "KORYTOWSKI ZBIGNIEW"
+    },
+    {
+      "peg": 43,
+      "sector": "E",
+      "sourceName": "WITOS ARKADIUSZ"
+    },
+    {
+      "peg": 44,
+      "sector": "E",
+      "sourceName": "CZAPKA MARCIN"
+    },
+    {
+      "peg": 45,
+      "sector": "E",
+      "sourceName": "MIROWSKI MIROSŁAW"
+    },
+    {
+      "peg": 46,
+      "sector": "F",
+      "sourceName": "FIC PAWEŁ"
+    },
+    {
+      "peg": 47,
+      "sector": "F",
+      "sourceName": "KALMUS ŁUKASZ"
+    },
+    {
+      "peg": 48,
+      "sector": "F",
+      "sourceName": "ALEFIEROWICZ MAREK"
+    },
+    {
+      "peg": 49,
+      "sector": "F",
+      "sourceName": "DUDA ZBIGNIEW"
+    },
+    {
+      "peg": 50,
+      "sector": "F",
+      "sourceName": "ŚWINIARSKI KRZYSZTOF"
+    },
+    {
+      "peg": 51,
+      "sector": "F",
+      "sourceName": "BIEŃ PAWEŁ"
+    },
+    {
+      "peg": 52,
+      "sector": "F",
+      "sourceName": "KMIEĆ WŁODZIMIERZ"
+    },
+    {
+      "peg": 53,
+      "sector": "F",
+      "sourceName": "STRZELCZYK PAWEŁ"
+    },
+    {
+      "peg": 54,
+      "sector": "F",
+      "sourceName": "KOCHAŃSKI GRZEGORZ"
+    }
+  ]
+}
