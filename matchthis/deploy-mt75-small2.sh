@@ -55,7 +55,7 @@ grep -Fq 'mt74-sedzia.php' "$web/panel.php"
 test ! -e "$web/mt73-state.php" || cmp -s "$web/mt73-state.php" "$stage/mt73-state.php"
 test ! -e "$web/mt73-store.php" || cmp -s "$web/mt73-store.php" "$stage/mt73-store.php"
 test ! -e "$web/.mt41-private/state-mt73.json"
-test ! -e "$stage/rollback-mt74" || test "$(sha256sum "$stage/rollback-mt74/index.html"|cut -d\u0027 \u0027 -f1)" = 2595a4fad3fa4a2b5457a345e65f896171b4ca95578d246ec0e599ad537aa4a6
+test ! -e "$stage/rollback-mt74" || test "$(sha256sum "$stage/rollback-mt74/index.html"|cut -d' ' -f1)" = 2595a4fad3fa4a2b5457a345e65f896171b4ca95578d246ec0e599ad537aa4a6
 test ! -e "$web/role-pages/mt75-admin.php" && test ! -e "$web/role-pages/mt75-sedzia.php"
 mkdir -p "$stage";chmod 700 "$stage"
 echo MT75_PREDEPLOY_EXACT_MT74_AND_NO_PREVIOUS_SERVER_STATE_CONFIRMED
@@ -87,7 +87,7 @@ set -Eeuo pipefail
 web="$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html"
 stage="$HOME/matchthis-independent/mt-75"
 backup="$stage/rollback-mt74"
-test ! -e "$backup" || test "$(sha256sum "$backup/index.html"|cut -d\u0027 \u0027 -f1)" = 2595a4fad3fa4a2b5457a345e65f896171b4ca95578d246ec0e599ad537aa4a6
+test ! -e "$backup" || test "$(sha256sum "$backup/index.html"|cut -d' ' -f1)" = 2595a4fad3fa4a2b5457a345e65f896171b4ca95578d246ec0e599ad537aa4a6
 test "$(sha256sum "$web/index.html"|cut -d' ' -f1)" = 2595a4fad3fa4a2b5457a345e65f896171b4ca95578d246ec0e599ad537aa4a6
 test "$(sha256sum "$stage/MatchThis_MT-75.html"|cut -d' ' -f1)" = bffd09ff07c8771ff3a359f180d0b4fe930295bc3a10f079b5ecbf27a711fac0
 test "$(sha256sum "$stage/MatchThis_MT-75_OGLADACZ.html"|cut -d' ' -f1)" = db6b74cb6bbe139efac93197842ae3da97131b7af486b586e88408e39455875a
