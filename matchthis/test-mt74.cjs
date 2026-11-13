@@ -9,7 +9,7 @@ const live=process.argv.includes('--live');const root=live?'https://matchthis.lo
  for(const r of rows){let peg=names.indexOf(r.competitorName)+1;assert(peg);assert.equal(r.peg,peg);assert.equal(r.sector,String.fromCharCode(65+Math.floor((peg-1)/9)));}
  if(baseline){const original=baseline.events.find(e=>e.id===target.id).rounds[1];for(const r of original.results){let peg=names.indexOf(r.competitorName)+1;r.peg=peg;r.sector=String.fromCharCode(65+Math.floor((peg-1)/9));}assert.deepEqual(actual,baseline,'Only 54 pairs may change');}
  // Click actual UI event and second round, then sector view.
- await p.locator('[data-view="events"]').first().click();await p.locator('[data-open="mt2025-mega_final_2025"]').first().click();await p.locator('[data-round="1"]').first().click();await p.locator('[data-result-mode="sectors"]').first().click();
+ await p.locator('[data-view="archive"]').first().click();const fold=p.locator('details[data-year="2025"]');if(await fold.getAttribute('open')===null)await fold.locator('summary').click();await p.locator('[data-open="mt2025-mega_final_2025"]').first().click();await p.locator('[data-round="1"]').first().click();await p.locator('[data-result-mode="sectors"]').first().click();
  for(const name of ['SOBUSIAK KAMIL','PASTUSZKA TOMASZ','KURCZYŃSKI MARIUSZ'])assert((await p.locator('body').innerText()).includes(name));
  for(const width of [1366,768,390]){await p.setViewportSize({width,height:900});assert(await p.locator('#appversion').isVisible());}
  await p.reload();const reread=await p.evaluate(()=>db.events.find(e=>e.id==='mt2025-mega_final_2025').rounds[1].results.map(r=>[r.competitorName,r.peg,r.sector]));assert.equal(reread.filter(r=>r[1]&&r[2]).length,54);

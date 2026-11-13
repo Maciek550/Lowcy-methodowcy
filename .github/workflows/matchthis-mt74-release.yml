@@ -51,3 +51,5 @@ jobs:
         env:
           SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
         run: bash matchthis/deploy-mt74-small2.sh rollback
+
+# UI navigation checks open the 2025 archive before selecting its final.
