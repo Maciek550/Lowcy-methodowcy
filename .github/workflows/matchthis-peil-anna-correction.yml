@@ -121,3 +121,5 @@ jobs:
           print('PEIL_ANNA_SMALL2_EXACT_CORRECTION_BOTH_ROUNDS_AND_UNCHANGED_RESULTS_PASS',after['revision'])
           PY
           curl -fsSL --max-time 30 https://lowcymethodowcy.smallhost.pl/health
+
+# Retry after relaxing legacy entrantIds check; preserve strict per-result person IDs.
