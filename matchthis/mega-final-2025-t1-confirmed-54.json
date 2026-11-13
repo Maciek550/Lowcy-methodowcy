@@ -121,7 +121,7 @@
     {
       "peg": 23,
       "sector": "C",
-      "sourceName": "PELL ANNA"
+      "sourceName": "PEIL ANNA"
     },
     {
       "peg": 24,
@@ -256,7 +256,7 @@
     {
       "peg": 50,
       "sector": "F",
-      "sourceName": "ŚWINIARSKI KRZYSZTOF"
+      "sourceName": "ŚWINARSKI KRZYSZTOF"
     },
     {
       "peg": 51,
@@ -277,6 +277,18 @@
       "peg": 54,
       "sector": "F",
       "sourceName": "KOCHAŃSKI GRZEGORZ"
+    }
+  ],
+  "organizerNameCorrections": [
+    {
+      "peg": 23,
+      "name": "PEIL ANNA",
+      "confirmedAt": "2026-11-13"
+    },
+    {
+      "peg": 50,
+      "name": "ŚWINARSKI KRZYSZTOF",
+      "confirmedAt": "2026-11-13"
     }
   ]
 }
