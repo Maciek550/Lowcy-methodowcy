@@ -1,0 +1,53 @@
+name: MatchThis MT74 final sectors SMALL2 only
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: ['.github/workflows/matchthis-mt74-release.yml']
+permissions: {contents: read, actions: read}
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch verified MT72 baseline and build minimal sector patch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download 42829597892 -R Maciek550/Lowcy-methodowcy -n MatchThis_MT-72_three_roles_verified -D /tmp/mt72
+          for role in '' '_OGLADACZ' '_SEDZIA'; do
+            cp "$(find /tmp/mt72 -name "MatchThis_MT-72$role.html" -print -quit)" "matchthis/MatchThis_MT-72$role.html"
+          done
+          python3 matchthis/build-mt74.py
+          bash -n matchthis/deploy-mt74-small2.sh
+      - name: Prepare Chromium and Firefox
+        run: |
+          npm install --prefix /tmp/mt74-test --silent playwright
+          cd /tmp/mt74-test
+          npx playwright install --with-deps chromium firefox
+      - name: Test all roles, old data migration and exact data regression before deployment
+        run: |
+          python3 -m http.server 8765 --directory matchthis >/tmp/mt74-http.log 2>&1 &
+          NODE_PATH=/tmp/mt74-test/node_modules node matchthis/test-mt74.cjs
+      - name: Snapshot published draws
+        run: curl -fsSL https://matchthis.lowcymethodowcy.smallhost.pl/mt60-draws.php -o /tmp/draws-before.json
+      - name: Deploy backed-up MT74 roles only to SMALL2
+        id: deploy
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: bash matchthis/deploy-mt74-small2.sh
+      - name: Verify live SMALL2 in both browsers
+        run: |
+          NODE_PATH=/tmp/mt74-test/node_modules node matchthis/test-mt74.cjs --live
+          curl -fsSL https://matchthis.lowcymethodowcy.smallhost.pl/mt60-draws.php -o /tmp/draws-after.json
+          cmp /tmp/draws-before.json /tmp/draws-after.json
+          curl -fsSL https://lowcymethodowcy.smallhost.pl/health
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MatchThis_MT74_PRODUCTION_VERIFIED
+          path: matchthis/MatchThis_MT-74*.html
+      - name: Restore MT72 if post-deploy verification fails
+        if: failure() && steps.deploy.outcome == 'success'
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: bash matchthis/deploy-mt74-small2.sh rollback
