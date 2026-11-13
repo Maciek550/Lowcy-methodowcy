@@ -1,0 +1,192 @@
+name: MatchThis MT75 organizer-approved 6 sector counts 2025 - SMALL2
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-approve-sectors-2025.yml]
+permissions: {contents: read, actions: read}
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test sector-count patch against full actual MT75 seed, backups and repeat writes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          php -l matchthis/approve-six-sectors-2025.php
+          mkdir -p /tmp/sector-test/.mt41-private /tmp/seed
+          cp matchthis/mt73-store.php /tmp/sector-test/mt73-store.php
+          gh run download 43396689592 -R Maciek550/Lowcy-methodowcy -n MatchThis_MT75_PREDEPLOY_VALIDATED -D /tmp/seed
+          test -s /tmp/seed/mt75-seed.json
+          python3 - <<'PY'
+          import json,pathlib
+          base=pathlib.Path('/tmp/sector-test')
+          data=json.loads(pathlib.Path('/tmp/seed/mt75-seed.json').read_text())
+          assert len(data['events'])==14 and len(data['cycles'])==2
+          (base/'.mt41-private/state-mt73.json').write_text(json.dumps({'revision':1,'seeded':True,'updatedAt':'test','data':data},ensure_ascii=False))
+          (base/'unmodified.json').write_text(json.dumps(data,ensure_ascii=False))
+          PY
+          php matchthis/approve-six-sectors-2025.php preview /tmp/sector-test | tee /tmp/sector-preview.json
+          php matchthis/approve-six-sectors-2025.php apply /tmp/sector-test | tee /tmp/sector-applied.json
+          php matchthis/approve-six-sectors-2025.php verify /tmp/sector-test | tee /tmp/sector-verified.json
+          php matchthis/approve-six-sectors-2025.php apply /tmp/sector-test | tee /tmp/sector-repeat.json
+          python3 - <<'PY'
+          import pathlib,json
+          root=pathlib.Path('/tmp/sector-test')
+          before=json.loads((root/'unmodified.json').read_text())
+          state=json.loads((root/'.mt41-private/state-mt73.json').read_text())
+          checks={
+           'mt2025-champions_2025':2,
+           'mt2025-mega_final_2025':2
+          }
+          for event in before['events']:
+           if event['id'] in checks:
+            assert len(event['rounds'])==checks[event['id']]
+            for t in event['rounds']: t['sectorCount']=6
+          assert state['data']==before, 'Some unrelated data was changed'
+          assert state['revision']==2 and state['seeded'] is False
+          logs=[json.loads((pathlib.Path('/tmp')/('sector-'+name+'.json')).read_text()) for name in ('preview','applied','verified','repeat')]
+          assert [x['status'] for x in logs]==['DRY_RUN','SAVED_AND_READ_BACK','VERIFIED','ALREADY_APPLIED']
+          assert logs[0]['wouldChange']==4 and logs[1]['changed']==4 and logs[3]['changed']==0
+          history=list((root/'.mt41-private/mt73-history').glob('*.json'))
+          assert len(history)==1
+          assert json.loads(history[0].read_text())['data']['data']!=state['data']
+          print('MT75_APPROVED_SECTOR_PATCH_LOCAL_WRITE_READ_RELOAD_IDEMPOTENCE_BACKUP_UNCHANGED_RESULTS_PASS')
+          PY
+      - name: Set up production smoke browsers
+        run: |
+          npm install --prefix /tmp/mt75-sector-smoke --silent playwright
+          cd /tmp/mt75-sector-smoke
+          npx playwright install --with-deps chromium firefox
+      - name: Snapshot live backend and published draws before updating
+        run: |
+          set -euo pipefail
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/ -o /tmp/sector-live-before.html
+          test "$(sha256sum /tmp/sector-live-before.html | awk '{print $1}')" = db6b74cb6bbe139efac93197842ae3da97131b7af486b586e88408e39455875a
+          curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/sector-state-before.json
+          curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt60-draws.php' -o /tmp/sector-draws-before.json
+          curl -fsSL --max-time 30 https://lowcymethodowcy.smallhost.pl/health
+          python3 - <<'PY'
+          import json
+          p=json.load(open('/tmp/sector-state-before.json'))
+          assert p['revision']>=1
+          targets={'mt2025-champions_2025':60,'mt2025-mega_final_2025':54}
+          for e in p['data']['events']:
+           if e['id'] in targets:
+            assert len(e['rounds'])==2
+            for t in e['rounds']:
+             assert len(t['results'])==targets[e['id']]
+             assert t.get('sectorCount') in (None,6)
+          print('LIVE_MT75_PREWRITE_TARGETS_AND_EXACT_BASELINE_PASS')
+          PY
+      - name: Install exact approved metadata in SMALL2 central state with server backup
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$SSH_PASSWORD"
+          sudo apt-get -qq update
+          sudo apt-get -qq install -y sshpass
+          mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test "$(ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256 | awk '{print $2}')" = 'SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8'
+          export SSHPASS="$SSH_PASSWORD"
+          options=(-o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15)
+          remote=lowcymethodowcy@s3.small.pl
+          sshpass -e ssh "${options[@]}" "$remote" 'bash -s' <<'PRE'
+          set -euo pipefail
+          web="$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html"
+          test "$(sha256sum "$web/index.html" | awk '{print $1}')" = db6b74cb6bbe139efac93197842ae3da97131b7af486b586e88408e39455875a
+          test -f "$web/.mt41-private/state-mt73.json" && test -f "$web/mt73-store.php"
+          test ! -L "$web/.mt41-private/state-mt73.json"
+          mkdir -p "$HOME/matchthis-independent/approved-2025-sector-counts"
+          chmod 700 "$HOME/matchthis-independent/approved-2025-sector-counts"
+          echo MT75_SMALL2_EXACT_ORIGINAL_AND_STATE_PRECHECK_PASS
+          PRE
+          sshpass -e scp "${options[@]}" matchthis/approve-six-sectors-2025.php "$remote:matchthis-independent/approved-2025-sector-counts/approve-six-sectors-2025.php"
+          sshpass -e ssh "${options[@]}" "$remote" 'bash -s' <<'CHANGE'
+          set -euo pipefail
+          web="$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html"
+          patch="$HOME/matchthis-independent/approved-2025-sector-counts/approve-six-sectors-2025.php"
+          php -l "$patch" >/dev/null
+          php "$patch" preview "$web"
+          php "$patch" apply "$web"
+          php "$patch" verify "$web"
+          test "$(sha256sum "$web/index.html" | awk '{print $1}')" = db6b74cb6bbe139efac93197842ae3da97131b7af486b586e88408e39455875a
+          echo MT75_SMALL2_APPROVED_FOUR_SECTOR_COUNTS_SAVED_AND_VERIFIED
+          CHANGE
+      - name: Verify exact live public-data delta and no draw or Łowcy regressions
+        run: |
+          set -euo pipefail
+          curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/sector-state-after.json
+          curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt60-draws.php' -o /tmp/sector-draws-after.json
+          cmp /tmp/sector-draws-before.json /tmp/sector-draws-after.json
+          curl -fsSL --max-time 30 https://lowcymethodowcy.smallhost.pl/health
+          python3 - <<'PY'
+          import json
+          old=json.load(open('/tmp/sector-state-before.json'))
+          new=json.load(open('/tmp/sector-state-after.json'))
+          assert new['revision'] in (old['revision'],old['revision']+1)
+          fields={'mt2025-champions_2025','mt2025-mega_final_2025'}
+          touched=0
+          for e in old['data']['events']:
+           if e['id'] in fields:
+            for t in e['rounds']:
+             assert t.get('sectorCount') in (None,6)
+             t['sectorCount']=6
+             touched+=1
+          assert touched==4
+          assert old['data']==new['data'], 'Result weights, places, sectors or other data changed'
+          for e in new['data']['events']:
+           if e['id']=='mt2025-champions_2025':
+            assert [t['sectorCount'] for t in e['rounds']]==[6,6]
+            assert all(r.get('peg') is None and r.get('sector') is None for t in e['rounds'] for r in t['results'])
+           if e['id']=='mt2025-mega_final_2025':
+            assert [t['sectorCount'] for t in e['rounds']]==[6,6]
+            assert all(r.get('peg') is None and r.get('sector') is None for r in e['rounds'][0]['results'])
+            assert len([r for r in e['rounds'][1]['results'] if r.get('peg') and r.get('sector')])==54
+          print('MT75_SMALL2_FOUR_APPROVED_SECTOR_COUNTS_ONLY_DELTA_PASS','revision',new['revision'])
+          PY
+      - name: Actual SMALL2 viewer clicks and read after reload in Chromium and Firefox
+        run: |
+          cat > /tmp/mt75-sector-smoke/check.cjs <<'NODE'
+          const {chromium,firefox}=require('playwright');
+          const assert=require('node:assert/strict');
+          const root='https://matchthis.lowcymethodowcy.smallhost.pl/';
+          (async()=>{for(const engine of [chromium,firefox]){
+            const browser=await engine.launch();
+            try{
+              const page=await browser.newPage({viewport:{width:1366,height:900}});
+              const errors=[];page.on('pageerror',e=>errors.push(String(e)));
+              page.setDefaultTimeout(20000);
+              await page.goto(root);
+              await page.waitForFunction(()=>document.getElementById('mt73-sync')?.textContent.includes('Dane z serwera'));
+              assert.equal(await page.title(),'MatchThis MT-75');
+              assert.equal(await page.locator('#appversion').innerText(),'MT-75');
+              async function readCounts(){
+                const r=await page.request.get(root+'mt73-state.php?public=1',{headers:{'Cache-Control':'no-cache'}});
+                assert.equal(r.status(),200);
+                const j=await r.json();
+                for(const id of ['mt2025-champions_2025','mt2025-mega_final_2025']){
+                  const e=j.data.events.find(x=>x.id===id);assert(e);
+                  assert.deepEqual(e.rounds.map(t=>t.sectorCount),[6,6]);
+                }return j.revision;
+              }
+              const rev=await readCounts();
+              await page.locator('[data-view="archive"]').first().click();
+              const fold=page.locator('details[data-year="2025"]');
+              if(await fold.getAttribute('open')===null)await fold.locator('summary').click();
+              await page.locator('[data-open="mt2025-champions_2025"]').first().click();
+              await page.locator('[data-round="0"]').first().click();
+              assert((await page.locator('body').innerText()).includes('CHAMPIONS LEAGUE'));
+              await page.reload();
+              await page.waitForFunction(()=>document.getElementById('mt73-sync')?.textContent.includes('Dane z serwera'));
+              assert.equal(await readCounts(),rev);
+              assert.deepEqual(errors,[]);
+              console.log('MT75_SMALL2_CHAMPIONS_AND_FINAL_6_SECTORS_LIVE_UI_RELOAD_PASS',engine.name());
+            }finally{await browser.close();}
+          }})().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+          NODE_PATH=/tmp/mt75-sector-smoke/node_modules node /tmp/mt75-sector-smoke/check.cjs
