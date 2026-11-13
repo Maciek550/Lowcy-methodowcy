@@ -190,3 +190,5 @@ jobs:
           }})().catch(e=>{console.error(e);process.exit(1)});
           NODE
           NODE_PATH=/tmp/mt75-sector-smoke/node_modules node /tmp/mt75-sector-smoke/check.cjs
+
+# Preflight rerun: correct by-reference mutation of approved four sector-count fields.
