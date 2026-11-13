@@ -1,0 +1,135 @@
+name: MatchThis MT76 - verified sector cards preflight
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-mt76-preflight.yml]
+permissions: {contents: read, actions: read}
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build pinned MT76 from verified MT75 production sources
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt75
+          gh run download 43396689592 -R Maciek550/Lowcy-methodowcy -n MatchThis_MT75_PREDEPLOY_VALIDATED -D /tmp/mt75
+          for role in '' '_OGLADACZ' '_SEDZIA'; do
+            cp "$(find /tmp/mt75 -name "MatchThis_MT-75$role.html" -print -quit)" "matchthis/MatchThis_MT-75$role.html"
+          done
+          python3 matchthis/build-mt76.py
+          test "$(sha256sum matchthis/MatchThis_MT-76.html|awk '{print $1}')" = 7c48d3b7bd8400dc432e563697f77fbc7ea6ee5c724fc6191c35bd9003843522
+          test "$(sha256sum matchthis/MatchThis_MT-76_OGLADACZ.html|awk '{print $1}')" = 2ac2deb60ef64860b141d8048442b02dc8a1e0584efe384ef161f160eb642b28
+          test "$(sha256sum matchthis/MatchThis_MT-76_SEDZIA.html|awk '{print $1}')" = e7cba2388d827f2698e5848dfb9ee1a7a91bc405dbeac86dcb69e8a15d6dab31
+          cp "$(find /tmp/mt75 -name mt75-seed.json -print -quit)" /tmp/mt75-seed.json
+      - name: Serve realistic approved central MatchThis state in PHP fixture
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt76-fixture
+          cp matchthis/MatchThis_MT-76_OGLADACZ.html /tmp/mt76-fixture/index.html
+          python3 - <<'PY'
+          import json,pathlib
+          d=json.loads(pathlib.Path('/tmp/mt75-seed.json').read_text())
+          n=0
+          for e in d['events']:
+           if e['id'] in ('mt2025-champions_2025','mt2025-mega_final_2025'):
+            for t in e['rounds']:
+             t['sectorCount']=6;n+=1
+          assert n==4
+          pathlib.Path('/tmp/mt76-fixture/state.json').write_text(json.dumps({'revision':2,'data':d},ensure_ascii=False))
+          PY
+          cat > /tmp/mt76-fixture/mt73-state.php <<'PHP'
+          <?php
+          header('Content-Type: application/json; charset=utf-8');
+          header('Cache-Control: no-store');
+          echo file_get_contents(__DIR__.'/state.json');
+          PHP
+          cat > /tmp/mt76-fixture/mt60-draws.php <<'PHP'
+          <?php
+          header('Content-Type: application/json; charset=utf-8');
+          echo '{"draws":[]}';
+          PHP
+          php -S 127.0.0.1:8876 -t /tmp/mt76-fixture >/tmp/mt76-php.log 2>&1 &
+          curl --retry 6 --retry-connrefused --retry-delay 1 -fsS http://127.0.0.1:8876/mt73-state.php -o /tmp/mt76-state-readback.json
+      - name: Install Chromium and Firefox
+        run: |
+          npm install --prefix /tmp/mt76-test --silent playwright
+          cd /tmp/mt76-test
+          npx playwright install --with-deps chromium firefox
+      - name: Test actual clicks of six sector filters and full results for all four approved tours
+        run: |
+          cat > /tmp/mt76-test/check.cjs <<'NODE'
+          const {chromium,firefox}=require('playwright'),assert=require('node:assert/strict');
+          (async()=>{
+            for(const engine of [chromium,firefox]){
+              const b=await engine.launch();
+              try{
+                const p=await b.newPage({viewport:{width:1347,height:768}});
+                const errors=[];p.on('pageerror',e=>errors.push(e.message));
+                p.setDefaultTimeout(20000);
+                await p.goto('http://127.0.0.1:8876/');
+                await p.waitForFunction(()=>document.getElementById('mt73-sync')?.textContent.includes('Dane z serwera'));
+                assert.equal(await p.title(),'MatchThis MT-76');
+                assert.equal(await p.locator('#appversion').innerText(),'MT-76');
+                assert.equal(await p.locator('body').getAttribute('data-version'),'MT-76');
+                await p.locator('[data-view="archive"]').first().click();
+                const fold=p.locator('details[data-year="2025"]');
+                if(await fold.getAttribute('open')===null)await fold.locator('summary').click();
+                for(const id of ['mt2025-champions_2025','mt2025-mega_final_2025']){
+                  await p.locator('[data-open="'+id+'"]').first().click();
+                  for(const round of [0,1]){
+                    await p.locator('[data-round="'+round+'"]').first().click();
+                    await p.locator('[data-result-mode="sectors"]').first().click();
+                    const panels=p.locator('[data-approved-sectors="6"][data-assignment-status="pending"]');
+                    if(id==='mt2025-mega_final_2025'&&round===1){
+                      assert.equal(await panels.count(),0);
+                      assert((await p.locator('body').innerText()).includes('SEKTOR A'));
+                    }else{
+                      assert.equal(await panels.count(),1,id+' '+round);
+                      assert.equal(await p.locator('.mt76-sector-pending').count(),6);
+                      assert((await panels.innerText()).includes('6 sektorów · zatwierdzone'));
+                      for(const s of ['A','B','C','D','E','F'])assert.equal(await panels.locator('[data-sector-filter="'+s+'"]').count(),1);
+                      await panels.locator('[data-sector-filter="C"]').click();
+                      assert.equal(await p.locator('.mt76-sector-pending').count(),1);
+                      assert((await p.locator('.mt76-sector-pending').innerText()).includes('SEKTOR C'));
+                      await p.locator('[data-sector-filter="ALL"]').click();
+                      assert.equal(await p.locator('.mt76-sector-pending').count(),6);
+                      await p.setViewportSize({width:390,height:844});
+                      assert.equal(await p.locator('[data-approved-sectors="6"]').count(),1);
+                      await p.setViewportSize({width:1347,height:768});
+                    }
+                  }
+                  await p.locator('[data-view="archive"]').first().click();
+                  const again=p.locator('details[data-year="2025"]');
+                  if(await again.getAttribute('open')===null)await again.locator('summary').click();
+                }
+                await p.locator('[data-open="mt2025-champions_2025"]').first().click();
+                await p.locator('[data-round="0"]').first().click();
+                await p.locator('[data-result-mode="round"]').first().click();
+                assert((await p.locator('body').innerText()).includes('KULKA ARTUR'));
+                await p.reload();
+                await p.waitForFunction(()=>document.getElementById('mt73-sync')?.textContent.includes('Dane z serwera'));
+                await p.locator('[data-view="archive"]').first().click();
+                const again=p.locator('details[data-year="2025"]');
+                if(await again.getAttribute('open')===null)await again.locator('summary').click();
+                await p.locator('[data-open="mt2025-champions_2025"]').first().click();
+                await p.locator('[data-result-mode="sectors"]').first().click();
+                assert.equal(await p.locator('.mt76-sector-pending').count(),6);
+                assert.deepEqual(errors,[]);
+                console.log('MT76_REAL_UI_SECTOR_A_F_CLICKS_RELOAD_PASS',engine.name());
+              }finally{await b.close();}
+            }
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+          NODE_PATH=/tmp/mt76-test/node_modules node /tmp/mt76-test/check.cjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MatchThis_MT76_SECTOR_UI_PRETESTED
+          path: |
+            matchthis/MatchThis_MT-76.html
+            matchthis/MatchThis_MT-76_OGLADACZ.html
+            matchthis/MatchThis_MT-76_SEDZIA.html
+          if-no-files-found: error
