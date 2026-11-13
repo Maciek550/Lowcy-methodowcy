@@ -100,3 +100,5 @@ jobs:
         run: bash matchthis/deploy-mt75-small2.sh rollback
 
 # Retry only after fixing installer seed-name mismatch; MT74 rollback was verified.
+
+# Retry after correcting shell delimiter in safe rollback-state checksum guard.
