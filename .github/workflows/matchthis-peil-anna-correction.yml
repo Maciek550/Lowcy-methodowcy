@@ -1,0 +1,123 @@
+name: MatchThis final 2025 PEIL ANNA organizer correction SMALL2
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-peil-anna-correction.yml]
+permissions: {contents: read, actions: read}
+jobs:
+  apply:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pin actual MT77 production and snapshot authoritative data
+        run: |
+          set -euo pipefail
+          python3 -m py_compile matchthis/correct-peil-anna-final-2025.py
+          mkdir -p /tmp/peil
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/ -o /tmp/peil/index-before.html
+          test "$(sha256sum /tmp/peil/index-before.html|awk '{print $1}')" = a74812f3f8dccb855ae59b5ae1731f195e08e346ff029cd4e73bdbd8af2cabab
+          curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/peil/state-before.json
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/mt60-draws.php -o /tmp/peil/draws-before.json
+          curl -fsSL --max-time 30 https://lowcymethodowcy.smallhost.pl/health
+          python3 - <<'PY'
+          import json
+          s=json.load(open('/tmp/peil/state-before.json'))
+          assert s['revision']>=8,s['revision']
+          ev=next(e for e in s['data']['events'] if e['id']=='mt2025-mega_final_2025')
+          assert all(len(t['results'])==54 and sum(r.get('peg') is not None for r in t['results'])==54 for t in ev['rounds'])
+          print('PEIL_ANNA_LIVE_MT77_FINAL_FULL_SECTORS_PREWRITE_VERIFIED',s['revision'])
+          PY
+      - name: Test single-player correction on a COPY with byte-exact rollback snapshot and read-back
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/peil/test-webroot/.mt41-private
+          cp matchthis/mt73-store.php /tmp/peil/test-webroot/mt73-store.php
+          cp /tmp/peil/state-before.json /tmp/peil/test-webroot/.mt41-private/state-mt73.json
+          python3 matchthis/correct-peil-anna-final-2025.py preview /tmp/peil/test-webroot | tee /tmp/peil/preview.json
+          python3 matchthis/correct-peil-anna-final-2025.py apply /tmp/peil/test-webroot | tee /tmp/peil/applied.json
+          python3 matchthis/correct-peil-anna-final-2025.py verify /tmp/peil/test-webroot | tee /tmp/peil/verify.json
+          python3 matchthis/correct-peil-anna-final-2025.py apply /tmp/peil/test-webroot | tee /tmp/peil/repeat.json
+          python3 - <<'PY'
+          import json,copy,pathlib
+          base=pathlib.Path('/tmp/peil')
+          old=json.load(open(base/'state-before.json'))
+          new=json.load(open(base/'test-webroot/.mt41-private/state-mt73.json'))
+          a=next(e for e in old['data']['events'] if e['id']=='mt2025-mega_final_2025')
+          for t in a['rounds']:
+           r=next(r for r in t['results'] if r['competitorId']=='mt2025-mega_final_2025-person-51')
+           assert r['competitorName']=='PEL ANNA'
+           r['competitorName']='PEIL ANNA'
+          p=next(p for p in old['data']['players'] if p['id']=='mt2025-mega_final_2025-person-51')
+          assert p['lastName']=='PEL'
+          p['lastName']='PEIL';p['aliases'].append('PEIL ANNA')
+          assert old['data']==new['data'],'Unrequested data mutation'
+          assert new['revision']==old['revision']+1
+          reports=[json.load(open(base/(x+'.json'))) for x in ('preview','applied','verify','repeat')]
+          assert [x['status'] for x in reports]==['PREVIEW','SAVED_AND_READ_BACK','VERIFIED','ALREADY_APPLIED']
+          backups=list((base/'test-webroot/.mt41-private/mt73-history').glob('before-peil-anna-final-2025-*.json'))
+          assert len(backups)==1 and json.load(open(backups[0]))['revision']==new['revision']-1
+          print('PEIL_ANNA_EXACT_CORRECTION_PRESERVE_SW_INARSKI_RESTORE_BACKUP_TEST_PASS')
+          PY
+      - name: Write exact organizer corrections to standalone MatchThis SMALL2, with server copy
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$SSH_PASSWORD"
+          sudo apt-get -qq update;sudo apt-get -qq install -y sshpass
+          mkdir -p "$HOME/.ssh";chmod 700 "$HOME/.ssh"
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test "$(ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256|awk '{print $2}')" = 'SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8'
+          export SSHPASS="$SSH_PASSWORD"
+          opts=(-o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15)
+          remote=lowcymethodowcy@s3.small.pl
+          sshpass -e ssh "${opts[@]}" "$remote" 'bash -s' <<'PRE'
+          set -euo pipefail
+          web="$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html"
+          test "$(sha256sum "$web/index.html"|awk '{print $1}')" = a74812f3f8dccb855ae59b5ae1731f195e08e346ff029cd4e73bdbd8af2cabab
+          test -f "$web/.mt41-private/state-mt73.json" && test ! -L "$web/.mt41-private/state-mt73.json"
+          mkdir -p "$HOME/matchthis-independent/peil-anna-2025-approved"
+          chmod 700 "$HOME/matchthis-independent/peil-anna-2025-approved"
+          echo MATCHTHIS_SMALL2_PEIL_CORRECTION_PRECHECK_PASS
+          PRE
+          sshpass -e scp "${opts[@]}" matchthis/correct-peil-anna-final-2025.py "$remote:matchthis-independent/peil-anna-2025-approved/"
+          sshpass -e ssh "${opts[@]}" "$remote" 'bash -s' <<'APPLY'
+          set -euo pipefail
+          web="$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html"
+          script="$HOME/matchthis-independent/peil-anna-2025-approved/correct-peil-anna-final-2025.py"
+          python3 -m py_compile "$script"
+          python3 "$script" preview "$web"
+          python3 "$script" apply "$web"
+          python3 "$script" verify "$web"
+          test "$(sha256sum "$web/index.html"|awk '{print $1}')" = a74812f3f8dccb855ae59b5ae1731f195e08e346ff029cd4e73bdbd8af2cabab
+          echo SMALL2_PEIL_ANNA_NAME_SAVED_AND_READ_BACK_PASS
+          APPLY
+      - name: Verify production exact DB delta including preserved weights, standings and published draws
+        run: |
+          set -euo pipefail
+          curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/peil/state-after.json
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/mt60-draws.php -o /tmp/peil/draws-after.json
+          cmp /tmp/peil/draws-before.json /tmp/peil/draws-after.json
+          python3 - <<'PY'
+          import json
+          before=json.load(open('/tmp/peil/state-before.json'))
+          after=json.load(open('/tmp/peil/state-after.json'))
+          assert after['revision']==before['revision']+1
+          e=next(e for e in before['data']['events'] if e['id']=='mt2025-mega_final_2025')
+          for t in e['rounds']:
+           rows=[r for r in t['results'] if r['competitorId']=='mt2025-mega_final_2025-person-51']
+           assert len(rows)==1 and rows[0]['competitorName']=='PEL ANNA'
+           rows[0]['competitorName']='PEIL ANNA'
+          player=next(p for p in before['data']['players'] if p['id']=='mt2025-mega_final_2025-person-51')
+          assert player['lastName']=='PEL'
+          player['lastName']='PEIL';player['aliases'].append('PEIL ANNA')
+          assert before['data']==after['data'],'Unrelated competition data changed'
+          ev=next(e for e in after['data']['events'] if e['id']=='mt2025-mega_final_2025')
+          for t in ev['rounds']:
+           assert sum(r.get('peg') is not None for r in t['results'])==54
+           assert any(r['competitorName']=='PEIL ANNA' for r in t['results'])
+           assert any(r['competitorName']=='ŚWINARSKI KRZYSZTOF' for r in t['results'])
+          print('PEIL_ANNA_SMALL2_EXACT_CORRECTION_BOTH_ROUNDS_AND_UNCHANGED_RESULTS_PASS',after['revision'])
+          PY
+          curl -fsSL --max-time 30 https://lowcymethodowcy.smallhost.pl/health
