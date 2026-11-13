@@ -1,0 +1,201 @@
+name: MatchThis 2025 Champions T1 T2 photo-verified stands on SMALL2
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-champions-2025-import.yml]
+permissions: {contents: read, actions: read}
+jobs:
+  import-and-test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate original photographic transcript and protected import code
+        run: |
+          set -euo pipefail
+          python3 -m py_compile matchthis/import-champions-2025.py
+          node --check matchthis/test-champions-2025-t1-t2.cjs
+          python3 - <<'PY'
+          import json,collections
+          m=json.load(open('matchthis/champions-2025-confirmed-119.json'))
+          assert len(m['assignments'])==119
+          assert collections.Counter(r['round'] for r in m['assignments'])=={1:60,2:59}
+          assert len(set((r['round'],r['peg']) for r in m['assignments']))==119
+          assert all(chr(65+(r['peg']-1)//10)==r['sector'] for r in m['assignments'])
+          assert all(r['peg']!=60 or r['round']==1 for r in m['assignments'])
+          assert m['unconfirmed']==[{'round':2,'competitorName':'STASIAK ŁUKASZ','proposedPeg':60,'proposedSector':'F','reason':'Stanowisko 60 niewidoczne na drugim zdjęciu II tury. Nie wdrażać bez osobnej akceptacji.'}]
+          print('PHOTO_MANIFEST_60_PLUS_59_STANDS_AND_PENDING_60_PROVENANCE_PASS')
+          PY
+      - name: Pin MT77 published version and snapshot actual SMALL2 state and published draws
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt77
+          gh run download 43410715434 -R Maciek550/Lowcy-methodowcy -n MatchThis_MT77_VERIFIED_3_ROLE_HTML -D /tmp/mt77
+          cp "$(find /tmp/mt77 -name 'MatchThis_MT-77_OGLADACZ.html' -print -quit)" /tmp/mt77-live-viewer.html
+          test "$(sha256sum /tmp/mt77-live-viewer.html|awk '{print $1}')" = a74812f3f8dccb855ae59b5ae1731f195e08e346ff029cd4e73bdbd8af2cabab
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/ -o /tmp/cl-live-index-before.html
+          cmp /tmp/mt77-live-viewer.html /tmp/cl-live-index-before.html
+          curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/cl-live-state-before.json
+          curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt60-draws.php' -o /tmp/cl-live-draws-before.json
+          curl -fsSL --max-time 30 https://lowcymethodowcy.smallhost.pl/health
+          python3 - <<'PY'
+          import json
+          s=json.load(open('/tmp/cl-live-state-before.json'))
+          assert s['revision']>=2
+          e=next(x for x in s['data']['events'] if x['id']=='mt2025-champions_2025')
+          assert e['year']==2025 and len(e['rounds'])==2
+          for i,t in enumerate(e['rounds']):
+           assert t['sectorCount']==6 and len(t['results'])==60 and t['status']=='FINAL'
+          print('MT77_ACTUAL_SMALL2_PUBLISHED_VERSION_AND_REAL_RESULTS_BASELINE_PASS',s['revision'])
+          PY
+      - name: Run actual save, reload, repeat write and rollback backup tests on COPY of live state
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/cl-fixture/test-webroot/.mt41-private
+          cp matchthis/mt73-store.php /tmp/cl-fixture/test-webroot/mt73-store.php
+          cp /tmp/cl-live-state-before.json /tmp/cl-fixture/test-webroot/.mt41-private/state-mt73.json
+          cp /tmp/cl-live-state-before.json /tmp/cl-pretest-before.json
+          script=matchthis/import-champions-2025.py
+          web=/tmp/cl-fixture/test-webroot
+          manifest=matchthis/champions-2025-confirmed-119.json
+          python3 "$script" preview "$web" "$manifest" | tee /tmp/cl-pretest-preview.json
+          python3 "$script" apply "$web" "$manifest" | tee /tmp/cl-pretest-applied.json
+          python3 "$script" verify "$web" "$manifest" | tee /tmp/cl-pretest-verify.json
+          python3 "$script" apply "$web" "$manifest" | tee /tmp/cl-pretest-repeat.json
+          python3 - <<'PY'
+          import json,pathlib,unicodedata,re,copy
+          root=pathlib.Path('/tmp/cl-fixture/test-webroot/.mt41-private')
+          before=json.load(open('/tmp/cl-pretest-before.json'))
+          after=json.load(open(root/'state-mt73.json'))
+          m=json.load(open('matchthis/champions-2025-confirmed-119.json'))
+          reports=[json.load(open('/tmp/cl-pretest-'+x+'.json')) for x in ('preview','applied','verify','repeat')]
+          assert [x['status'] for x in reports]==['DRY_RUN','SAVED_AND_READ_BACK','VERIFIED','ALREADY_APPLIED']
+          assert reports[0]['wouldChange']==119 and reports[1]['changed']==119 and reports[3]['wouldChange']==0
+          assert after['revision']==before['revision']+1
+          backup=list((root/'mt73-history').glob('before-champions-2025-119-*.json'))
+          assert len(backup)==1
+          assert json.loads(backup[0].read_text())==before
+          def norm(s):
+           s=unicodedata.normalize('NFKD',s.upper().replace('Ł','L'))
+           return re.sub('[^A-Z0-9]','', ''.join(c for c in s if not unicodedata.combining(c)))
+          expectation={(r['round'],norm(r['sourceName'])):(r['peg'],r['sector']) for r in m['assignments']}
+          old=copy.deepcopy(before['data'])
+          e=next(e for e in old['events'] if e['id']=='mt2025-champions_2025')
+          for rid,t in enumerate(e['rounds'],1):
+           for r in t['results']:
+            found=expectation.get((rid,norm(r['competitorName'])))
+            if found:r['peg'],r['sector']=found
+          assert old==after['data'], 'A result, weight, official place, name, flag or unrelated event changed'
+          print('MT77_COPY_FULL_DATABASE_PROTECTED_119_IMPORT_60_59_SAVE_RELOAD_BACKUP_IDEMPOTENCE_PASS')
+          PY
+          mkdir -p /tmp/cl-fixture/site
+          cp /tmp/mt77-live-viewer.html /tmp/cl-fixture/site/index.html
+          cp /tmp/cl-fixture/test-webroot/.mt41-private/state-mt73.json /tmp/cl-fixture/site/state.json
+          cat > /tmp/cl-fixture/site/mt73-state.php <<'PHP'
+          <?php
+          header('Content-Type: application/json; charset=utf-8');
+          header('Cache-Control: no-store');
+          echo file_get_contents(__DIR__.'/state.json');
+          PHP
+          cat > /tmp/cl-fixture/site/mt60-draws.php <<'PHP'
+          <?php
+          header('Content-Type: application/json; charset=utf-8');
+          echo '{"draws":[]}';
+          PHP
+          php -S 127.0.0.1:8882 -t /tmp/cl-fixture/site >/tmp/cl-fixture-php.log 2>&1 &
+          curl --retry 6 --retry-connrefused --retry-delay 1 -fsS http://127.0.0.1:8882/mt73-state.php -o /tmp/cl-pretest-restored.json
+      - name: Install real Chromium and Firefox for real page-click regression
+        run: |
+          npm install --prefix /tmp/cl-playwright --silent playwright
+          cd /tmp/cl-playwright
+          npx playwright install --with-deps chromium firefox
+      - name: Test both rounds, sectors A to F, official results, unchanged final in both browsers on COPY
+        run: NODE_PATH=/tmp/cl-playwright/node_modules node matchthis/test-champions-2025-t1-t2.cjs
+      - name: Apply exact 119 photo-confirmed assignments to central SMALL2 store, preserving a private backup
+        id: deploy
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$SSH_PASSWORD"
+          sudo apt-get -qq update
+          sudo apt-get -qq install -y sshpass
+          mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test "$(ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256 | awk '{print $2}')" = 'SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8'
+          export SSHPASS="$SSH_PASSWORD"
+          options=(-o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15)
+          remote=lowcymethodowcy@s3.small.pl
+          sshpass -e ssh "${options[@]}" "$remote" 'bash -s' <<'PRE'
+          set -euo pipefail
+          web="$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html"
+          test "$(sha256sum "$web/index.html"|awk '{print $1}')" = a74812f3f8dccb855ae59b5ae1731f195e08e346ff029cd4e73bdbd8af2cabab
+          test -f "$web/.mt41-private/state-mt73.json" && test -f "$web/mt73-store.php"
+          test ! -L "$web/.mt41-private/state-mt73.json"
+          mkdir -p "$HOME/matchthis-independent/champions-2025-documented"
+          chmod 700 "$HOME/matchthis-independent/champions-2025-documented"
+          echo CHAMPIONS_2025_EXACT_MT77_PRODUCTION_NO_UNRELATED_CHANGES_PRECHECK_PASS
+          PRE
+          sshpass -e scp "${options[@]}" matchthis/import-champions-2025.py matchthis/champions-2025-confirmed-119.json "$remote:matchthis-independent/champions-2025-documented/"
+          sshpass -e ssh "${options[@]}" "$remote" 'bash -s' <<'APPLY'
+          set -euo pipefail
+          web="$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html"
+          stage="$HOME/matchthis-independent/champions-2025-documented"
+          script="$stage/import-champions-2025.py"
+          manifest="$stage/champions-2025-confirmed-119.json"
+          python3 -m py_compile "$script"
+          python3 "$script" preview "$web" "$manifest"
+          python3 "$script" apply "$web" "$manifest"
+          python3 "$script" verify "$web" "$manifest"
+          test "$(sha256sum "$web/index.html"|awk '{print $1}')" = a74812f3f8dccb855ae59b5ae1731f195e08e346ff029cd4e73bdbd8af2cabab
+          echo CHAMPIONS_2025_T1_60_T2_59_SAVED_AND_READ_FROM_REAL_SMALL2_PASS
+          APPLY
+      - name: Independently compare live published state against before, permitting ONLY 119 approved peg/sector fields
+        run: |
+          set -euo pipefail
+          curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/cl-live-state-after.json
+          curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt60-draws.php' -o /tmp/cl-live-draws-after.json
+          cmp /tmp/cl-live-draws-before.json /tmp/cl-live-draws-after.json
+          cmp /tmp/cl-live-index-before.html /tmp/mt77-live-viewer.html
+          python3 - <<'PY'
+          import json,re,unicodedata
+          old=json.load(open('/tmp/cl-live-state-before.json'))
+          new=json.load(open('/tmp/cl-live-state-after.json'))
+          manifest=json.load(open('matchthis/champions-2025-confirmed-119.json'))
+          def norm(s):
+           s=unicodedata.normalize('NFKD',s.upper().replace('Ł','L'))
+           return re.sub('[^A-Z0-9]','', ''.join(c for c in s if not unicodedata.combining(c)))
+          lookup={(x['round'],norm(x['sourceName'])):(x['peg'],x['sector']) for x in manifest['assignments']}
+          e=next(e for e in old['data']['events'] if e['id']==manifest['eventId'])
+          for idx,round in enumerate(e['rounds'],1):
+           for row in round['results']:
+            k=lookup.get((idx,norm(row['competitorName'])))
+            if k:row['peg'],row['sector']=k
+          assert old['data']==new['data'], 'Other data or official results changed'
+          assert new['revision'] in (old['revision'],old['revision']+1)
+          e=next(e for e in new['data']['events'] if e['id']==manifest['eventId'])
+          assert [sum(bool(r.get('peg')) for r in t['results']) for t in e['rounds']]==[60,59]
+          assert [t.get('sectorCount') for t in e['rounds']]==[6,6]
+          missing=[r for r in e['rounds'][1]['results'] if not r.get('peg')]
+          assert [(r['competitorName'],r['weightG'],r['officialPlace']) for r in missing]==[('STASIAK ŁUKASZ',0,11)]
+          print('CHAMPIONS_2025_LIVE_SERVER_PUBLISHED_119_EXACT_MATCHES_AND_WEIGHTS_PLACES_OTHER_EVENTS_UNCHANGED_PASS',new['revision'])
+          PY
+      - name: Real browser interactive tests on SMALL2 after server write
+        env:
+          MT_CL_TEST_URL: https://matchthis.lowcymethodowcy.smallhost.pl/
+        run: NODE_PATH=/tmp/cl-playwright/node_modules node matchthis/test-champions-2025-t1-t2.cjs
+      - name: Verify unrelated Łowcy still healthy and no unintended protected route exposure
+        run: |
+          curl -fsSL --max-time 30 https://lowcymethodowcy.smallhost.pl/health
+          test "$(curl -sS -o /dev/null -w '%{http_code}' https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php)" = 401
+          echo MATCHTHIS_2025_119_ASSIGNMENTS_PRODUCTION_SERVER_AND_BROWSERS_COMPLETE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MatchThis_CHAMPIONS_2025_119_SOURCE_ASSIGNMENTS
+          path: |
+            matchthis/champions-2025-confirmed-119.json
+            matchthis/import-champions-2025.py
+            matchthis/test-champions-2025-t1-t2.cjs
+          if-no-files-found: error
