@@ -14,6 +14,15 @@ def norm(s):
     s=unicodedata.normalize('NFKD',s.upper().replace('Ł','L'))
     return re.sub('[^A-Z0-9]','', ''.join(c for c in s if not unicodedata.combining(c)))
 
+# Two unique, one-to-one photo transcription variants; NEVER rename stored athletes.
+PHOTO_TO_DB={
+    norm('PELL ANNA'):norm('PEL ANNA'),
+    norm('ŚWINIARSKI KRZYSZTOF'):norm('ŚWINARSKI KRZYSZTOF'),
+}
+def identity(name):
+    k=norm(name)
+    return PHOTO_TO_DB.get(k,k)
+
 def read(p):return json.loads(p.read_text(encoding='utf8'))
 
 def patch(old,source):
@@ -22,7 +31,7 @@ def patch(old,source):
     ensure(source['eventId']=='mt2025-mega_final_2025' and source['roundId']=='mt2025-mega_final_2025-round1','Wrong source event')
     ensure(len(m)==54 and len(set(x['peg'] for x in m))==54,'Source not 54 unique stations')
     ensure(sorted(x['peg'] for x in m)==list(range(1,55)),'Source not all stations 1..54')
-    ensure(len({norm(x['sourceName']) for x in m})==54,'Duplicate source names')
+    ensure(len({identity(x['sourceName']) for x in m})==54,'Duplicate source names')
     for x in m:
         ensure(x['sector']==chr(65+(x['peg']-1)//9),'Photo sector does not match station')
     events=[e for e in data['data']['events'] if e.get('id')==source['eventId']]
@@ -37,12 +46,12 @@ def patch(old,source):
         key=norm(row['competitorName'])
         ensure(key not in byname,'Duplicate result name '+row['competitorName'])
         byname[key]=row
-    missing=[x['sourceName'] for x in m if norm(x['sourceName']) not in byname]
+    missing=[x['sourceName'] for x in m if identity(x['sourceName']) not in byname]
     ensure(not missing,'Source names NOT FOUND in central results: '+', '.join(missing))
-    ensure(set(byname)=={norm(x['sourceName']) for x in m},'Unmatched central result names: '+', '.join(r['competitorName'] for k,r in byname.items() if k not in {norm(x['sourceName']) for x in m}))
+    ensure(set(byname)=={identity(x['sourceName']) for x in m},'Unmatched central result names: '+', '.join(r['competitorName'] for k,r in byname.items() if k not in {identity(x['sourceName']) for x in m}))
     changed=0
     for x in m:
-        row=byname[norm(x['sourceName'])]
+        row=byname[identity(x['sourceName'])]
         peg,sector=row.get('peg'),row.get('sector')
         ensure(peg is None or peg==x['peg'],'CONFLICT existing peg: '+x['sourceName'])
         ensure(sector is None or sector==x['sector'],'CONFLICT existing sector: '+x['sourceName'])
