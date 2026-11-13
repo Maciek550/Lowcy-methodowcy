@@ -21,9 +21,9 @@ jobs:
             cp "$(find /tmp/mt76-original -name "MatchThis_MT-76$role.html" -print -quit)" "matchthis/MatchThis_MT-76$role.html"
           done
           python3 matchthis/build-mt77.py
-          test "$(sha256sum matchthis/MatchThis_MT-77.html|awk '{print $1}')" = cbfbc31174046eb563a4158072ad0b0ff84a2978636fddbf049bac23abf6b96d
-          test "$(sha256sum matchthis/MatchThis_MT-77_OGLADACZ.html|awk '{print $1}')" = 1e595d5d2be69d540685f27535543c97dad9c00c5caaf7a96c7d7b529691b6bb
-          test "$(sha256sum matchthis/MatchThis_MT-77_SEDZIA.html|awk '{print $1}')" = 985ddfcf11587c64043c38c6dfcb2412624332d415ac047a8653ed3f204682c6
+          test "$(sha256sum matchthis/MatchThis_MT-77.html|awk '{print $1}')" = ea61426e32455b591c5c464e7de93118a10e485daa412137095f131d37dcecd3
+          test "$(sha256sum matchthis/MatchThis_MT-77_OGLADACZ.html|awk '{print $1}')" = a74812f3f8dccb855ae59b5ae1731f195e08e346ff029cd4e73bdbd8af2cabab
+          test "$(sha256sum matchthis/MatchThis_MT-77_SEDZIA.html|awk '{print $1}')" = 91033a1f6abc2685f1598aedfc0ce8608bc74edc5b44edacf7b353022ea176c1
           bash -n matchthis/deploy-mt77-small2.sh
           node --check matchthis/test-mt77-results.cjs
           echo MT77_EXACT_BUILD_AND_SYNTAX_PASS
@@ -81,7 +81,7 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/ -o /tmp/mt77-live-after.html
-          test "$(sha256sum /tmp/mt77-live-after.html|awk '{print $1}')" = 1e595d5d2be69d540685f27535543c97dad9c00c5caaf7a96c7d7b529691b6bb
+          test "$(sha256sum /tmp/mt77-live-after.html|awk '{print $1}')" = a74812f3f8dccb855ae59b5ae1731f195e08e346ff029cd4e73bdbd8af2cabab
           curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/mt77-live-state-after.json
           cmp /tmp/mt77-live-state-before.json /tmp/mt77-live-state-after.json
           curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/mt60-draws.php -o /tmp/mt77-live-draws-after.json
@@ -107,3 +107,5 @@ jobs:
         env:
           SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
         run: bash matchthis/deploy-mt77-small2.sh rollback
+
+# Re-run after pinning verified repository build hashes (rather than local prototype).
