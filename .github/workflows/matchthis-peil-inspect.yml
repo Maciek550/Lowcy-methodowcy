@@ -1,0 +1,29 @@
+name: MatchThis inspect PEIL target real player relation read only
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-peil-inspect.yml]
+permissions: {contents: read}
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Read only targeted public participant identity fields
+        run: |
+          set -euo pipefail
+          curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/state.json
+          python3 - <<'PY'
+          import json
+          s=json.load(open('/tmp/state.json'))
+          e=next(e for e in s['data']['events'] if e['id']=='mt2025-mega_final_2025')
+          print('REVISION',s['revision'])
+          print('EVENT_ENTRANTS_LEN',len(e.get('entrantIds',[])))
+          print('EVENT_ID_MATCHES',[x for x in e.get('entrantIds',[]) if 'person-51' in x])
+          for i,t in enumerate(e['rounds']):
+            print('ANNA_RESULT',i,[{k:r.get(k) for k in ('competitorId','competitorName','sourceName','sector','peg','weightG','officialPlace')} for r in t['results'] if 'ANNA' in r.get('competitorName','')])
+            print('SWINARSKI_RESULT',i,[{k:r.get(k) for k in ('competitorId','competitorName','sector','peg')} for r in t['results'] if 'ŚWINARSKI' in r.get('competitorName','')])
+          ps=[{k:p.get(k) for k in ('id','firstName','lastName','aliases')} for p in s['data']['players'] if 'ANNA' in p.get('firstName','') or any('PEL ' in v or 'PEIL ' in v for v in p.get('aliases',[]))]
+          print('PLAYER_MATCHES',ps)
+          print('TOTAL_PLAYERS',len(s['data']['players']))
+          PY
