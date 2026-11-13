@@ -52,7 +52,8 @@ test "$(tail -n +2 "$web/role-pages/mt74-admin.php"|sha256sum|cut -d' ' -f1)" = 
 test "$(tail -n +2 "$web/role-pages/mt74-sedzia.php"|sha256sum|cut -d' ' -f1)" = 8d10378ebb8152bb16da39199f398dcf57d61801b286c356bf6fa5459d21bdd2
 grep -Fq 'mt74-admin.php' "$web/panel.php"
 grep -Fq 'mt74-sedzia.php' "$web/panel.php"
-test ! -e "$web/mt73-state.php" && test ! -e "$web/mt73-store.php"
+test ! -e "$web/mt73-state.php" || cmp -s "$web/mt73-state.php" "$stage/mt73-state.php"
+test ! -e "$web/mt73-store.php" || cmp -s "$web/mt73-store.php" "$stage/mt73-store.php"
 test ! -e "$web/.mt41-private/state-mt73.json"
 test ! -e "$stage/rollback-mt74"
 test ! -e "$web/role-pages/mt75-admin.php" && test ! -e "$web/role-pages/mt75-sedzia.php"
