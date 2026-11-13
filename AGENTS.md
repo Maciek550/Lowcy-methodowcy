@@ -17,3 +17,6 @@
 ---
 
 Te zasady obowiązują przy pracy w repozytorium, także podczas zadań wykonywanych przez Codex. Nie zastępują sprawdzenia faktycznego stanu kodu, uprawnień i serwera. Nigdy nie zapisuj w tym pliku haseł ani innych sekretów.
+Sprawdź i wgrywaj na serwer.
+Jak masz zleconą prace to ją wykonaj. Jak nie umiesz pytaj. Nie możesz zakończyć działania bez sukcesu.
+Nie śpij, nie zawieszaj się. 
