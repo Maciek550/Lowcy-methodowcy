@@ -19,3 +19,5 @@ jobs:
           curl -fsSL --max-time 25 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/mt-final/test-webroot/.mt41-private/state-mt73.json
           python3 matchthis/import-mega-final-2025-t1.py preview /tmp/mt-final/test-webroot matchthis/mega-final-2025-t1-confirmed-54.json
           echo MT2025_FINAL_54_IDENTITIES_EXACT_PRECHECK_PASS
+
+# Rerun with exact verified photo-to-database spelling variants for two unique people.
