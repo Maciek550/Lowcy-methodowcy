@@ -28,9 +28,9 @@ echo MT77_ROUTES_ROLLED_BACK_MT76_PRIVATE_STATE_INTACT
 ROLLBACK
  exit
 fi
-test "$(sha256sum matchthis/MatchThis_MT-77.html|awk '{print $1}')" = cbfbc31174046eb563a4158072ad0b0ff84a2978636fddbf049bac23abf6b96d
-test "$(sha256sum matchthis/MatchThis_MT-77_OGLADACZ.html|awk '{print $1}')" = 1e595d5d2be69d540685f27535543c97dad9c00c5caaf7a96c7d7b529691b6bb
-test "$(sha256sum matchthis/MatchThis_MT-77_SEDZIA.html|awk '{print $1}')" = 985ddfcf11587c64043c38c6dfcb2412624332d415ac047a8653ed3f204682c6
+test "$(sha256sum matchthis/MatchThis_MT-77.html|awk '{print $1}')" = ea61426e32455b591c5c464e7de93118a10e485daa412137095f131d37dcecd3
+test "$(sha256sum matchthis/MatchThis_MT-77_OGLADACZ.html|awk '{print $1}')" = a74812f3f8dccb855ae59b5ae1731f195e08e346ff029cd4e73bdbd8af2cabab
+test "$(sha256sum matchthis/MatchThis_MT-77_SEDZIA.html|awk '{print $1}')" = 91033a1f6abc2685f1598aedfc0ce8608bc74edc5b44edacf7b353022ea176c1
 sshpass -e ssh "${options[@]}" "$remote" 'bash -s' <<'CHECK'
 set -euo pipefail
 web="$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html"
@@ -74,9 +74,9 @@ stage="$HOME/matchthis-independent/mt-77"
 prior="$stage/previous"
 hash(){ sha256sum "$1"|awk '{print $1}'; }
 test "$(hash "$web/index.html")" = 2ac2deb60ef64860b141d8048442b02dc8a1e0584efe384ef161f160eb642b28
-test "$(hash "$stage/MatchThis_MT-77.html")" = cbfbc31174046eb563a4158072ad0b0ff84a2978636fddbf049bac23abf6b96d
-test "$(hash "$stage/MatchThis_MT-77_OGLADACZ.html")" = 1e595d5d2be69d540685f27535543c97dad9c00c5caaf7a96c7d7b529691b6bb
-test "$(hash "$stage/MatchThis_MT-77_SEDZIA.html")" = 985ddfcf11587c64043c38c6dfcb2412624332d415ac047a8653ed3f204682c6
+test "$(hash "$stage/MatchThis_MT-77.html")" = ea61426e32455b591c5c464e7de93118a10e485daa412137095f131d37dcecd3
+test "$(hash "$stage/MatchThis_MT-77_OGLADACZ.html")" = a74812f3f8dccb855ae59b5ae1731f195e08e346ff029cd4e73bdbd8af2cabab
+test "$(hash "$stage/MatchThis_MT-77_SEDZIA.html")" = 91033a1f6abc2685f1598aedfc0ce8608bc74edc5b44edacf7b353022ea176c1
 mkdir -m 700 "$prior"
 cp -p "$web/index.html" "$prior/index.html"
 cp -p "$web/panel.php" "$prior/panel.php"
@@ -108,15 +108,15 @@ cp -p "$stage/panel.php" "$web/panel.php.next"
 mv -f "$web/panel.php.next" "$web/panel.php"
 cp -p "$stage/MatchThis_MT-77_OGLADACZ.html" "$web/index.html.next"
 mv -f "$web/index.html.next" "$web/index.html"
-test "$(hash "$web/index.html")" = 1e595d5d2be69d540685f27535543c97dad9c00c5caaf7a96c7d7b529691b6bb
-test "$(tail -n +2 "$web/role-pages/mt77-admin.php"|sha256sum|awk '{print $1}')" = cbfbc31174046eb563a4158072ad0b0ff84a2978636fddbf049bac23abf6b96d
-test "$(tail -n +2 "$web/role-pages/mt77-sedzia.php"|sha256sum|awk '{print $1}')" = 985ddfcf11587c64043c38c6dfcb2412624332d415ac047a8653ed3f204682c6
+test "$(hash "$web/index.html")" = a74812f3f8dccb855ae59b5ae1731f195e08e346ff029cd4e73bdbd8af2cabab
+test "$(tail -n +2 "$web/role-pages/mt77-admin.php"|sha256sum|awk '{print $1}')" = ea61426e32455b591c5c464e7de93118a10e485daa412137095f131d37dcecd3
+test "$(tail -n +2 "$web/role-pages/mt77-sedzia.php"|sha256sum|awk '{print $1}')" = 91033a1f6abc2685f1598aedfc0ce8608bc74edc5b44edacf7b353022ea176c1
 cmp -s "$prior/state-mt73.json" "$web/.mt41-private/state-mt73.json"
 cmp -s "$prior/mt60-published-draws.json" "$web/.mt41-private/mt60-published-draws.json"
 echo MT77_PRODUCTION_THREE_ROLES_INSTALLED_MT76_BACKED_UP_DATA_UNCHANGED
 INSTALL
 curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/ -o /tmp/mt77-published.html
-test "$(sha256sum /tmp/mt77-published.html|awk '{print $1}')" = 1e595d5d2be69d540685f27535543c97dad9c00c5caaf7a96c7d7b529691b6bb
+test "$(sha256sum /tmp/mt77-published.html|awk '{print $1}')" = a74812f3f8dccb855ae59b5ae1731f195e08e346ff029cd4e73bdbd8af2cabab
 test "$(curl -sS -o /dev/null -w '%{http_code}' https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php)" = 401
 test "$(curl -sS -o /dev/null -w '%{http_code}' https://matchthis.lowcymethodowcy.smallhost.pl/panel.php)" = 303
 echo MT77_PUBLIC_ROUTING_AUTH_AND_SOURCE_HASH_PASS
