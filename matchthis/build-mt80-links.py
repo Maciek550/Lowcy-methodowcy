@@ -21,6 +21,11 @@ CSS='''
 .mt80-shop-link{display:inline-flex;align-items:center;justify-content:center;gap:6px;color:var(--accent);background:#fff6ee;border:1px solid var(--accent);border-radius:3px;text-decoration:none;white-space:nowrap;font-size:11px;font-weight:800;letter-spacing:.035em;min-height:32px;padding:5px 10px;line-height:1.2;flex:0 0 auto}
 .mt80-shop-link svg{flex:0 0 17px}
 .mt80-shop-link:hover{color:#fff;background:var(--accent)}
+.header-inner .brand-group{flex:0 0 218px;min-width:218px}
+.mt80-brand-link{max-width:none}
+@media(max-width:1100px){.header-inner .brand-group{flex:0 0 188px;min-width:188px}}
+@media(max-width:820px){.header-inner .brand-group{flex:1 1 190px;min-width:190px}}
+@media(max-width:390px){.header-inner .brand-group{flex:1 1 166px;min-width:166px}}
 @media(max-width:1100px){.mt80-brand-link{gap:6px}.mt80-brand-link img{width:21px;height:21px;flex-basis:21px}.mt80-shop-link{font-size:10px;padding:5px 7px}}
 @media(max-width:390px){.mt80-brand-link img{width:18px;height:18px;flex-basis:18px}.mt80-brand-link{gap:4px}.mt80-shop-link{font-size:10px;padding:4px 6px;min-height:30px;gap:4px}.mt80-shop-link svg{width:14px;height:14px;flex-basis:14px}}
 '''
