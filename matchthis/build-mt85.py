@@ -68,6 +68,9 @@ for suffix,digest in expected.items():
           'const tour=getRounds(entity)[roundIndex];const ranked=mt85ExportRows(entity,tour);const pdf=MatchThisVectorPdf.create(')
  s=once(s,'function renderFbPhoto(e,t){const ranked=core.tourClassification(t).filter(r=>!core.isNonStarter(r));const sectors=genuinePhotoSectors(t);',
           'function renderFbPhoto(e,t){const ranked=mt85ExportRows(e,t);const sectors=genuinePhotoSectors(mt83TourView(e,t));')
+ # Sector PDF crash repair: the PDF engine is a separate JS closure, so private mt68TourLabel is inaccessible.
+ s=once(s,'${formatted(mt68TourLabel(tour,entity))} | Sektor ${sector}',
+          '${formatted(datedTourLabel(tour,entity))} | Sektor ${sector}')
  s=s.replace('</style>',css+'</style>',1)
  s=s.replace('MT-84','MT-85')
  out=root/f'MatchThis_MT-85{suffix}.html';out.write_text(s,'utf-8')
