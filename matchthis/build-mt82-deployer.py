@@ -11,9 +11,9 @@ old=[
 'a4724e2e9d3e95d970b5524268b8497a4c3deca4c5f9a397418a95af0029da69',
 '8e96674bd98f032d6e8fd7487cb9eecfa711eb2a4df49c5ccfad80ef7650d53c']
 new=[old[3],old[4],old[5],
-'68cf1b90474a39bc899a503736c2f976f24689b0682752f57bfa44b9addcbd6e',
-'08a7269c5e2e9b9f538244a4a15a4b714a00c764e7bc59a8c0df337e53485090',
-'9e666f9cceaae8d75a238f0b23d59bd5f7b4aee73d950e62b92b8e3dd87ee9ac']
+'c28aeae8c75bbcfcbdc77f4b6fbb925df3551cc7ab304e244178eb15b694231b',
+'1e3fe8cbba31da1477b3642f514d4908bfd5d944fc3b2c7bdc1635dfebd96d26',
+'843c7023fb76c56ff1529e520508fb87d7ac096038c1cb34ca2991fcc821fdd3']
 for i,value in enumerate(old):
  assert value in text,('MT81 script SHA guard missing',i)
  text=text.replace(value,'__DIGEST'+str(i)+'__')
