@@ -1,0 +1,68 @@
+name: MatchThis MT84 - restore T2 weight inputs from saved assignments
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-mt84-release.yml]
+permissions: {contents: read, actions: read}
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download exact deployed MT83 and build minimal MT84
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh run download 43861230240 -R Maciek550/Lowcy-methodowcy -n MatchThis_MT83_PRODUCTION_TESTED_THREE_ROLE_HTML -D /tmp/mt83-source
+          for role in '' '_OGLADACZ' '_SEDZIA'; do
+            cp "$(find /tmp/mt83-source -name "MatchThis_MT-83$role.html" -print -quit)" "matchthis/MatchThis_MT-83$role.html"
+          done
+          python3 matchthis/build-mt84.py
+          bash -n matchthis/deploy-mt84-small2.sh
+          sed 's/MatchThis_MT-83.html/MatchThis_MT-84.html/g' matchthis/test-mt83-pzw.cjs > /tmp/mt84-pzw.cjs
+          node /tmp/mt84-pzw.cjs
+          python3 -m py_compile matchthis/test-mt84-fixture.py
+          node --check matchthis/test-mt84.cjs
+      - name: Install Chromium and Firefox
+        run: |
+          npm install --prefix /tmp/mt84-browser --silent playwright
+          cd /tmp/mt84-browser
+          npx playwright install --with-deps chromium firefox
+      - name: Reproduce MT83 bug and test MT84 saves on identical isolated T2 data
+        run: |
+          set -euo pipefail
+          MT_TEST_VERSION=83 MT_TEST_PORT=8784 python3 matchthis/test-mt84-fixture.py matchthis /tmp/mt83-baseline-state.json >/tmp/mt83-fixture.log 2>&1 &
+          MT_TEST_VERSION=84 MT_TEST_PORT=8785 python3 matchthis/test-mt84-fixture.py matchthis /tmp/mt84-fixed-state.json >/tmp/mt84-fixture.log 2>&1 &
+          curl --retry 10 --retry-connrefused --retry-delay 1 -fsS http://127.0.0.1:8784/mt73-state.php?public=1 >/dev/null
+          curl --retry 10 --retry-connrefused --retry-delay 1 -fsS http://127.0.0.1:8785/mt73-state.php?public=1 >/dev/null
+          MT84_URL=http://127.0.0.1:8784/ NODE_PATH=/tmp/mt84-browser/node_modules node matchthis/test-mt84.cjs baseline
+          MT84_URL=http://127.0.0.1:8785/ NODE_PATH=/tmp/mt84-browser/node_modules node matchthis/test-mt84.cjs fixed
+      - name: Deploy MatchThis only with exact MT83 backup and unchanged central data
+        id: deploy
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: bash matchthis/deploy-mt84-small2.sh
+      - name: Verify live SMALL2 in Chromium and Firefox
+        env:
+          MT83_URL: https://matchthis.lowcymethodowcy.smallhost.pl/
+        run: |
+          sed 's/MT-83/MT-84/g' matchthis/test-mt83-browser.cjs > /tmp/mt84-live.cjs
+          NODE_PATH=/tmp/mt84-browser/node_modules node /tmp/mt84-live.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: MT84_T2_BROWSER_SCREENSHOTS
+          path: /tmp/mt84-screens/*.png
+          if-no-files-found: warn
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MatchThis_MT84_TESTED_THREE_ROLE_HTML
+          path: matchthis/MatchThis_MT-84*.html
+          if-no-files-found: error
+      - name: Roll back HTML only if post deployment verification fails
+        if: failure() && steps.deploy.outcome == 'success'
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: bash matchthis/deploy-mt84-small2.sh rollback
