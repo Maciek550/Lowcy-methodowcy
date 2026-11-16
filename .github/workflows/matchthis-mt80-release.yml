@@ -1,0 +1,93 @@
+name: MatchThis MT80 official website and SKLEPMT links SMALL2 release
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-mt80-release.yml]
+permissions: {contents: read, actions: read}
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use only already browser-tested and SHA-pinned MT80 three-role artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt80-release
+          gh run download 43840224632 -R Maciek550/Lowcy-methodowcy -n MatchThis_MT80_PRETESTED_HEADER_LINKS_3_ROLES -D /tmp/mt80-release
+          for role in '' '_OGLADACZ' '_SEDZIA'; do
+            cp "$(find /tmp/mt80-release -name "MatchThis_MT-80$role.html" -print -quit)" "matchthis/MatchThis_MT-80$role.html"
+          done
+          test "$(sha256sum matchthis/MatchThis_MT-80.html|awk '{print $1}')" = fb4d4c4b16e62542e455d3bf142fd565193e6151ba36df72fe3e920f00223da6
+          test "$(sha256sum matchthis/MatchThis_MT-80_OGLADACZ.html|awk '{print $1}')" = 0dfe00ffdf2679a30f262147cdf9483de09a6491901d1fa6f0ec9df7248be3bf
+          test "$(sha256sum matchthis/MatchThis_MT-80_SEDZIA.html|awk '{print $1}')" = d215150524e587a8cd8d987a6924995aae6f21f997e036b6da2d9f3497951714
+          bash -n matchthis/deploy-mt80-small2.sh
+          node --check matchthis/test-mt80-links.cjs
+          echo MT80_ALL_THREE_ROLES_PRETESTED_AND_VERSION_SHA_PASS
+      - name: Snapshot real MT79 production and server results before code change
+        run: |
+          set -euo pipefail
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/ -o /tmp/mt80-index-before.html
+          test "$(sha256sum /tmp/mt80-index-before.html|awk '{print $1}')" = ece29feb50dd671461f984eccb17e9367514d37e802a291b924f4d199947eaa1
+          curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/mt80-state-before.json
+          curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt60-draws.php' -o /tmp/mt80-draws-before.json
+          curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/matchthis-orange-mt79-32.png' -o /tmp/mt80-icon-before.png
+          curl -fsSL --max-time 30 https://lowcymethodowcy.smallhost.pl/health
+          python3 - <<'PY'
+          import json
+          state=json.load(open('/tmp/mt80-state-before.json'))
+          assert state['revision']>=9
+          e=next(x for x in state['data']['events'] if x['id']=='mt2025-mega_final_2025')
+          assert [sum(bool(r.get('sector') and r.get('peg')) for r in t['results']) for t in e['rounds']]==[54,54]
+          assert all(any(r['competitorName']=='PEIL ANNA' for r in t['results']) for t in e['rounds'])
+          print('MT80_PRODUCTION_MT79_EXACT_VERSION_AND_SOURCE_RESULTS_BASELINE_PASS',state['revision'])
+          PY
+      - name: Install Firefox and Chromium for actual public SMALL2 UI tests
+        run: |
+          npm install --prefix /tmp/mt80-browser --silent playwright
+          cd /tmp/mt80-browser
+          npx playwright install --with-deps chromium firefox
+      - name: Deploy just three MT80 HTML roles with secure MT79 backup to SMALL2
+        id: deploy
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: bash matchthis/deploy-mt80-small2.sh
+      - name: Test ACTUAL live page external link clicks, 320–1366px layout and preserved archive in both browsers
+        env:
+          MT80_TEST_URL: https://matchthis.lowcymethodowcy.smallhost.pl/
+        run: |
+          NODE_PATH=/tmp/mt80-browser/node_modules node matchthis/test-mt80-links.cjs
+          echo MT80_SMALL2_REAL_FF_CHROMIUM_BRAND_ICON_SHOP_LINK_AND_ARCHIVE_PASS
+      - name: Confirm LIVE MT80 HTML, unmodified published draws, results, role permissions and Łowcy
+        run: |
+          set -euo pipefail
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/ -o /tmp/mt80-index-after.html
+          test "$(sha256sum /tmp/mt80-index-after.html|awk '{print $1}')" = 0dfe00ffdf2679a30f262147cdf9483de09a6491901d1fa6f0ec9df7248be3bf
+          curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/mt80-state-after.json
+          cmp /tmp/mt80-state-before.json /tmp/mt80-state-after.json
+          curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt60-draws.php' -o /tmp/mt80-draws-after.json
+          cmp /tmp/mt80-draws-before.json /tmp/mt80-draws-after.json
+          curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/matchthis-orange-mt79-32.png' -o /tmp/mt80-icon-after.png
+          cmp /tmp/mt80-icon-before.png /tmp/mt80-icon-after.png
+          test "$(curl -sS -o /dev/null -w '%{http_code}' https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php)" = 401
+          for role in mt80-admin.php mt80-sedzia.php;do
+            code="$(curl -sS -o /dev/null -w '%{http_code}' "https://matchthis.lowcymethodowcy.smallhost.pl/role-pages/$role")"
+            test "$code" = 403 || test "$code" = 404
+          done
+          curl -fsSL --max-time 30 https://lowcymethodowcy.smallhost.pl/health
+          echo MT80_SMALL2_SUCCESS_ALL_RESULTS_DRAWINGS_AND_ICON_UNCHANGED
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MatchThis_MT80_LIVE_DEPLOYED_3_HTML
+          path: |
+            matchthis/MatchThis_MT-80.html
+            matchthis/MatchThis_MT-80_OGLADACZ.html
+            matchthis/MatchThis_MT-80_SEDZIA.html
+          if-no-files-found: error
+      - name: Restore MT79 routes automatically after failed postdeployment checks
+        if: failure() && steps.deploy.outcome == 'success'
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: bash matchthis/deploy-mt80-small2.sh rollback
