@@ -18,6 +18,11 @@ const own=live?'https://matchthis.lowcymethodowcy.smallhost.pl/':'http://127.0.0
     const errs=[];p.on('pageerror',e=>errs.push(e.message));
     await p.goto(base+pageName);
     await p.waitForFunction(()=>document.querySelector('#appversion')?.textContent==='MT-81');
+    // MT81 production server hydration is asynchronous: do not inspect an empty
+    // navigation before the real central state and role menu have loaded.
+    if(role!=='judge'){
+      await p.waitForFunction(()=>document.querySelectorAll('#nav button,#nav a').length>=4,{timeout:25000});
+    }
     assert.equal(await p.title(),'MatchThis MT-81');
     assert.equal(await p.locator('body').getAttribute('data-version'),'MT-81');
     const logo=p.locator('.mt80-brand-link'),shop=p.locator('.mt80-shop-link');
@@ -42,10 +47,12 @@ const own=live?'https://matchthis.lowcymethodowcy.smallhost.pl/':'http://127.0.0
       await logo.locator('.brand').click();
       await p.waitForLoadState('domcontentloaded');
       assert.equal(p.url(),own);
+      await p.waitForFunction(()=>document.querySelectorAll('#nav button,#nav a').length>=4,{timeout:25000});
       assert.equal(await p.title(),'MatchThis MT-81');
       await logo.locator('img').click();
       await p.waitForLoadState('domcontentloaded');
       assert.equal(p.url(),own);
+      await p.waitForFunction(()=>document.querySelectorAll('#nav button,#nav a').length>=4,{timeout:25000});
     }else{
       await logo.locator('img').click({trial:true});
       await logo.locator('.brand').click({trial:true});
