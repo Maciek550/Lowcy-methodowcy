@@ -1,0 +1,78 @@
+name: MatchThis MT80 header links - preflight and browser clicks
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-mt80-preflight.yml]
+permissions: {contents: read, actions: read}
+jobs:
+  preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build MT80 from verified production MT79 and check all three consistent versions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt79-source
+          gh run download 43832209700 -R Maciek550/Lowcy-methodowcy -n MatchThis_MT79_ORANGE_FAVICON_THREE_ROLES_TESTED -D /tmp/mt79-source
+          for role in '' '_OGLADACZ' '_SEDZIA'; do
+            cp "$(find /tmp/mt79-source -name "MatchThis_MT-79$role.html" -print -quit)" "matchthis/MatchThis_MT-79$role.html"
+          done
+          python3 matchthis/build-mt80-links.py
+          node --check matchthis/test-mt80-links.cjs
+          for size in 32 64; do cp "$(find /tmp/mt79-source -name "matchthis-orange-mt79-$size.png" -print -quit)" "/tmp/mt79-source/matchthis-orange-mt79-$size.png" || :; done
+          echo MT80_THREE_ROLES_EXACT_MT79_SOURCE_VERSION_TITLE_AND_JS_SYNTAX_PASS
+      - name: Fixture on local real PHP with latest actual SMALL2 data; no production writes
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt80-site
+          cp matchthis/MatchThis_MT-80_OGLADACZ.html /tmp/mt80-site/index.html
+          cp matchthis/MatchThis_MT-80.html /tmp/mt80-site/admin.html
+          cp matchthis/MatchThis_MT-80_SEDZIA.html /tmp/mt80-site/sedzia.html
+          cp "/tmp/mt79-source/matchthis-orange-mt79-32.png" /tmp/mt80-site/
+          curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/mt80-site/public.json
+          python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/mt80-site/public.json'))
+          assert d['revision']>=9
+          e=next(x for x in d['data']['events'] if x['id']=='mt2025-mega_final_2025')
+          assert [sum(bool(row.get('peg')) for row in t['results']) for t in e['rounds']]==[54,54]
+          print('MT80_FIXTURE_REAL_SMALL2_STATE_LOADED_REVISION',d['revision'])
+          PY
+          cat > /tmp/mt80-site/mt73-state.php <<'PHP'
+          <?php
+          header('Content-Type: application/json; charset=utf-8');
+          header('Cache-Control: no-store');
+          $r=json_decode(file_get_contents(__DIR__.'/public.json'),true);
+          if(isset($_GET['public'])) {echo json_encode($r,JSON_UNESCAPED_UNICODE);return;}
+          echo json_encode(['role'=>'admin','csrf'=>'testonly','state'=>['revision'=>$r['revision'],'seeded'=>false,'updatedAt'=>'test','data'=>$r['data']]],JSON_UNESCAPED_UNICODE);
+          PHP
+          cat > /tmp/mt80-site/mt60-draws.php <<'PHP'
+          <?php header('Content-Type: application/json'); echo '{"draws":[]}';
+          PHP
+          php -S 127.0.0.1:8890 -t /tmp/mt80-site >/tmp/mt80-php.log 2>&1 &
+          curl --retry 6 --retry-connrefused --retry-delay 1 -fsS http://127.0.0.1:8890/mt73-state.php -o /tmp/mt80-fixture-readback.json
+      - name: Install real Chromium and Firefox
+        run: |
+          npm install --prefix /tmp/mt80-browser --silent playwright
+          cd /tmp/mt80-browser
+          npx playwright install --with-deps chromium firefox
+      - name: Test logo and icon clicks to matchthis.pl, SKLEPMT to shop, mobile/desktop, all roles
+        run: |
+          NODE_PATH=/tmp/mt80-browser/node_modules node matchthis/test-mt80-links.cjs
+          echo MT80_LINKS_ALL_ROLES_FF_CHROME_CLICK_AND_RESPONSIVE_TESTS_PASS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MatchThis_MT80_PRETESTED_HEADER_LINKS_3_ROLES
+          path: |
+            matchthis/MatchThis_MT-80.html
+            matchthis/MatchThis_MT-80_OGLADACZ.html
+            matchthis/MatchThis_MT-80_SEDZIA.html
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MatchThis_MT80_HEADER_UI_SCREENSHOTS
+          path: /tmp/mt80-screens/*.png
+          if-no-files-found: error
