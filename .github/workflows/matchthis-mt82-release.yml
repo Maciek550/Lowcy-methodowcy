@@ -22,9 +22,9 @@ jobs:
           done
           python3 matchthis/build-mt82-compact-header.py
           python3 matchthis/build-mt82-deployer.py
-          test "$(sha256sum matchthis/MatchThis_MT-82.html|awk '{print $1}')" = 68cf1b90474a39bc899a503736c2f976f24689b0682752f57bfa44b9addcbd6e
-          test "$(sha256sum matchthis/MatchThis_MT-82_OGLADACZ.html|awk '{print $1}')" = 08a7269c5e2e9b9f538244a4a15a4b714a00c764e7bc59a8c0df337e53485090
-          test "$(sha256sum matchthis/MatchThis_MT-82_SEDZIA.html|awk '{print $1}')" = 9e666f9cceaae8d75a238f0b23d59bd5f7b4aee73d950e62b92b8e3dd87ee9ac
+          test "$(sha256sum matchthis/MatchThis_MT-82.html|awk '{print $1}')" = c28aeae8c75bbcfcbdc77f4b6fbb925df3551cc7ab304e244178eb15b694231b
+          test "$(sha256sum matchthis/MatchThis_MT-82_OGLADACZ.html|awk '{print $1}')" = 1e3fe8cbba31da1477b3642f514d4908bfd5d944fc3b2c7bdc1635dfebd96d26
+          test "$(sha256sum matchthis/MatchThis_MT-82_SEDZIA.html|awk '{print $1}')" = 843c7023fb76c56ff1529e520508fb87d7ac096038c1cb34ca2991fcc821fdd3
           bash -n matchthis/deploy-mt82-small2.sh
           node --check matchthis/test-mt82-header.cjs
           echo MT82_EXACT_SOURCE_AND_CONSISTENT_ROLE_VERSION_PASS
@@ -91,7 +91,7 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/ -o /tmp/mt82-after.html
-          test "$(sha256sum /tmp/mt82-after.html|awk '{print $1}')" = 08a7269c5e2e9b9f538244a4a15a4b714a00c764e7bc59a8c0df337e53485090
+          test "$(sha256sum /tmp/mt82-after.html|awk '{print $1}')" = 1e3fe8cbba31da1477b3642f514d4908bfd5d944fc3b2c7bdc1635dfebd96d26
           curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/mt82-state-after.json
           cmp /tmp/mt82-state-before.json /tmp/mt82-state-after.json
           curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/mt60-draws.php -o /tmp/mt82-draws-after.json
