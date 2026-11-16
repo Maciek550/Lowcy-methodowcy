@@ -84,9 +84,19 @@ async function openTarget(page){
    await page.locator('[data-action="downloadFbPhoto"]').first().click();
    const jpg=await jpgPending, jpgBytes=fs.readFileSync(await jpg.path());
    assert.equal(jpgBytes[0],255);assert.equal(jpgBytes[1],216,'Valid JPEG photo');
-   const pdfPending=page.waitForEvent('download');
+   const pdfPending=page.waitForEvent('download',{timeout:7000}).catch(()=>null);
    await page.locator('[data-pdf-sector="A"]').first().click();
-   const pdfDownload=await pdfPending,pdfBytes=fs.readFileSync(await pdfDownload.path());
+   const pdfDownload=await pdfPending;
+   if(!pdfDownload){
+    const diag=await page.evaluate(()=>({
+      rows:window.__mt85Pdf,
+      visibleMessages:[...document.querySelectorAll('.toast,.notice,[role="alert"],.alert')].map(e=>e.textContent.slice(0,300)).slice(-10),
+      tail:document.body.innerText.slice(-600)
+    }));
+    console.log('MT85_PDF_DIAGNOSTIC',JSON.stringify(diag));
+    throw Error('PDF export did not initiate download');
+   }
+   const pdfBytes=fs.readFileSync(await pdfDownload.path());
    assert(pdfBytes.subarray(0,8).toString().startsWith('%PDF-'),'Valid vector PDF');
    const pdf=await page.evaluate(()=>window.__mt85Pdf);
    assert.equal(pdf.all,71,'PDF must include all assigned T2 starters');
