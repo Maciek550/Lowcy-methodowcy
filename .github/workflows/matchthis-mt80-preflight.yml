@@ -76,3 +76,5 @@ jobs:
           name: MatchThis_MT80_HEADER_UI_SCREENSHOTS
           path: /tmp/mt80-screens/*.png
           if-no-files-found: error
+
+# Rerun: true popup clicks in public mode; mocked admin/judge verify exact links and interactability.
