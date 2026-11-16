@@ -45,6 +45,8 @@ async function testFixtureAdmin(engine){
   const p=await browser.newPage({viewport:{width:1366,height:900}});
   p.setDefaultTimeout(25000);
   const errors=[];p.on('pageerror',e=>errors.push(e.message));
+  const reset=await p.request.post(base+'mt83-reset');
+  assert.equal(reset.status(),200,'Reset dedicated mock before each browser');
   await p.goto(base+'panel.php');
   await p.waitForFunction(()=>document.querySelector('#mt73-sync')?.textContent.includes('Dane z serwera'));
   assert.equal(await p.title(),'MatchThis MT-83');
