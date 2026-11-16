@@ -19,9 +19,9 @@ for suffix,sha in zip(['','_OGLADACZ','_SEDZIA'],old_pages):
  assert p.is_file()
  new_pages.append(hashlib.sha256(p.read_bytes()).hexdigest())
 assert new_pages==[
- '7eb883aa712fe8819dc95ca36dc23b0cec9f5960fcc5d5606d9e03585d754ef7',
- '574e9e342fe92442d56429eb1b15051c208bcf263b78de85f2b442bb35d5ebfb',
- '3143402a08ea6d98939e0aa7bc5887f2dd8c73e51d3c7192dd6f64a3fe8b9017'],new_pages
+ '2d37698750cc17e74d7245a0eccd8ab4ab6e6a12f09d52a3ccda98412b7b4736',
+ '0cb7bdd12fc97d6a15a36bd187f5897a2d0fb7435cbbe32d5e1382fea8d42e90',
+ '98e83728923b74b7aa19adecbdf2e923d1474c9d35f389a3313c20dcc6f099c9'],new_pages
 src=root/'deploy-mt84-small2.sh'
 s=src.read_text('utf-8')
 old_digests=[*old_pages,*prior_pages]
@@ -42,6 +42,19 @@ assert 'mt85-admin.php' in s and 'mt84-admin.php' in s
 assert 'MT85_ROLLBACK_TO_MT84' in s
 assert 'MT84_EXACT_MT83' not in s
 assert 'state-mt73.json' in s and 'mt60-published-draws.json' in s
+# Live state is mutable; never assume old fixed 71 rows. Reject corrupted assignments,
+# but do not edit them or silently overwrite any peg, sector, name, or stored weight.
+old_guard="""assert len(entries)==71
+assert len({r['peg'] for r in entries})==71
+assert len({r['sector'] for r in entries})==6
+assert all(r['competitorId'] for r in entries)"""
+new_guard="""assert len(entries)>=71
+assert len({r['sector'] for r in entries})==6
+assert all(r.get('competitorId') and r.get('sector') and isinstance(r.get('peg'),int) and r.get('peg')>0 for r in entries)
+assert len({str(r['competitorId']) for r in entries})>=71
+assert len({int(r['peg']) for r in entries})>=71"""
+assert old_guard in s, 'MT84 deployment safety preflight changed'
+s=s.replace(old_guard,new_guard,1)
 dest=root/'deploy-mt85-small2.sh'
 dest.write_text(s,'utf-8')
 print('MT85_SHA_GUARDED_DEPLOYER_GENERATED',len(s),'pages',new_pages)
