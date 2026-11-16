@@ -17,7 +17,7 @@ if test "$mode" = rollback;then
   sshpass -e ssh "${opts[@]}" "$remote" 'bash -s' <<'RESTORE'
 set -euo pipefail
 web="$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html"
-stage="$HOME/matchthis-independent/mt-81/previous"
+stage="$HOME/matchthis-independent/mt-81-r2/previous"
 test -f "$stage/index.html" && test -f "$stage/panel.php"
 test "$(sha256sum "$stage/index.html"|awk '{print $1}')" = f0541e9b09a7dc4d8e14d1d9d8d30b2120d06a10ee552b8e06f385c63dd0498c
 current="$(sha256sum "$web/index.html"|awk '{print $1}')"
@@ -44,9 +44,9 @@ test "$(tail -n +2 "$web/role-pages/mt80-admin.php"|sha256sum|awk '{print $1}')"
 test "$(tail -n +2 "$web/role-pages/mt80-sedzia.php"|sha256sum|awk '{print $1}')" = ac2da3f8a0cf1f1f880aa90de96823a14118c4be3d4783933e899bdb537d7664
 grep -Fq 'mt80-admin.php' "$web/panel.php"
 grep -Fq 'mt80-sedzia.php' "$web/panel.php"
-test ! -e "$web/role-pages/mt81-admin.php"
-test ! -e "$web/role-pages/mt81-sedzia.php"
-test ! -e "$HOME/matchthis-independent/mt-81/previous"
+test ! -e "$web/role-pages/mt81-admin.php" || test "$(tail -n +2 "$web/role-pages/mt81-admin.php"|sha256sum|awk '{print $1}')" = c88159202b6ab074778278458ed0b2054cdff5d4554391ed696c5524db375943
+test ! -e "$web/role-pages/mt81-sedzia.php" || test "$(tail -n +2 "$web/role-pages/mt81-sedzia.php"|sha256sum|awk '{print $1}')" = 8e96674bd98f032d6e8fd7487cb9eecfa711eb2a4df49c5ccfad80ef7650d53c
+test ! -e "$HOME/matchthis-independent/mt-81-r2/previous"
 test ! -L "$web/index.html" && test ! -L "$web/panel.php"
 test -f "$web/.mt41-private/state-mt73.json" && test ! -L "$web/.mt41-private/state-mt73.json"
 test -f "$web/.mt41-private/mt60-published-draws.json"
@@ -55,7 +55,7 @@ mkdir -p "$HOME/matchthis-independent/mt-81"
 chmod 700 "$HOME/matchthis-independent/mt-81"
 echo MT81_EXACT_MT80_THREE_ROLES_AND_ICON_PRECHECK_PASS
 PRE
-sshpass -e scp "${opts[@]}" matchthis/MatchThis_MT-81.html matchthis/MatchThis_MT-81_OGLADACZ.html matchthis/MatchThis_MT-81_SEDZIA.html "$remote:matchthis-independent/mt-81/"
+sshpass -e scp "${opts[@]}" matchthis/MatchThis_MT-81.html matchthis/MatchThis_MT-81_OGLADACZ.html matchthis/MatchThis_MT-81_SEDZIA.html "$remote:matchthis-independent/mt-81-r2/"
 installed=0
 cleanup(){
   code=$?
@@ -65,7 +65,7 @@ cleanup(){
     sshpass -e ssh "${opts[@]}" "$remote" 'bash -s' <<'REVERT' || echo MT81_ROLLBACK_ERROR_REQUIRES_REVIEW
 set -euo pipefail
 web="$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html"
-prior="$HOME/matchthis-independent/mt-81/previous"
+prior="$HOME/matchthis-independent/mt-81-r2/previous"
 test -f "$prior/index.html" && test -f "$prior/panel.php"
 test "$(sha256sum "$prior/index.html"|awk '{print $1}')" = f0541e9b09a7dc4d8e14d1d9d8d30b2120d06a10ee552b8e06f385c63dd0498c
 cp -p "$prior/panel.php" "$web/panel.php.tmp-restore"
