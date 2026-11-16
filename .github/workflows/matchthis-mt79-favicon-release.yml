@@ -1,0 +1,126 @@
+name: MatchThis MT79 orange bookmark icon fix - live SMALL2
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-mt79-favicon-release.yml]
+permissions: {contents: read, actions: read}
+jobs:
+  deploy-test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rebuild exactly released MT78 and new MT79 with only explicit favicon links
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt78-base
+          gh run download 43424459703 -R Maciek550/Lowcy-methodowcy -n MatchThis_MT78_FOTO_FB_DEPLOYED_AND_TESTED -D /tmp/mt78-base
+          for role in '' '_OGLADACZ' '_SEDZIA'; do
+            cp "$(find /tmp/mt78-base -name "MatchThis_MT-78$role.html" -print -quit)" "matchthis/MatchThis_MT-78$role.html"
+          done
+          python3 matchthis/build-mt79-favicon.py
+          test "$(sha256sum matchthis/MatchThis_MT-79.html|awk '{print $1}')" = 51baa122e97f39b733408e51076adaf98c052b025471b10559f9a234d627e0d1
+          test "$(sha256sum matchthis/MatchThis_MT-79_OGLADACZ.html|awk '{print $1}')" = ece29feb50dd671461f984eccb17e9367514d37e802a291b924f4d199947eaa1
+          test "$(sha256sum matchthis/MatchThis_MT-79_SEDZIA.html|awk '{print $1}')" = a71e5455a86565c726006bb6c31a89564ad42b28312adbd69d65300bf7d9c25b
+          for size in 32 64; do base64 --decode "matchthis/assets/matchthis-orange-mt79-$size.png.b64" > "matchthis/assets/matchthis-orange-mt79-$size.png"; done
+          echo 'c1dc3ff23667d074224eb6eb6265c7c9b5cbc40f0329a63fe3b0199f7b2e3f02  matchthis/assets/matchthis-orange-mt79-32.png' | sha256sum -c -
+          echo '1e83413b4db09f971a2f5f5e13cb268ba548a63259eb50f313ca1ece1652c6ce  matchthis/assets/matchthis-orange-mt79-64.png' | sha256sum -c -
+          bash -n matchthis/deploy-mt79-small2.sh
+          node --check matchthis/test-mt79-favicon.cjs
+          python3 - <<'PY'
+          from pathlib import Path
+          import struct
+          for n in (32,64):
+           b=Path(f'matchthis/assets/matchthis-orange-mt79-{n}.png').read_bytes()
+           assert b[:8]==b'\x89PNG\r\n\x1a\n' and struct.unpack('>II',b[16:24])==(n,n)
+          print('MT79_EXACT_THREE_ROLE_VERSION_AND_FAVICON_ASSETS_PASS')
+          PY
+      - name: Fetch current MT78 production state and keep immutable snapshots
+        run: |
+          set -euo pipefail
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/ -o /tmp/mt79-index-before.html
+          test "$(sha256sum /tmp/mt79-index-before.html|awk '{print $1}')" = 3ebed336016c0af5ef51fc86b19bc7e7244ec95940ff68aae95b18742f0a4f45
+          curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/mt79-state-before.json
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/mt60-draws.php -o /tmp/mt79-draws-before.json
+          curl -fsSL --max-time 30 https://lowcymethodowcy.smallhost.pl/health
+          python3 - <<'PY'
+          import json
+          s=json.load(open('/tmp/mt79-state-before.json'))
+          assert s['revision']>=9
+          e=next(e for e in s['data']['events'] if e['id']=='mt2025-mega_final_2025')
+          assert [sum(bool(r.get('peg') and r.get('sector')) for r in t['results']) for t in e['rounds']]==[54,54]
+          print('MT79_REAL_MT78_SMALL2_SOURCE_AND_RESULTS_PRECHECK_PASS',s['revision'])
+          PY
+      - name: Create read-only standalone test site with real published data, all favicon files
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt79-site
+          cp matchthis/MatchThis_MT-79_OGLADACZ.html /tmp/mt79-site/index.html
+          cp matchthis/assets/matchthis-orange-mt79-32.png /tmp/mt79-site/
+          cp matchthis/assets/matchthis-orange-mt79-64.png /tmp/mt79-site/
+          base64 --decode matchthis/assets/matchthis-orange-favicon.ico.b64 > /tmp/mt79-site/favicon.ico
+          cp /tmp/mt79-state-before.json /tmp/mt79-site/state.json
+          cat > /tmp/mt79-site/mt73-state.php <<'PHP'
+          <?php
+          header('Content-Type: application/json; charset=utf-8');
+          header('Cache-Control: no-store');
+          echo file_get_contents(__DIR__.'/state.json');
+          PHP
+          cat > /tmp/mt79-site/mt60-draws.php <<'PHP'
+          <?php header('Content-Type: application/json');echo '{"draws":[]}';
+          PHP
+          php -S 127.0.0.1:8899 -t /tmp/mt79-site >/tmp/mt79-php.log 2>&1 &
+          curl --retry 6 --retry-connrefused --retry-delay 1 -fsS http://127.0.0.1:8899/mt73-state.php -o /tmp/mt79-test-readback.json
+      - name: Install real Firefox and Chromium
+        run: |
+          npm install --prefix /tmp/mt79-browser --silent playwright
+          cd /tmp/mt79-browser
+          npx playwright install --with-deps chromium firefox
+      - name: Test favicon tags and PNG decoding in both browsers before deployment
+        run: |
+          NODE_PATH=/tmp/mt79-browser/node_modules node matchthis/test-mt79-favicon.cjs
+          echo MT79_BOTH_BROWSERS_BOOKMARK_ICON_PREDEPLOY_PASS
+      - name: Install MT79 three role pages plus icon images ONLY on MatchThis SMALL2
+        id: deploy
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: bash matchthis/deploy-mt79-small2.sh
+      - name: Real production Firefox and Chromium icon tests, archive clicks and page reload
+        env:
+          MT79_FAVICON_URL: https://matchthis.lowcymethodowcy.smallhost.pl/
+        run: |
+          NODE_PATH=/tmp/mt79-browser/node_modules node matchthis/test-mt79-favicon.cjs
+          echo MT79_REAL_SMALL2_CHROMIUM_FIREFOX_ICON_HEAD_AND_NETWORK_PASS
+      - name: Prove correct published MT79, unchanged central data, draws, admin protection and Łowcy
+        run: |
+          set -euo pipefail
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/ -o /tmp/mt79-index-after.html
+          test "$(sha256sum /tmp/mt79-index-after.html|awk '{print $1}')" = ece29feb50dd671461f984eccb17e9367514d37e802a291b924f4d199947eaa1
+          curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/mt79-state-after.json
+          cmp /tmp/mt79-state-before.json /tmp/mt79-state-after.json
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/mt60-draws.php -o /tmp/mt79-draws-after.json
+          cmp /tmp/mt79-draws-before.json /tmp/mt79-draws-after.json
+          test "$(curl -sS -o /dev/null -w '%{http_code}' https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php)" = 401
+          for role in mt79-admin.php mt79-sedzia.php; do
+            status="$(curl -sS -o /dev/null -w '%{http_code}' "https://matchthis.lowcymethodowcy.smallhost.pl/role-pages/$role")"
+            test "$status" = 404 || test "$status" = 403
+          done
+          curl -fsSL --max-time 30 https://lowcymethodowcy.smallhost.pl/health
+          echo MT79_SMALL2_BOOKMARK_FAVICON_DEPLOYMENT_AND_UNCHANGED_RESULTS_ROLES_PASS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MatchThis_MT79_ORANGE_FAVICON_THREE_ROLES_TESTED
+          path: |
+            matchthis/MatchThis_MT-79.html
+            matchthis/MatchThis_MT-79_OGLADACZ.html
+            matchthis/MatchThis_MT-79_SEDZIA.html
+            matchthis/assets/matchthis-orange-mt79-32.png
+            matchthis/assets/matchthis-orange-mt79-64.png
+          if-no-files-found: error
+      - name: Auto-restore MT78 routes if any post-install verification fails
+        if: failure() && steps.deploy.outcome == 'success'
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: bash matchthis/deploy-mt79-small2.sh rollback
