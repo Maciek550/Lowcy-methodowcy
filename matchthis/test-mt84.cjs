@@ -44,7 +44,8 @@ async function open(p){await p.locator('[data-open="test-event"]').first().click
    assert.deepEqual(assignments(after.events[0].rounds[1]),assignments(expected.rounds[1]),'Every original T2 peg/sector unchanged');
    assert.equal(after.events[0].rounds[1].drawPublished,true);
    assert.equal(after.events[0].rounds[1].mt55SectorPlan,undefined,'No plan fabricated');
-   assert.deepEqual(after.events[0].rounds[1].results.map(r=>r.weightG).sort((a,b)=>a-b),[1234,5678]);
+   assert.deepEqual(after.events[0].rounds[1].results.filter(r=>r.weightG>0).map(r=>r.weightG).sort((a,b)=>a-b),[1234,5678]);
+   assert(after.events[0].rounds[1].results.every(r=>[0,1234,5678].includes(r.weightG)),'Tab may persist an untouched displayed zero, never another catch');
    await p.reload();await p.waitForFunction(()=>document.querySelector('#mt73-sync').textContent.includes('Dane z serwera'));
    assert.equal(await weights.count(),71);
    assert.equal(await weights.first().inputValue(),'1234');assert.equal(await weights.last().inputValue(),'5678');

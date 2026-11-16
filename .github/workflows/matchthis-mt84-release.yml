@@ -66,3 +66,5 @@ jobs:
         env:
           SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
         run: bash matchthis/deploy-mt84-small2.sh rollback
+
+# Regression run 2: allow the existing blur-save of a displayed zero after Tab.
