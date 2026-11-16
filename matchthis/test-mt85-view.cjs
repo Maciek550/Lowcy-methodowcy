@@ -4,18 +4,14 @@ const {chromium,firefox}=require('playwright');
 const url=process.env.MT85_URL||'http://127.0.0.1:8785/';
 const eventId='mt2026-xiv-puchar-matchthis-28-29-nov';
 async function openTarget(page){
- const locator=page.locator('[data-open="'+eventId+'"]');
- if(await locator.count()) {await locator.first().click();return;}
- const diagnostic=await page.evaluate(()=>({
-  ids:db.events.map(e=>e.id),links:[...document.querySelectorAll('[data-open]')].map(e=>e.getAttribute('data-open')).slice(0,18)
- }));
- console.log('MT85_TEST_EVENT_NOT_ON_HOME_NAVIGATE_BY_STATE',JSON.stringify(diagnostic));
- await page.evaluate(id=>{
-  if(!db.events.some(e=>e.id===id))throw Error('Target event absent from server-loaded test state');
-  page='event';selectedId=id;roundIndex=0;resultMode='sectors';selectedSector='ALL';render();
- },eventId);
+ const target=page.locator('[data-open="'+eventId+'"]');
+ if(!(await target.count()))await page.locator('[data-view="events"]').first().click();
+ if(!(await target.count())){
+  const ids=await page.locator('[data-open]').evaluateAll(xs=>xs.map(x=>x.getAttribute('data-open')).slice(0,25));
+  throw Error('Target is not in the 2026 events list; displayed IDs: '+JSON.stringify(ids));
+ }
+ await target.first().click();
 }
-
 (async()=>{
  for(const engine of [chromium,firefox]){
   const browser=await engine.launch();
