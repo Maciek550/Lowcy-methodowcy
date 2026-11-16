@@ -82,3 +82,5 @@ jobs:
 # Re-run after correcting real header overlap and adding pointer-hit regression across all widths.
 
 # Rerun after fixing nav overflow so header logo never sits underneath GŁÓWNA.
+
+# Final rerun: desktop menu spacing keeps all five admin items visible without horizontal overlap.
