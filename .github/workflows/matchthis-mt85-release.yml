@@ -94,3 +94,5 @@ jobs:
 # MT85 retry 8: both independently scoped PDF functions fixed, browser JPG/PDF with 11 zero-weight peers required.
 
 # MT85 retry 9: photo/PDF no-write assertions now snapshot after prior editor auto-save settles.
+
+# MT85 retry 10: verified 71 complete unique assignments plus 3 incomplete records are preserved, without data mutations.
