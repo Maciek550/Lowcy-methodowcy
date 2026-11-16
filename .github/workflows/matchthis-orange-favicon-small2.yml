@@ -1,0 +1,145 @@
+name: MatchThis orange MT favicon - bookmarks - independent SMALL2
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-orange-favicon-small2.yml]
+permissions: {contents: read}
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate exactly approved multi-resolution orange MT icon and current MT78
+        run: |
+          set -euo pipefail
+          base64 --decode matchthis/assets/matchthis-orange-favicon.ico.b64 >/tmp/matchthis-favicon.ico
+          echo '162ac423fdd594d3db0213b05cde40203d2053b44c135b18ea29880c36b60d5c  /tmp/matchthis-favicon.ico'|sha256sum -c -
+          python3 - <<'PY'
+          from pathlib import Path
+          import struct
+          b=Path('/tmp/matchthis-favicon.ico').read_bytes()
+          reserved,kind,count=struct.unpack_from('<HHH',b,0)
+          assert (reserved,kind,count)==(0,1,4)
+          sizes=[]
+          for i in range(count):
+              w,h,colors,res,planes,bits,length,offset=struct.unpack_from('<BBBBHHII',b,6+i*16)
+              assert w==h and w in (16,32,48,64) and planes==1 and bits==32
+              assert b[offset:offset+8]==b'\x89PNG\r\n\x1a\n'
+              assert offset+length<=len(b)
+              sizes.append(w)
+          assert sizes==[16,32,48,64]
+          print('MATCHTHIS_BOOKMARK_FAVICON_ICO_16_32_48_64_VALIDATED',len(b))
+          PY
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/ -o /tmp/mt-favicon-index-before.html
+          test "$(sha256sum /tmp/mt-favicon-index-before.html|awk '{print $1}')" = 3ebed336016c0af5ef51fc86b19bc7e7244ec95940ff68aae95b18742f0a4f45
+          curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/mt-favicon-state-before.json
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/mt60-draws.php -o /tmp/mt-favicon-draws-before.json
+          curl -fsSL --max-time 30 https://lowcymethodowcy.smallhost.pl/health
+          echo MATCHTHIS_MT78_LIVE_BASELINE_AND_PRIVATE_DATA_SNAPSHOT_PASS
+      - name: Install favicon only on MatchThis SMALL2 with previous icon backup
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$SSH_PASSWORD"
+          sudo apt-get -qq update
+          sudo apt-get -qq install -y sshpass
+          mkdir -p "$HOME/.ssh";chmod 700 "$HOME/.ssh"
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test "$(ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256|awk '{print $2}')" = 'SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8'
+          export SSHPASS="$SSH_PASSWORD"
+          opts=(-o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15)
+          remote=lowcymethodowcy@s3.small.pl
+          sshpass -e ssh "${opts[@]}" "$remote" 'bash -s' <<'PRECHECK'
+          set -euo pipefail
+          web="$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html"
+          test "$(sha256sum "$web/index.html"|awk '{print $1}')" = 3ebed336016c0af5ef51fc86b19bc7e7244ec95940ff68aae95b18742f0a4f45
+          test -f "$web/.mt41-private/state-mt73.json"
+          test -f "$web/.mt41-private/mt60-published-draws.json"
+          test ! -L "$web/index.html"
+          test ! -L "$web/favicon.ico"
+          stage="$HOME/matchthis-independent/branding-favicon-mt78"
+          mkdir -p "$stage";chmod 700 "$stage"
+          echo MT78_FAVICON_SMALL2_SAFE_BASELINE_PASS
+          PRECHECK
+          sshpass -e scp "${opts[@]}" /tmp/matchthis-favicon.ico "$remote:matchthis-independent/branding-favicon-mt78/favicon-new.ico"
+          sshpass -e ssh "${opts[@]}" "$remote" 'bash -s' <<'INSTALL'
+          set -Eeuo pipefail
+          web="$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html"
+          stage="$HOME/matchthis-independent/branding-favicon-mt78"
+          expected=162ac423fdd594d3db0213b05cde40203d2053b44c135b18ea29880c36b60d5c
+          test "$(sha256sum "$stage/favicon-new.ico"|awk '{print $1}')" = "$expected"
+          test "$(sha256sum "$web/index.html"|awk '{print $1}')" = 3ebed336016c0af5ef51fc86b19bc7e7244ec95940ff68aae95b18742f0a4f45
+          test ! -L "$web/favicon.ico"
+          if test -f "$web/favicon.ico";then
+            if test "$(sha256sum "$web/favicon.ico"|awk '{print $1}')" = "$expected";then
+              echo MATCHTHIS_FAVICON_ALREADY_CORRECT
+              exit 0
+            fi
+            cp -p "$web/favicon.ico" "$stage/original-favicon-$(date +%Y%m%d-%H%M%S).ico"
+          else
+            touch "$stage/original-favicon-was-absent"
+          fi
+          cp "$stage/favicon-new.ico" "$web/favicon.ico.next"
+          chmod 644 "$web/favicon.ico.next"
+          mv -f "$web/favicon.ico.next" "$web/favicon.ico"
+          test "$(sha256sum "$web/favicon.ico"|awk '{print $1}')" = "$expected"
+          test "$(sha256sum "$web/index.html"|awk '{print $1}')" = 3ebed336016c0af5ef51fc86b19bc7e7244ec95940ff68aae95b18742f0a4f45
+          echo MATCHTHIS_ORANGE_MT_BOOKMARK_FAVICON_INSTALLED_SMALL2
+          INSTALL
+      - name: Verify PUBLIC favicon response, exact image bytes, untouched HTML, central results and Łowcy
+        run: |
+          set -euo pipefail
+          curl -fsSL --max-time 30 -H 'Cache-Control: no-cache' 'https://matchthis.lowcymethodowcy.smallhost.pl/favicon.ico' -o /tmp/mt-favicon-from-SMALL2.ico
+          cmp /tmp/matchthis-favicon.ico /tmp/mt-favicon-from-SMALL2.ico
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/ -o /tmp/mt-favicon-index-after.html
+          cmp /tmp/mt-favicon-index-before.html /tmp/mt-favicon-index-after.html
+          curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/mt-favicon-state-after.json
+          cmp /tmp/mt-favicon-state-before.json /tmp/mt-favicon-state-after.json
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/mt60-draws.php -o /tmp/mt-favicon-draws-after.json
+          cmp /tmp/mt-favicon-draws-before.json /tmp/mt-favicon-draws-after.json
+          test "$(curl -sS -o /dev/null -w '%{http_code}' https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php)" = 401
+          curl -fsSL --max-time 30 https://lowcymethodowcy.smallhost.pl/health
+          echo MATCHTHIS_FAVICON_LIVE_PUBLIC_ICON_BYTE_IDENTICAL_RESULTS_AND_LOWCY_UNCHANGED_PASS
+      - name: Test favicon fetch and current MatchThis UI in actual Chromium and Firefox
+        run: |
+          npm install --prefix /tmp/mt-favicon-test --silent playwright
+          cd /tmp/mt-favicon-test
+          npx playwright install --with-deps chromium firefox
+          cat > /tmp/mt-favicon-test/test.cjs <<'NODE'
+          const {chromium,firefox}=require('playwright');
+          const assert=require('node:assert/strict');
+          const crypto=require('node:crypto');
+          const host='https://matchthis.lowcymethodowcy.smallhost.pl/';
+          (async()=>{
+            for(const engine of [chromium,firefox]){
+              const browser=await engine.launch();
+              try{
+                const page=await browser.newPage({viewport:{width:1280,height:800}});
+                const errors=[];page.on('pageerror',e=>errors.push(e.message));
+                await page.goto(host);
+                await page.waitForFunction(()=>document.getElementById('mt73-sync')?.textContent.includes('Dane z serwera'),{timeout:30000});
+                assert.equal(await page.title(),'MatchThis MT-78');
+                assert.equal(await page.locator('#appversion').innerText(),'MT-78');
+                const response=await page.request.get(host+'favicon.ico',{headers:{'Cache-Control':'no-cache'}});
+                assert.equal(response.status(),200);
+                const bytes=await response.body();
+                assert.equal(crypto.createHash('sha256').update(bytes).digest('hex'),'162ac423fdd594d3db0213b05cde40203d2053b44c135b18ea29880c36b60d5c');
+                assert.equal(bytes.readUInt16LE(2),1);
+                assert.equal(bytes.readUInt16LE(4),4);
+                await page.locator('[data-view="archive"]').first().click();
+                await page.reload();
+                await page.waitForFunction(()=>document.getElementById('mt73-sync')?.textContent.includes('Dane z serwera'),{timeout:30000});
+                assert.deepEqual(errors,[]);
+                console.log('MATCHTHIS_ORANGE_FAVICON_REAL_BROWSER_FETCH_AND_UI_RELOAD_PASS',engine.name(),bytes.length);
+              }finally{await browser.close();}
+            }
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+          NODE_PATH=/tmp/mt-favicon-test/node_modules node /tmp/mt-favicon-test/test.cjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MatchThis_orange_favicon_verified_SMALL2
+          path: /tmp/matchthis-favicon.ico
+          if-no-files-found: error
