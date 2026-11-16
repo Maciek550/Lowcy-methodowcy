@@ -16,7 +16,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p /tmp/mt81-source
-          gh run download 43845767710 -R Maciek550/Lowcy-methodowcy -n MatchThis_MT82_LINKS_NO_SCROLL_3_ROLE_HTML -D /tmp/mt81-source
+          gh run download 43845767710 -R Maciek550/Lowcy-methodowcy -n MatchThis_MT81_LINKS_NO_SCROLL_3_ROLE_HTML -D /tmp/mt81-source
           for role in '' '_OGLADACZ' '_SEDZIA'; do
             cp "$(find /tmp/mt81-source -name "MatchThis_MT-81$role.html" -print -quit)" "matchthis/MatchThis_MT-81$role.html"
           done
