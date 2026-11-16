@@ -86,3 +86,5 @@ jobs:
 # MT85 retry 4: same rankings for on-screen sector, FOTO FB (zeros) and vector PDF; live 74 entries are untouched.
 
 # MT85 retry 5: source patch newline quoting corrected; FB and PDF zero-gram coverage regression.
+
+# MT85 retry 6: reveal exact PDF export failure after successful 71-person photo regression.
