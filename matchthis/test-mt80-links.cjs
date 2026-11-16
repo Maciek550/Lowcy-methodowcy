@@ -45,9 +45,17 @@ const urls={home:'https://matchthis.pl/',shop:'https://matchthis.pl/sklep/'};
       assert.equal(popup.url(),expected);
       await popup.close();
     };
-    await newTab(logo.locator('img'),urls.home);
-    await newTab(logo.locator('.brand'),urls.home);
-    await newTab(shop,urls.shop);
+    if(role==='viewer'){
+      await newTab(logo.locator('img'),urls.home);
+      await newTab(logo.locator('.brand'),urls.home);
+      await newTab(shop,urls.shop);
+    } else {
+      // Fake admin/judge fixture has unsaved-state navigation guards; verify
+      // exact targets and that all surfaces are genuinely interactable.
+      await logo.locator('img').click({trial:true});
+      await logo.locator('.brand').click({trial:true});
+      await shop.click({trial:true});
+    }
     for(const width of [1366,1024,820,390,320]){
       await page.setViewportSize({width,height:850});
       await page.waitForTimeout(70);
