@@ -80,3 +80,5 @@ jobs:
         run: bash matchthis/deploy-mt85-small2.sh rollback
 
 # MT85 retry 2: target event lookup not restricted to home shortlist.
+
+# MT85 retry 3: fixture is a future event; click Zawody 2026 to open it.
