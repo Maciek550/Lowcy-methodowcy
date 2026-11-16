@@ -1,5 +1,6 @@
 'use strict';
 const assert=require('node:assert/strict');
+const fs=require('node:fs');
 const {chromium,firefox}=require('playwright');
 const url=process.env.MT85_URL||'http://127.0.0.1:8785/';
 const eventId='mt2026-xiv-puchar-matchthis-28-29-nov';
@@ -59,6 +60,42 @@ async function openTarget(page){
    await page.locator('[data-result-mode="round"]').first().click();
    assert(await page.locator('.mt85-published-draw').count());
    assert((await page.locator('.panel .result-title').first().innerText()).includes('Cała tura'));
+   // Regression: 1 weighed angler must not hide 11 zero-gram peers in FOTO FB or vector PDF.
+   await page.evaluate(()=>{
+    const photo=MatchThisFbPhoto.draw,pdf=MatchThisVectorPdf.create;
+    MatchThisFbPhoto.draw=(canvas,args)=>{
+      window.__mt85Photo={sector:args.sector,rows:args.ranked.filter(r=>r.sector===args.sector).map(r=>({weightG:r.weightG,place:r.place})),all:args.ranked.length};
+      return photo(canvas,args);
+    };
+    MatchThisVectorPdf.create=(args)=>{
+      window.__mt85Pdf={sector:args.sector,rows:args.ranked.filter(r=>!args.sector||r.sector===args.sector).map(r=>({weightG:r.weightG,place:r.place})),all:args.ranked.length};
+      return pdf(args);
+    };
+   });
+   await page.locator('[data-result-mode="photo"]').first().click();
+   await page.waitForFunction(()=>window.__mt85Photo?.rows?.length>0);
+   const photo=await page.evaluate(()=>window.__mt85Photo);
+   assert.equal(photo.all,71,'Photo must include all assigned T2 starters, not only catches');
+   assert.equal(photo.sector,'A');
+   assert.equal(photo.rows.length,12,'Photo sector A includes 12 entries');
+   assert.equal(photo.rows.filter(r=>r.weightG===0).length,11,'Zero catches must appear in photo');
+   assert(photo.rows.filter(r=>r.weightG===0).every(r=>r.place===7),'PZW: 11 zeros each score mean positions 2–12');
+   const jpgPending=page.waitForEvent('download');
+   await page.locator('[data-action="downloadFbPhoto"]').first().click();
+   const jpg=await jpgPending, jpgBytes=fs.readFileSync(await jpg.path());
+   assert.equal(jpgBytes[0],255);assert.equal(jpgBytes[1],216,'Valid JPEG photo');
+   const pdfPending=page.waitForEvent('download');
+   await page.locator('[data-pdf-sector="A"]').first().click();
+   const pdfDownload=await pdfPending,pdfBytes=fs.readFileSync(await pdfDownload.path());
+   assert(pdfBytes.subarray(0,8).toString().startsWith('%PDF-'),'Valid vector PDF');
+   const pdf=await page.evaluate(()=>window.__mt85Pdf);
+   assert.equal(pdf.all,71,'PDF must include all assigned T2 starters');
+   assert.equal(pdf.rows.length,12,'PDF sector A includes 12 entries');
+   assert.equal(pdf.rows.filter(r=>r.weightG===0).length,11,'Zero catches must appear in PDF');
+   assert(!pdfBytes.includes(Buffer.from('/Subtype /Image')),'PDF must not be rasterized');
+   const unchangedAfterExports=(await (await page.request.get(url+'mt73-state.php?public=1')).json()).data;
+   assert.deepEqual(unchangedAfterExports,saved,'Generating PDF and Foto FB must never modify server data');
+   console.log('MT85_FOTO_FB_AND_PDF_VECTOR_12_SECTOR_A_11_ZEROS_71_TOTAL_'+engine.name().toUpperCase()+'_PASS');
    await page.reload();
    await page.waitForFunction(()=>document.querySelector('#mt73-sync')?.textContent.includes('Dane z serwera'));
    await openTarget(page);
