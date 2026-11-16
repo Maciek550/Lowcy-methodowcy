@@ -80,6 +80,7 @@ async function openTarget(page){
    assert.equal(photo.rows.length,12,'Photo sector A includes 12 entries');
    assert.equal(photo.rows.filter(r=>r.weightG===0).length,11,'Zero catches must appear in photo');
    assert(photo.rows.filter(r=>r.weightG===0).every(r=>r.place===7),'PZW: 11 zeros each score mean positions 2–12');
+   const beforeExports=(await (await page.request.get(url+'mt73-state.php?public=1')).json()).data;
    const jpgPending=page.waitForEvent('download');
    await page.locator('[data-action="downloadFbPhoto"]').first().click();
    const jpg=await jpgPending, jpgBytes=fs.readFileSync(await jpg.path());
@@ -104,7 +105,7 @@ async function openTarget(page){
    assert.equal(pdf.rows.filter(r=>r.weightG===0).length,11,'Zero catches must appear in PDF');
    assert(!pdfBytes.includes(Buffer.from('/Subtype /Image')),'PDF must not be rasterized');
    const unchangedAfterExports=(await (await page.request.get(url+'mt73-state.php?public=1')).json()).data;
-   assert.deepEqual(unchangedAfterExports,saved,'Generating PDF and Foto FB must never modify server data');
+   assert.deepEqual(unchangedAfterExports,beforeExports,'Generating PDF and Foto FB must never modify server data');
    console.log('MT85_FOTO_FB_AND_PDF_VECTOR_12_SECTOR_A_11_ZEROS_71_TOTAL_'+engine.name().toUpperCase()+'_PASS');
    await page.reload();
    await page.waitForFunction(()=>document.querySelector('#mt73-sync')?.textContent.includes('Dane z serwera'));
