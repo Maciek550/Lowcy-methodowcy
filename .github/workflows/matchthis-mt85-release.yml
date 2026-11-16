@@ -1,0 +1,80 @@
+name: MatchThis MT85 - XIV Puchar T2 results visible ahead of published draw
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-mt85-release.yml]
+permissions: {contents: read, actions: read}
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build three MT85 pages from exactly the verified MT84 release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh run download 43864768559 -R Maciek550/Lowcy-methodowcy -n MatchThis_MT84_TESTED_THREE_ROLE_HTML -D /tmp/mt84-source
+          for role in '' '_OGLADACZ' '_SEDZIA'; do
+            cp "$(find /tmp/mt84-source -name "MatchThis_MT-84$role.html" -print -quit)" "matchthis/MatchThis_MT-84$role.html"
+          done
+          python3 matchthis/build-mt85.py
+          python3 matchthis/build-mt85-deploy.py
+          bash -n matchthis/deploy-mt85-small2.sh
+          (cd matchthis && sha256sum MatchThis_MT-85*.html)
+          node --check matchthis/test-mt85-view.cjs
+          sed 's/MatchThis_MT-83.html/MatchThis_MT-85.html/g' matchthis/test-mt83-pzw.cjs > /tmp/mt85-pzw.cjs
+          node /tmp/mt85-pzw.cjs
+      - name: Install real Chromium and Firefox browsers for isolated regression
+        run: |
+          npm install --prefix /tmp/mt85-browser --silent playwright
+          cd /tmp/mt85-browser
+          npx playwright install --with-deps chromium firefox
+      - name: Test MT84 functions unchanged, then verify new T2 results layout, saved weights and reload
+        run: |
+          set -euo pipefail
+          cp matchthis/test-mt84-fixture.py /tmp/test-mt85-fixture.py
+          python3 - <<'PY'
+          import json
+          p='matchthis/mt84-fixture.json'
+          d=json.load(open(p))
+          d['data']['events'][0]['id']='mt2026-xiv-puchar-matchthis-28-29-nov'
+          d['data']['events'][0]['name']='XIV PUCHAR SKLEPU MatchThis.pl 28-29.11.2026'
+          with open('/tmp/mt84-fixture.json','w') as f: json.dump(d,f,ensure_ascii=False)
+          PY
+          MT_TEST_VERSION=85 MT_TEST_PORT=8785 python3 matchthis/test-mt84-fixture.py matchthis /tmp/mt85-backwards.json >/tmp/mt85-compat.log 2>&1 &
+          MT_TEST_VERSION=85 MT_TEST_PORT=8786 python3 /tmp/test-mt85-fixture.py matchthis /tmp/mt85-new-layout.json >/tmp/mt85-layout.log 2>&1 &
+          curl --retry 10 --retry-connrefused --retry-delay 1 -fsS 'http://127.0.0.1:8785/mt73-state.php?public=1' >/dev/null
+          curl --retry 10 --retry-connrefused --retry-delay 1 -fsS 'http://127.0.0.1:8786/mt73-state.php?public=1' >/dev/null
+          sed 's/MT-84/MT-85/g' matchthis/test-mt84.cjs > /tmp/mt85-unchanged.cjs
+          MT84_URL='http://127.0.0.1:8785/' NODE_PATH=/tmp/mt85-browser/node_modules node /tmp/mt85-unchanged.cjs fixed
+          MT85_URL='http://127.0.0.1:8786/' NODE_PATH=/tmp/mt85-browser/node_modules node matchthis/test-mt85-view.cjs
+      - name: Deploy MT85 ONLY to MatchThis SMALL2 with SHA prechecks and MT84 rollback
+        id: deploy
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: bash matchthis/deploy-mt85-small2.sh
+      - name: Check live SMALL2 public route and existing results in Chromium and Firefox
+        env:
+          MT83_URL: https://matchthis.lowcymethodowcy.smallhost.pl/
+        run: |
+          sed 's/MT-83/MT-85/g' matchthis/test-mt83-browser.cjs > /tmp/mt85-live.cjs
+          NODE_PATH=/tmp/mt85-browser/node_modules node /tmp/mt85-live.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: MT85_RESULTS_FIRST_TEST_SCREENSHOTS
+          path: /tmp/mt85-screens/*.png
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: MatchThis_MT85_VERIFIED_THREE_ROLE_HTML
+          path: matchthis/MatchThis_MT-85*.html
+          if-no-files-found: error
+      - name: Roll back HTML only if live verification fails
+        if: failure() && steps.deploy.outcome == 'success'
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: bash matchthis/deploy-mt85-small2.sh rollback
