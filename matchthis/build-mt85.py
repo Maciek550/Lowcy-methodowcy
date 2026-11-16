@@ -57,13 +57,13 @@ for suffix,digest in expected.items():
  # Sector FB photos and vector PDFs must use the SAME read-only classified tour view as result tables.
  # Do not invent catches: add only explicitly assigned starters with 0g.
  s=once(s,'function photoCandidates(){',
-          'function mt85ExportRows(e,t){\\n return core.tourClassification(mt83TourView(e,t)).filter(r=>!core.isNonStarter(r));\\n}\\nfunction photoCandidates(){')
+          'function mt85ExportRows(e,t){\n return core.tourClassification(mt83TourView(e,t)).filter(r=>!core.isNonStarter(r));\n}\nfunction photoCandidates(){')
  s=once(s,'hasActive=rows.length>0;sectors=genuinePhotoSectors(tour);',
           'hasActive=rows.length>0;sectors=genuinePhotoSectors(mt83TourView(entity,tour));')
  s=once(s,'const tour=chosenRound.tour,ranked=core.tourClassification(tour).filter(r=>!core.isNonStarter(r));',
           'const tour=chosenRound.tour,ranked=mt85ExportRows(entity,tour);')
- s=once(s,'const ranked=core.tourClassification(tour).filter(r=>!core.isNonStarter(r));\\n const sectors=genuinePhotoSectors(tour);',
-          'const ranked=mt85ExportRows(entity,tour);\\n const sectors=genuinePhotoSectors(mt83TourView(entity,tour));')
+ s=once(s,'const ranked=core.tourClassification(tour).filter(r=>!core.isNonStarter(r));\n const sectors=genuinePhotoSectors(tour);',
+          'const ranked=mt85ExportRows(entity,tour);\n const sectors=genuinePhotoSectors(mt83TourView(entity,tour));')
  s=once(s,'const tour=getRounds(entity)[roundIndex];const ranked=core.tourClassification(tour).filter(r=>!core.isNonStarter(r));const pdf=MatchThisVectorPdf.create(',
           'const tour=getRounds(entity)[roundIndex];const ranked=mt85ExportRows(entity,tour);const pdf=MatchThisVectorPdf.create(')
  s=once(s,'function renderFbPhoto(e,t){const ranked=core.tourClassification(t).filter(r=>!core.isNonStarter(r));const sectors=genuinePhotoSectors(t);',
