@@ -78,3 +78,5 @@ jobs:
           if-no-files-found: error
 
 # Rerun: true popup clicks in public mode; mocked admin/judge verify exact links and interactability.
+
+# Re-run after correcting real header overlap and adding pointer-hit regression across all widths.
