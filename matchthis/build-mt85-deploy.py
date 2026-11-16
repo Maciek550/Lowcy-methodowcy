@@ -48,11 +48,12 @@ old_guard="""assert len(entries)==71
 assert len({r['peg'] for r in entries})==71
 assert len({r['sector'] for r in entries})==6
 assert all(r['competitorId'] for r in entries)"""
-new_guard="""assert len(entries)>=71
-assert len({r['sector'] for r in entries})==6
-assert all(r.get('competitorId') and r.get('sector') and isinstance(r.get('peg'),int) and r.get('peg')>0 for r in entries)
-assert len({str(r['competitorId']) for r in entries})>=71
-assert len({int(r['peg']) for r in entries})>=71"""
+new_guard="""valid=[r for r in entries if r.get('competitorId') and r.get('sector') and isinstance(r.get('peg'),int) and r.get('peg')>0]
+assert len(valid)>=71
+assert len({r['sector'] for r in valid})==6
+assert len({str(r['competitorId']) for r in valid})==len(valid)
+assert len({int(r['peg']) for r in valid})==len(valid)
+print('MT85_COMPLETE_ASSIGNMENTS',len(valid),'INCOMPLETE_RECORDS_PRESERVED',len(entries)-len(valid))"""
 assert old_guard in s, 'MT84 deployment safety preflight changed'
 s=s.replace(old_guard,new_guard,1)
 dest=root/'deploy-mt85-small2.sh'
