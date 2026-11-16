@@ -124,3 +124,5 @@ jobs:
         env:
           SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
         run: bash matchthis/deploy-mt79-small2.sh rollback
+
+# Retry: PNG checksum only after server install; preserve failed-attempt rollback snapshot.
