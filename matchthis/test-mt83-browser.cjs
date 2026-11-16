@@ -62,11 +62,11 @@ async function testFixtureAdmin(engine){
   assert.equal(await rows.count(),10,'All 10 assigned starters initially in sector A');
   assert((await rows.all_text_contents()).every(s=>s.includes('5,5')),'All-zero round must give 5.5 pts');
   await goMode(p,'edit');
-  let weights=p.locator('input[data-mt55-field="weightG"]');
+  let weights=p.locator('input[data-mt55-field="weight"]');
   assert.equal(await weights.count(),10,'Ten editable weights for ten entrants');
   for(const value of await weights.evaluateAll(xs=>xs.map(x=>x.value)))assert.equal(value,'0','Default weight is 0');
   for(const [i,g] of [[0,3000],[1,2000],[2,1000]]){
-   weights=p.locator('input[data-mt55-field="weightG"]');
+   weights=p.locator('input[data-mt55-field="weight"]');
    await weights.nth(i).fill(String(g));
    await weights.nth(i).press('Tab');
    await p.waitForFunction(()=>document.querySelector('#mt73-sync')?.textContent.includes('Zapisano na serwerze'),{timeout:25000});
@@ -89,7 +89,7 @@ async function testFixtureAdmin(engine){
   rows=p.locator('.sector-result tbody tr');
   assert.equal(await rows.count(),10,'All starters stay visible after real server reload');
   await goMode(p,'edit');
-  assert.equal(await p.locator('input[data-mt55-field="weightG"]').count(),10);
+  assert.equal(await p.locator('input[data-mt55-field="weight"]').count(),10);
   // Turn test race into a past-date editor; save creates ten real durable 0+weighing rows.
   await p.locator('#tourDate').fill('2026-10-10');
   await p.locator('[data-action="saveTourDate"]').click();
@@ -127,9 +127,19 @@ async function testViewer(engine){
   assert.equal(await p.title(),'MatchThis MT-83');
   assert.equal(await p.locator('.mt80-brand-link').getAttribute('href'),'/');
   assert.equal(await p.locator('[data-view="photoHub"]').count(),0,'No photo downloads for viewer');
-  await clickEvent(p);
-  await goMode(p,'sectors');
-  assert.equal(await p.locator('.sector-result tbody tr').count(),10);
+  if(live){
+    await p.locator('[data-view="archive"]').first().click();
+    const year=p.locator('details[data-year="2025"]');
+    if(await year.getAttribute('open')===null)await year.locator('summary').click();
+    await p.locator('[data-open="mt2025-mega_final_2025"]').first().click();
+    await goMode(p,'sectors');
+    assert.equal(await p.locator('.sector-title').count(),6,'Real 2025 final six sectors');
+    assert.equal(await p.locator('.sector-result tbody tr').count(),54,'Real final all 54 competitors');
+  }else{
+    await clickEvent(p);
+    await goMode(p,'sectors');
+    assert.equal(await p.locator('.sector-result tbody tr').count(),10);
+  }
   await p.locator('.mt80-brand-link .brand').click();
   assert.equal(new URL(p.url()).pathname,'/','Viewer logo stays on own site');
   assert((await p.locator('#main').innerText()).includes('Planowane zawody')||(await p.locator('#main').innerText()).includes('Ostatnio rozegrane zawody'));
