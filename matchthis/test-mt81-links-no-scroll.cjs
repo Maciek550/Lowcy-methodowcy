@@ -67,7 +67,9 @@ const own=live?'https://matchthis.lowcymethodowcy.smallhost.pl/':'http://127.0.0
           hScroll:document.documentElement.scrollWidth>innerWidth+1};
       });
       assert.equal(result.style,'visible',role+' '+width+' illegal scrollbar');
-      assert(result.n>=4,'Navigation lost main items: '+JSON.stringify(result));
+      // Judge role intentionally has no navigation tabs; admin/viewer must retain all.
+      if(role==='judge')assert.equal(result.n,0,'Judge acquired unexpected navigation');
+      else assert(result.n>=4,'Navigation lost main items: '+JSON.stringify(result));
       assert(result.sw<=result.cw+2,'Navigation content clipped at '+width+': '+JSON.stringify(result));
       assert(result.brandHit&&result.iconHit&&result.shopHit,'Header link blocked '+role+' '+width);
       assert(!result.hScroll,'Page width overflow '+role+' '+width);
