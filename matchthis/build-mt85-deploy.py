@@ -19,9 +19,9 @@ for suffix,sha in zip(['','_OGLADACZ','_SEDZIA'],old_pages):
  assert p.is_file()
  new_pages.append(hashlib.sha256(p.read_bytes()).hexdigest())
 assert new_pages==[
- '77e7269710ba8b9dc577c89320facd6c5bd97df90af4784718ce507c4570f200',
- '86825329582035c184d5b82d6c767d50aeb43c4be0f8dd5c74a83f82cf7517be',
- '11c91d3d6e280eae5ce89a1fcc204b1b4246764350ff0795ab01c126295a743a'],new_pages
+ '0dff776b91424c9a82a07aec477781b382ea66ed0a1186ac85c3fc82cd47c5ae',
+ '7b7fcf03f536250d3677db5fff2cdbcb866a8eadd6d5ae7373ddd661d722da9f',
+ 'b28d43c81505b8b3039ede692c3c29c1903ea8e3b4f01265990f822ab7578f4b'],new_pages
 src=root/'deploy-mt84-small2.sh'
 s=src.read_text('utf-8')
 old_digests=[*old_pages,*prior_pages]
