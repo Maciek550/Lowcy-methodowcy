@@ -13,7 +13,7 @@ const ten=Array.from({length:10},(_,i)=>({
 const t={id:'test-r1',date:'2026-12-10',status:'DRAFT',sourceOfficial:false,results:ten};
 const ranked=core.tourClassification(t);
 assert.equal(ranked.length,10);
-assert.deepEqual(ranked.filter(x=>x.weightG>0).map(x=>x.place).sort((a,b)=>a-b),[1,2,3]);
+assert.deepEqual(Array.from(ranked.filter(x=>x.weightG>0).map(x=>x.place).sort((a,b)=>a-b)),[1,2,3]);
 for(const x of ranked.filter(x=>x.weightG===0))assert.equal(x.place,7,'3 positives, 7 zeros => (4+10)/2=7');
 for(const x of core.rankSector(ten.map(r=>({...r,weightG:0}))))assert.equal(x.place,5.5,'10 zeros => average 1..10');
 for(const x of core.rankSector(ten.map((r,i)=>({...r,weightG:i===0?100:0}))).filter(r=>r.weightG===0))assert.equal(x.place,6);
