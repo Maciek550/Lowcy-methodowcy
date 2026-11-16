@@ -45,6 +45,16 @@ jobs:
             print('round',n,'status',t.get('status'),'draw_published',t.get('drawPublished'),'entries',len(entries),'entry_sector_count',len(sectors),'results',len(results),'positive_weights',sum(float(r.get('weightG') or 0)>0 for r in results),'zero_weights',sum(float(r.get('weightG') or 0)==0 for r in results))
             ids={str(x.get('competitorId')) for x in results}
             print('round',n,'assigned_without_result',sum(bool(x.get('sector')) and x.get('peg') is not None and str(x.get('competitorId')) not in ids for x in entries))
+            print('round',n,'unique_ids',len({str(r.get('competitorId')) for r in entries if r.get('competitorId')}),'unique_pegs',len({str(r.get('peg')) for r in entries if r.get('peg') is not None}),'sector_labels',sorted({str(r.get('sector')) for r in entries if r.get('sector')}),'invalid_or_incomplete',sum(not (r.get('competitorId') and r.get('sector') and isinstance(r.get('peg'),int) and r.get('peg')>0) for r in entries))
+            by_id={};by_peg={};conflict_id=0;conflict_peg=0
+            for r in entries:
+             if not (r.get('competitorId') and r.get('sector') and isinstance(r.get('peg'),int) and r.get('peg')>0):continue
+             x=(r['sector'],r['peg']); k=str(r['competitorId'])
+             if k in by_id and by_id[k]!=x:conflict_id+=1
+             if r['peg'] in by_peg and by_peg[r['peg']]!=(r['sector'],k):conflict_peg+=1
+             by_id[k]=x;by_peg[r['peg']]=(r['sector'],k)
+            print('round',n,'conflicting_person_assignments',conflict_id,'conflicting_peg_assignments',conflict_peg)
+
           PY
           echo "MATCHTHIS_READONLY_END"
           READONLY
