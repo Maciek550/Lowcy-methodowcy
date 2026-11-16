@@ -51,8 +51,8 @@ test ! -L "$web/index.html" && test ! -L "$web/panel.php"
 test -f "$web/.mt41-private/state-mt73.json" && test ! -L "$web/.mt41-private/state-mt73.json"
 test -f "$web/.mt41-private/mt60-published-draws.json"
 test "$(sha256sum "$web/matchthis-orange-mt79-32.png"|awk '{print $1}')" = c1dc3ff23667d074224eb6eb6265c7c9b5cbc40f0329a63fe3b0199f7b2e3f02
-mkdir -p "$HOME/matchthis-independent/mt-81"
-chmod 700 "$HOME/matchthis-independent/mt-81"
+mkdir -p "$HOME/matchthis-independent/mt-81-r2"
+chmod 700 "$HOME/matchthis-independent/mt-81-r2"
 echo MT81_EXACT_MT80_THREE_ROLES_AND_ICON_PRECHECK_PASS
 PRE
 sshpass -e scp "${opts[@]}" matchthis/MatchThis_MT-81.html matchthis/MatchThis_MT-81_OGLADACZ.html matchthis/MatchThis_MT-81_SEDZIA.html "$remote:matchthis-independent/mt-81-r2/"
@@ -82,7 +82,7 @@ installed=1
 sshpass -e ssh "${opts[@]}" "$remote" 'bash -s' <<'INSTALL'
 set -Eeuo pipefail
 web="$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html"
-stage="$HOME/matchthis-independent/mt-81"
+stage="$HOME/matchthis-independent/mt-81-r2"
 prior="$stage/previous"
 sha(){ sha256sum "$1"|awk '{print $1}'; }
 test "$(sha "$web/index.html")" = f0541e9b09a7dc4d8e14d1d9d8d30b2120d06a10ee552b8e06f385c63dd0498c
