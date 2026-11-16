@@ -50,7 +50,7 @@ test ! -e "$HOME/matchthis-independent/mt-81/previous"
 test ! -L "$web/index.html" && test ! -L "$web/panel.php"
 test -f "$web/.mt41-private/state-mt73.json" && test ! -L "$web/.mt41-private/state-mt73.json"
 test -f "$web/.mt41-private/mt60-published-draws.json"
-test "$(sha256sum "$web/matchthis-orange-mt80-32.png"|awk '{print $1}')" = c1dc3ff23667d074224eb6eb6265c7c9b5cbc40f0329a63fe3b0199f7b2e3f02
+test "$(sha256sum "$web/matchthis-orange-mt79-32.png"|awk '{print $1}')" = c1dc3ff23667d074224eb6eb6265c7c9b5cbc40f0329a63fe3b0199f7b2e3f02
 mkdir -p "$HOME/matchthis-independent/mt-81"
 chmod 700 "$HOME/matchthis-independent/mt-81"
 echo MT81_EXACT_MT80_THREE_ROLES_AND_ICON_PRECHECK_PASS
