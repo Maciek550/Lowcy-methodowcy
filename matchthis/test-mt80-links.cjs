@@ -66,6 +66,15 @@ const urls={home:'https://matchthis.pl/',shop:'https://matchthis.pl/sklep/'};
         assert(box.x>=-1&&box.x+box.width<=width+2,
           role+' '+label+' '+width+' outside viewport '+JSON.stringify(box));
       }
+      // Regression for previous admin bug: GŁÓWNA must not intercept logo clicks.
+      for(const [label,selector] of [['logo text','.mt80-brand-link .brand'],['logo icon','.mt80-brand-link img'],['shop','.mt80-shop-link']]){
+        const hit=await page.locator(selector).evaluate(el=>{
+          const r=el.getBoundingClientRect();
+          const target=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
+          return el===target||el.contains(target);
+        });
+        assert(hit,role+' '+engine.name()+' '+width+' '+label+' covered by another header element');
+      }
       const a=await logo.boundingBox(),b=await shop.boundingBox();
       assert(a.y+a.height<=b.y+1||b.y+b.height<=a.y+1||
         a.x+a.width<=b.x+1||b.x+b.width<=a.x+1,'Logo/shop overlapping at '+width);
