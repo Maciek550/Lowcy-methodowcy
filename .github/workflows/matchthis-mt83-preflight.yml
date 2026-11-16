@@ -1,0 +1,80 @@
+name: MatchThis MT83 - PZW zero standings and login regression BEFORE release
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-mt83-preflight.yml]
+permissions: {contents: read, actions: read}
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 19
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify exact MT82 baseline and rebuild MT83 changes for three roles
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt82-source
+          gh run download 43854390443 -R Maciek550/Lowcy-methodowcy -n MatchThis_MT82_LINKS_NO_SCROLL_3_ROLE_HTML -D /tmp/mt82-source
+          for role in '' '_OGLADACZ' '_SEDZIA'; do
+            cp "$(find /tmp/mt82-source -name "MatchThis_MT-82$role.html" -print -quit)" "matchthis/MatchThis_MT-82$role.html"
+          done
+          python3 - <<'PY'
+          from pathlib import Path
+          import zlib,base64,hashlib
+          b=zlib.decompress(base64.b64decode(Path('matchthis/mt83-builder.zlib.b64').read_text().strip()))
+          assert hashlib.sha256(b).hexdigest()=='b375115efaffdfd654264e6b5c2ebf28b2ea9b9b213abfe610b169bf31cc7b2c'
+          s=b.decode()
+          a="SRC=Path('/mnt/data'); OUT=Path('/mnt/data/mt83')"
+          assert s.count(a)==1
+          s=s.replace(a,"SRC=Path('matchthis'); OUT=Path('matchthis')")
+          Path('matchthis/build-mt83.py').write_text(s)
+          PY
+          python3 matchthis/build-mt83.py
+          echo 'defbdb62a66f70c016b83ec6cfdb2f281f1e4b07709ea0a26fc0ed362f71361c  matchthis/MatchThis_MT-83.html'|sha256sum -c -
+          echo '24c6e6757e5dbc85769597dda6c5df3afcb6e1e537cc9ece7664855db6ad38aa  matchthis/MatchThis_MT-83_OGLADACZ.html'|sha256sum -c -
+          echo 'af5727e4f26b7019de7502963322725d6d5528f8b0ece0a91969fca1867c56ef  matchthis/MatchThis_MT-83_SEDZIA.html'|sha256sum -c -
+          node --check matchthis/test-mt83-browser.cjs
+          node matchthis/test-mt83-pzw.cjs
+          python3 -m py_compile matchthis/test-mt83-fixture.py
+          echo MT83_EXACT_RELEASE_VERSION_THREE_HTML_AND_PZW_ENGINE_UNIT_PASS
+      - name: Launch isolated real-save server fixture (no connection to SMALL2 writes)
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt83-screens
+          python3 matchthis/test-mt83-fixture.py matchthis /tmp/mt83-fixture-state.json >/tmp/mt83-fixture.log 2>&1 &
+          curl --retry 10 --retry-connrefused --retry-delay 1 --fail --silent http://127.0.0.1:8783/mt73-state.php?public=1 > /tmp/mt83-readiness.json
+      - name: Install actual Chromium and Firefox engines
+        run: |
+          npm install --prefix /tmp/mt83-browser --silent playwright
+          cd /tmp/mt83-browser
+          npx playwright install --with-deps chromium firefox
+      - name: Test logged-in logo, vertical header, ten zero starters, 7-point ties, saves, reload and final class
+        run: |
+          set -euo pipefail
+          NODE_PATH=/tmp/mt83-browser/node_modules node matchthis/test-mt83-browser.cjs
+          cat /tmp/mt83-fixture.log
+          python3 - <<'PY'
+          import json
+          s=json.load(open('/tmp/mt83-fixture-state.json'))
+          e=next(e for e in s['data']['events'] if e['id']=='test-event')
+          r=e['rounds'][0]['results']
+          assert len(r)==10 and sum(x['weightG']==0 for x in r)==7
+          assert e['rounds'][0]['status']=='FINAL'
+          print('MT83_FIXTURE_SAVED_TEN_PARTICIPANTS_SEVEN_ZERO_RESULTS_READ_BACK_PASS',s['revision'])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: MT83_PZW_PREDEPLOY_SCREENSHOTS
+          path: /tmp/mt83-screens/*.png
+          if-no-files-found: warn
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MT83_EXACT_THREE_ROLE_HTML_PREDEPLOY
+          path: |
+            matchthis/MatchThis_MT-83.html
+            matchthis/MatchThis_MT-83_OGLADACZ.html
+            matchthis/MatchThis_MT-83_SEDZIA.html
+          if-no-files-found: error
