@@ -21,7 +21,7 @@ stage="$HOME/matchthis-independent/mt-80/previous"
 test -f "$stage/index.html" && test -f "$stage/panel.php"
 test "$(sha256sum "$stage/index.html"|awk '{print $1}')" = ece29feb50dd671461f984eccb17e9367514d37e802a291b924f4d199947eaa1
 current="$(sha256sum "$web/index.html"|awk '{print $1}')"
-test "$current" = 0dfe00ffdf2679a30f262147cdf9483de09a6491901d1fa6f0ec9df7248be3bf || test "$current" = ece29feb50dd671461f984eccb17e9367514d37e802a291b924f4d199947eaa1
+test "$current" = 6b663dc02882d565fa3436e58d2989ef9fdc3f7b2faeb5c81f050070d6c53b35 || test "$current" = ece29feb50dd671461f984eccb17e9367514d37e802a291b924f4d199947eaa1
 cp -p "$stage/panel.php" "$web/panel.php.mt80-rollback"
 mv -f "$web/panel.php.mt80-rollback" "$web/panel.php"
 cp -p "$stage/index.html" "$web/index.html.mt80-rollback"
@@ -31,9 +31,9 @@ RESTORE
   exit
 fi
 for item in \
-  'fb4d4c4b16e62542e455d3bf142fd565193e6151ba36df72fe3e920f00223da6 matchthis/MatchThis_MT-80.html' \
-  '0dfe00ffdf2679a30f262147cdf9483de09a6491901d1fa6f0ec9df7248be3bf matchthis/MatchThis_MT-80_OGLADACZ.html' \
-  'd215150524e587a8cd8d987a6924995aae6f21f997e036b6da2d9f3497951714 matchthis/MatchThis_MT-80_SEDZIA.html'; do
+  '4f1eb5e12a0699465decf67bf7ea9cf17d94f247544af524f42d2d2d22b1cacb matchthis/MatchThis_MT-80.html' \
+  '6b663dc02882d565fa3436e58d2989ef9fdc3f7b2faeb5c81f050070d6c53b35 matchthis/MatchThis_MT-80_OGLADACZ.html' \
+  '9b3921065e2a166e25b176289bfed412dc2e8d583bdf314ee57295213b39f1ff matchthis/MatchThis_MT-80_SEDZIA.html'; do
   echo "$item" | sha256sum -c -
 done
 sshpass -e ssh "${opts[@]}" "$remote" 'bash -s' <<'PRE'
@@ -86,9 +86,9 @@ stage="$HOME/matchthis-independent/mt-80"
 prior="$stage/previous"
 sha(){ sha256sum "$1"|awk '{print $1}'; }
 test "$(sha "$web/index.html")" = ece29feb50dd671461f984eccb17e9367514d37e802a291b924f4d199947eaa1
-test "$(sha "$stage/MatchThis_MT-80.html")" = fb4d4c4b16e62542e455d3bf142fd565193e6151ba36df72fe3e920f00223da6
-test "$(sha "$stage/MatchThis_MT-80_OGLADACZ.html")" = 0dfe00ffdf2679a30f262147cdf9483de09a6491901d1fa6f0ec9df7248be3bf
-test "$(sha "$stage/MatchThis_MT-80_SEDZIA.html")" = d215150524e587a8cd8d987a6924995aae6f21f997e036b6da2d9f3497951714
+test "$(sha "$stage/MatchThis_MT-80.html")" = 4f1eb5e12a0699465decf67bf7ea9cf17d94f247544af524f42d2d2d22b1cacb
+test "$(sha "$stage/MatchThis_MT-80_OGLADACZ.html")" = 6b663dc02882d565fa3436e58d2989ef9fdc3f7b2faeb5c81f050070d6c53b35
+test "$(sha "$stage/MatchThis_MT-80_SEDZIA.html")" = 9b3921065e2a166e25b176289bfed412dc2e8d583bdf314ee57295213b39f1ff
 mkdir -m 700 "$prior"
 cp -p "$web/index.html" "$prior/index.html"
 cp -p "$web/panel.php" "$prior/panel.php"
@@ -120,15 +120,15 @@ cp -p "$stage/panel.php" "$web/panel.php.next"
 mv -f "$web/panel.php.next" "$web/panel.php"
 cp -p "$stage/MatchThis_MT-80_OGLADACZ.html" "$web/index.html.next"
 mv -f "$web/index.html.next" "$web/index.html"
-test "$(sha "$web/index.html")" = 0dfe00ffdf2679a30f262147cdf9483de09a6491901d1fa6f0ec9df7248be3bf
-test "$(tail -n +2 "$web/role-pages/mt80-admin.php"|sha256sum|awk '{print $1}')" = fb4d4c4b16e62542e455d3bf142fd565193e6151ba36df72fe3e920f00223da6
-test "$(tail -n +2 "$web/role-pages/mt80-sedzia.php"|sha256sum|awk '{print $1}')" = d215150524e587a8cd8d987a6924995aae6f21f997e036b6da2d9f3497951714
+test "$(sha "$web/index.html")" = 6b663dc02882d565fa3436e58d2989ef9fdc3f7b2faeb5c81f050070d6c53b35
+test "$(tail -n +2 "$web/role-pages/mt80-admin.php"|sha256sum|awk '{print $1}')" = 4f1eb5e12a0699465decf67bf7ea9cf17d94f247544af524f42d2d2d22b1cacb
+test "$(tail -n +2 "$web/role-pages/mt80-sedzia.php"|sha256sum|awk '{print $1}')" = 9b3921065e2a166e25b176289bfed412dc2e8d583bdf314ee57295213b39f1ff
 cmp "$prior/state-mt73.json" "$web/.mt41-private/state-mt73.json"
 cmp "$prior/mt60-published-draws.json" "$web/.mt41-private/mt60-published-draws.json"
 echo MT80_THREE_ROLES_INSTALLED_ON_SMALL2_MT79_BACKUP_AND_UNTOUCHED_DATA_PASS
 INSTALL
 curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/ -o /tmp/mt80-live.html
-test "$(sha256sum /tmp/mt80-live.html|awk '{print $1}')" = 0dfe00ffdf2679a30f262147cdf9483de09a6491901d1fa6f0ec9df7248be3bf
+test "$(sha256sum /tmp/mt80-live.html|awk '{print $1}')" = 6b663dc02882d565fa3436e58d2989ef9fdc3f7b2faeb5c81f050070d6c53b35
 test "$(curl -sS -o /dev/null -w '%{http_code}' https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php)" = 401
 test "$(curl -sS -o /dev/null -w '%{http_code}' https://matchthis.lowcymethodowcy.smallhost.pl/panel.php)" = 303
 echo MT80_PRODUCTION_PUBLIC_LINKS_AND_AUTH_ROUTE_PASS
