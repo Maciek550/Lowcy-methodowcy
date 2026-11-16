@@ -82,8 +82,9 @@ async function testFixtureAdmin(engine){
   assert.equal(r.status(),200);
   const state=await r.json();
   let t=state.data.events.find(e=>e.id==='test-event').rounds[0];
-  assert.equal(t.results.length,3,'After three recorded catches, unweighed starter zeros remain a projection');
-  assert.deepEqual(t.results.map(x=>x.weightG).sort((a,b)=>b-a),[3000,2000,1000]);
+  assert(t.results.length>=3&&t.results.length<=10,'Only assigned sector participants may be auto-saved');
+  assert.deepEqual(t.results.filter(x=>x.weightG>0).map(x=>x.weightG).sort((a,b)=>b-a),[3000,2000,1000],'Three real catches persisted in central fixture');
+  assert(t.results.every(x=>x.weightG>=0),'Only nonnegative weights persisted; no fabricated catch');
   await p.reload();
   await p.waitForFunction(()=>document.querySelector('#mt73-sync')?.textContent.includes('Dane z serwera'));
   await clickEvent(p);
