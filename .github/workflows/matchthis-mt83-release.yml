@@ -60,7 +60,7 @@ jobs:
         env:
           SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
         run: bash matchthis/deploy-mt83-small2.sh
-      - name: Real Chromium and Firefox browser clicks: homepage, no logout, sectors and responsive
+      - name: "Real Chromium and Firefox browser clicks: homepage, no logout, sectors and responsive"
         env:
           MT83_URL: https://matchthis.lowcymethodowcy.smallhost.pl/
         run: |
