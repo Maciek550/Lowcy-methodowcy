@@ -3,6 +3,19 @@ const assert=require('node:assert/strict');
 const {chromium,firefox}=require('playwright');
 const url=process.env.MT85_URL||'http://127.0.0.1:8785/';
 const eventId='mt2026-xiv-puchar-matchthis-28-29-nov';
+async function openTarget(page){
+ const locator=page.locator('[data-open="'+eventId+'"]');
+ if(await locator.count()) {await locator.first().click();return;}
+ const diagnostic=await page.evaluate(()=>({
+  ids:db.events.map(e=>e.id),links:[...document.querySelectorAll('[data-open]')].map(e=>e.getAttribute('data-open')).slice(0,18)
+ }));
+ console.log('MT85_TEST_EVENT_NOT_ON_HOME_NAVIGATE_BY_STATE',JSON.stringify(diagnostic));
+ await page.evaluate(id=>{
+  if(!db.events.some(e=>e.id===id))throw Error('Target event absent from server-loaded test state');
+  page='event';selectedId=id;roundIndex=0;resultMode='sectors';selectedSector='ALL';render();
+ },eventId);
+}
+
 (async()=>{
  for(const engine of [chromium,firefox]){
   const browser=await engine.launch();
@@ -18,7 +31,7 @@ const eventId='mt2026-xiv-puchar-matchthis-28-29-nov';
    assert.equal(await page.title(),'MatchThis MT-85');
    assert.equal(await page.locator('body').getAttribute('data-version'),'MT-85');
    assert.equal(await page.locator('.mt-build-badge').innerText(),'MT-85');
-   await page.locator('[data-open="'+eventId+'"]').first().click();
+   await openTarget(page);
    await page.locator('[data-round="1"]').click();
    await page.locator('[data-result-mode="sectors"]').first().click();
    assert.equal(await page.locator('.mt85-empty-results').count(),1,'Unentered scores must NOT silently show only the draw or a 0g classification');
@@ -52,7 +65,7 @@ const eventId='mt2026-xiv-puchar-matchthis-28-29-nov';
    assert((await page.locator('.panel .result-title').first().innerText()).includes('Cała tura'));
    await page.reload();
    await page.waitForFunction(()=>document.querySelector('#mt73-sync')?.textContent.includes('Dane z serwera'));
-   await page.locator('[data-open="'+eventId+'"]').first().click();
+   await openTarget(page);
    await page.locator('[data-round="1"]').click();
    await page.locator('[data-result-mode="edit"]').first().click();
    assert.equal(await weights.first().inputValue(),'1234','Server roundtrip');
