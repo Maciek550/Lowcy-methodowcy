@@ -117,3 +117,5 @@ jobs:
         run: bash matchthis/deploy-mt81-small2.sh rollback
 
 # Rerun after matching actual judge role (zero menu tabs, no scrollbar).
+
+# Retry after fixing only favicon asset basename in safety precheck (actual asset remains MT79).
