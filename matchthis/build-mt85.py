@@ -71,6 +71,29 @@ for suffix,digest in expected.items():
  # Sector PDF crash repair: the PDF engine is a separate JS closure, so private mt68TourLabel is inaccessible.
  s=once(s,'${formatted(mt68TourLabel(tour,entity))} | Sektor ${sector}',
           '${formatted(datedTourLabel(tour,entity))} | Sektor ${sector}')
+ # The PDF engine is a separate script and cannot access navigation's private date helper.
+ # Reproduce the existing date label logic in the PDF scope without changing vector rendering.
+ s=once(s,'const MatchThisVectorPdf=(()=>{',r"""const MatchThisVectorPdf=(()=>{
+ function mt85PdfEntityDate(e){
+  const tours=Array.isArray(e?.rounds)?e.rounds:Array.isArray(e?.tours)?e.tours:[];
+  const valid=d=>typeof d==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(d)?d:'';
+  const pl=d=>valid(d)?d.slice(8,10)+'.'+d.slice(5,7)+'.'+d.slice(0,4):'';
+  const dates=tours.map(t=>valid(t.date)).filter(Boolean).sort();
+  const unique=[...new Set(dates)];
+  if(tours.length>1&&dates.length===tours.length)return unique.length===1?pl(unique[0]):pl(unique[0])+' – '+pl(unique[unique.length-1]);
+  if(tours.length>1&&dates.length)return 'Potw.: '+unique.map(pl).join(', ')+' · pozostałe daty niepotwierdzone';
+  const day=pl(e?.date);
+  if(day&&tours.length<=1)return day;
+  if(day&&tours.length>1)return 'Data zawodów: '+day+' · daty tur niepotwierdzone';
+  return 'Data niepotwierdzona'+(e?.year?' ('+e.year+')':'');
+ }
+""")
+ s=once(s,'formatted(entityDateLabel(entity)),pageW-margin,817',
+          'formatted(mt85PdfEntityDate(entity)),pageW-margin,817')
+ s=once(s,'formatted(entityDateLabel(entity)),pageW-margin,816',
+          'formatted(mt85PdfEntityDate(entity)),pageW-margin,816')
+ s=once(s,"formatted(entity.name)+' · '+formatted(entityDateLabel(entity)),margin,43",
+          "formatted(entity.name)+' · '+formatted(mt85PdfEntityDate(entity)),margin,43")
  s=s.replace('</style>',css+'</style>',1)
  s=s.replace('MT-84','MT-85')
  out=root/f'MatchThis_MT-85{suffix}.html';out.write_text(s,'utf-8')
