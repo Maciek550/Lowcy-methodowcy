@@ -20,9 +20,9 @@ jobs:
           for role in '' '_OGLADACZ' '_SEDZIA'; do
             cp "$(find /tmp/mt80-release -name "MatchThis_MT-80$role.html" -print -quit)" "matchthis/MatchThis_MT-80$role.html"
           done
-          test "$(sha256sum matchthis/MatchThis_MT-80.html|awk '{print $1}')" = 4f1eb5e12a0699465decf67bf7ea9cf17d94f247544af524f42d2d2d22b1cacb
-          test "$(sha256sum matchthis/MatchThis_MT-80_OGLADACZ.html|awk '{print $1}')" = 6b663dc02882d565fa3436e58d2989ef9fdc3f7b2faeb5c81f050070d6c53b35
-          test "$(sha256sum matchthis/MatchThis_MT-80_SEDZIA.html|awk '{print $1}')" = 9b3921065e2a166e25b176289bfed412dc2e8d583bdf314ee57295213b39f1ff
+          test "$(sha256sum matchthis/MatchThis_MT-80.html|awk '{print $1}')" = 59efe4f1ffd6000ea7ae634f0002cb21819e0885bf8a5c74da50320dac02d0bf
+          test "$(sha256sum matchthis/MatchThis_MT-80_OGLADACZ.html|awk '{print $1}')" = f0541e9b09a7dc4d8e14d1d9d8d30b2120d06a10ee552b8e06f385c63dd0498c
+          test "$(sha256sum matchthis/MatchThis_MT-80_SEDZIA.html|awk '{print $1}')" = ac2da3f8a0cf1f1f880aa90de96823a14118c4be3d4783933e899bdb537d7664
           bash -n matchthis/deploy-mt80-small2.sh
           node --check matchthis/test-mt80-links.cjs
           echo MT80_ALL_THREE_ROLES_PRETESTED_AND_VERSION_SHA_PASS
@@ -64,7 +64,7 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/ -o /tmp/mt80-index-after.html
-          test "$(sha256sum /tmp/mt80-index-after.html|awk '{print $1}')" = 6b663dc02882d565fa3436e58d2989ef9fdc3f7b2faeb5c81f050070d6c53b35
+          test "$(sha256sum /tmp/mt80-index-after.html|awk '{print $1}')" = f0541e9b09a7dc4d8e14d1d9d8d30b2120d06a10ee552b8e06f385c63dd0498c
           curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/mt80-state-after.json
           cmp /tmp/mt80-state-before.json /tmp/mt80-state-after.json
           curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt60-draws.php' -o /tmp/mt80-draws-after.json
