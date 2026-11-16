@@ -90,3 +90,5 @@ jobs:
 # MT85 retry 6: reveal exact PDF export failure after successful 71-person photo regression.
 
 # MT85 retry 7: vector PDF footer called a private closure function. Replaced with public helper; rendered PDF and 12 rows verified locally.
+
+# MT85 retry 8: both independently scoped PDF functions fixed, browser JPG/PDF with 11 zero-weight peers required.
