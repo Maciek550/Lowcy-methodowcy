@@ -16,7 +16,7 @@ if test "$mode" = rollback;then
  sshpass -e ssh "${options[@]}" "$remote" 'bash -s' <<'ROLLBACK'
 set -euo pipefail
 web="$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html"
-prior="$HOME/matchthis-independent/mt-79/previous"
+prior="$HOME/matchthis-independent/mt-79-r2/previous"
 test -f "$prior/panel.php" && test -f "$prior/index.html"
 test "$(sha256sum "$prior/index.html"|awk '{print $1}')" = 3ebed336016c0af5ef51fc86b19bc7e7244ec95940ff68aae95b18742f0a4f45
 cp -p "$prior/panel.php" "$web/panel.php.mt79-rollback"
@@ -40,7 +40,7 @@ test "$(tail -n +2 "$web/role-pages/mt78-sedzia.php"|sha256sum|awk '{print $1}')
 grep -Fq 'mt78-admin.php' "$web/panel.php"
 grep -Fq 'mt78-sedzia.php' "$web/panel.php"
 test ! -e "$web/role-pages/mt79-admin.php" && test ! -e "$web/role-pages/mt79-sedzia.php"
-test ! -e "$HOME/matchthis-independent/mt-79/previous"
+test ! -e "$HOME/matchthis-independent/mt-79-r2/previous"
 test ! -e "$web/matchthis-orange-mt79-32.png" && test ! -e "$web/matchthis-orange-mt79-64.png"
 test "$(sha256sum "$web/favicon.ico" | awk '{print $1}')" = 162ac423fdd594d3db0213b05cde40203d2053b44c135b18ea29880c36b60d5c
 test -f "$web/.mt41-private/state-mt73.json"
@@ -48,8 +48,8 @@ test -f "$web/.mt41-private/mt60-published-draws.json"
 test ! -L "$web/index.html" && test ! -L "$web/panel.php"
 echo MT79_PREDEPLOY_EXACT_MT78_SMALL2_PASS
 CHECK
-sshpass -e ssh "${options[@]}" "$remote" 'mkdir -p "$HOME/matchthis-independent/mt-79";chmod 700 "$HOME/matchthis-independent/mt-79"'
-sshpass -e scp "${options[@]}" matchthis/MatchThis_MT-79.html matchthis/MatchThis_MT-79_SEDZIA.html matchthis/MatchThis_MT-79_OGLADACZ.html matchthis/assets/matchthis-orange-mt79-32.png matchthis/assets/matchthis-orange-mt79-64.png "$remote:matchthis-independent/mt-79/"
+sshpass -e ssh "${options[@]}" "$remote" 'mkdir -p "$HOME/matchthis-independent/mt-79-r2";chmod 700 "$HOME/matchthis-independent/mt-79-r2"'
+sshpass -e scp "${options[@]}" matchthis/MatchThis_MT-79.html matchthis/MatchThis_MT-79_SEDZIA.html matchthis/MatchThis_MT-79_OGLADACZ.html matchthis/assets/matchthis-orange-mt79-32.png matchthis/assets/matchthis-orange-mt79-64.png "$remote:matchthis-independent/mt-79-r2/"
 switched=0
 failure(){
  code=$?;trap - EXIT
@@ -58,7 +58,7 @@ failure(){
    sshpass -e ssh "${options[@]}" "$remote" 'bash -s' <<'RESTORE' || echo MT79_AUTO_ROLLBACK_FAILED
 set -euo pipefail
 web="$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html"
-prior="$HOME/matchthis-independent/mt-79/previous"
+prior="$HOME/matchthis-independent/mt-79-r2/previous"
 test "$(sha256sum "$prior/index.html"|awk '{print $1}')" = 3ebed336016c0af5ef51fc86b19bc7e7244ec95940ff68aae95b18742f0a4f45
 cp -p "$prior/panel.php" "$web/panel.php.revert";mv -f "$web/panel.php.revert" "$web/panel.php"
 cp -p "$prior/index.html" "$web/index.html.revert";mv -f "$web/index.html.revert" "$web/index.html"
@@ -72,7 +72,7 @@ switched=1
 sshpass -e ssh "${options[@]}" "$remote" 'bash -s' <<'INSTALL'
 set -Eeuo pipefail
 web="$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html"
-stage="$HOME/matchthis-independent/mt-79"
+stage="$HOME/matchthis-independent/mt-79-r2"
 prior="$stage/previous"
 hash(){ sha256sum "$1"|awk '{print $1}'; }
 test "$(hash "$web/index.html")" = 3ebed336016c0af5ef51fc86b19bc7e7244ec95940ff68aae95b18742f0a4f45
@@ -90,8 +90,6 @@ cp -p "$web/role-pages/mt78-admin.php" "$prior/mt78-admin.php"
 cp -p "$web/role-pages/mt78-sedzia.php" "$prior/mt78-sedzia.php"
 cp -p "$web/.mt41-private/state-mt73.json" "$prior/state-mt73.json"
 cp -p "$web/.mt41-private/mt60-published-draws.json" "$prior/mt60-published-draws.json"
-test "$(sha256sum "$web/matchthis-orange-mt79-32.png" | awk '{print $1}')" = c1dc3ff23667d074224eb6eb6265c7c9b5cbc40f0329a63fe3b0199f7b2e3f02
-test "$(sha256sum "$web/matchthis-orange-mt79-64.png" | awk '{print $1}')" = 1e83413b4db09f971a2f5f5e13cb268ba548a63259eb50f313ca1ece1652c6ce
 cmp -s "$prior/state-mt73.json" "$web/.mt41-private/state-mt73.json"
 cmp -s "$prior/mt60-published-draws.json" "$web/.mt41-private/mt60-published-draws.json"
 { printf '%s\n' '<?php if (!defined("MATCHTHIS_AUTHED")) {http_response_code(404);exit;} ?>';cat "$stage/MatchThis_MT-79.html"; } > "$stage/mt79-admin.php"
@@ -121,6 +119,8 @@ cp -p "$stage/panel.php" "$web/panel.php.next"
 mv -f "$web/panel.php.next" "$web/panel.php"
 cp -p "$stage/MatchThis_MT-79_OGLADACZ.html" "$web/index.html.next"
 mv -f "$web/index.html.next" "$web/index.html"
+test "$(sha256sum "$web/matchthis-orange-mt79-32.png" | awk '{print $1}')" = c1dc3ff23667d074224eb6eb6265c7c9b5cbc40f0329a63fe3b0199f7b2e3f02
+test "$(sha256sum "$web/matchthis-orange-mt79-64.png" | awk '{print $1}')" = 1e83413b4db09f971a2f5f5e13cb268ba548a63259eb50f313ca1ece1652c6ce
 test "$(hash "$web/index.html")" = ece29feb50dd671461f984eccb17e9367514d37e802a291b924f4d199947eaa1
 test "$(tail -n +2 "$web/role-pages/mt79-admin.php"|sha256sum|awk '{print $1}')" = 51baa122e97f39b733408e51076adaf98c052b025471b10559f9a234d627e0d1
 test "$(tail -n +2 "$web/role-pages/mt79-sedzia.php"|sha256sum|awk '{print $1}')" = a71e5455a86565c726006bb6c31a89564ad42b28312adbd69d65300bf7d9c25b
