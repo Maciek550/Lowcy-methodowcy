@@ -22,6 +22,7 @@ CSS='''
 .mt80-shop-link svg{flex:0 0 17px}
 .mt80-shop-link:hover{color:#fff;background:var(--accent)}
 .header-inner .brand-group{flex:0 0 218px;min-width:218px}
+.header-inner #nav{overflow-x:auto;overflow-y:hidden;justify-content:flex-start;scrollbar-width:thin}
 .mt80-brand-link{max-width:none}
 @media(max-width:1100px){.header-inner .brand-group{flex:0 0 188px;min-width:188px}}
 @media(max-width:820px){.header-inner .brand-group{flex:1 1 190px;min-width:190px}}
