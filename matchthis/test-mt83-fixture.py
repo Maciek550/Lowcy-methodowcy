@@ -2,7 +2,7 @@
 """Non-production MT83 fixture: ten entrants, approved A1-A10, unweighed 0 g.
 HTTP roundtrip persists real POSTed JSON to test-only file for reload assertions.
 """
-import json,os,sys,threading,urllib.parse
+import json,os,sys,threading,urllib.parse,copy
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from pathlib import Path
 ROOT=Path(sys.argv[1]).resolve()
@@ -19,6 +19,7 @@ EVENT={'id':'test-event','name':'TEST ZERO PZW','year':2026,'date':'2026-12-10',
        'entrantIds':[p['id'] for p in PLAYERS],
        'mt63ConfirmedIds':[p['id'] for p in PLAYERS]}
 STATE={'revision':1,'data':{'players':PLAYERS,'events':[EVENT],'cycles':[]}}
+INITIAL_STATE=copy.deepcopy(STATE)
 LOCK=threading.RLock()
 class App(BaseHTTPRequestHandler):
  def log_message(self,*_):pass
@@ -43,6 +44,11 @@ class App(BaseHTTPRequestHandler):
   if url.path.endswith('.png'):return self.send(404,'{}')
   return self.send(404,'{"error":"not found"}')
  def do_POST(self):
+  if urllib.parse.urlparse(self.path).path=='/mt83-reset':
+   with LOCK:
+    STATE.clear();STATE.update(copy.deepcopy(INITIAL_STATE))
+    STATEFILE.write_text(json.dumps(STATE,ensure_ascii=False))
+    return self.send(200,'{"ok":true}')
   if urllib.parse.urlparse(self.path).path!='/mt73-state.php':return self.send(404,'{}')
   payload=json.loads(self.rfile.read(int(self.headers.get('Content-Length','0'))))
   if payload.get('op')!='save':return self.send(400,'{"error":"only save supported"}')
