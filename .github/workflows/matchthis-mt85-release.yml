@@ -82,3 +82,5 @@ jobs:
 # MT85 retry 2: target event lookup not restricted to home shortlist.
 
 # MT85 retry 3: fixture is a future event; click Zawody 2026 to open it.
+
+# MT85 retry 4: same rankings for on-screen sector, FOTO FB (zeros) and vector PDF; live 74 entries are untouched.
