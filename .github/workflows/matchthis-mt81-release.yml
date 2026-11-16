@@ -1,0 +1,117 @@
+name: MatchThis MT81 - correct two links and remove header scrollbar SMALL2
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-mt81-release.yml]
+permissions: {contents: read, actions: read}
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build exact SHA-pinned MT80 into MT81, no unrelated code changes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt80-source
+          gh run download 43841887839 -R Maciek550/Lowcy-methodowcy -n MatchThis_MT80_LIVE_DEPLOYED_3_HTML -D /tmp/mt80-source
+          for role in '' '_OGLADACZ' '_SEDZIA'; do
+            cp "$(find /tmp/mt80-source -name "MatchThis_MT-80$role.html" -print -quit)" "matchthis/MatchThis_MT-80$role.html"
+          done
+          python3 matchthis/build-mt81-header.py
+          test "$(sha256sum matchthis/MatchThis_MT-81.html|awk '{print $1}')" = c88159202b6ab074778278458ed0b2054cdff5d4554391ed696c5524db375943
+          test "$(sha256sum matchthis/MatchThis_MT-81_OGLADACZ.html|awk '{print $1}')" = a4724e2e9d3e95d970b5524268b8497a4c3deca4c5f9a397418a95af0029da69
+          test "$(sha256sum matchthis/MatchThis_MT-81_SEDZIA.html|awk '{print $1}')" = 8e96674bd98f032d6e8fd7487cb9eecfa711eb2a4df49c5ccfad80ef7650d53c
+          bash -n matchthis/deploy-mt81-small2.sh
+          node --check matchthis/test-mt81-links-no-scroll.cjs
+          echo MT81_EXACT_SOURCE_AND_CONSISTENT_ROLE_VERSION_PASS
+      - name: Snapshot real SMALL2 MT80 production, immutable data, drawings, verify Łowcy
+        run: |
+          set -euo pipefail
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/ -o /tmp/mt81-before.html
+          test "$(sha256sum /tmp/mt81-before.html|awk '{print $1}')" = f0541e9b09a7dc4d8e14d1d9d8d30b2120d06a10ee552b8e06f385c63dd0498c
+          curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/mt81-state-before.json
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/mt60-draws.php -o /tmp/mt81-draws-before.json
+          curl -fsSL --max-time 30 https://lowcymethodowcy.smallhost.pl/health
+          python3 - <<'PY'
+          import json
+          s=json.load(open('/tmp/mt81-state-before.json'))
+          assert s['revision']>=9
+          e=next(e for e in s['data']['events'] if e['id']=='mt2025-mega_final_2025')
+          assert [sum(bool(x.get('peg') and x.get('sector')) for x in t['results']) for t in e['rounds']]==[54,54]
+          assert all(any(x['competitorName']=='PEIL ANNA' for x in t['results']) for t in e['rounds'])
+          print('MT81_LIVE_BASELINE_PRESERVES_REAL_RESULTS_AND_LOWCY',s['revision'])
+          PY
+      - name: Simulate all three pages with actual SMALL2 server data, no writes
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt81-fixture
+          cp matchthis/MatchThis_MT-81_OGLADACZ.html /tmp/mt81-fixture/index.html
+          cp matchthis/MatchThis_MT-81.html /tmp/mt81-fixture/admin.html
+          cp matchthis/MatchThis_MT-81_SEDZIA.html /tmp/mt81-fixture/judge.html
+          cp /tmp/mt81-state-before.json /tmp/mt81-fixture/state.json
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/matchthis-orange-mt79-32.png -o /tmp/mt81-fixture/matchthis-orange-mt79-32.png
+          cat > /tmp/mt81-fixture/mt73-state.php <<'PHP'
+          <?php
+          header('Content-Type: application/json; charset=utf-8');
+          header('Cache-Control: no-store');
+          $r=json_decode(file_get_contents(__DIR__.'/state.json'),true);
+          if(isset($_GET['public'])){echo json_encode($r,JSON_UNESCAPED_UNICODE);return;}
+          echo json_encode(['role'=>'admin','csrf'=>'testonly','state'=>['revision'=>$r['revision'],'seeded'=>false,'updatedAt'=>'test','data'=>$r['data']]],JSON_UNESCAPED_UNICODE);
+          PHP
+          cat > /tmp/mt81-fixture/mt60-draws.php <<'PHP'
+          <?php header('Content-Type: application/json');echo '{"draws":[]}';
+          PHP
+          php -S 127.0.0.1:8891 -t /tmp/mt81-fixture >/tmp/mt81-php.log 2>&1 &
+          curl --retry 6 --retry-connrefused --retry-delay 1 -fsSL http://127.0.0.1:8891/mt73-state.php -o /tmp/mt81-fixture-api-readback.json
+      - name: Install real Chromium and Firefox for browser clicks and 7 viewport widths
+        run: |
+          npm install --prefix /tmp/mt81-browser --silent playwright
+          cd /tmp/mt81-browser
+          npx playwright install --with-deps chromium firefox
+      - name: Before deployment confirm correct logo, shop URL, no nav slider or covered menu in every role
+        run: |
+          NODE_PATH=/tmp/mt81-browser/node_modules node matchthis/test-mt81-links-no-scroll.cjs
+          echo MT81_REAL_BROWSERS_THREE_ROLES_LINKS_NO_SLIDER_PREDEPLOY_PASS
+      - name: Deploy only MT81 header correction to independent SMALL2 with MT80 backup
+        id: deploy
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: bash matchthis/deploy-mt81-small2.sh
+      - name: Test actual SMALL2 logo and shop clicks in Firefox Chromium plus no header scrollbars
+        env:
+          MT81_URL: https://matchthis.lowcymethodowcy.smallhost.pl/
+        run: |
+          NODE_PATH=/tmp/mt81-browser/node_modules node matchthis/test-mt81-links-no-scroll.cjs
+          echo MT81_REAL_SMALL2_BOTH_BROWSERS_LINK_AND_NO_SLIDER_PASS
+      - name: Verify new live MT81, untouched central state, drawings, permissions and Łowcy
+        run: |
+          set -euo pipefail
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/ -o /tmp/mt81-after.html
+          test "$(sha256sum /tmp/mt81-after.html|awk '{print $1}')" = a4724e2e9d3e95d970b5524268b8497a4c3deca4c5f9a397418a95af0029da69
+          curl -fsSL --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/mt81-state-after.json
+          cmp /tmp/mt81-state-before.json /tmp/mt81-state-after.json
+          curl -fsSL --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/mt60-draws.php -o /tmp/mt81-draws-after.json
+          cmp /tmp/mt81-draws-before.json /tmp/mt81-draws-after.json
+          test "$(curl -sS -o /dev/null -w '%{http_code}' https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php)" = 401
+          for page in mt81-admin.php mt81-sedzia.php;do
+            status="$(curl -sS -o /dev/null -w '%{http_code}' "https://matchthis.lowcymethodowcy.smallhost.pl/role-pages/$page")"
+            test "$status" = 403 || test "$status" = 404
+          done
+          curl -fsSL --max-time 30 https://lowcymethodowcy.smallhost.pl/health
+          echo MT81_SMALL2_LIVE_NEW_LINKS_NO_SLIDER_RESULTS_DRAWINGS_UNCHANGED_PASS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MatchThis_MT81_LINKS_NO_SCROLL_3_ROLE_HTML
+          path: |
+            matchthis/MatchThis_MT-81.html
+            matchthis/MatchThis_MT-81_OGLADACZ.html
+            matchthis/MatchThis_MT-81_SEDZIA.html
+          if-no-files-found: error
+      - name: Restore MT80 automatically if any post-release verification fails
+        if: failure() && steps.deploy.outcome == 'success'
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: bash matchthis/deploy-mt81-small2.sh rollback
