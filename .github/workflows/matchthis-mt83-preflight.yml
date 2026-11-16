@@ -1,4 +1,4 @@
-name: MatchThis MT83 - PZW zero standings and login regression BEFORE release
+name: MatchThis MT83 - PZW zero standings and login regression before server release
 'on':
   push:
     branches: [matchthis-mt23-independent-small2-20261106]
