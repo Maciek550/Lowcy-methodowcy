@@ -22,7 +22,7 @@ function mt85NoWeights(e,t,draw){
  if(!mt85TargetRound(e,t)||t.sourceOfficial||(t.results||[]).length || !(t.mt55Entries||[]).length ||
     (t.mt55Entries||[]).some(r=>r.weightG!=null))return '';
  return '<section class="panel mt85-empty-results"><h2>Wyniki sektorowe — '+safeName(mt68TourLabel(t,e))+'</h2>'+
-  '<p class="sub">Przydziały 71 stanowisk w 6 sektorach są zapisane. Wagi II tury nie zostały jeszcze wprowadzone.</p>'+
+  '<p class="sub">Zapisane przydziały stanowisk i sektorów są dostępne. Wagi II tury nie zostały jeszcze wprowadzone.</p>'+
   (roleMode==='admin'?'<button class="btn" data-result-mode="edit">Wpisz wagi II tury</button>':'<p class="sub">Wyniki pojawią się po zapisaniu wag.</p>')+
   '</section>'+mt85DrawDetails(draw);
 }
@@ -54,6 +54,20 @@ for suffix,digest in expected.items():
            'if(!rows.length&&allDraw)return mt85?mt85DrawDetails(allDraw):published;')
  s=once(s,'${readableResultsTable(rows)}${mt83PendingPanel(e,t,view)}</section>`;',
            '${readableResultsTable(rows)}${mt83PendingPanel(e,t,view)}</section>`+drawAfter;')
+ # Sector FB photos and vector PDFs must use the SAME read-only classified tour view as result tables.
+ # Do not invent catches: add only explicitly assigned starters with 0g.
+ s=once(s,'function photoCandidates(){',
+          'function mt85ExportRows(e,t){\\n return core.tourClassification(mt83TourView(e,t)).filter(r=>!core.isNonStarter(r));\\n}\\nfunction photoCandidates(){')
+ s=once(s,'hasActive=rows.length>0;sectors=genuinePhotoSectors(tour);',
+          'hasActive=rows.length>0;sectors=genuinePhotoSectors(mt83TourView(entity,tour));')
+ s=once(s,'const tour=chosenRound.tour,ranked=core.tourClassification(tour).filter(r=>!core.isNonStarter(r));',
+          'const tour=chosenRound.tour,ranked=mt85ExportRows(entity,tour);')
+ s=once(s,'const ranked=core.tourClassification(tour).filter(r=>!core.isNonStarter(r));\\n const sectors=genuinePhotoSectors(tour);',
+          'const ranked=mt85ExportRows(entity,tour);\\n const sectors=genuinePhotoSectors(mt83TourView(entity,tour));')
+ s=once(s,'const tour=getRounds(entity)[roundIndex];const ranked=core.tourClassification(tour).filter(r=>!core.isNonStarter(r));const pdf=MatchThisVectorPdf.create(',
+          'const tour=getRounds(entity)[roundIndex];const ranked=mt85ExportRows(entity,tour);const pdf=MatchThisVectorPdf.create(')
+ s=once(s,'function renderFbPhoto(e,t){const ranked=core.tourClassification(t).filter(r=>!core.isNonStarter(r));const sectors=genuinePhotoSectors(t);',
+          'function renderFbPhoto(e,t){const ranked=mt85ExportRows(e,t);const sectors=genuinePhotoSectors(mt83TourView(e,t));')
  s=s.replace('</style>',css+'</style>',1)
  s=s.replace('MT-84','MT-85')
  out=root/f'MatchThis_MT-85{suffix}.html';out.write_text(s,'utf-8')
