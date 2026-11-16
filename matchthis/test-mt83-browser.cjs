@@ -62,7 +62,7 @@ async function testFixtureAdmin(engine){
   assert.equal(await p.locator('.sector-title').count(),1);
   let rows=p.locator('.sector-result tbody tr');
   assert.equal(await rows.count(),10,'All 10 assigned starters initially in sector A');
-  assert((await rows.all_text_contents()).every(s=>s.includes('5,5')),'All-zero round must give 5.5 pts');
+  assert((await rows.allTextContents()).every(s=>s.includes('5,5')),'All-zero round must give 5.5 pts');
   await goMode(p,'edit');
   let weights=p.locator('input[data-mt55-field="weight"]');
   assert.equal(await weights.count(),10,'Ten editable weights for ten entrants');
@@ -76,7 +76,7 @@ async function testFixtureAdmin(engine){
   await goMode(p,'sectors');
   rows=p.locator('.sector-result tbody tr');
   assert.equal(await rows.count(),10);
-  const data=await rows.all_text_contents();
+  const data=await rows.allTextContents();
   assert.equal(data.filter(x=>x.includes('7')&&x.includes('TEST')).length>=7,true,'Zero group 7 points');
   const r=await p.request.get(base+'mt73-state.php?public=1',{headers:{'Cache-Control':'no-cache'}});
   assert.equal(r.status(),200);
