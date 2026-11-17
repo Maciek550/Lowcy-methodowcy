@@ -62,10 +62,18 @@ with sync_playwright() as p:
       st=page.evaluate('''() => ({last:__mt89test.data.cycles.at(-1),old:JSON.stringify(__mt89test.data.cycles.slice(0,-1))})''')
       assert st['old']==saved,'previous cycle changed'
       assert st['last']['expectedTours']==8 and st['last']['countedTours']==5 and len(st['last']['tours'])==8
-      page.set_content((root/f'MatchThis_MT-89{suffix}.html').read_text(),wait_until='domcontentloaded')
-      page.wait_for_function("document.querySelector('#mt73-sync')?.textContent.includes('Dane z serwera')",timeout=20000)
-      persisted=page.evaluate('''() => __mt89test.data.cycles.at(-1)''')
+      # New browser document instead of document.write in the same global scope:
+      # this accurately simulates re-opening a page without JS redeclaration errors.
+      state_after=page.evaluate('''() => __mt89test.data''')
+      reopened=browser.new_page(viewport={'width':width,'height':880})
+      reopened_errors=[];reopened.on('pageerror',lambda e:reopened_errors.append(str(e)))
+      reopened.evaluate(fake,{'fixture':state_after,'role':role})
+      reopened.set_content((root/f'MatchThis_MT-89{suffix}.html').read_text(),wait_until='domcontentloaded')
+      reopened.wait_for_function("document.querySelector('#mt73-sync')?.textContent.includes('Dane z serwera')",timeout=20000)
+      persisted=reopened.evaluate('''() => __mt89test.data.cycles.at(-1)''')
       assert persisted['expectedTours']==8 and persisted['countedTours']==5 and len(persisted['tours'])==8
+      assert not reopened_errors,reopened_errors
+      reopened.close()
      assert not errs,errs
      print('MT89_LOCAL_CHROMIUM_FIREFOX_SINGLE_PLANNED_CARDS_NEW_CYCLE_SAVE_RELOAD_PASS',engine,role,width,flush=True)
      page.close()
