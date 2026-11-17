@@ -1,0 +1,43 @@
+name: MatchThis MT89 production visual proof Zawody 2026
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-mt89-screenshot.yml]
+permissions: {contents: read}
+jobs:
+  snapshot:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Capture exact live production UI in Chromium with no writes
+        run: |
+          set -Eeuo pipefail
+          python3 -m venv /tmp/mtsnap
+          /tmp/mtsnap/bin/pip install -q playwright
+          /tmp/mtsnap/bin/python -m playwright install --with-deps chromium
+          mkdir -p /tmp/snap
+          cat > /tmp/snap.py <<'PY'
+          from playwright.sync_api import sync_playwright
+          with sync_playwright() as p:
+           b=p.chromium.launch(headless=True)
+           page=b.new_page(viewport={'width':1366,'height':940},device_scale_factor=1)
+           errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
+           page.goto('https://matchthis.lowcymethodowcy.smallhost.pl/',wait_until='domcontentloaded',timeout=50000)
+           page.wait_for_function("document.querySelector('#mt73-sync')?.textContent.includes('Dane z serwera')",timeout=35000)
+           assert page.title()=='MatchThis MT-89'
+           page.locator('#nav button[data-view="events"]').click()
+           planned=('mt2026-xiv-puchar-matchthis-28-29-nov','mt-mwj0n0dm-hrwptq','mt-mwj1bp7k-8vaq2i','mt-mwj1exa0-v70o58')
+           for key in planned:
+            assert page.locator('#main button[data-open="'+key+'"]').count()==1
+            assert page.locator('.mt49-two-columns button[data-open="'+key+'"]').count()==0
+           assert not errors,errors
+           page.screenshot(path='/tmp/snap/MatchThis_MT89_Zawody_2026_BEZ_POWTORZEN.png',full_page=True)
+           print('MT89_LIVE_2026_VISUAL_SCREENSHOT_UNIQUE_FOUR_PLANNED_EVENTS_PASS')
+           b.close()
+          PY
+          /tmp/mtsnap/bin/python /tmp/snap.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MT89_SMALL2_ZAWODY_2026_VISUAL_PROOF
+          path: /tmp/snap/*.png
+          if-no-files-found: error
