@@ -55,14 +55,14 @@ jobs:
           cp /tmp/mt87-sources/deploy-mt87-small2.sh matchthis/deploy-mt87-small2.sh
           python3 matchthis/mt87-deploy-retry-fix.py
           python3 matchthis/mt87-dom-ready-fix.py
+          python3 matchthis/mt87-completion.py
           bash -n matchthis/deploy-mt87-small2.sh
           (cd matchthis && sha256sum MatchThis_MT-87*.html)
           python3 - <<'PY'
           from pathlib import Path
           import re,subprocess,tempfile,hashlib
-          expected={'':'810ebd485c21c30da23ba13d439c4aa48afcc92d3947838fc510d26c81d1c7fa',
-                    '_OGLADACZ':'c79479c2af9af94f795474d8ce0407730d6a0b7f3d6cc36c546737cd0315a596',
-                    '_SEDZIA':'f74db6bfd00bdfa410cf525582eeb87e4aa4ac9cede28cc617879da0b391c687'}
+          import json
+          expected=json.loads(Path('matchthis/mt87-final-sha.json').read_text())
           for suffix,sha in expected.items():
            f=Path('matchthis/MatchThis_MT-87'+suffix+'.html')
            assert hashlib.sha256(f.read_bytes()).hexdigest()==sha
@@ -145,6 +145,8 @@ jobs:
                 }""")
                 print('MT87_LIVE_REGISTRATION_DIAGNOSTIC',engine.name,width,info,'JS_ERRORS',errors,flush=True)
                assert visible
+               await page.wait_for_function("document.querySelector('#mt87-register-csrf')?.value.length>=20",timeout=20000)
+               assert await page.locator('#mt87-register-form button[type=submit]').is_enabled()
                token_len=len(await page.locator('#mt87-register-csrf').input_value())
                if token_len<20:
                 probe=await page.request.get(URL+'player-session.php')
@@ -182,3 +184,6 @@ jobs:
 # MT87 retry 5: staged old viewer is SHA-pinned; precheck may accept it before overwrite with fixed viewer.
 
 # MT87 retry 6: inspect public JSON keys and CSRF length without revealing token or credentials.
+
+
+# MT87 completion: registration readiness, persistent rejection, historical result linkage and compact menu regression.
