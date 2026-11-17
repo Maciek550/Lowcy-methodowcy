@@ -12,8 +12,8 @@ new='<form id="mt86-player-logout-form" action="/player-logout.php" method="post
 assert s.count(old)==1
 s=s.replace(old,new,1)
 # Legacy button CSS overrides the native HTML hidden attribute; enforce actual visual hiding.
-old='</style>\\n</head>\\n<body data-version="MT-86"'
-new='</style>\\n<style>#mtLoginOpen[hidden],#mt86-player-tools[hidden]{display:none!important}</style>\\n</head>\\n<body data-version="MT-86"'
+old='</style>\n</head>\n<body data-version="MT-86"'
+new='</style>\n<style>#mtLoginOpen[hidden],#mt86-player-tools[hidden]{display:none!important}</style>\n</head>\n<body data-version="MT-86"'
 assert s.count(old)==1
 s=s.replace(old,new,1)
 p.write_text(s,'utf8')
