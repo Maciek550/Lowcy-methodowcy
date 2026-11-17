@@ -1,0 +1,85 @@
+name: MatchThis - read-only detailed result and login UX inspection
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-ui-detail-inspection-20261117.yml]
+permissions: {contents: read}
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Setup real browsers
+        run: |
+          python3 -m venv /tmp/mt-detail-venv
+          /tmp/mt-detail-venv/bin/pip install -q playwright
+          /tmp/mt-detail-venv/bin/python -m playwright install --with-deps chromium firefox
+      - name: Click 2025 and 2026 results, sector, turn, back, registration cancel; inspect overflow
+        run: |
+          set -Eeuo pipefail
+          cat >/tmp/mt-detail.py <<'PY'
+          from playwright.sync_api import sync_playwright
+          import json,traceback
+          SITE='https://matchthis.lowcymethodowcy.smallhost.pl/'
+          def note(name,data):
+           print('DETAIL',name,json.dumps(data,ensure_ascii=False,default=str),flush=True)
+          with sync_playwright() as p:
+           for engine in ('chromium','firefox'):
+            b=getattr(p,engine).launch(headless=True)
+            try:
+             for width in (390,1366):
+              page=b.new_page(viewport={'width':width,'height':900})
+              errors=[];page.on('pageerror',lambda e:errors.append(str(e)[:350]))
+              try:
+               page.goto(SITE,wait_until='domcontentloaded',timeout=60000)
+               page.wait_for_function("document.querySelector('#mt73-sync')?.textContent.includes('Dane z serwera')",timeout=45000)
+               page.locator('#nav button[data-view="events"]').click()
+               page.locator('button[data-open="mt2026-mega-match-this-cup-final"]').first.click()
+               heading=page.locator('#main h1').first.inner_text()
+               rounds=page.locator('#main [data-round]').count()
+               modes=page.locator('#main [data-result-mode]').all_inner_texts()
+               note('OPEN_2026_'+engine+'_'+str(width),{'heading':heading[:130],'roundButtons':rounds,'modes':modes[:12]})
+               if page.locator('#main [data-round="1"]').count():
+                page.locator('#main [data-round="1"]').first.click()
+               if page.locator('#main [data-result-mode="sectors"]').count():
+                page.locator('#main [data-result-mode="sectors"]').first.click()
+               if page.locator('#main [data-sector-filter="B"]').count():
+                page.locator('#main [data-sector-filter="B"]').click()
+               main=page.locator('#main').inner_text()
+               bchecks={'bartczakVisible':('BARTCZAK JAN' in main),'weight7575Visible':('7 575' in main or '7575' in main),'sectorSelected':(page.locator('#main [data-sector-filter="B"].active').count()>0),'overflow':page.evaluate('document.documentElement.scrollWidth-document.documentElement.clientWidth'),'textLen':len(main)}
+               note('SECTOR_B_FINAL_T2_'+engine+'_'+str(width),bchecks)
+               assert bchecks['bartczakVisible'] and bchecks['weight7575Visible'],bchecks
+               assert bchecks['sectorSelected'],bchecks
+               if page.locator('#main [data-nav-back]').count():
+                page.locator('#main [data-nav-back]').first.click()
+                note('BACK_BUTTON_'+engine+'_'+str(width),{'mainHeadings':page.locator('#main h1').all_inner_texts()[:3]})
+               page.locator('#nav button[data-view="archive"]').click()
+               page.locator('button[data-open="mt2025-mega_final_2025"]').first.click()
+               old=page.locator('#main').inner_text()
+               note('OPEN_2025_'+engine+'_'+str(width),{'heading':page.locator('#main h1').first.inner_text()[:140],'rounds':page.locator('#main [data-round]').count(),'mainChars':len(old)})
+               assert 'MEGA MATCH THIS CUP 2025' in old.upper()
+               if page.locator('#main [data-nav-back]').count():page.locator('#main [data-nav-back]').first.click()
+               page.locator('#mtLoginOpen').click()
+               page.locator('#mt87-tab-register').click()
+               assert page.locator('#mt87-register-form').is_visible()
+               visible_cancel=page.locator('#mt87-register-form .mt87-cancel')
+               assert visible_cancel.is_visible()
+               visible_cancel.click()
+               close_ok=not page.locator('#mtLoginModal').is_visible()
+               note('REGISTER_CANCEL_'+engine+'_'+str(width),{'closed':close_ok,'jsErrors':errors})
+               assert close_ok and not errors
+               note('DETAIL_PASS_'+engine+'_'+str(width),{'result':True})
+              except Exception as e:
+               note('DETAIL_FAIL_'+engine+'_'+str(width),{'error':str(e)[:650],'trace':traceback.format_exc()[-1000:],'jsErrors':errors})
+              finally:page.close()
+            finally:b.close()
+          PY
+          /tmp/mt-detail-venv/bin/python /tmp/mt-detail.py | tee /tmp/mt-details.log
+          if grep -q '^DETAIL DETAIL_FAIL' /tmp/mt-details.log;then exit 3;fi
+          test "$(grep -c '^DETAIL DETAIL_PASS' /tmp/mt-details.log)" = 4
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: MatchThis_Results_2025_2026_Detailed_Browser_Test_20261117
+          path: /tmp/mt-details.log
+          if-no-files-found: ignore
