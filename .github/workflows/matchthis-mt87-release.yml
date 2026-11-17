@@ -53,6 +53,7 @@ jobs:
           PY
           for f in matchthis/server/mt87-player-*.php;do php -l "$f" >/dev/null;done
           cp /tmp/mt87-sources/deploy-mt87-small2.sh matchthis/deploy-mt87-small2.sh
+          python3 matchthis/mt87-deploy-retry-fix.py
           bash -n matchthis/deploy-mt87-small2.sh
           (cd matchthis && sha256sum MatchThis_MT-87*.html)
           python3 - <<'PY'
@@ -155,3 +156,5 @@ jobs:
         env:
           SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
         run: bash matchthis/deploy-mt87-small2.sh rollback
+
+# MT87 retry 2: syntax-blocked release had uploaded staged files without touching production.
