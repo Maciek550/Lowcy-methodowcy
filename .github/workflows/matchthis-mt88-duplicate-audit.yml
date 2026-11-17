@@ -1,0 +1,32 @@
+name: MatchThis MT88 - read-only duplicate Bartczak audit
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-mt88-duplicate-audit.yml]
+permissions: {contents: read}
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Read central public server snapshot without modifications
+        run: |
+          set -Eeuo pipefail
+          curl -fLsS --retry 3 --max-time 45 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/live-mt88.json
+          python3 - <<'PY'
+          import json, collections
+          s=json.load(open('/tmp/live-mt88.json'))
+          d=s['data']; players=d['players']
+          print('REVISION',s['revision'],'PLAYERS',len(players),'EVENTS',len(d['events']),'CYCLES',len(d['cycles']))
+          matches=[p for p in players if ('bartczak' in (p.get('lastName','').lower()) or 'barczak' in (p.get('lastName','').lower())) and p.get('firstName','').lower()=='jan']
+          for p in matches:
+            print('DUPLICATE_PLAYER',json.dumps({k:p.get(k) for k in ('id','firstName','lastName','aliases','archived','nameNeedsReview')},ensure_ascii=False))
+          for group,roundkey in [('events','rounds'),('cycles','tours')]:
+            for event in d[group]:
+              for tour in event.get(roundkey,[]):
+                for r in tour.get('results',[]):
+                  name=(r.get('competitorName') or '').upper()
+                  if 'BARTCZAK' in name or 'BARCZAK' in name or r.get('competitorId') in [p['id'] for p in matches]:
+                    print('RESULT',json.dumps({'group':group,'event':event.get('name'),'tour':tour.get('name'),'id':r.get('competitorId'),'name':r.get('competitorName'),'peg':r.get('peg'),'sector':r.get('sector'),'weightG':r.get('weightG')},ensure_ascii=False))
+          print('DONE_READ_ONLY')
+          PY
