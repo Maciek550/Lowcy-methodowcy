@@ -128,3 +128,5 @@ jobs:
         env:
           SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
         run: bash matchthis/deploy-mt86-small2.sh rollback
+
+# MT86 retry 3: login button CSS hidden-state regression fixed; anonymous and logged-in flows required.
