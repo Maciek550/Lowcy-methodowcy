@@ -84,7 +84,7 @@ jobs:
               assert page.title()=='MatchThis MT-88'
               assert page.locator('#appversion').inner_text()=='MT-88'
               stat=page.evaluate("""() => {
-                const people=filteredPlayers().filter(p=>p.firstName==='JAN'&&p.lastName==='BARTCZAK');
+                const people=db.players.filter(p=>p.firstName==='JAN'&&p.lastName==='BARTCZAK');
                 let history=0,old=0;
                 for(const e of [...db.events,...db.cycles])for(const t of [...(e.rounds||[]),...(e.tours||[])])
                   for(const r of (t.results||[])){
