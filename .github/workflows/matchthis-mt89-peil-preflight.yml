@@ -1,0 +1,44 @@
+name: MatchThis MT88 - Peil Anna exact merge preflight read only
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-mt89-peil-preflight.yml]
+permissions: {contents: read}
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - name: Read current production data and exact two Anna PEIL link sets
+        run: |
+          set -euo pipefail
+          curl -fLsS --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/live.json
+          python3 - <<'PY'
+          import json,collections
+          d=json.load(open('/tmp/live.json'));db=d['data']
+          ids=('mt2026-person-peil-anna','mt2025-float_king_2025-person-60')
+          print('PEIL_REVISION',d['revision'],'players',len(db['players']))
+          for x in db['players']:
+           if x.get('id') in ids:print('PEIL_PLAYER',json.dumps(x,ensure_ascii=False))
+          counts=collections.Counter(); rounds=collections.defaultdict(set)
+          for group,key in [('events','rounds'),('cycles','tours')]:
+           for entity in db[group]:
+            for i,tour in enumerate(entity.get(key,[])):
+             rows=[r for r in tour.get('results',[]) if r.get('competitorId') in ids]
+             if len(rows)>1:print('PEIL_COLLISION',group,entity.get('name'),tour.get('name'))
+             for r in rows:
+              counts[r['competitorId']]+=1
+              rounds[r['competitorId']].add((group,entity.get('name'),tour.get('name')))
+              print('PEIL_RESULT',group,entity.get('name'),tour.get('name'),json.dumps({k:r.get(k) for k in ('competitorId','competitorName','peg','sector','weightG')},ensure_ascii=False))
+          def count_refs(node):
+           out=collections.Counter()
+           def walk(o):
+            if isinstance(o,dict):
+             for v in o.values():walk(v)
+            elif isinstance(o,list):
+             for v in o:walk(v)
+            elif isinstance(o,str) and o in ids:out[o]+=1
+           walk(node);return out
+          print('PEIL_COUNTS',dict(counts),'ALL_REFERENCES',dict(count_refs(db)))
+          print('PEIL_NO_COLLISION',not bool(rounds[ids[0]] & rounds[ids[1]]))
+          PY
