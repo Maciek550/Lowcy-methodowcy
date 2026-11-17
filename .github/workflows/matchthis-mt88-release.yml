@@ -1,0 +1,25 @@
+name: MatchThis MT88 verification
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-mt88-release.yml]
+permissions: {contents: read, actions: read}
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reconstruct exact MT88 from MT87 verified artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -Eeuo pipefail
+          mkdir -p matchthis/mt88-base
+          gh run download 44066765970 -R Maciek550/Lowcy-methodowcy -n MatchThis_MT87_VERIFIED_THREE_ROLE_HTML -D matchthis/mt88-base
+          python3 matchthis/mt88-build.py
+          php -l matchthis/mt88-state-correct.php
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MatchThis_MT88_SHA_VERIFIED_THREE_ROLE_HTML
+          path: matchthis/MatchThis_MT-88*.html
+          if-no-files-found: error
