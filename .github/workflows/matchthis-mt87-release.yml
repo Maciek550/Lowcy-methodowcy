@@ -1,0 +1,157 @@
+name: MatchThis MT87 - sign in, create account, recover password SMALL2
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-mt87-release.yml]
+permissions: {contents: read, actions: read}
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reconstruct exact SHA-pinned MT87 sources and verified MT86 HTML baseline
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          sudo apt-get -qq update
+          sudo apt-get -qq install -y brotli
+          cat matchthis/mt87-bundle.part{0,1,2,3} | base64 -d > /tmp/mt87-sources.tar.br
+          echo 'ce2d181bb2df1b204bb43525e4121331e9311604980d61ae242ad5d47e6aa029  /tmp/mt87-sources.tar.br' | sha256sum -c -
+          mkdir -p /tmp/mt87-sources
+          brotli -d -c /tmp/mt87-sources.tar.br | tar -xf - -C /tmp/mt87-sources
+          cat matchthis/mt86-bundle.part{0,1,2} | base64 -d > /tmp/mt86-sources.tar.br
+          echo '2ad5499a82d19a567d878fb728305146465268c8733297081a55592cdac24d9f  /tmp/mt86-sources.tar.br' | sha256sum -c -
+          mkdir -p /tmp/mt86-sources
+          brotli -d -c /tmp/mt86-sources.tar.br | tar -xf - -C /tmp/mt86-sources
+          mkdir -p matchthis/base matchthis/server
+          gh run download 44038121946 -R Maciek550/Lowcy-methodowcy -n MatchThis_MT86_VERIFIED_THREE_ROLE_HTML -D matchthis/base
+          cp /tmp/mt87-sources/build-mt87.py matchthis/build-mt87.py
+          sed -i 's@/mnt/data/mt87@matchthis@g' matchthis/build-mt87.py
+          python3 matchthis/build-mt87.py
+          cp /tmp/mt86-sources/server/mt86-player-lib.php matchthis/server/mt87-player-lib-unchanged.php
+          cp /tmp/mt86-sources/server/mt86-player-accounts.php matchthis/server/mt87-player-accounts.php
+          cp /tmp/mt86-sources/server/mt86-player-session.php matchthis/server/mt87-player-session.php
+          for f in recovery password;do
+            sed 's/MT-86/MT-87/g' "/tmp/mt86-sources/server/mt86-player-$f.php" > "matchthis/server/mt87-player-$f.php"
+          done
+          cp /tmp/mt87-sources/server/mt87-player-register.php matchthis/server/
+          cp /tmp/mt87-sources/patch-admin.py matchthis/patch-mt87-admin.py
+          sed -i 's@/mnt/data/mt87@matchthis@g' matchthis/patch-mt87-admin.py
+          python3 matchthis/patch-mt87-admin.py
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('matchthis/server/mt87-player-session.php');s=p.read_text()
+          a="""if(!$a||!$p){echo '{"authenticated":false}';exit;}"""
+          b="""if(!$a||!$p){echo json_encode(['authenticated'=>false,'registrationCsrf'=>mt86_csrf()],JSON_THROW_ON_ERROR);exit;}"""
+          assert s.count(a)==1;s=s.replace(a,b)
+          a="'mustChange'=>!empty($a['record']['mustChange']),'csrf'=>mt86_csrf()"
+          b="'mustChange'=>!empty($a['record']['mustChange']),'csrf'=>mt86_csrf(),'registrationCsrf'=>mt86_csrf()"
+          assert s.count(a)==1;s=s.replace(a,b)
+          p.write_text(s)
+          PY
+          for f in matchthis/server/mt87-player-*.php;do php -l "$f" >/dev/null;done
+          cp /tmp/mt87-sources/deploy-mt87-small2.sh matchthis/deploy-mt87-small2.sh
+          bash -n matchthis/deploy-mt87-small2.sh
+          (cd matchthis && sha256sum MatchThis_MT-87*.html)
+          python3 - <<'PY'
+          from pathlib import Path
+          import re,subprocess,tempfile,hashlib
+          expected={'':'810ebd485c21c30da23ba13d439c4aa48afcc92d3947838fc510d26c81d1c7fa',
+                    '_OGLADACZ':'d325e33d7d3b598457c53e52439c9993c876f21ab2cd4d385fedac78ad21d01a',
+                    '_SEDZIA':'f74db6bfd00bdfa410cf525582eeb87e4aa4ac9cede28cc617879da0b391c687'}
+          for suffix,sha in expected.items():
+           f=Path('matchthis/MatchThis_MT-87'+suffix+'.html')
+           assert hashlib.sha256(f.read_bytes()).hexdigest()==sha
+           s=f.read_text()
+           assert 'MT-86' not in s and '<title>MatchThis MT-87' in s and 'data-version="MT-87"' in s
+           assert "const APP_VERSION='MT-87'" in s and '<span class="mt-build-badge"' in s
+           for n,script in enumerate(re.findall(r'<script[^>]*>(.*?)</script>',s,re.S|re.I)):
+            if not script.strip():continue
+            temp=Path(tempfile.gettempdir())/(f.stem+'_'+str(n)+'.js')
+            temp.write_text(script);subprocess.run(['node','--check',str(temp)],check=True)
+           print('MT87_VERSION_SHA_JS_PASS',f.name)
+          PY
+      - name: Real PHP signup and approval integration with isolated private account store
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mt87-sources/server
+          cp matchthis/server/mt87-player-*.php /tmp/mt87-sources/server/
+          python3 /tmp/mt87-sources/tests/php-integration.py
+      - name: Install Chromium and Firefox
+        run: |
+          python3 -m venv /tmp/mt87-venv
+          /tmp/mt87-venv/bin/pip install -q playwright
+          /tmp/mt87-venv/bin/python -m playwright install --with-deps chromium firefox
+      - name: Test login, signup, forgot password, admin login, own history and logout in both browsers
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          fixture=Path('/tmp/mt87-sources/tests/browser-fixture.py')
+          s=fixture.read_text().replace("Path('/mnt/data/mt87')","Path('matchthis').resolve()")
+          fixture.write_text(s)
+          test=Path('/tmp/mt87-sources/tests/browser-test.py')
+          s=test.read_text().replace("for eng in ('chromium',):","for eng in ('chromium','firefox'):")
+          s=s.replace("getattr(p,eng).launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox'])",
+                      "getattr(p,eng).launch(headless=True)")
+          assert "for eng in ('chromium','firefox'):" in s
+          assert "getattr(p,eng).launch(headless=True)" in s
+          s=s.replace("'MT87_BROWSER_LOGIN_SIGNUP_RECOVER_ADMIN_PLAYER_HISTORY_LOGOUT_PASS',w","'MT87_BROWSER_LOGIN_SIGNUP_RECOVER_ADMIN_PLAYER_HISTORY_LOGOUT_PASS',eng,w")
+          test.write_text(s)
+          PY
+          /tmp/mt87-venv/bin/python /tmp/mt87-sources/tests/browser-fixture.py >/tmp/mt87-fixture.log 2>&1 &
+          curl --retry 15 --retry-connrefused --retry-delay 1 -fsS 'http://127.0.0.1:8787/' >/dev/null
+          /tmp/mt87-venv/bin/python /tmp/mt87-sources/tests/browser-test.py
+      - name: Deploy only MatchThis to SMALL2 with original MT86 preserved
+        id: deploy
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: bash matchthis/deploy-mt87-small2.sh
+      - name: Verify live MT87 SMALL2 anonymous actions, history privacy and admin route
+        run: |
+          set -euo pipefail
+          cat >/tmp/mt87-live.py <<'PY'
+          import asyncio
+          from playwright.async_api import async_playwright
+          URL='https://matchthis.lowcymethodowcy.smallhost.pl/'
+          async def check():
+           async with async_playwright() as p:
+            for engine in (p.chromium,p.firefox):
+             b=await engine.launch()
+             try:
+              for width in (1366,390):
+               page=await b.new_page(viewport={'width':width,'height':880})
+               errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
+               await page.goto(URL,wait_until='domcontentloaded')
+               await page.wait_for_function("document.querySelector('#mt73-sync')?.textContent.includes('Dane z serwera')",timeout=30000)
+               assert await page.title()=='MatchThis MT-87'
+               assert await page.locator('#nav [data-view="players"]').count()==0
+               assert await page.locator('#nav [data-view="profile"]').count()==0
+               await page.locator('#mtLoginOpen').click()
+               assert await page.locator('#mt86-player-form').is_visible()
+               assert await page.locator('#mt87-recover').is_visible()
+               await page.locator('#mt87-tab-register').click()
+               assert await page.locator('#mt87-register-form').is_visible()
+               assert len(await page.locator('#mt87-register-csrf').input_value())>=20
+               await page.locator('#mt86-tab-admin').click()
+               assert await page.locator('#mtLoginForm').is_visible()
+               assert not errors,errors
+               print('MT87_LIVE_CHROMIUM_FIREFOX_ANONYMOUS_LOGIN_REGISTER_ADMIN_NO_ERRORS_PASS',engine.name,width)
+               await page.close()
+             finally:await b.close()
+          asyncio.run(check())
+          PY
+          /tmp/mt87-venv/bin/python /tmp/mt87-live.py
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: MatchThis_MT87_VERIFIED_THREE_ROLE_HTML
+          path: matchthis/MatchThis_MT-87*.html
+          if-no-files-found: error
+      - name: Roll back HTML and PHP routes if post-deployment verification fails (accounts unchanged)
+        if: failure() && steps.deploy.outcome == 'success'
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: bash matchthis/deploy-mt87-small2.sh rollback
