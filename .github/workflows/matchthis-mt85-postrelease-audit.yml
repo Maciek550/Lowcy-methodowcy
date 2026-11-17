@@ -1,0 +1,73 @@
+name: MatchThis MT85 - post-release read-only audit (2026-11-17)
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-mt85-postrelease-audit.yml]
+permissions: {contents: read}
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Read SMALL2 version, data integrity, and sector result coverage (no mutations)
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$SSH_PASSWORD"
+          sudo apt-get -qq update
+          sudo apt-get -qq install -y sshpass
+          mkdir -p "$HOME/.ssh";chmod 700 "$HOME/.ssh"
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test "$(ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256|awk '{print $2}')" = 'SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8'
+          export SSHPASS="$SSH_PASSWORD"
+          sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 lowcymethodowcy@s3.small.pl 'bash -s' <<'READ_ONLY'
+          set -euo pipefail
+          web="$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html"
+          echo "MT85_AUDIT_START"
+          grep -o -m1 '<title>[^<]*' "$web/index.html"
+          grep -o -m1 'mt[0-9][0-9]-admin.php' "$web/panel.php"
+          sha256sum "$web/index.html"
+          test "$(sha256sum "$web/index.html"|awk '{print $1}')" = '7b7fcf03f536250d3677db5fff2cdbcb866a8eadd6d5ae7373ddd661d722da9f'
+          test -f "$web/.mt41-private/mt60-published-draws.json"
+          python3 - "$web/.mt41-private/state-mt73.json" <<'PY'
+          import json,sys,collections,hashlib
+          from pathlib import Path
+          state=json.loads(Path(sys.argv[1]).read_text('utf-8'))
+          data=state.get('data',{})
+          events=data.get('events',[])
+          print('MT85_DATA_REVISION',state.get('revision'),'EVENTS',len(events),'PLAYERS',len(data.get('players',[])))
+          print('MT85_SNAPSHOT_SHA256',hashlib.sha256(Path(sys.argv[1]).read_bytes()).hexdigest())
+          for e in events:
+           for idx,t in enumerate(e.get('rounds',[])):
+            entries=t.get('mt55Entries',[]) or []
+            results=t.get('results',[]) or []
+            complete=[x for x in entries if x.get('competitorId') and x.get('sector') and isinstance(x.get('peg'),int) and x.get('peg')>0]
+            ids={str(x['competitorId']) for x in complete}
+            res_ids={str(x.get('competitorId')) for x in results if x.get('competitorId')}
+            if not complete and not results:continue
+            issues=[]
+            if len(complete)!=len(entries):issues.append('INCOMPLETE:'+str(len(entries)-len(complete)))
+            if len({str(x['competitorId']) for x in complete})!=len(complete):issues.append('REPEATED_COMPETITOR')
+            if len({x['peg'] for x in complete})!=len(complete):issues.append('REPEATED_PEG')
+            if len(res_ids)!=len(results):issues.append('DUPLICATE_OR_ID_MISSING_RESULTS')
+            if res_ids-ids and entries:issues.append('RESULTS_WITHOUT_COMPLETE_ASSIGNMENT:'+str(len(res_ids-ids)))
+            print('ROUND',e.get('id'),idx+1,'entries',len(entries),'complete',len(complete),'sector_count',len({x['sector'] for x in complete}),'results',len(results),'positive',sum(float(x.get('weightG') or 0)>0 for x in results),'zero',sum(float(x.get('weightG') or 0)==0 for x in results),'no_result',len(ids-res_ids),'issues',','.join(issues) or 'none')
+          target=next(e for e in events if e.get('id')=='mt2026-xiv-puchar-matchthis-28-29-nov')
+          print('TARGET_ENTRY_IDS',len(target.get('entrantIds',[])),'TARGET_TOURS',len(target.get('rounds',[])))
+          for idx,t in enumerate(target.get('rounds',[])):
+           entries=t.get('mt55Entries',[]) or []
+           complete=[x for x in entries if x.get('competitorId') and x.get('sector') and isinstance(x.get('peg'),int) and x.get('peg')>0]
+           incomplete=[x for x in entries if x not in complete]
+           results=t.get('results',[]) or []
+           result_ids={str(x.get('competitorId')) for x in results if x.get('competitorId')}
+           print('TARGET_ROUND',idx+1,'published',t.get('drawPublished'),'complete',len(complete),'incomplete',len(incomplete),'result_rows',len(results),'complete_without_result',len({str(x['competitorId']) for x in complete}-result_ids))
+           for i,x in enumerate(incomplete):
+            print('INCOMPLETE_ROW',idx+1,i+1,'id',x.get('competitorId'),'peg',x.get('peg'),'sector',x.get('sector'),'has_result',str(x.get('competitorId')) in result_ids)
+          print('MT85_AUDIT_SUCCESS_READ_ONLY')
+          PY
+          READ_ONLY
+          curl -fsS --max-time 30 https://matchthis.lowcymethodowcy.smallhost.pl/ -o /tmp/mt85-audit-public.html
+          grep -q 'MatchThis MT-85' /tmp/mt85-audit-public.html
+          test "$(sha256sum /tmp/mt85-audit-public.html|awk '{print $1}')" = '7b7fcf03f536250d3677db5fff2cdbcb866a8eadd6d5ae7373ddd661d722da9f'
+          echo MT85_AUDIT_PUBLIC_HTTP_AND_HTML_SHA_PASS
