@@ -18,7 +18,7 @@ jobs:
           mkdir -p matchthis/mt89-source
           gh run download 44081200822 -R Maciek550/Lowcy-methodowcy -n MatchThis_MT88_SHA_VERIFIED_THREE_ROLE_HTML -D matchthis/mt89-source
           python3 matchthis/mt89-build.py
-          php -l matchthis/mt89-peil-merge.php
+          php -l matchthis/mt89-peil-merge-v2.php
           bash -n matchthis/mt89-deploy-small2.sh
           bash -n matchthis/mt89-rollback-small2.sh
       - name: Real local browser regression before any server changes
@@ -86,3 +86,5 @@ jobs:
         run: bash matchthis/mt89-rollback-small2.sh
 
 # MT89 regression retry: a fresh browser page is required for reloading persisted cycles.
+
+# MT89 retry r2: preserve two published draw references and cycle officialRows key during Peil merge.
