@@ -1,0 +1,14 @@
+name: MatchThis MT88 duplicate data repair
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-mt88-dedupe-release.yml]
+permissions: {contents: read}
+jobs:
+  dedupe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate merge syntax
+        run: php -l matchthis/mt88-dedupe-bartczak.php
