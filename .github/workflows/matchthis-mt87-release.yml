@@ -54,13 +54,14 @@ jobs:
           for f in matchthis/server/mt87-player-*.php;do php -l "$f" >/dev/null;done
           cp /tmp/mt87-sources/deploy-mt87-small2.sh matchthis/deploy-mt87-small2.sh
           python3 matchthis/mt87-deploy-retry-fix.py
+          python3 matchthis/mt87-dom-ready-fix.py
           bash -n matchthis/deploy-mt87-small2.sh
           (cd matchthis && sha256sum MatchThis_MT-87*.html)
           python3 - <<'PY'
           from pathlib import Path
           import re,subprocess,tempfile,hashlib
           expected={'':'810ebd485c21c30da23ba13d439c4aa48afcc92d3947838fc510d26c81d1c7fa',
-                    '_OGLADACZ':'d325e33d7d3b598457c53e52439c9993c876f21ab2cd4d385fedac78ad21d01a',
+                    '_OGLADACZ':'c79479c2af9af94f795474d8ce0407730d6a0b7f3d6cc36c546737cd0315a596',
                     '_SEDZIA':'f74db6bfd00bdfa410cf525582eeb87e4aa4ac9cede28cc617879da0b391c687'}
           for suffix,sha in expected.items():
            f=Path('matchthis/MatchThis_MT-87'+suffix+'.html')
@@ -169,3 +170,5 @@ jobs:
 # MT87 retry 2: syntax-blocked release had uploaded staged files without touching production.
 
 # MT87 retry 3: instrumentation of the exact production registration tab visibility.
+
+# MT87 retry 4: wait until parsed DOM before consuming server-side signup CSRF token; reproduce fast-production race.
