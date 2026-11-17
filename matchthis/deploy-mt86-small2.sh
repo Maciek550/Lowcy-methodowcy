@@ -13,7 +13,7 @@ opts=(-o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthen
 remote=lowcymethodowcy@s3.small.pl
 site=https://matchthis.lowcymethodowcy.smallhost.pl
 old=7b7fcf03f536250d3677db5fff2cdbcb866a8eadd6d5ae7373ddd661d722da9f
-new=e61c5c79cf55970ec5b700a91599ce889c45c0467acd27c29c1dbb98259f5dc5
+new=d5ddcc58aa3e118743573e776069af8eeabb3234cf27b36ae5615689888b268f
 if test "$mode" = rollback;then
  sshpass -e ssh "${opts[@]}" "$remote" 'bash -s' <<'ROLL'
 set -Eeuo pipefail
@@ -32,7 +32,7 @@ ROLL
 fi
 for pair in \
  '31df19ab51bd687d4212bbdfdb264671241ff0481c8d4e71bc912e2887892e31 matchthis/MatchThis_MT-86.html' \
- 'e61c5c79cf55970ec5b700a91599ce889c45c0467acd27c29c1dbb98259f5dc5 matchthis/MatchThis_MT-86_OGLADACZ.html' \
+ 'd5ddcc58aa3e118743573e776069af8eeabb3234cf27b36ae5615689888b268f matchthis/MatchThis_MT-86_OGLADACZ.html' \
  '8305b3c467f3ca240e2b20af2014ebdd780e176717031f0b66b6aa4ca8958848 matchthis/MatchThis_MT-86_SEDZIA.html';do echo "$pair"|sha256sum -c -;done
 for f in matchthis/server/mt86-player-*.php;do php -l "$f" >/dev/null;done
 sshpass -e ssh "${opts[@]}" "$remote" 'bash -s' <<'PRE'
@@ -70,7 +70,7 @@ prior="$stage/previous"
 sha(){ sha256sum "$1"|awk '{print $1}'; }
 test "$(sha "$web/index.html")" = 7b7fcf03f536250d3677db5fff2cdbcb866a8eadd6d5ae7373ddd661d722da9f
 test "$(sha "$stage/MatchThis_MT-86.html")" = 31df19ab51bd687d4212bbdfdb264671241ff0481c8d4e71bc912e2887892e31
-test "$(sha "$stage/MatchThis_MT-86_OGLADACZ.html")" = e61c5c79cf55970ec5b700a91599ce889c45c0467acd27c29c1dbb98259f5dc5
+test "$(sha "$stage/MatchThis_MT-86_OGLADACZ.html")" = d5ddcc58aa3e118743573e776069af8eeabb3234cf27b36ae5615689888b268f
 test "$(sha "$stage/MatchThis_MT-86_SEDZIA.html")" = 8305b3c467f3ca240e2b20af2014ebdd780e176717031f0b66b6aa4ca8958848
 mkdir -m 700 "$prior"
 for f in index.html panel.php;do cp -p "$web/$f" "$prior/$f";done
@@ -100,7 +100,7 @@ for route in login session logout password recovery accounts;do
 done
 cp -p "$stage/panel.php" "$web/panel.php.next";mv -f "$web/panel.php.next" "$web/panel.php"
 cp -p "$stage/MatchThis_MT-86_OGLADACZ.html" "$web/index.html.next";mv -f "$web/index.html.next" "$web/index.html"
-test "$(sha "$web/index.html")" = e61c5c79cf55970ec5b700a91599ce889c45c0467acd27c29c1dbb98259f5dc5
+test "$(sha "$web/index.html")" = d5ddcc58aa3e118743573e776069af8eeabb3234cf27b36ae5615689888b268f
 test "$(tail -n +2 "$web/role-pages/mt86-admin.php"|sha256sum|awk '{print $1}')" = 31df19ab51bd687d4212bbdfdb264671241ff0481c8d4e71bc912e2887892e31
 test "$(tail -n +2 "$web/role-pages/mt86-sedzia.php"|sha256sum|awk '{print $1}')" = 8305b3c467f3ca240e2b20af2014ebdd780e176717031f0b66b6aa4ca8958848
 for f in state-mt73.json users.php mt60-published-draws.json;do cmp "$prior/$f" "$web/.mt41-private/$f";done
