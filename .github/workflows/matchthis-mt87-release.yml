@@ -134,7 +134,16 @@ jobs:
                assert await page.locator('#mt86-player-form').is_visible()
                assert await page.locator('#mt87-recover').is_visible()
                await page.locator('#mt87-tab-register').click()
-               assert await page.locator('#mt87-register-form').is_visible()
+               visible=await page.locator('#mt87-register-form').is_visible()
+               if not visible:
+                info=await page.evaluate("""() => {
+                  const r=document.getElementById('mt87-register-form');
+                  const m=document.getElementById('mtLoginModal');
+                  const tab=document.getElementById('mt87-tab-register');
+                  return {registerHidden:r.hidden,registerComputed:getComputedStyle(r).display,registerParentHidden:r.parentElement.hidden,modalHidden:m.hidden,modalDisplay:getComputedStyle(m).display,tabSelected:tab.getAttribute('aria-selected'),modalHtml:m.outerHTML.slice(0,1800)};
+                }""")
+                print('MT87_LIVE_REGISTRATION_DIAGNOSTIC',engine.name,width,info,'JS_ERRORS',errors,flush=True)
+               assert visible
                assert len(await page.locator('#mt87-register-csrf').input_value())>=20
                await page.locator('#mt86-tab-admin').click()
                assert await page.locator('#mtLoginForm').is_visible()
@@ -158,3 +167,5 @@ jobs:
         run: bash matchthis/deploy-mt87-small2.sh rollback
 
 # MT87 retry 2: syntax-blocked release had uploaded staged files without touching production.
+
+# MT87 retry 3: instrumentation of the exact production registration tab visibility.
