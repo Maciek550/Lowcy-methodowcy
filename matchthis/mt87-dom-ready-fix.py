@@ -20,5 +20,12 @@ deploy=base/"deploy-mt87-small2.sh"
 d=deploy.read_text("utf-8")
 assert d.count(old_sha)>=2
 d=d.replace(old_sha,new_sha)
+# Only the upload precheck may accept the immediately prior SHA-staged viewer.
+# The installed site's checksum MUST be the new SHA.
+stage_line='test "$(sha256sum "$stage/MatchThis_MT-87_OGLADACZ.html"|awk \'{print $1}\')" = '+new_sha
+assert d.count(stage_line)==1,("staging SHA check changed",d.count(stage_line))
+d=d.replace(stage_line,
+  'stage_viewer_sha="$(sha256sum "$stage/MatchThis_MT-87_OGLADACZ.html"|awk \'{print $1}\')"\n'
+  'test "$stage_viewer_sha" = '+new_sha+' || test "$stage_viewer_sha" = '+old_sha,1)
 deploy.write_text(d,"utf-8")
 print("MT87_RACE_FIXED_AFTER_DOM_READY_SHA_VERIFIED",new_sha)
