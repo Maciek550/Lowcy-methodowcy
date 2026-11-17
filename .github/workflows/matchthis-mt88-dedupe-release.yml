@@ -12,3 +12,32 @@ jobs:
       - uses: actions/checkout@v4
       - name: Validate merge syntax
         run: php -l matchthis/mt88-dedupe-bartczak.php
+      - name: Merge exact player records on SMALL2 with before-save backup
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: bash matchthis/mt88-dedupe-run.sh
+      - name: Independently verify live one-profile 25-result history
+        run: |
+          set -Eeuo pipefail
+          curl -fLsS --retry 3 --max-time 40 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/mt88-live.json
+          python3 - <<'PY'
+          import json
+          j=json.load(open('/tmp/mt88-live.json'));d=j['data']
+          canon='mt2025-sensas-dec06-person-26';old='mt2026-person-barczak-jan'
+          p=[p for p in d['players'] if p.get('lastName')=='BARTCZAK' and p.get('firstName')=='JAN']
+          assert len(p)==1 and p[0]['id']==canon
+          results=[]
+          for group,key in [('events','rounds'),('cycles','tours')]:
+           for event in d[group]:
+            assert old not in event.get('entrantIds',[])
+            for tour in event.get(key,[]):
+             for row in tour.get('results',[]):
+              assert row.get('competitorId')!=old
+              if row.get('competitorId')==canon:
+               results.append(row)
+               assert row.get('competitorName')=='BARTCZAK JAN'
+          assert len(results)==25,len(results)
+          assert len(d['players'])==238 and j['revision']>=52
+          assert any(x.get('peg')==18 and x.get('sector')=='B' and x.get('weightG')==7575 for x in results)
+          print('MT88_ONE_BARTCZAK_PLAYER_25_RESULTS_SERVER_READBACK_PASS',j['revision'])
+          PY
