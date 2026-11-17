@@ -31,3 +31,75 @@ jobs:
           print('DONE_READ_ONLY')
           PY
 # Post-merge read-only reinspection; no data writes.
+
+      - name: Regression - one Bartczak record and all 25 results after fresh download
+        run: |
+          set -Eeuo pipefail
+          curl -fLsS --retry 3 --max-time 45 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/mt88-again.json
+          python3 - <<'PY'
+          import json
+          s=json.load(open('/tmp/mt88-again.json'));d=s['data']
+          old='mt2026-person-barczak-jan';canonical='mt2025-sensas-dec06-person-26'
+          players=[p for p in d['players'] if p.get('firstName')=='JAN' and p.get('lastName')=='BARTCZAK']
+          assert len(players)==1 and players[0]['id']==canonical
+          assert len(d['players'])==238
+          found=[]
+          for group,key in [('events','rounds'),('cycles','tours')]:
+           for e in d[group]:
+            assert old not in e.get('entrantIds',[])
+            for t in e.get(key,[]):
+             for r in t.get('results',[]):
+              assert r.get('competitorId')!=old
+              if r.get('competitorId')==canonical:found.append((e.get('name'),t.get('name'),r))
+          assert len(found)==25,len(found)
+          assert any(x[2].get('peg')==18 and x[2].get('sector')=='B' and x[2].get('weightG')==7575 for x in found)
+          def find_substrings(obj,path='$'):
+           if isinstance(obj,dict):
+            for k,v in obj.items():find_substrings(v,path+'/'+str(k))
+           elif isinstance(obj,list):
+            for i,v in enumerate(obj):find_substrings(v,path+'/'+str(i))
+           elif isinstance(obj,str) and old in obj:
+            print('OLD_ID_TEXT_PATH',path,'EXACT_LINK',obj==old)
+          find_substrings(d)
+          print('MT88_PERSISTENT_ONE_BARTCZAK_25_RESULTS_REGRESSION_PASS',s['revision'])
+          PY
+      - name: Browser verification of single player, history references and admin login tabs
+        run: |
+          set -Eeuo pipefail
+          python3 -m venv /tmp/mt88-audit-venv
+          /tmp/mt88-audit-venv/bin/pip install -q playwright
+          /tmp/mt88-audit-venv/bin/python -m playwright install --with-deps chromium firefox
+          cat > /tmp/mt88-live-ui.py <<'PY'
+          from playwright.sync_api import sync_playwright
+          url='https://matchthis.lowcymethodowcy.smallhost.pl/'
+          with sync_playwright() as p:
+           for browser_name in ('chromium','firefox'):
+            browser=getattr(p,browser_name).launch(headless=True)
+            try:
+             for width in (390,1366):
+              page=browser.new_page(viewport={'width':width,'height':900})
+              errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
+              page.goto(url,wait_until='domcontentloaded')
+              page.wait_for_function("document.querySelector('#mt73-sync')?.textContent.includes('Dane z serwera')",timeout=45000)
+              assert page.title()=='MatchThis MT-88'
+              assert page.locator('#appversion').inner_text()=='MT-88'
+              stat=page.evaluate("""() => {
+                const people=filteredPlayers().filter(p=>p.firstName==='JAN'&&p.lastName==='BARTCZAK');
+                let history=0,old=0;
+                for(const e of [...db.events,...db.cycles])for(const t of [...(e.rounds||[]),...(e.tours||[])])
+                  for(const r of (t.results||[])){
+                   if(r.competitorId==='mt2025-sensas-dec06-person-26')history++;
+                   if(r.competitorId==='mt2026-person-barczak-jan')old++;
+                  }
+                return {profiles:people.map(p=>p.id),history,old};
+              }""")
+              assert stat=={'profiles':['mt2025-sensas-dec06-person-26'],'history':25,'old':0},stat
+              page.locator('#mtLoginOpen').click()
+              page.locator('#mt86-tab-admin').click()
+              assert page.locator('#mtLoginForm').is_visible()
+              assert not errors,errors
+              print('MT88_CHROMIUM_FIREFOX_ONE_PROFILE_ADMIN_UNCHANGED_PASS',browser_name,width)
+              page.close()
+            finally:browser.close()
+          PY
+          /tmp/mt88-audit-venv/bin/python /tmp/mt88-live-ui.py
