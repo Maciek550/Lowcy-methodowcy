@@ -1,0 +1,28 @@
+name: MatchThis MT89 reproduce and validate three HTML roles
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-mt89-verify.yml]
+permissions: {contents: read, actions: read}
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rebuild SHA-locked MT89 from actual verified MT88 production baseline
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -Eeuo pipefail
+          mkdir -p matchthis/mt89-source
+          gh run download 44081200822 -R Maciek550/Lowcy-methodowcy -n MatchThis_MT88_SHA_VERIFIED_THREE_ROLE_HTML -D matchthis/mt89-source
+          python3 matchthis/mt89-build.py
+          php -l matchthis/mt89-peil-merge.php
+          test -f matchthis/mt89-release/MatchThis_MT-89_OGLADACZ.html
+          echo MT89_SHA_PHP_JS_VERSION_PASS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MatchThis_MT89_EXACT_VERIFIED_THREE_ROLE_HTML
+          path: matchthis/mt89-release/MatchThis_MT-89*.html
+          if-no-files-found: error
