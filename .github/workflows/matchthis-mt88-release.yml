@@ -18,6 +18,56 @@ jobs:
           gh run download 44066765970 -R Maciek550/Lowcy-methodowcy -n MatchThis_MT87_VERIFIED_THREE_ROLE_HTML -D matchthis/mt88-base
           python3 matchthis/mt88-build.py
           php -l matchthis/mt88-state-correct.php
+      - name: Safely patch real MatchThis results and deploy MT88 to SMALL2
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: |
+          bash -n matchthis/mt88-deploy.sh
+          bash matchthis/mt88-deploy.sh
+      - name: Live Chromium and Firefox UI, login-route and responsive regression
+        run: |
+          set -Eeuo pipefail
+          python3 -m venv /tmp/mt88-venv
+          /tmp/mt88-venv/bin/pip install -q playwright
+          /tmp/mt88-venv/bin/python -m playwright install --with-deps chromium firefox
+          mkdir -p /tmp/mt88-screens
+          cat >/tmp/mt88-ui.py <<'PY'
+          from playwright.sync_api import sync_playwright
+          url='https://matchthis.lowcymethodowcy.smallhost.pl/'
+          with sync_playwright() as p:
+           for engine in ('chromium','firefox'):
+            b=getattr(p,engine).launch(headless=True)
+            try:
+             for width,zoom in ((1366,1),(390,1),(1366,1.5)):
+              page=b.new_page(viewport={'width':width,'height':900})
+              errs=[];page.on('pageerror',lambda e:errs.append(str(e)))
+              page.goto(url,wait_until='domcontentloaded',timeout=45000)
+              page.wait_for_function("document.querySelector('#mt73-sync')?.textContent.includes('Dane z serwera')",timeout=45000)
+              if zoom!=1:page.evaluate('(v)=>document.body.style.zoom=v',zoom)
+              assert page.title()=='MatchThis MT-88'
+              assert page.locator('body').get_attribute('data-version')=='MT-88'
+              assert page.locator('#appversion').inner_text()=='MT-88'
+              assert page.locator('#appversion').is_visible()
+              assert page.locator('.utility-strip').count()==0
+              assert page.evaluate('document.documentElement.scrollWidth<=document.documentElement.clientWidth+1')
+              if width in (1366,390) and zoom==1:
+               page.screenshot(path=f'/tmp/mt88-screens/{engine}-{width}.png')
+              page.locator('#mtLoginOpen').click()
+              assert page.locator('#mt86-player-form').is_visible()
+              page.locator('#mt86-tab-admin').click()
+              assert page.locator('#mtLoginForm').is_visible()
+              assert not errs,errs
+              print('MT88_LIVE_BROWSER_PASS',engine,width,zoom,flush=True)
+              page.close()
+            finally:b.close()
+          PY
+          /tmp/mt88-venv/bin/python /tmp/mt88-ui.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: MatchThis_MT88_LIVE_UI_SCREENSHOTS
+          path: /tmp/mt88-screens/*.png
+          if-no-files-found: ignore
       - uses: actions/upload-artifact@v4
         with:
           name: MatchThis_MT88_SHA_VERIFIED_THREE_ROLE_HTML
