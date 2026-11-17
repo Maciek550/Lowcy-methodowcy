@@ -34,6 +34,7 @@ jobs:
           p.write_text(s.replace("/mnt/data/mt85_release","matchthis").replace("/mnt/data/mt86","matchthis"))
           PY
           python3 /tmp/mt86-sources/build-mt86.py
+          python3 matchthis/mt86-postbuild.py
           mkdir -p matchthis/server
           cp /tmp/mt86-sources/server/mt86-player-*.php matchthis/server/
           (cd matchthis && sha256sum MatchThis_MT-86*.html)
