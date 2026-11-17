@@ -72,12 +72,21 @@ try{
  $next=$db;
  array_walk_recursive($next,function(&$v)use($from,$to){if(is_string($v)&&$v===$from)$v=$to;});
  array_splice($next['players'],$ps[$from],1);
- foreach(['events'=>'rounds','cycles'=>'tours'] as $group=>$key)
-  foreach($next[$group] as &$event)foreach($event[$key]??[] as &$tour)
-   foreach($tour['results']??[] as &$result)
-    if(($result['competitorId']??'')===$to&&($result['competitorName']??'')==='PEL ANNA')
-     $result['competitorName']='PEIL ANNA';
- unset($event,$tour,$result);
+ foreach(['events'=>'rounds','cycles'=>'tours'] as $group=>$key){
+  foreach($next[$group] as &$event){
+   if(!isset($event[$key])||!is_array($event[$key]))continue;
+   foreach($event[$key] as &$tour){
+    if(!isset($tour['results'])||!is_array($tour['results']))continue;
+    foreach($tour['results'] as &$result){
+     if(($result['competitorId']??'')===$to&&($result['competitorName']??'')==='PEL ANNA')
+      $result['competitorName']='PEIL ANNA';
+    }
+    unset($result);
+   }
+   unset($tour);
+  }
+  unset($event);
+ }
  mt73_validate($next);
  if(peil_count($next,$from)!==0)throw new RuntimeException('Old identity still referenced');
  if(count($next['players'])!==count($db['players'])-1)throw new RuntimeException('Wrong player count');
