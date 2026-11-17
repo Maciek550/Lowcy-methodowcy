@@ -30,3 +30,4 @@ jobs:
                     print('RESULT',json.dumps({'group':group,'event':event.get('name'),'tour':tour.get('name'),'id':r.get('competitorId'),'name':r.get('competitorName'),'peg':r.get('peg'),'sector':r.get('sector'),'weightG':r.get('weightG')},ensure_ascii=False))
           print('DONE_READ_ONLY')
           PY
+# Post-merge read-only reinspection; no data writes.
