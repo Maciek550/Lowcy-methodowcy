@@ -1,0 +1,70 @@
+name: MatchThis MT88 - private read-only duplicate and account reference audit
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-mt88-private-audit.yml]
+permissions: {contents: read}
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Read-only exact duplicate references on SMALL2
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: |
+          set -Eeuo pipefail
+          sudo apt-get -qq update
+          sudo apt-get -qq install -y sshpass
+          mkdir -p "$HOME/.ssh"; chmod 700 "$HOME/.ssh"
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test "$(ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256|awk '{print $2}')" = 'SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8'
+          export SSHPASS="$SSH_PASSWORD"
+          sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15 lowcymethodowcy@s3.small.pl 'bash -s' <<'REMOTE'
+          set -Eeuo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,collections
+          web=Path.home()/'domains/matchthis.lowcymethodowcy.smallhost.pl/public_html'
+          private=web/'.mt41-private'
+          s=json.loads((private/'state-mt73.json').read_text())
+          d=s['data']
+          ids=('mt2025-sensas-dec06-person-26','mt2026-person-barczak-jan')
+          print('STATE_REVISION',s['revision'])
+          print('RECORDS',[(p['id'],p.get('source'),sorted(p.keys())) for p in d['players'] if p['id'] in ids])
+          refs=collections.defaultdict(list)
+          def walk(x,p='$'):
+           if isinstance(x,dict):
+            for k,v in x.items():walk(v,p+'/'+str(k))
+           elif isinstance(x,list):
+            for i,v in enumerate(x):walk(v,p+'/'+str(i))
+           elif isinstance(x,str) and x in ids:
+            refs[x].append(p)
+          walk(d)
+          for id in ids:
+           paths=refs[id]
+           print('LINK_COUNTS',id,len(paths))
+           print('NON_RESULT_REFERENCES',id,[p for p in paths if '/results/' not in p][:100])
+          for typ,rounds in [('events','rounds'),('cycles','tours')]:
+           for e in d[typ]:
+            for t in e.get(rounds,[]):
+             rows=[r for r in t.get('results',[]) if r.get('competitorId') in ids]
+             if len(rows)>1:print('BLOCK_BOTH_IN_ROUND',e.get('name'),t.get('name'),len(rows))
+          print('PLAYER_ACCOUNT_FILE_NAMES',[p.name for p in private.iterdir() if 'player' in p.name.lower() or 'account' in p.name.lower()])
+          for p in private.iterdir():
+           if p.is_file() and p.suffix=='.json' and ('player' in p.name.lower() or 'account' in p.name.lower()):
+            try: a=json.loads(p.read_text())
+            except Exception:continue
+            for id in ids:
+             hits=[]
+             def scan(x,path='$'):
+              if isinstance(x,dict):
+               for k,v in x.items():scan(v,path+'/'+str(k))
+              elif isinstance(x,list):
+               for i,v in enumerate(x):scan(v,path+'/'+str(i))
+              elif isinstance(x,str) and x==id:hits.append(path)
+             scan(a)
+             print('ACCOUNT_REFERENCE',p.name,id,len(hits),hits[:20])
+          print('PRIVATE_AUDIT_DONE_NO_CHANGES')
+          PY
+          REMOTE
