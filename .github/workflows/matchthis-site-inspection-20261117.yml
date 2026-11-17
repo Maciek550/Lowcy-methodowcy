@@ -1,0 +1,30 @@
+name: MatchThis - full read-only site inspection 17 Nov 2026
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-site-inspection-20261117.yml]
+permissions: {contents: read}
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install actual Chromium and Firefox browser environments
+        run: |
+          python3 -m venv /tmp/mtsite-venv
+          /tmp/mtsite-venv/bin/pip install -q requests playwright
+          /tmp/mtsite-venv/bin/python -m playwright install --with-deps chromium firefox
+      - name: Read-only inspection on production SMALL2 site and live public data
+        run: |
+          set -Eeuo pipefail
+          /tmp/mtsite-venv/bin/python matchthis/mt88-live-site-inspection.py | tee /tmp/mtsite-inspection.log
+          test "$(grep -c '^INSPECT INSPECTION_COMPLETE' /tmp/mtsite-inspection.log)" = 1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: MatchThis_Small2_Inspection_20261117
+          path: |
+            /tmp/mtsite-inspection.log
+            /tmp/mt-site-audit/*.png
+          if-no-files-found: ignore
