@@ -1,0 +1,86 @@
+name: MatchThis MT89 - cycles, planned cards, Peil merge SMALL2
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-mt89-small2-release.yml]
+permissions: {contents: read, actions: read}
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rebuild exact MT89 baseline and validate SHA, JavaScript, PHP and shell
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -Eeuo pipefail
+          mkdir -p matchthis/mt89-source
+          gh run download 44081200822 -R Maciek550/Lowcy-methodowcy -n MatchThis_MT88_SHA_VERIFIED_THREE_ROLE_HTML -D matchthis/mt89-source
+          python3 matchthis/mt89-build.py
+          php -l matchthis/mt89-peil-merge.php
+          bash -n matchthis/mt89-deploy-small2.sh
+          bash -n matchthis/mt89-rollback-small2.sh
+      - name: Real local browser regression before any server changes
+        run: |
+          set -Eeuo pipefail
+          python3 -m venv /tmp/mt89-venv
+          /tmp/mt89-venv/bin/pip install -q playwright
+          /tmp/mt89-venv/bin/python -m playwright install --with-deps chromium firefox
+          /tmp/mt89-venv/bin/python matchthis/mt89-regression.py
+      - name: Guarded SMALL2 release, central database copy and Peil identity merge
+        id: deploy
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: bash matchthis/mt89-deploy-small2.sh
+      - name: Live Chromium and Firefox verification of MT89, duplicates, 18 results and admin route
+        run: |
+          set -Eeuo pipefail
+          cat > /tmp/mt89-live.py <<'PY'
+          from playwright.sync_api import sync_playwright
+          URL='https://matchthis.lowcymethodowcy.smallhost.pl/'
+          expected=('mt2026-xiv-puchar-matchthis-28-29-nov','mt-mwj0n0dm-hrwptq','mt-mwj1bp7k-8vaq2i','mt-mwj1exa0-v70o58')
+          with sync_playwright() as p:
+           for eng in ('chromium','firefox'):
+            b=getattr(p,eng).launch(headless=True)
+            try:
+             for width in (390,1366):
+              page=b.new_page(viewport={'width':width,'height':900})
+              errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
+              page.goto(URL,wait_until='domcontentloaded',timeout=60000)
+              page.wait_for_function("document.querySelector('#mt73-sync')?.textContent.includes('Dane z serwera')",timeout=45000)
+              assert page.title()=='MatchThis MT-89'
+              assert page.locator('body').get_attribute('data-version')=='MT-89'
+              assert page.locator('#appversion').inner_text()=='MT-89'
+              assert page.evaluate('document.documentElement.scrollWidth<=document.documentElement.clientWidth+1')
+              page.locator('#nav button[data-view="events"]').click()
+              for eid in expected:
+               assert page.locator('#main button[data-open="'+eid+'"]').count()==1,eid
+               assert page.locator('.mt49-two-columns button[data-open="'+eid+'"]').count()==0,eid
+              j=page.evaluate("""() => fetch('/mt73-state.php?public=1',{cache:'no-store'}).then(r=>r.json())""")
+              players=[x for x in j['data']['players'] if x.get('firstName')=='ANNA' and x.get('lastName')=='PEIL']
+              assert len(players)==1 and players[0]['id']=='mt2025-float_king_2025-person-60'
+              rows=[r for group,key in [('events','rounds'),('cycles','tours')] for e in j['data'][group] for t in e.get(key,[]) for r in t.get('results',[]) if r.get('competitorId')=='mt2025-float_king_2025-person-60']
+              assert len(rows)==18
+              assert all(r['competitorName']=='PEIL ANNA' for r in rows)
+              page.locator('#mtLoginOpen').click()
+              assert page.locator('#mt86-player-form').is_visible()
+              page.locator('#mt86-tab-admin').click()
+              assert page.locator('#mtLoginForm').is_visible()
+              assert not errors,errors
+              print('MT89_LIVE_BOTH_BROWSERS_UNIQUE_EVENTS_PEIL_18_ADMIN_PASS',eng,width)
+              page.close()
+            finally:b.close()
+          PY
+          /tmp/mt89-venv/bin/python /tmp/mt89-live.py
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: MatchThis_MT89_VERIFIED_LIVE_THREE_ROLE_HTML
+          path: matchthis/mt89-release/MatchThis_MT-89*.html
+          if-no-files-found: error
+      - name: Restore previous MT88 UI after failed live verification (data preserved)
+        if: failure() && steps.deploy.outcome == 'success'
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: bash matchthis/mt89-rollback-small2.sh
