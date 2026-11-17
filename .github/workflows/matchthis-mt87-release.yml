@@ -172,3 +172,5 @@ jobs:
 # MT87 retry 3: instrumentation of the exact production registration tab visibility.
 
 # MT87 retry 4: wait until parsed DOM before consuming server-side signup CSRF token; reproduce fast-production race.
+
+# MT87 retry 5: staged old viewer is SHA-pinned; precheck may accept it before overwrite with fixed viewer.
