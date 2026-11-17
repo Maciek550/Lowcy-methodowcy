@@ -51,8 +51,14 @@ jobs:
                assert bchecks['bartczakVisible'] and bchecks['weight7575Visible'],bchecks
                assert bchecks['sectorSelected'],bchecks
                if page.locator('#main [data-nav-back]').count():
-                page.locator('#main [data-nav-back]').first.click()
-                note('BACK_BUTTON_'+engine+'_'+str(width),{'mainHeadings':page.locator('#main h1').all_inner_texts()[:3]})
+                steps=[]
+                for n in range(5):
+                 if not page.locator('#main [data-nav-back]').count():break
+                 page.locator('#main [data-nav-back]').first.click()
+                 page.wait_for_timeout(550)
+                 steps.append({'heading':page.locator('#main h1').first.inner_text()[:85] if page.locator('#main h1').count() else '',
+                               'historyDepth':page.evaluate('history.state?.depth??null')})
+                note('BACK_BUTTON_SEQUENCE_'+engine+'_'+str(width),{'steps':steps,'leftDetail':page.locator('#main [data-nav-back]').count()==0})
                page.locator('#nav button[data-view="archive"]').click()
                page.locator('button[data-open="mt2025-mega_final_2025"]').first.click()
                old=page.locator('#main').inner_text()
