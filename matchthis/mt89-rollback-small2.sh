@@ -9,7 +9,7 @@ export SSHPASS="$SSH_PASSWORD"
 sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1 -o ConnectTimeout=15 lowcymethodowcy@s3.small.pl 'bash -s' <<'ROLLBACK'
 set -Eeuo pipefail
 web="$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html"
-prior="$HOME/matchthis-independent/mt89-peil-20261117/previous"
+prior="$HOME/matchthis-independent/mt89-peil-20261117-r2/previous"
 test -f "$prior/index.html" && test -f "$prior/panel.php"
 test "$(sha256sum "$prior/index.html"|awk '{print $1}')" = 1e990e680c7138c06df5e197d4d8dcadb40289af351c703ace893acb9e372b92
 for f in index.html panel.php;do cp -p "$prior/$f" "$web/$f.mt89-restore";mv -f "$web/$f.mt89-restore" "$web/$f";done
