@@ -71,7 +71,8 @@ try {
  $read=mt73_read();
  if($read!==$before)throw new RuntimeException('State readback mismatch');
  if(count($read['data']['players'])!==count($players)-1)throw new RuntimeException('Player count mismatch');
- $json=mt73_json($read['data']);
- if(str_contains($json,$from))throw new RuntimeException('Old player ID survived');
+ $dangling=0;
+ array_walk_recursive($read['data'],function($v)use($from,&$dangling){if(is_string($v)&&$v===$from)$dangling++;});
+ if($dangling!==0)throw new RuntimeException('Old player ID still referenced');
  echo 'MT88_BARTCZAK_ONE_RECORD_25_RESULTS_READBACK_PASS players='.count($read['data']['players']).' revision='.$read['revision']."\n";
 } finally {flock($f,LOCK_UN);fclose($f);}
