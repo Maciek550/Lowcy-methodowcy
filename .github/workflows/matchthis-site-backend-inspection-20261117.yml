@@ -1,0 +1,54 @@
+name: MatchThis - immediate production data and HTTP inspection
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-site-backend-inspection-20261117.yml]
+permissions: {contents: read}
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    steps:
+      - name: Read public data only; no logins and no writes
+        run: |
+          set -Eeuo pipefail
+          for p in '/' '/panel.php' '/mt73-state.php?public=1' '/mt73-state.php' '/player-accounts.php' '/role-pages/mt88-admin.php' '/.mt41-private/users.php' '/matchthis-orange-mt79-32.png';do
+            echo "AUDIT_ROUTE $(curl -sS -L -o /dev/null -w '%{http_code} %{content_type} %{size_download}' --max-time 15 "https://matchthis.lowcymethodowcy.smallhost.pl$p") $p"
+          done
+          curl -fLsS --max-time 30 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' > /tmp/site.json
+          python3 - <<'PY'
+          import json,collections,re
+          d=json.load(open('/tmp/site.json'))
+          data=d['data'];players=data['players'];ids={p.get('id') for p in players}
+          names=collections.defaultdict(list)
+          for p in players:names[(p.get('lastName','').strip().upper(),p.get('firstName','').strip().upper())].append(p.get('id'))
+          print('AUDIT_COUNTS revision',d['revision'],'players',len(players),'events',len(data['events']),'cycles',len(data['cycles']))
+          dup=[(k,v) for k,v in names.items() if len(v)>1]
+          print('AUDIT_DUPLICATES',len(dup))
+          for item in dup[:30]:print('AUDIT_DUPLICATE',item)
+          anomalies=collections.Counter(); examples=collections.defaultdict(list)
+          for g,k in [('events','rounds'),('cycles','tours')]:
+           print('AUDIT_GROUP',g,'tours',sum(len(e.get(k,[])) for e in data[g]),'final',sum(t.get('status')=='FINAL' for e in data[g] for t in e.get(k,[])),'rows',sum(len(t.get('results',[])) for e in data[g] for t in e.get(k,[])))
+           for e in data[g]:
+            for tour in e.get(k,[]):
+             seen=collections.defaultdict(list)
+             for idx,r in enumerate(tour.get('results',[])):
+              name=r.get('competitorName','')
+              for key,test in [
+               ('orphan',r.get('competitorId') not in ids),
+               ('positive_weight_missing_peg',isinstance(r.get('weightG'),int) and r.get('weightG')>0 and r.get('peg') is None),
+               ('positive_weight_missing_sector',isinstance(r.get('weightG'),int) and r.get('weightG')>0 and not r.get('sector')),
+               ('bad_weight',not isinstance(r.get('weightG'),int))]:
+               if test:
+                anomalies[key]+=1
+                if len(examples[key])<8:examples[key].append((e.get('name','')[:65],tour.get('name','')[:35],name[:35],r.get('peg'),r.get('sector'),r.get('weightG')))
+              if r.get('competitorId'):seen[r['competitorId']].append(idx)
+             for cid,occ in seen.items():
+              if len(occ)>1:
+               anomalies['same_player_twice_in_tour']+=1
+               if len(examples['same_player_twice_in_tour'])<8: examples['same_player_twice_in_tour'].append((e.get('name'),tour.get('name'),cid,occ))
+          print('AUDIT_ANOMALIES',dict(anomalies))
+          for k,v in examples.items():print('AUDIT_EXAMPLES',k,v)
+          bart=[p for p in players if p.get('lastName')=='BARTCZAK' and p.get('firstName')=='JAN']
+          print('AUDIT_BARTCZAK',[(p.get('id'),p.get('archived')) for p in bart])
+          PY
