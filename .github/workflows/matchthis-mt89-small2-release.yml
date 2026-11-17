@@ -84,3 +84,5 @@ jobs:
         env:
           SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
         run: bash matchthis/mt89-rollback-small2.sh
+
+# MT89 regression retry: a fresh browser page is required for reloading persisted cycles.
