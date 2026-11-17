@@ -84,14 +84,17 @@ jobs:
               assert page.title()=='MatchThis MT-88'
               assert page.locator('#appversion').inner_text()=='MT-88'
               stat=page.evaluate("""() => {
-                const people=db.players.filter(p=>p.firstName==='JAN'&&p.lastName==='BARTCZAK');
-                let history=0,old=0;
-                for(const e of [...db.events,...db.cycles])for(const t of [...(e.rounds||[]),...(e.tours||[])])
+                return fetch('/mt73-state.php?public=1',{cache:'no-store'}).then(r=>r.json()).then(j=>{
+                 const d=j.data;
+                 const people=d.players.filter(p=>p.firstName==='JAN'&&p.lastName==='BARTCZAK');
+                 let history=0,old=0;
+                 for(const e of [...d.events,...d.cycles])for(const t of [...(e.rounds||[]),...(e.tours||[])])
                   for(const r of (t.results||[])){
                    if(r.competitorId==='mt2025-sensas-dec06-person-26')history++;
                    if(r.competitorId==='mt2026-person-barczak-jan')old++;
                   }
-                return {profiles:people.map(p=>p.id),history,old};
+                 return {profiles:people.map(p=>p.id),history,old};
+                });
               }""")
               assert stat=={'profiles':['mt2025-sensas-dec06-person-26'],'history':25,'old':0},stat
               page.locator('#mtLoginOpen').click()
