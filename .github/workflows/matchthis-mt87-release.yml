@@ -145,7 +145,13 @@ jobs:
                 }""")
                 print('MT87_LIVE_REGISTRATION_DIAGNOSTIC',engine.name,width,info,'JS_ERRORS',errors,flush=True)
                assert visible
-               assert len(await page.locator('#mt87-register-csrf').input_value())>=20
+               token_len=len(await page.locator('#mt87-register-csrf').input_value())
+               if token_len<20:
+                probe=await page.request.get(URL+'player-session.php')
+                try: data=await probe.json()
+                except Exception: data={}
+                print('MT87_LIVE_PUBLIC_SESSION_SAFE_DIAGNOSTIC',engine.name,width,'status',probe.status,'keys',sorted(data.keys()),'csrf_len',len(str(data.get('registrationCsrf') or '')),'js_errors',errors,flush=True)
+               assert token_len>=20
                await page.locator('#mt86-tab-admin').click()
                assert await page.locator('#mtLoginForm').is_visible()
                assert not errors,errors
@@ -174,3 +180,5 @@ jobs:
 # MT87 retry 4: wait until parsed DOM before consuming server-side signup CSRF token; reproduce fast-production race.
 
 # MT87 retry 5: staged old viewer is SHA-pinned; precheck may accept it before overwrite with fixed viewer.
+
+# MT87 retry 6: inspect public JSON keys and CSRF length without revealing token or credentials.
