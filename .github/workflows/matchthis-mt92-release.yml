@@ -49,3 +49,5 @@ jobs:
         env:
           SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
         run: bash matchthis/mt92-rollback-small2.sh
+
+# MT92 retry: test exact header labels TURA 1 / TURA 2 (data-round indices are 0,1).
