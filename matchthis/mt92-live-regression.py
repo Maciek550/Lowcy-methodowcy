@@ -24,8 +24,7 @@ with sync_playwright() as p:
     assert page.locator('.summary-mobile-list .mt91-two-round').count()>=30
     assert first.locator('.mt91-points-part b').all_text_contents()==['1','1']
     assert first.locator('.mt91-points-part small').count()==0,'T1/T2 labels must not be repeated in cells'
-    assert page.locator('.results-navigation button[data-round="1"]').count()>=1
-    assert page.locator('.results-navigation button[data-round="2"]').count()>=1
+    assert page.locator('.results-navigation .mt68-round-button strong').all_text_contents()==['TURA 1','TURA 2']
     assert first.locator('.mt91-math-sign').all_text_contents()==['+','=']
     assert first.locator('.mt91-points-total').text_content()=='2 pkt'
     assert '25 260 g' in first.text_content()
