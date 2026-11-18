@@ -3,19 +3,30 @@
 from playwright.sync_api import sync_playwright
 URL='https://matchthis.lowcymethodowcy.smallhost.pl/'
 def check_selection(page):
+ # Take one atomic DOM snapshot. Page controls can be replaced during
+ # async server sync; a detached button's computed style is an empty string.
+ state=page.evaluate("""() => {
+   const selected=['.results-navigation .rounds button',
+     '.results-navigation .view-modes button[data-result-mode]',
+     '.compact-sector-panel .sector-choice button'];
+   return selected.map(selector=>({
+     selector,
+     buttons:[...document.querySelectorAll(selector)].map(el=>({
+       active:el.classList.contains('active'),
+       bg:getComputedStyle(el).backgroundColor,
+       fg:getComputedStyle(el).color
+     }))
+   }));
+ }""")
  orange='rgb(233, 102, 9)'
  white='rgb(255, 255, 255)'
  neutral='rgb(52, 56, 65)'
- for selector in ('.results-navigation .rounds button',
-                  '.results-navigation .view-modes button[data-result-mode]',
-                  '.compact-sector-panel .sector-choice button'):
-  for btn in page.locator(selector).all():
-   v=btn.evaluate('e=>({active:e.classList.contains("active"),bg:getComputedStyle(e).backgroundColor,fg:getComputedStyle(e).color})')
-   assert v['bg']==(orange if v['active'] else white),(selector,v)
-   assert v['fg']==(white if v['active'] else neutral),(selector,v)
- assert page.locator('.results-navigation .rounds button.active').count()<=1
- assert page.locator('.results-navigation .view-modes button[data-result-mode].active').count()<=1
- assert page.locator('.compact-sector-panel .sector-choice button.active').count()<=1
+ for group in state:
+  buttons=group['buttons']
+  assert sum(x['active'] for x in buttons)<=1,(group['selector'],buttons)
+  for button in buttons:
+   assert button['bg']==(orange if button['active'] else white),(group['selector'],button)
+   assert button['fg']==(white if button['active'] else neutral),(group['selector'],button)
 
 with sync_playwright() as p:
  for engine in ('chromium','firefox'):
