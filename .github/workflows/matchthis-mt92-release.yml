@@ -1,0 +1,51 @@
+name: MatchThis MT92 mobile classification cards - guarded SMALL2 release
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-mt92-release.yml]
+permissions: {contents: read, actions: read}
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Wait for MT91 browser and SMALL2 verification to finish successfully
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run watch 44252221325 -R Maciek550/Lowcy-methodowcy --exit-status --interval 15
+      - name: Rebuild from verified SHA-locked production MT91 HTML (3 roles)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -Eeuo pipefail
+          mkdir -p matchthis/mt92-source
+          gh run download 44252221325 -R Maciek550/Lowcy-methodowcy -n MatchThis_MT91_VERIFIED_LIVE_THREE_ROLE_HTML -D matchthis/mt92-source
+          python3 matchthis/mt92-mobile-build.py
+          bash -n matchthis/mt92-deploy-small2.sh
+          bash -n matchthis/mt92-rollback-small2.sh
+      - name: Real Chromium and Firefox regression - mobile cards, tours, admin save/reload
+        run: |
+          set -Eeuo pipefail
+          python3 -m venv /tmp/mt92-venv
+          /tmp/mt92-venv/bin/pip install -q playwright
+          /tmp/mt92-venv/bin/python -m playwright install --with-deps chromium firefox
+          /tmp/mt92-venv/bin/python matchthis/mt92-mobile-regression.py
+      - name: Atomic guarded UI-only SMALL2 release with MT91 rollback backup
+        id: deploy
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: bash matchthis/mt92-deploy-small2.sh
+      - name: Live SMALL2 browser verification Chromium and Firefox, all viewports
+        run: /tmp/mt92-venv/bin/python matchthis/mt92-live-regression.py
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: MatchThis_MT92_VERIFIED_LIVE_THREE_ROLE_HTML
+          path: matchthis/mt92-release/MatchThis_MT-92*.html
+          if-no-files-found: error
+      - name: Automatic UI-only rollback if verification fails (data untouched)
+        if: failure() && steps.deploy.outcome == 'success'
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: bash matchthis/mt92-rollback-small2.sh
