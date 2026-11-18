@@ -20,6 +20,7 @@ transform={
  old_admin:new_admin,
  old_viewer:new_viewer,
  old_judge:new_judge,
+ "mt92-mobile-20261118":"mt93-mobile-20261118-r2",
  "MT-92":"MT-93","MT92":"MT93","MT91":"MT92",
  "mt92":"mt93","mt91":"mt92","panel92":"panel93"
 }
@@ -30,7 +31,7 @@ for filename in ("deploy","rollback"):
  text=base.read_text("utf-8")
  assert 'mt92-mobile-20261118' in text
  out=pattern.sub(lambda m: transform[m.group(0)],text)
- assert 'mt93-mobile-20261118' in out
+ assert 'mt93-mobile-20261118-r2' in out
  assert 'mt92-mobile-20261118' not in out
  assert new_viewer in out and old_viewer in out
  assert "mt93" in out and "MT93" in out
