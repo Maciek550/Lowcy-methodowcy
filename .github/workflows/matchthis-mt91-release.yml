@@ -1,0 +1,47 @@
+name: MatchThis MT91 mobile classification cards - guarded SMALL2 release
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-mt91-release.yml]
+permissions: {contents: read, actions: read}
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rebuild from verified SHA-locked production MT90 HTML (3 roles)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -Eeuo pipefail
+          mkdir -p matchthis/mt91-source
+          gh run download 44168919823 -R Maciek550/Lowcy-methodowcy -n MatchThis_MT90_VERIFIED_LIVE_THREE_ROLE_HTML -D matchthis/mt91-source
+          python3 matchthis/mt91-mobile-build.py
+          bash -n matchthis/mt91-deploy-small2.sh
+          bash -n matchthis/mt91-rollback-small2.sh
+      - name: Real Chromium and Firefox regression - mobile cards, tours, admin save/reload
+        run: |
+          set -Eeuo pipefail
+          python3 -m venv /tmp/mt91-venv
+          /tmp/mt91-venv/bin/pip install -q playwright
+          /tmp/mt91-venv/bin/python -m playwright install --with-deps chromium firefox
+          /tmp/mt91-venv/bin/python matchthis/mt91-mobile-regression.py
+      - name: Atomic guarded UI-only SMALL2 release with MT90 rollback backup
+        id: deploy
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: bash matchthis/mt91-deploy-small2.sh
+      - name: Live SMALL2 browser verification Chromium and Firefox, all viewports
+        run: /tmp/mt91-venv/bin/python matchthis/mt91-live-regression.py
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: MatchThis_MT91_VERIFIED_LIVE_THREE_ROLE_HTML
+          path: matchthis/mt91-release/MatchThis_MT-91*.html
+          if-no-files-found: error
+      - name: Automatic UI-only rollback if verification fails (data untouched)
+        if: failure() && steps.deploy.outcome == 'success'
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: bash matchthis/mt91-rollback-small2.sh
