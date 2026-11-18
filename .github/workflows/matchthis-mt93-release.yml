@@ -48,3 +48,5 @@ jobs:
         run: bash matchthis/mt93-rollback-small2.sh
 
 # MT93 results navigation: orange only for selected state, screen-only CSS.
+
+# MT93 retry r2: atomic live style snapshot; new staging directory after verified rollback.
