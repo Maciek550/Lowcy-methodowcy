@@ -1,0 +1,80 @@
+name: MatchThis MT94 - approved bream sharp PWA icon - SMALL2
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-mt94-icon-release.yml]
+permissions: {contents: read, actions: read}
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build exact MT94 from verified MT93 with icons, manifest, SHA and JS checks
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -Eeuo pipefail
+          mkdir -p matchthis/mt94-source
+          gh run download 44261716109 -R Maciek550/Lowcy-methodowcy -n MatchThis_MT93_VERIFIED_LIVE_THREE_ROLE_HTML -D matchthis/mt94-source
+          python3 -m pip install -q --break-system-packages pillow
+          python3 matchthis/mt94-build.py
+          bash -n matchthis/mt94-deploy-small2.sh
+          python3 - <<'PY'
+          from pathlib import Path
+          from PIL import Image
+          import json
+          p=Path('matchthis/mt94-release')
+          for size in (16,32,48,64,180,192,512):
+           assert Image.open(p/f'matchthis-mt94-{size}.png').size==(size,size)
+          assert Image.open(p/'matchthis-mt94-maskable-512.png').size==(512,512)
+          m=json.loads((p/'matchthis-mt94.webmanifest').read_text())
+          assert m['version']=='MT-94' and m['icons'][-1]['purpose']=='maskable'
+          print('MT94_LOCAL_PNG_DIMENSIONS_MANIFEST_SHA_LOCKED_BASE_PASS')
+          PY
+      - name: Chromium and Firefox offline regression, three roles, responsive cards and data-save reload
+        run: |
+          set -Eeuo pipefail
+          python3 -m venv /tmp/mt94-venv
+          /tmp/mt94-venv/bin/pip install -q playwright pillow
+          /tmp/mt94-venv/bin/python -m playwright install --with-deps chromium firefox
+          /tmp/mt94-venv/bin/python matchthis/mt94-mobile-regression.py
+      - name: Capture live MT93 public data and published draw snapshot before UI-only change
+        run: |
+          set -Eeuo pipefail
+          curl -fsSL --max-time 30 -H 'Cache-Control: no-cache' 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/mt94-before-state.json
+          curl -fsSL --max-time 30 -H 'Cache-Control: no-cache' 'https://matchthis.lowcymethodowcy.smallhost.pl/mt60-draws.php' -o /tmp/mt94-before-draws.json
+          test "$(curl -sS -o /dev/null -w '%{http_code}' 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php')" = 401
+      - name: Deploy icon assets with strict MT93 SHA guard and backup of prior logo/router
+        id: deploy
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: bash matchthis/mt94-deploy-small2.sh deploy
+      - name: Live SMALL2 Chromium and Firefox icon and navigation regression
+        run: |
+          set -Eeuo pipefail
+          /tmp/mt94-venv/bin/python matchthis/mt94-live-regression.py
+      - name: Confirm no application state or published results changed
+        run: |
+          set -Eeuo pipefail
+          curl -fsSL --max-time 30 -H 'Cache-Control: no-cache' 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/mt94-after-state.json
+          curl -fsSL --max-time 30 -H 'Cache-Control: no-cache' 'https://matchthis.lowcymethodowcy.smallhost.pl/mt60-draws.php' -o /tmp/mt94-after-draws.json
+          cmp /tmp/mt94-before-state.json /tmp/mt94-after-state.json
+          cmp /tmp/mt94-before-draws.json /tmp/mt94-after-draws.json
+          test "$(curl -sS -o /dev/null -w '%{http_code}' 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php')" = 401
+          echo MT94_MATCHTHIS_STATE_AND_DRAWS_UNCHANGED_PASS
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: MatchThis_MT94_BREAM_ICON_LIVE_VERIFIED_HTML_PWA
+          path: |
+            matchthis/mt94-release/MatchThis_MT-94*.html
+            matchthis/mt94-release/matchthis-mt94-*.png
+            matchthis/mt94-release/matchthis-mt94.webmanifest
+            matchthis/mt94-release/favicon.ico
+          if-no-files-found: error
+      - name: Automatic rollback to MT93 UI and previous favicon on failed verification
+        if: failure() && steps.deploy.outcome == 'success'
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: bash matchthis/mt94-deploy-small2.sh rollback
