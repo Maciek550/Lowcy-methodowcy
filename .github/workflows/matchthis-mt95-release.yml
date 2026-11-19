@@ -1,0 +1,93 @@
+name: MatchThis MT95 fix six-tour mobile date clipping on SMALL2
+'on':
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-mt95-release.yml]
+permissions: {contents: read, actions: read}
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rebuild exact verified MT94, lock hashes and versions, check JavaScript and shell
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -Eeuo pipefail
+          mkdir -p matchthis/mt95-source
+          gh run download 44400831810 -R Maciek550/Lowcy-methodowcy -n MatchThis_MT94_BREAM_ICON_LIVE_VERIFIED_HTML_PWA -D matchthis/mt95-source
+          python3 matchthis/mt95-mobile-build.py
+          bash -n matchthis/mt95-deploy-small2.sh
+          python3 - <<'PY'
+          import json,hashlib
+          from pathlib import Path
+          root=Path('matchthis/mt95-release')
+          manifest=json.loads((root/'matchthis-mt95.webmanifest').read_text())
+          assert manifest['version']=='MT-95'
+          assert manifest['icons'][-1]['src']=='/matchthis-mt94-maskable-512.png'
+          for suffix in ('','_OGLADACZ','_SEDZIA'):
+           p=root/('MatchThis_MT-95'+suffix+'.html')
+           s=p.read_text()
+           assert s.count('<title>MatchThis MT-95</title>')==1
+           assert s.count('body data-version="MT-95"')==1
+           assert s.count("const APP_VERSION='MT-95'")==1
+           assert s.count('id="appversion" aria-label="Wersja MT-95">MT-95</span>')==1
+           assert s.count('/matchthis-mt95.webmanifest')==1
+          print('MT95_VERSION_TITLE_APP_BODY_PWA_MANIFEST_CONSISTENT_PASS')
+          PY
+      - name: Real Chromium and Firefox local regression, three roles, seven screen widths, save/reopen
+        run: |
+          set -Eeuo pipefail
+          python3 -m venv /tmp/mt95-venv
+          /tmp/mt95-venv/bin/pip install -q playwright
+          /tmp/mt95-venv/bin/python -m playwright install --with-deps chromium firefox
+          /tmp/mt95-venv/bin/python matchthis/mt95-mobile-regression.py
+      - name: Verify live MT94 baseline and snapshot public state and published draw results
+        run: |
+          set -Eeuo pipefail
+          curl -fsSL --max-time 35 -H 'Cache-Control: no-cache' 'https://matchthis.lowcymethodowcy.smallhost.pl/' -o /tmp/mt95-index-before.html
+          test "$(sha256sum /tmp/mt95-index-before.html|cut -d' ' -f1)" = 377cde541531feb53843d424b3e5b638aa146f561a6fb0af08430797a957f946
+          curl -fsSL --max-time 35 -H 'Cache-Control: no-cache' 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/mt95-before-state.json
+          curl -fsSL --max-time 35 -H 'Cache-Control: no-cache' 'https://matchthis.lowcymethodowcy.smallhost.pl/mt60-draws.php' -o /tmp/mt95-before-draws.json
+          test "$(curl -sS -o /dev/null -w '%{http_code}' 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php')" = 401
+          python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/mt95-before-state.json'))['data']
+          cycles=[x for x in d['cycles'] if x.get('name','').strip().upper()=='MEGA MATCH THIS CUP 2025' and x.get('year')==2025]
+          assert len(cycles)==1 and len(cycles[0]['tours'])==6
+          print('MT95_LIVE_2025_SIX_TOURS_PRESENT_PREDEPLOY')
+          PY
+      - name: Atomic guarded UI-only MT95 deploy to SMALL2 with MT94 rollback backup
+        id: deploy
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: bash matchthis/mt95-deploy-small2.sh deploy
+      - name: Live Chromium and Firefox verified 2025 six tour labels on mobile and desktop
+        run: /tmp/mt95-venv/bin/python matchthis/mt95-live-regression.py
+      - name: Verify same server data, published drawings and no authentication regressions
+        run: |
+          set -Eeuo pipefail
+          curl -fsSL --max-time 35 -H 'Cache-Control: no-cache' 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/mt95-after-state.json
+          curl -fsSL --max-time 35 -H 'Cache-Control: no-cache' 'https://matchthis.lowcymethodowcy.smallhost.pl/mt60-draws.php' -o /tmp/mt95-after-draws.json
+          cmp /tmp/mt95-before-state.json /tmp/mt95-after-state.json
+          cmp /tmp/mt95-before-draws.json /tmp/mt95-after-draws.json
+          test "$(curl -sS -o /dev/null -w '%{http_code}' 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php')" = 401
+          for role in mt95-admin.php mt95-sedzia.php; do
+            code="$(curl -sS -o /dev/null -w '%{http_code}' "https://matchthis.lowcymethodowcy.smallhost.pl/role-pages/$role")"
+            test "$code" = 404 || test "$code" = 403
+          done
+          echo MT95_DEPLOYED_DATABASE_UNCHANGED_PROTECTED_ROLES_PASS
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: MatchThis_MT95_MOBILE_DATES_VERIFIED_THREE_ROLE_HTML
+          path: |
+            matchthis/mt95-release/MatchThis_MT-95*.html
+            matchthis/mt95-release/matchthis-mt95.webmanifest
+          if-no-files-found: error
+      - name: Auto rollback MT95 UI to MT94 on any live verification failure
+        if: failure() && steps.deploy.outcome == 'success'
+        env:
+          SSH_PASSWORD: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: bash matchthis/mt95-deploy-small2.sh rollback
