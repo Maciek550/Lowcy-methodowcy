@@ -11,9 +11,9 @@ SOURCE={
  '_SEDZIA':'4c021912c08d01c3f6d7cd546388b09bbe5be1f5e0c783cb9ebdbbdf58de77e8'
 }
 OUTPUT={
- '':'538837a9c998be52656296529eb2a9cade7272827bc946c81ad5f36bd444172a',
- '_OGLADACZ':'20ee3d390425bd9f941089d79925d5a4433142b59e6e3e2421474320a189766c',
- '_SEDZIA':'4f28f500f177ca03268c5b95cbda3b79ee1d060431c5da8612de0bd05d080780'
+ '':'683ce11d793cc9e9db0639758e8de1d3be1c115440d7f06caa32c09813653a61',
+ '_OGLADACZ':'f94ae5af18ef0cedd6e70526dd2a796d771b23c0a34642e9007f3b127c9289c3',
+ '_SEDZIA':'dceccf1bc9c7680e634c39ec99912384e179699518379c5429f47ad9b14adf93'
 }
 CSS='''<style id="mt95-mobile-tour-choices">
 /* MatchThis MT95 — only the results-navigation tour buttons at phone/tablet
@@ -90,7 +90,9 @@ for suffix,digest in SOURCE.items():
  assert old.count('<style id="mt95-mobile-tour-choices">')==0
  assert old.index('</head>')<old.index('<body data-version="MT-94"')
  new=old.replace('</head>',CSS+'</head>',1).replace('MT-94','MT-95')
- assert new.replace('MT-95','MT-94').replace(CSS,'')==old,'scope violation'
+ assert new.count('/matchthis-mt94.webmanifest')==1
+ new=new.replace('/matchthis-mt94.webmanifest','/matchthis-mt95.webmanifest',1)
+ assert new.replace('MT-95','MT-94').replace(CSS,'').replace('/matchthis-mt95.webmanifest','/matchthis-mt94.webmanifest')==old,'scope violation'
  assert '<title>MatchThis MT-95</title>' in new
  assert 'body data-version="MT-95"' in new
  assert "const APP_VERSION='MT-95'" in new
@@ -104,3 +106,11 @@ for suffix,digest in SOURCE.items():
  dest.write_text(new,'utf8')
  assert sha(dest.read_bytes())==OUTPUT[suffix],(dest.name,sha(dest.read_bytes()))
  print('MT95_VERIFIED_BASE_VERSION_SCOPE_JS_SHA_PASS',dest.name,OUTPUT[suffix],flush=True)
+
+manifest=(base/'matchthis-mt94.webmanifest').read_text('utf8')
+assert manifest.count('MT-94')==1
+p=out/'matchthis-mt95.webmanifest'
+p.write_text(manifest.replace('MT-94','MT-95'),'utf8')
+import json
+assert json.loads(p.read_text())['version']=='MT-95'
+print('MT95_MATCHTHIS_MANIFEST_VERSION_PASS',sha(p.read_bytes()),flush=True)
