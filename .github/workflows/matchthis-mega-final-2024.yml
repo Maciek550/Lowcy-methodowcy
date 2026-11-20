@@ -43,7 +43,9 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -T 10 -t ed25519 s3.small.pl > ~/.ssh/known_hosts 2>/dev/null
           test "$(ssh-keygen -lf ~/.ssh/known_hosts -E sha256 | awk '{print $2}')" = SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8
-          sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password lowcymethodowcy@s3.small.pl 'python3 - "$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html/.mt41-private"' < matchthis/import-mega-final-2024.py
+          sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password lowcymethodowcy@s3.small.pl 'mkdir -p "$HOME/matchthis-independent/final2024-input/matchthis"'
+          sshpass -e scp -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password matchthis/mega-2024-final-round1.csv matchthis/mega-2024-final-round2.csv lowcymethodowcy@s3.small.pl:matchthis-independent/final2024-input/matchthis/
+          sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password lowcymethodowcy@s3.small.pl 'python3 - "$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html/.mt41-private" "$HOME/matchthis-independent/final2024-input"' < matchthis/import-mega-final-2024.py
       - name: Verify public server state and all unchanged historic data
         run: |
           set -euo pipefail
