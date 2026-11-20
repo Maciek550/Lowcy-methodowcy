@@ -1,0 +1,46 @@
+name: Verify Splawikowo 2024 on live SMALL2
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-sp2024-browser.yml]
+permissions: {contents: read}
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          python -m pip install playwright
+          python -m playwright install --with-deps chromium
+      - run: |
+          python - <<'PY'
+          from playwright.sync_api import sync_playwright
+          with sync_playwright() as pw:
+              page=pw.chromium.launch().new_page(viewport={'width':1400,'height':960})
+              errors=[]
+              page.on('pageerror',lambda e:errors.append(str(e)))
+              url='https://matchthis.lowcymethodowcy.smallhost.pl/'
+              page.goto(url)
+              page.wait_for_function("document.querySelector('#mt73-sync')?.textContent.includes('Dane z serwera')")
+              page.locator('[data-view="archive"]').first.click()
+              fold=page.locator('details[data-year="2024"]')
+              if fold.get_attribute('open') is None: fold.locator('summary').click()
+              fold.locator('[data-open="mt2024-splawikowo"]').first.click()
+              page.locator('[data-result-mode="sectors"]').first.click()
+              sectors=page.locator('.sector-title')
+              assert sectors.count()==5
+              for i,s in enumerate('ABCDE'):
+                  title=sectors.nth(i)
+                  assert 'SEKTOR '+s in title.inner_text().upper()
+                  rows=title.locator('xpath=following-sibling::*[1]').locator('tbody tr')
+                  assert rows.count()==11
+                  for j,color in enumerate(['rgb(249, 223, 226)','rgb(220, 232, 247)','rgb(220, 241, 226)']):
+                      assert rows.nth(j).locator('td').first.evaluate('(e)=>getComputedStyle(e).backgroundColor')==color
+              data=page.request.get(url+'mt73-state.php?public=1').json()['data']
+              results=next(x for x in data['events'] if x['id']=='mt2024-splawikowo')['rounds'][0]['results']
+              for r in results:
+                  hist=page.evaluate("(id)=>playerHistory(id).find(e=>e.id==='mt2024-splawikowo')",r['competitorId'])
+                  row=hist['rows'][0]
+                  assert (row['sector'],row['peg'],row['weightG'],row['place'])==(r['sector'],r['peg'],r['weightG'],r['officialPlace'])
+              assert not errors,errors
+              print('55 player histories, 5 sectors, 15 podium colors verified')
+          PY
