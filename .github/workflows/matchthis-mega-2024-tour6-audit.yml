@@ -1,0 +1,47 @@
+name: MEGA 2024 VI tura source and live profile audit - read only
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-mega-2024-tour6-audit.yml]
+permissions: {contents: read}
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Source exact placement and live identities (NO WRITE)
+        run: |
+          set -euo pipefail
+          python3 -m py_compile matchthis/import-mega-2024-tour6.py
+          curl --fail --retry 3 -fsS 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/live-mega6.json
+          python3 - <<'PY'
+          import collections,json,runpy
+          x=runpy.run_path('matchthis/import-mega-2024-tour6.py')
+          rows=x['load_source']()
+          print('SOURCE',len(rows),'five sectors',sum(int(r['weight']) for r in rows))
+          db=json.load(open('/tmp/live-mega6.json'))['data']
+          cycle=next(c for c in db['cycles'] if c['id']==x['CYCLE_ID'])
+          print('CURRENT SERVER TOURS',len(cycle['tours']),[(t['id'],len(t['results'])) for t in cycle['tours']])
+          by_name=collections.defaultdict(set)
+          by_id={p['id']:p for p in db['players']}
+          for pid,p in by_id.items():
+              for n in [p['lastName']+' '+p['firstName']]+p.get('aliases',[]):by_name[x['key'](n)].add(pid)
+          unresolved=[]
+          ambiguous=[]
+          for row in rows:
+              name=row['name']
+              ids=by_name[x['key'](name)]
+              if not ids:unresolved.append((name,row['source'],row['peg']))
+              elif len(ids)>1:
+                  exact=[i for i in ids if (by_id[i]['lastName']+' '+by_id[i]['firstName']).upper()==name.upper()]
+                  if len(exact)!=1:ambiguous.append((name,sorted(ids)))
+          print('UNRESOLVED',unresolved)
+          print('AMBIGUOUS',ambiguous)
+          if len(cycle['tours'])==5 and not unresolved and not ambiguous:
+              final,_=x['build'](db)
+              assert len(final['tours'])==6
+              print('FULL READ-ONLY PREFLIGHT PASS')
+          else:
+              print('NOT READY FOR WRITING; no data changed')
+          PY
