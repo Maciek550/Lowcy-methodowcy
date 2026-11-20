@@ -1,0 +1,109 @@
+name: MEGA 2024 final guarded SMALL2 import
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-mega-final-2024.yml]
+permissions: {contents: read, actions: read}
+concurrency:
+  group: matchthis-small2-mega-final2024
+  cancel-in-progress: false
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Preflight: source, live identities, no writes
+        run: |
+          set -euo pipefail
+          python3 -m py_compile matchthis/import-mega-final-2024.py
+          curl --retry 3 -fsS 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/final-before.json
+          python3 - <<'PY'
+          import runpy,json
+          c=runpy.run_path('matchthis/import-mega-final-2024.py')
+          a=json.load(open('/tmp/final-before.json'))['data']
+          event,new=c['build'](a)
+          assert not any(e['id']==c['EVENT_ID'] for e in a['events'])
+          assert len(event['rounds'])==2 and all(len(t['results'])==60 for t in event['rounds'])
+          assert sum(r['weightG'] for r in event['rounds'][0]['results'])==480935
+          assert sum(r['weightG'] for r in event['rounds'][1]['results'])==485055
+          assert len([r for r in event['rounds'][1]['results'] if r.get('absent')])==1
+          print('SOURCE+ROSTER PREFLIGHT PASS; new athletes',len(new))
+          PY
+      - name: Install Chromium before making any live changes
+        run: |
+          python3 -m pip install --quiet playwright
+          python3 -m playwright install --with-deps chromium
+      - name: Import with locked atomic update, protected backup
+        env:
+          SSHPASS: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: |
+          set -euo pipefail
+          sudo apt-get -qq update && sudo apt-get -qq install -y sshpass
+          mkdir -p ~/.ssh
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > ~/.ssh/known_hosts 2>/dev/null
+          test "$(ssh-keygen -lf ~/.ssh/known_hosts -E sha256 | awk '{print $2}')" = SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8
+          sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password lowcymethodowcy@s3.small.pl 'python3 - "$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html/.mt41-private"' < matchthis/import-mega-final-2024.py
+      - name: Verify public server state and all unchanged historic data
+        run: |
+          set -euo pipefail
+          curl --retry 4 --retry-delay 3 -fsS 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/final-after.json
+          python3 - <<'PY'
+          import json,runpy
+          c=runpy.run_path('matchthis/import-mega-final-2024.py')
+          a=json.load(open('/tmp/final-before.json'))['data']
+          b=json.load(open('/tmp/final-after.json'))['data']
+          assert a['cycles']==b['cycles'],'Historic cycle changed'
+          assert len(b['events'])==len(a['events'])+1
+          for e in a['events']:assert e in b['events'],('Historic event changed',e['id'])
+          for p in a['players']:assert p in b['players'],('Historic profile changed',p['id'])
+          assert len({p['id'] for p in b['players']})==len(b['players'])
+          event=next(e for e in b['events'] if e['id']==c['EVENT_ID'])
+          expected,added=c['build'](b)
+          assert not added and event==expected
+          print('LIVE READBACK PASS: 60 + 59 + 1 DNS, all previous data unchanged')
+          PY
+      - name: Real Chromium archive, both tours, all sector rows, all 60 athlete histories
+        run: |
+          python3 - <<'PY'
+          import json
+          from playwright.sync_api import sync_playwright
+          url='https://matchthis.lowcymethodowcy.smallhost.pl/'
+          event=next(e for e in json.load(open('/tmp/final-after.json'))['data']['events'] if e['id']=='mt2024-mega-match-this-cup-final')
+          with sync_playwright() as pw:
+              browser=pw.chromium.launch()
+              page=browser.new_page(viewport={'width':1366,'height':950})
+              errors=[]
+              page.on('pageerror',lambda e:errors.append(str(e)))
+              def expose(route):
+                  r=route.fetch();h=r.text()
+                  marker='function playerHistory(personId){'
+                  assert h.count(marker)==1
+                  route.fulfill(response=r,body=h.replace(marker,'window.final24History=playerHistory;'+marker))
+              page.route(url,expose)
+              page.goto(url,wait_until='domcontentloaded')
+              page.wait_for_function("document.querySelector('#mt73-sync')?.textContent.includes('Dane z serwera')",timeout=45000)
+              assert page.title()=='MatchThis MT-95'
+              page.locator('[data-view="archive"]').first.click()
+              fold=page.locator('details[data-year="2024"]')
+              if fold.get_attribute('open') is None:fold.locator('summary').click()
+              fold.locator('[data-open="mt2024-mega-match-this-cup-final"]').first.click()
+              for n in (0,1):
+                  page.locator(f'[data-round="{n}"]').first.click()
+                  page.locator('[data-result-mode="sectors"]').first.click()
+                  titles=page.locator('.sector-title')
+                  assert titles.count()==6,(n,titles.count())
+                  for i,s in enumerate('ABCDEF'):
+                      heading=titles.nth(i)
+                      assert 'SEKTOR '+s in heading.inner_text().upper()
+                      rows=heading.locator('xpath=following-sibling::*[1]').locator('tbody tr')
+                      assert rows.count()==(9 if n==1 and s=='F' else 10),(n,s,rows.count())
+              for tour in event['rounds']:
+                  for r in tour['results']:
+                      h=page.evaluate("(pid)=>window.final24History(pid).find(e=>e.id==='mt2024-mega-match-this-cup-final')",r['competitorId'])
+                      assert h,('Missing history',r['competitorId'])
+                      assert any(x['tourId']==tour['id'] and x['weightG']==r['weightG'] and x['place']==r['officialPlace'] for x in h['rows']),(r,h)
+              assert not errors,errors
+              print('LIVE CHROMIUM PASS: both tours, 12 sector tables, 60 player histories, DNS, zero JS errors')
+              browser.close()
+          PY
