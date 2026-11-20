@@ -1,0 +1,42 @@
+name: MEGA Final 2024 read-only saved record diagnosis
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-mega-final-2024-diagnose.yml]
+permissions: {contents: read}
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read saved result against exact source, never mutate
+        run: |
+          set -euo pipefail
+          curl -fsS 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/final-diagnostic.json
+          python3 - <<'PY'
+          import runpy,json,collections
+          c=runpy.run_path('matchthis/import-mega-final-2024.py')
+          d=json.load(open('/tmp/final-diagnostic.json'))['data']
+          saved=[e for e in d['events'] if e['id']==c['EVENT_ID']]
+          assert len(saved)==1
+          target,new=c['build'](d)
+          print('NEW PROFILES UNEXPECTED',len(new))
+          print('ROOT FIELD DIFFERENCES')
+          for k in sorted(set(saved[0])|set(target)):
+              if saved[0].get(k)!=target.get(k):
+                  if k!='rounds':print(k,repr(saved[0].get(k))[:350],repr(target.get(k))[:350])
+          for index,(old,tgt) in enumerate(zip(saved[0]['rounds'],target['rounds'])):
+              print('ROUND',index+1,'saved',len(old['results']),'expected',len(tgt['results']))
+              for k in set(old)|set(tgt):
+                  if k!='results' and old.get(k)!=tgt.get(k):print('ROUND_DIFFERENCE',k,repr(old.get(k)),repr(tgt.get(k)))
+              if old['results']!=tgt['results']:
+                  sa={r['competitorId']:r for r in old['results']}
+                  sb={r['competitorId']:r for r in tgt['results']}
+                  print('IDS_DIFFERENT',list(set(sa)^set(sb))[:8])
+                  for pid in sa.keys()&sb.keys():
+                      if sa[pid]!=sb[pid]:
+                          print('ROW_DIFFERENCE',pid,sa[pid],sb[pid])
+                          break
+              print('TOTAL',sum(x['weightG'] for x in old['results']))
+          print('CYCLE_COUNT',len(d['cycles']))
+          PY
