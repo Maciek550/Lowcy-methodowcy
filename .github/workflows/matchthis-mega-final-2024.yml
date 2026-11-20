@@ -13,7 +13,7 @@ jobs:
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
-      - name: Preflight: source, live identities, no writes
+      - name: "Preflight source, live identities, no writes"
         run: |
           set -euo pipefail
           python3 -m py_compile matchthis/import-mega-final-2024.py
