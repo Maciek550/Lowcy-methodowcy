@@ -37,7 +37,7 @@ def build(data):
             seen_names.add(norm)
             ids=by_name[norm].copy()
             if len(ids)>1:
-                exact={i for i in ids if key(by_id[i]['lastName']+' '+by_id[i]['firstName'])==norm}
+                exact={i for i in ids if (by_id[i]['lastName']+' '+by_id[i]['firstName']).upper()==name.upper()}
                 assert len(exact)==1, f'Ambiguous identity {name}: {len(ids)}'
                 ids=exact
             if not ids:
