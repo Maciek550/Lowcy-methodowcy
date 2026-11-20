@@ -1,0 +1,128 @@
+name: MEGA CUP 2024 round V guarded import SMALL2
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-mega-2024-tour5.yml]
+permissions: {contents: read, actions: read}
+concurrency:
+  group: matchthis-small2-2024-mega-tour5
+  cancel-in-progress: false
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check source and existing live I tura without writes
+        run: |
+          set -euo pipefail
+          python3 -m py_compile matchthis/import-mega-2024-tour5.py
+          curl --retry 3 -fsS 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/mega24t5-before.json
+          python3 - <<'PY'
+          import json,runpy
+          src=runpy.run_path('matchthis/import-mega-2024-tour5.py')
+          before=json.load(open('/tmp/mega24t5-before.json'))['data']
+          cycle,new=src['build'](before)
+          assert cycle['expectedTours']==6 and cycle['countedTours']==4
+          assert len(cycle['tours'])==5 and [len(t['results']) for t in cycle['tours']]==[79,77,73,73,63]
+          assert len({r['competitorId'] for r in cycle['tours'][4]['results']})==73
+          assert set(r['sector'] for r in cycle['tours'][4]['results'])==set('ABCDEF')
+          print('PREFLIGHT PASSED: 63 fifth-round results, first four rounds preserved; new profiles',len(new))
+          PY
+      - name: Install Chromium for real published browser regression
+        run: |
+          python3 -m pip install --quiet playwright
+          python3 -m playwright install --with-deps chromium
+      - name: Add only verified V tura to 2024 MEGA cycle on SMALL2 with private backup
+        env:
+          SSHPASS: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: |
+          set -euo pipefail
+          sudo apt-get -qq update && sudo apt-get -qq install -y sshpass
+          mkdir -p ~/.ssh
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > ~/.ssh/known_hosts 2>/dev/null
+          test "$(ssh-keygen -lf ~/.ssh/known_hosts -E sha256 | awk '{print $2}')" = SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8
+          sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password lowcymethodowcy@s3.small.pl 'python3 - "$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html/.mt41-private"' < matchthis/import-mega-2024-tour5.py
+      - name: Compare source to saved data and guarantee unchanged existing events and all other cycles
+        run: |
+          set -euo pipefail
+          curl --retry 4 --retry-delay 3 -fsS 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/mega24t5-after.json
+          python3 - <<'PY'
+          import json,runpy
+          src=runpy.run_path('matchthis/import-mega-2024-tour5.py')
+          old=json.load(open('/tmp/mega24t5-before.json'))['data']
+          new=json.load(open('/tmp/mega24t5-after.json'))['data']
+          assert len(new['events'])==len(old['events']) and new['events']==old['events']
+          assert len(new['cycles'])==len(old['cycles'])
+          cid=src['CYCLE_ID']
+          olds=[c for c in old['cycles'] if c['id']==cid]
+          news=[c for c in new['cycles'] if c['id']==cid]
+          assert len(olds)==len(news)==1
+          assert news[0]['tours'][:4]==olds[0]['tours']
+          assert news[0]['tours'][4]['id']==src['TOUR_ID']
+          assert len(news[0]['tours'][4]['results'])==73
+          assert {c['id']:c for c in old['cycles'] if c['id']!=cid}=={c['id']:c for c in new['cycles'] if c['id']!=cid}
+          for person in old['players']:assert person in new['players'],('Existing profile changed',person['id'])
+          assert len({p['id'] for p in new['players']})==len(new['players'])
+          assert len({c['id'] for c in new['cycles']})==len(new['cycles'])
+          virtual=dict(new,cycles=[(olds[0] if c['id']==cid else c) for c in new['cycles']])
+          expected,added=src['build'](virtual)
+          assert not added and news[0]==expected
+          print('LIVE READBACK PASSED: prior tours 79+77+73+73 identical; new tour 63/63 verified; all historic data unchanged')
+          PY
+      - name: 'Real browser clicks: both tour sector tables, history for all competitors'
+        run: |
+          python3 - <<'PY'
+          import json
+          from playwright.sync_api import sync_playwright
+          url='https://matchthis.lowcymethodowcy.smallhost.pl/'
+          data=json.load(open('/tmp/mega24t5-after.json'))['data']
+          cycle=next(c for c in data['cycles'] if c['id']=='mt2024-mega-match-this-cup-cycle')
+          all_results={}
+          for tour in cycle['tours']:
+              for r in tour['results']:
+                  all_results.setdefault(r['competitorId'],[]).append((tour['id'],r['sector'],r['peg'],r['weightG'],r['officialPlace']))
+          assert len(all_results)>=94 and len(all_results)<=110,len(all_results)
+          with sync_playwright() as pw:
+              browser=pw.chromium.launch()
+              page=browser.new_page(viewport={'width':1366,'height':950})
+              errors=[]
+              page.on('pageerror',lambda e:errors.append(str(e)))
+              def expose(route):
+                  response=route.fetch()
+                  body=response.text()
+                  marker='function playerHistory(personId){'
+                  assert body.count(marker)==1
+                  route.fulfill(response=response,body=body.replace(marker,'window.mega24HistoryTest=playerHistory;'+marker))
+              page.route(url,expose)
+              page.goto(url,wait_until='domcontentloaded',timeout=45000)
+              page.wait_for_function("document.querySelector('#mt73-sync')?.textContent.includes('Dane z serwera')",timeout=45000)
+              assert page.title()=='MatchThis MT-95',page.title()
+              page.locator('[data-view="archive"]').first.click()
+              fold=page.locator('details[data-year="2024"]')
+              if fold.get_attribute('open') is None:fold.locator('summary').click()
+              fold.locator('[data-open="mt2024-mega-match-this-cup-cycle"]').first.click()
+              for idx,expected in ((0,{'A':12,'B':12,'C':11,'D':11,'E':11,'F':11,'G':11}),
+                                   (1,{'A':12,'B':11,'C':11,'D':11,'E':11,'F':11,'G':10}),
+                                   (2,{'A':13,'B':12,'C':12,'D':12,'E':12,'F':12}),
+                                   (3,{'A':13,'B':12,'C':12,'D':12,'E':12,'F':12}),
+                                   (4,{'A':13,'B':13,'C':13,'D':12,'E':12})):
+                  page.locator(f'[data-round="{idx}"]').first.click()
+                  page.locator('[data-result-mode="sectors"]').first.click()
+                  titles=page.locator('.sector-title')
+                  assert titles.count()==len(expected),titles.count()
+                  for num,sec in enumerate(expected):
+                      title=titles.nth(num)
+                      assert 'SEKTOR '+sec in title.inner_text().upper()
+                      rows=title.locator('xpath=following-sibling::*[1]').locator('tbody tr')
+                      assert rows.count()==expected[sec],(idx,sec,rows.count())
+                  print('LIVE TOUR',idx+1,'SECTOR COUNTS VERIFIED',sum(expected.values()))
+              for pid,want in all_results.items():
+                  hist=page.evaluate("(id)=>window.mega24HistoryTest(id).find(e=>e.id==='mt2024-mega-match-this-cup-cycle')",pid)
+                  assert hist,(pid,'missing history')
+                  actual=[(r['tourId'],r['sector'],r['peg'],r['weightG'],r['place']) for r in hist['rows']]
+                  assert sorted(actual)==sorted(want),(pid,actual,want)
+              assert not errors,errors
+              print('LIVE BROWSER VERIFIED: real clicks, 31 sector tables, 365 starts, verified histories, zero JS errors')
+              browser.close()
+          PY
