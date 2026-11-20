@@ -1,0 +1,32 @@
+name: Garbolino 2024 two-round strict read-only preflight
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-garbolino-2024-audit.yml]
+permissions: {contents: read}
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - name: Original cards, complete live names and archive duplication guard
+        run: |
+          set -euo pipefail
+          python3 -m py_compile matchthis/import-garbolino-2024.py
+          curl -fsS --retry 3 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/gar24-before.json
+          python3 - <<'PY'
+          import json,runpy
+          source=runpy.run_path('matchthis/import-garbolino-2024.py')
+          live=json.load(open('/tmp/gar24-before.json'))['data']
+          event,new=source['build'](live)
+          print('NEW PROFILES',[(p['lastName'],p['firstName'],p['nameNeedsReview']) for p in new])
+          assert not any(e.get('id')==event['id'] or (e.get('date')=='2024-03-09' and 'GARBOLINO' in e.get('name','').upper()) for e in live['events'])
+          assert len(event['rounds'])==2 and all(len(t['results'])==59 for t in event['rounds'])
+          assert len({r['competitorId'] for r in event['rounds'][0]['results']})==59
+          assert len({r['competitorId'] for r in event['rounds'][1]['results']})==59
+          assert len([r for r in event['rounds'][1]['results'] if r.get('absent')])==1
+          assert sum(r['weightG'] for r in event['rounds'][0]['results'])==483945
+          assert sum(r['weightG'] for r in event['rounds'][1]['results'])==673555
+          print('PASS: no live write, 117 starts, one 100-point nonstarter, 6 sectors each')
+          PY
