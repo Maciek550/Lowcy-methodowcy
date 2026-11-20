@@ -43,8 +43,15 @@ def build(data):
       if exact: assert len(exact)==1,('ambiguous canonical',name,exact);ids=exact
       else: assert len(ids)==1,('ambiguous alias',name,ids)
     else:
-      # No silent new identity on an unverified handwritten spelling.
-      raise AssertionError('UNRESOLVED_PERSON: '+name)
+      allowed_new={'NARZO PAWEŁ','KOCIAŃSKI GRZEGORZ','PRASAK DAMIAN','LESZCZYŃSKI BARTOSZ','KRÓLIKOWSKI MARCIN',
+                   'STEFANIUK TOMASZ','LENARCZYK ŁUKASZ','SOBCZYK KAMIL','KRZYŻAK ARKADIUSZ','CHYB BERNARD','WILKOWSKI SZYMON'}
+      assert name in allowed_new,('Unverified new profile',name)
+      last,first=name.split(' ',1)
+      pid='mt2024-mega-'+key(name).lower()
+      assert pid not in by_id
+      p={'id':pid,'lastName':last,'firstName':first,'aliases':[name],'archived':False,
+         'nameNeedsReview':name in {'NARZO PAWEŁ','KOCIAŃSKI GRZEGORZ'}}
+      by_id[pid]=p;by_name[key(name)].add(pid);new.append(p);ids={pid}
     assert len(ids)==1
     pid=next(iter(ids));p=by_id[pid]
     results.append({'competitorId':pid,'competitorName':p['lastName']+' '+p['firstName'],'sector':r['sector'],'peg':int(r['peg']),'weightG':int(r['weight']),'officialPlace':float(r['place'])})
@@ -68,10 +75,11 @@ def run(private):
   with (private/'mt73.lock').open('a') as lock:
     fcntl.flock(lock,fcntl.LOCK_EX)
     before=json.loads(path.read_bytes());cycle,new=build(before['data'])
-    assert not new
+    assert len(new)==11 and len({p['id'] for p in new})==11
     after=deepcopy(before)
     ix=next(i for i,c in enumerate(after['data']['cycles']) if c['id']==CYCLE_ID)
     after['data']['cycles'][ix]=cycle
+    after['data']['players'].extend(new)
     after['revision']+=1;after['seeded']=False;after['updatedAt']=datetime.datetime.now(datetime.timezone.utc).isoformat()
     history=private/'mt73-history';history.mkdir(mode=0o700,exist_ok=True)
     backup=history/('before-mega2024-tour6-r%d.json'%before['revision'])
