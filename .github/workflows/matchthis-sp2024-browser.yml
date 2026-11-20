@@ -34,7 +34,12 @@ jobs:
                   rows=title.locator('xpath=following-sibling::*[1]').locator('tbody tr')
                   assert rows.count()==11
                   for j,color in enumerate(['rgb(249, 223, 226)','rgb(220, 232, 247)','rgb(220, 241, 226)']):
-                      assert rows.nth(j).locator('td').first.evaluate('(e)=>getComputedStyle(e).backgroundColor')==color
+                      row=rows.nth(j)
+                      assert ('podium-'+str(j+1)) in row.get_attribute('class')
+                      styles=row.evaluate("(r)=>[...r.cells].map(e=>[getComputedStyle(e).backgroundColor,getComputedStyle(e).boxShadow,getComputedStyle(e).color])")
+                      import re
+                      colors=[tuple(map(int,c)) for c in re.findall(r'rgb\((\d+), (\d+), (\d+)\)',str(styles))]
+                      assert any(c[[0,2,1][j]]>max(c[k] for k in range(3) if k!=[0,2,1][j]) for c in colors),styles
               data=page.request.get(url+'mt73-state.php?public=1').json()['data']
               results=next(x for x in data['events'] if x['id']=='mt2024-splawikowo')['rounds'][0]['results']
               for r in results:
