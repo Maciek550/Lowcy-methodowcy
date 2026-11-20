@@ -25,8 +25,8 @@ jobs:
           cycle,new=src['build'](before)
           assert cycle['expectedTours']==6 and cycle['countedTours']==4
           assert len(cycle['tours'])==5 and [len(t['results']) for t in cycle['tours']]==[79,77,73,73,63]
-          assert len({r['competitorId'] for r in cycle['tours'][4]['results']})==73
-          assert set(r['sector'] for r in cycle['tours'][4]['results'])==set('ABCDEF')
+          assert len({r['competitorId'] for r in cycle['tours'][4]['results']})==63
+          assert set(r['sector'] for r in cycle['tours'][4]['results'])==set('ABCDE')
           print('PREFLIGHT PASSED: 63 fifth-round results, first four rounds preserved; new profiles',len(new))
           PY
       - name: Install Chromium for real published browser regression
@@ -60,7 +60,7 @@ jobs:
           assert len(olds)==len(news)==1
           assert news[0]['tours'][:4]==olds[0]['tours']
           assert news[0]['tours'][4]['id']==src['TOUR_ID']
-          assert len(news[0]['tours'][4]['results'])==73
+          assert len(news[0]['tours'][4]['results'])==63
           assert {c['id']:c for c in old['cycles'] if c['id']!=cid}=={c['id']:c for c in new['cycles'] if c['id']!=cid}
           for person in old['players']:assert person in new['players'],('Existing profile changed',person['id'])
           assert len({p['id'] for p in new['players']})==len(new['players'])
