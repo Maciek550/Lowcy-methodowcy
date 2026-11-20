@@ -19,6 +19,13 @@ jobs:
               errors=[]
               page.on('pageerror',lambda e:errors.append(str(e)))
               url='https://matchthis.lowcymethodowcy.smallhost.pl/'
+              def expose_history(route):
+                  response=route.fetch()
+                  html=response.text()
+                  marker='function playerHistory(personId){'
+                  assert html.count(marker)==1
+                  route.fulfill(response=response,body=html.replace(marker,'window.readHistoryForTest=playerHistory;'+marker))
+              page.route(url,expose_history)
               page.goto(url)
               page.wait_for_function("document.querySelector('#mt73-sync')?.textContent.includes('Dane z serwera')")
               page.locator('[data-view="archive"]').first.click()
@@ -43,7 +50,7 @@ jobs:
               data=page.request.get(url+'mt73-state.php?public=1').json()['data']
               results=next(x for x in data['events'] if x['id']=='mt2024-splawikowo')['rounds'][0]['results']
               for r in results:
-                  hist=page.evaluate("(id)=>playerHistory(id).find(e=>e.id==='mt2024-splawikowo')",r['competitorId'])
+                  hist=page.evaluate("(id)=>window.readHistoryForTest(id).find(e=>e.id==='mt2024-splawikowo')",r['competitorId'])
                   row=hist['rows'][0]
                   assert (row['sector'],row['peg'],row['weightG'],row['place'])==(r['sector'],r['peg'],r['weightG'],r['officialPlace'])
               assert not errors,errors
