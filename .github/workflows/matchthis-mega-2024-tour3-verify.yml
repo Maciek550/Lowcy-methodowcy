@@ -1,0 +1,91 @@
+name: Verify published MEGA 2024 III tura in real browser
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-mega-2024-tour3-verify.yml]
+permissions: {contents: read}
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check 73 published rows against photographed transcript
+        run: |
+          set -euo pipefail
+          curl --retry 3 -fsS 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/mega24t3-live.json
+          python3 - <<'PY'
+          import json,runpy
+          mod=runpy.run_path('matchthis/import-mega-2024-tour3.py')
+          source=mod['load_source']()
+          data=json.load(open('/tmp/mega24t3-live.json'))['data']
+          c=next(c for c in data['cycles'] if c['id']==mod['CYCLE_ID'])
+          assert [len(t['results']) for t in c['tours']]==[79,77,73]
+          assert [t['sectorCount'] for t in c['tours']]==[7,7,6]
+          assert c['expectedTours']==6 and c['countedTours']==4
+          bypeg={r['peg']:r for r in c['tours'][2]['results']}
+          assert len(bypeg)==73
+          for row in source:
+              result=bypeg[int(row['peg'])]
+              assert (result['sector'],result['weightG'],result['officialPlace'])==(row['sector'],int(row['weight']),float(row['place']))
+              assert mod['key'](result['competitorName'])==mod['key'](row['name']),(row['name'],result['competitorName'])
+          print('PUBLISHED DATA CHECK PASSED: 73/73 results, correct places and names, previous 156 starts present')
+          PY
+      - name: Prepare Chromium
+        run: |
+          python3 -m pip install --quiet playwright
+          python3 -m playwright install --with-deps chromium
+      - name: 'Real browser clicks: both tour sector tables, history for all 93 competitors'
+        run: |
+          python3 - <<'PY'
+          import json
+          from playwright.sync_api import sync_playwright
+          url='https://matchthis.lowcymethodowcy.smallhost.pl/'
+          data=json.load(open('/tmp/mega24t3-live.json'))['data']
+          cycle=next(c for c in data['cycles'] if c['id']=='mt2024-mega-match-this-cup-cycle')
+          all_results={}
+          for tour in cycle['tours']:
+              for r in tour['results']:
+                  all_results.setdefault(r['competitorId'],[]).append((tour['id'],r['sector'],r['peg'],r['weightG'],r['officialPlace']))
+          assert len(all_results)==93,len(all_results)
+          with sync_playwright() as pw:
+              browser=pw.chromium.launch()
+              page=browser.new_page(viewport={'width':1366,'height':950})
+              errors=[]
+              page.on('pageerror',lambda e:errors.append(str(e)))
+              def expose(route):
+                  response=route.fetch()
+                  body=response.text()
+                  marker='function playerHistory(personId){'
+                  assert body.count(marker)==1
+                  route.fulfill(response=response,body=body.replace(marker,'window.mega24HistoryTest=playerHistory;'+marker))
+              page.route(url,expose)
+              page.goto(url,wait_until='domcontentloaded',timeout=45000)
+              page.wait_for_function("document.querySelector('#mt73-sync')?.textContent.includes('Dane z serwera')",timeout=45000)
+              assert page.title()=='MatchThis MT-95',page.title()
+              page.locator('[data-view="archive"]').first.click()
+              fold=page.locator('details[data-year="2024"]')
+              if fold.get_attribute('open') is None:fold.locator('summary').click()
+              fold.locator('[data-open="mt2024-mega-match-this-cup-cycle"]').first.click()
+              for idx,expected in ((0,{'A':12,'B':12,'C':11,'D':11,'E':11,'F':11,'G':11}),
+                                   (1,{'A':12,'B':11,'C':11,'D':11,'E':11,'F':11,'G':10}),
+                                   (2,{'A':13,'B':12,'C':12,'D':12,'E':12,'F':12})):
+                  page.locator(f'[data-round="{idx}"]').first.click()
+                  page.locator('[data-result-mode="sectors"]').first.click()
+                  titles=page.locator('.sector-title')
+                  assert titles.count()==len(expected),titles.count()
+                  for num,sec in enumerate(expected):
+                      title=titles.nth(num)
+                      assert 'SEKTOR '+sec in title.inner_text().upper()
+                      rows=title.locator('xpath=following-sibling::*[1]').locator('tbody tr')
+                      assert rows.count()==expected[sec],(idx,sec,rows.count())
+                  print('LIVE TOUR',idx+1,'SECTOR COUNTS VERIFIED',sum(expected.values()))
+              for pid,want in all_results.items():
+                  hist=page.evaluate("(id)=>window.mega24HistoryTest(id).find(e=>e.id==='mt2024-mega-match-this-cup-cycle')",pid)
+                  assert hist,(pid,'missing history')
+                  actual=[(r['tourId'],r['sector'],r['peg'],r['weightG'],r['place']) for r in hist['rows']]
+                  assert sorted(actual)==sorted(want),(pid,actual,want)
+              assert not errors,errors
+              print('LIVE BROWSER VERIFIED: real clicks, 20 sector tables, 229 starts, 93 histories, zero JS errors')
+              browser.close()
+          PY
