@@ -1,0 +1,95 @@
+name: MEGA Final 2024 SMALL2 source and browser verification (no writes)
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-mega-final-2024-postcheck.yml]
+permissions: {contents: read}
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify saved source, DNS public normalization and 60-place official classification
+        run: |
+          set -euo pipefail
+          curl --retry 3 -fsS 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/live-final2024.json
+          python3 - <<'PY'
+          import json,runpy,copy
+          c=runpy.run_path('matchthis/import-mega-final-2024.py')
+          d=json.load(open('/tmp/live-final2024.json'))['data']
+          original=[e for e in d['events'] if e['id']==c['EVENT_ID']]
+          assert len(original)==1
+          expected,new=c['build'](d)
+          assert not new
+          normalized=copy.deepcopy(expected)
+          for t in normalized['rounds']:
+              for r in t['results']:
+                  if r.get('absent'):del r['absent']
+          assert original[0]==normalized,'Saved results differ after documented public DNS normalization'
+          assert len(d['cycles'])==3
+          assert sum(len(t['results']) for t in original[0]['rounds'])==120
+          assert len({r['competitorId'] for r in original[0]['rounds'][0]['results']})==60
+          assert sum(r['weightG'] for r in original[0]['rounds'][0]['results'])==480935
+          assert sum(r['weightG'] for r in original[0]['rounds'][1]['results'])==485055
+          dns=[r for r in original[0]['rounds'][1]['results'] if r['officialPlace']==100]
+          assert len(dns)==1 and dns[0]['competitorName']=='LISIAK MARCIN'
+          assert dns[0]['peg'] is None and dns[0]['sector']=='' and dns[0]['weightG']==0
+          print('PASS: 60+59 starts, source exact, 1 DNS with 100pts, official 60 places, old cycles present')
+          PY
+      - name: Install headless Chromium
+        run: |
+          python3 -m pip install --quiet playwright
+          python3 -m playwright install --with-deps chromium
+      - name: Published browser actual archive clicks, both tours, tables and every player history
+        run: |
+          python3 - <<'PY'
+          import json
+          from playwright.sync_api import sync_playwright
+          url='https://matchthis.lowcymethodowcy.smallhost.pl/'
+          e=next(x for x in json.load(open('/tmp/live-final2024.json'))['data']['events'] if x['id']=='mt2024-mega-match-this-cup-final')
+          with sync_playwright() as pw:
+              browser=pw.chromium.launch()
+              page=browser.new_page(viewport={'width':1366,'height':950})
+              errors=[]
+              page.on('pageerror',lambda x:errors.append(str(x)))
+              def expose(route):
+                  resp=route.fetch();html=resp.text()
+                  marker='function playerHistory(personId){'
+                  assert html.count(marker)==1
+                  route.fulfill(response=resp,body=html.replace(marker,'window.final2024History=playerHistory;'+marker))
+              page.route(url,expose)
+              page.goto(url,wait_until='domcontentloaded',timeout=45000)
+              page.wait_for_function("document.querySelector('#mt73-sync')?.textContent.includes('Dane z serwera')",timeout=45000)
+              assert page.title()=='MatchThis MT-95'
+              page.locator('[data-view="archive"]').first.click()
+              fold=page.locator('details[data-year="2024"]')
+              if fold.get_attribute('open') is None:fold.locator('summary').click()
+              fold.locator('[data-open="mt2024-mega-match-this-cup-final"]').first.click()
+              for turn in (0,1):
+                  page.locator(f'[data-round="{turn}"]').first.click()
+                  page.locator('[data-result-mode="sectors"]').first.click()
+                  titles=page.locator('.sector-title')
+                  assert titles.count()==6,(turn,titles.count())
+                  for idx,s in enumerate('ABCDEF'):
+                      title=titles.nth(idx)
+                      assert 'SEKTOR '+s in title.inner_text().upper()
+                      rows=title.locator('xpath=following-sibling::*[1]').locator('tbody tr')
+                      assert rows.count()==(9 if turn==1 and s=='F' else 10),(turn,s,rows.count())
+              history_ids=set()
+              for tour in e['rounds']:
+                  for row in tour['results']:
+                      pid=row['competitorId']
+                      if pid in history_ids:continue
+                      history_ids.add(pid)
+                      hist=page.evaluate("(id)=>window.final2024History(id).find(e=>e.id==='mt2024-mega-match-this-cup-final')",pid)
+                      assert hist,('Missing athlete history',pid)
+                      wanted=[r for t in e['rounds'] for r in t['results'] if r['competitorId']==pid]
+                      assert len(hist['rows'])==len(wanted),(pid,hist['rows'])
+                      for r in wanted:
+                          assert any(x['weightG']==r['weightG'] and x['place']==r['officialPlace'] and x['peg']==r['peg'] for x in hist['rows']),(pid,r,hist['rows'])
+              assert len(history_ids)==60
+              assert not errors,errors
+              print('LIVE CHROMIUM PASS: 12 tables, 119 physical results, 1 DNS, 60 athlete histories, 0 JS errors')
+              browser.close()
+          PY
