@@ -1,0 +1,132 @@
+name: GARBOLINO FLOAT CUP 2024 guarded two-round import SMALL2
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-garbolino-2024-release.yml]
+permissions: {contents: read, actions: read}
+concurrency:
+  group: matchthis-small2-garbolino-2024
+  cancel-in-progress: false
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate original cards, all aliases and no duplicate competition without writes
+        run: |
+          set -euo pipefail
+          python3 -m py_compile matchthis/import-garbolino-2024.py
+          curl --retry 3 -fsS 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/gar24-before.json
+          python3 - <<'PY'
+          import json,runpy
+          src=runpy.run_path('matchthis/import-garbolino-2024.py')
+          live=json.load(open('/tmp/gar24-before.json'))['data']
+          event,new=src['build'](live)
+          assert not any(e['id']==event['id'] for e in live['events'])
+          assert len(new)==6
+          assert [len(t['results']) for t in event['rounds']]==[59,59]
+          assert sum(r['weightG'] for r in event['rounds'][0]['results'])==483945
+          assert sum(r['weightG'] for r in event['rounds'][1]['results'])==673555
+          assert len([r for r in event['rounds'][1]['results'] if r.get('absent')])==1
+          assert len({r['competitorId'] for r in event['rounds'][0]['results']})==59
+          print('PREFLIGHT PASSED: 117 actual starts + 1 official DNS; six new profiles')
+          PY
+      - name: Install Chromium for real published browser regression
+        run: |
+          python3 -m pip install --quiet playwright
+          python3 -m playwright install --with-deps chromium
+      - name: Append only photographed Garbolino 2024 to SMALL2 with private locked backup
+        env:
+          SSHPASS: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: |
+          set -euo pipefail
+          sudo apt-get -qq update && sudo apt-get -qq install -y sshpass
+          mkdir -p ~/.ssh
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > ~/.ssh/known_hosts 2>/dev/null
+          test "$(ssh-keygen -lf ~/.ssh/known_hosts -E sha256 | awk '{print $2}')" = SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8
+          sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password lowcymethodowcy@s3.small.pl 'python3 - "$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html/.mt41-private"' < matchthis/import-garbolino-2024.py
+      - name: Compare exact original events, old players, six new profiles and 118 source records
+        run: |
+          set -euo pipefail
+          curl --retry 4 --retry-delay 3 -fsS 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/gar24-after.json
+          python3 - <<'PY'
+          import json,runpy
+          src=runpy.run_path('matchthis/import-garbolino-2024.py')
+          a=json.load(open('/tmp/gar24-before.json'))['data']
+          b=json.load(open('/tmp/gar24-after.json'))['data']
+          assert a['cycles']==b['cycles']
+          assert len(b['events'])==len(a['events'])+1
+          for old in a['events']: assert old in b['events'],('Existing event changed',old['id'])
+          for old in a['players']: assert old in b['players'],('Existing profile changed',old['id'])
+          assert len(b['players'])==len(a['players'])+6
+          assert len({x['id'] for x in b['events']})==len(b['events'])
+          assert len({x['id'] for x in b['players']})==len(b['players'])
+          published=[e for e in b['events'] if e['id']==src['EVENT_ID']]
+          assert len(published)==1
+          wanted,new=src['build'](b)
+          assert not new and published[0]==wanted
+          assert all(len(t['results'])==59 for t in wanted['rounds'])
+          for t in wanted['rounds']:
+              assert len({r['competitorId'] for r in t['results']})==59
+          assert sum(not r.get('absent') for t in wanted['rounds'] for r in t['results'])==117
+          assert sum(r['weightG'] for t in wanted['rounds'] for r in t['results'])==1157500
+          print('LIVE SERVER READBACK PASSED: event 118 records, 117 real starts, 6 new profiles, all historic data unchanged')
+          PY
+      - name: Real Chromium archive clicks and every player history, winner and DNS
+        run: |
+          python3 - <<'PY'
+          import json
+          from playwright.sync_api import sync_playwright
+          url='https://matchthis.lowcymethodowcy.smallhost.pl/'
+          data=json.load(open('/tmp/gar24-after.json'))['data']
+          event=next(e for e in data['events'] if e['id']=='mt2024-garbolino-float-cup')
+          wanted={}
+          for t in event['rounds']:
+              for r in t['results']:
+                  wanted.setdefault(r['competitorId'],[]).append((t['id'],r['sector'] or '—',r['peg'],r['weightG'],r['officialPlace'],bool(r.get('absent'))))
+          assert len(wanted)==59
+          with sync_playwright() as pw:
+              browser=pw.chromium.launch()
+              page=browser.new_page(viewport={'width':1366,'height':950})
+              errors=[]
+              page.on('pageerror',lambda e:errors.append(str(e)))
+              def expose(route):
+                  response=route.fetch()
+                  body=response.text()
+                  marker='function playerHistory(personId){'
+                  assert body.count(marker)==1
+                  route.fulfill(response=response,body=body.replace(marker,'window.garbolinoHistoryTest=playerHistory;'+marker))
+              page.route(url,expose)
+              page.goto(url,wait_until='domcontentloaded',timeout=45000)
+              page.wait_for_function("document.querySelector('#mt73-sync')?.textContent.includes('Dane z serwera')",timeout=45000)
+              assert page.title()=='MatchThis MT-95'
+              page.locator('[data-view="archive"]').first.click()
+              fold=page.locator('details[data-year="2024"]')
+              if fold.get_attribute('open') is None: fold.locator('summary').click()
+              fold.locator('[data-open="mt2024-garbolino-float-cup"]').first.click()
+              for i,counts in enumerate(({'A':10,'B':10,'C':10,'D':10,'E':10,'F':9},{'A':10,'B':10,'C':10,'D':10,'E':9,'F':9})):
+                  page.locator(f'[data-round="{i}"]').first.click()
+                  page.locator('[data-result-mode="sectors"]').first.click()
+                  titles=page.locator('.sector-title')
+                  assert titles.count()==6,(i,titles.count())
+                  for j,sector in enumerate('ABCDEF'):
+                      title=titles.nth(j)
+                      assert 'SEKTOR '+sector in title.inner_text().upper()
+                      rows=title.locator('xpath=following-sibling::*[1]').locator('tbody tr')
+                      assert rows.count()==counts[sector],(i,sector,rows.count())
+              for pid,records in wanted.items():
+                  history=page.evaluate("(id)=>window.garbolinoHistoryTest(id).find(e=>e.id==='mt2024-garbolino-float-cup')",pid)
+                  assert history is not None,('Missing athlete history',pid)
+                  actual=[(r['tourId'],r['sector'],r['peg'],r['weightG'],r['place'],bool(r['absent'])) for r in history['rows']]
+                  assert sorted(actual,key=str)==sorted(records,key=str),(pid,actual,records)
+              combined=page.evaluate("(e)=>window.MatchThisCore.eventClassification(e)",event)
+              first=combined['rows'][0]
+              assert first['competitorName']=='KOWALCZYK WOJCIECH',first
+              assert first['points']==2 and first['weightG']==40870,first
+              fic=next(r for r in combined['rows'] if r['competitorName']=='FIC PAWEŁ')
+              assert fic['points']==107 and fic['actualStarts']==1,fic
+              assert not errors,errors
+              print('LIVE BROWSER PASS: two round clicks, 12 sectors, 117 actual starts, 59 histories, real winner and DNS; zero JS errors')
+              browser.close()
+          PY
