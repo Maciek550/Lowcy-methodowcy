@@ -1,0 +1,28 @@
+name: Import Puchar Splawikowo 2024 on SMALL2
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-splawikowo-2024.yml]
+permissions: {contents: read}
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply verified event and read back all results
+        env:
+          SSHPASS: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: |
+          set -euo pipefail
+          sudo apt-get -qq update && sudo apt-get -qq install -y sshpass
+          mkdir -p ~/.ssh
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > ~/.ssh/known_hosts 2>/dev/null
+          test "$(ssh-keygen -lf ~/.ssh/known_hosts -E sha256 | awk '{print $2}')" = SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8
+          sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password lowcymethodowcy@s3.small.pl 'python3 - "$HOME/domains/matchthis.lowcymethodowcy.smallhost.pl/public_html/.mt41-private"' < matchthis/import-splawikowo-2024.py
+          curl -fsS 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/live.json
+          python3 - <<'PY'
+          import runpy,json
+          data=json.load(open('/tmp/live.json'))['data']
+          event,new=runpy.run_path('matchthis/import-splawikowo-2024.py')['build'](data)
+          assert event in data['events'] and not new
+          PY
