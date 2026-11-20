@@ -1,0 +1,98 @@
+name: Verify GARBOLINO 2024 on live SMALL2 without DB writes
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-garbolino-2024-verify.yml]
+permissions: {contents: read}
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read saved records and reconcile official 100-point DNS readback
+        run: |
+          set -euo pipefail
+          curl -fsS --retry 3 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/gar24-after.json
+          python3 - <<'PY'
+          import json,runpy,copy
+          src=runpy.run_path('matchthis/import-garbolino-2024.py')
+          data=json.load(open('/tmp/gar24-after.json'))['data']
+          got=[x for x in data['events'] if x['id']==src['EVENT_ID']]
+          assert len(got)==1
+          expected,new=src['build'](data)
+          assert not new
+          actual=copy.deepcopy(got[0]);target=copy.deepcopy(expected)
+          for ev in [actual,target]:
+              for tour in ev['rounds']:
+                  for row in tour['results']:
+                      if row['officialPlace']==100:
+                          assert row['weightG']==0 and row['peg'] is None and not row['sector']
+                          row.pop('absent',None)
+          assert actual==target,'Different competition source data after normalizing redundant DNS flag'
+          assert [len(t['results']) for t in actual['rounds']]==[59,59]
+          assert sum(t['results'][i]['weightG'] for t in actual['rounds'] for i in range(59))==1157500
+          assert sum(r['officialPlace']==100 for t in actual['rounds'] for r in t['results'])==1
+          print('LIVE SOURCE PASS: 117 actual starts, 1 official 100-point DNS, 6 sector sets, all source weights')
+          PY
+      - name: Prepare headless Chromium
+        run: |
+          python3 -m pip install --quiet playwright
+          python3 -m playwright install --with-deps chromium
+      - name: Real Chromium archive clicks and every player history, winner and DNS
+        run: |
+          python3 - <<'PY'
+          import json
+          from playwright.sync_api import sync_playwright
+          url='https://matchthis.lowcymethodowcy.smallhost.pl/'
+          data=json.load(open('/tmp/gar24-after.json'))['data']
+          event=next(e for e in data['events'] if e['id']=='mt2024-garbolino-float-cup')
+          wanted={}
+          for t in event['rounds']:
+              for r in t['results']:
+                  wanted.setdefault(r['competitorId'],[]).append((t['id'],r['sector'] or '—',r['peg'],r['weightG'],r['officialPlace'],bool(r.get('absent') or r.get('officialPlace')==100)))
+          assert len(wanted)==59
+          with sync_playwright() as pw:
+              browser=pw.chromium.launch()
+              page=browser.new_page(viewport={'width':1366,'height':950})
+              errors=[]
+              page.on('pageerror',lambda e:errors.append(str(e)))
+              def expose(route):
+                  response=route.fetch()
+                  body=response.text()
+                  marker='function playerHistory(personId){'
+                  assert body.count(marker)==1
+                  route.fulfill(response=response,body=body.replace(marker,'window.garbolinoHistoryTest=playerHistory;'+marker))
+              page.route(url,expose)
+              page.goto(url,wait_until='domcontentloaded',timeout=45000)
+              page.wait_for_function("document.querySelector('#mt73-sync')?.textContent.includes('Dane z serwera')",timeout=45000)
+              assert page.title()=='MatchThis MT-95'
+              page.locator('[data-view="archive"]').first.click()
+              fold=page.locator('details[data-year="2024"]')
+              if fold.get_attribute('open') is None: fold.locator('summary').click()
+              fold.locator('[data-open="mt2024-garbolino-float-cup"]').first.click()
+              for i,counts in enumerate(({'A':10,'B':10,'C':10,'D':10,'E':10,'F':9},{'A':10,'B':10,'C':10,'D':10,'E':9,'F':9})):
+                  page.locator(f'[data-round="{i}"]').first.click()
+                  page.locator('[data-result-mode="sectors"]').first.click()
+                  titles=page.locator('.sector-title')
+                  assert titles.count()==6,(i,titles.count())
+                  for j,sector in enumerate('ABCDEF'):
+                      title=titles.nth(j)
+                      assert 'SEKTOR '+sector in title.inner_text().upper()
+                      rows=title.locator('xpath=following-sibling::*[1]').locator('tbody tr')
+                      assert rows.count()==counts[sector],(i,sector,rows.count())
+              for pid,records in wanted.items():
+                  history=page.evaluate("(id)=>window.garbolinoHistoryTest(id).find(e=>e.id==='mt2024-garbolino-float-cup')",pid)
+                  assert history is not None,('Missing athlete history',pid)
+                  actual=[(r['tourId'],r['sector'],r['peg'],r['weightG'],r['place'],bool(r['absent'])) for r in history['rows']]
+                  assert sorted(actual,key=str)==sorted(records,key=str),(pid,actual,records)
+              combined=page.evaluate("(e)=>window.MatchThisCore.eventClassification(e)",event)
+              first=combined['rows'][0]
+              assert first['competitorName']=='KOWALCZYK WOJCIECH',first
+              assert first['points']==2 and first['weightG']==40870,first
+              fic=next(r for r in combined['rows'] if r['competitorName']=='FIC PAWEŁ')
+              assert fic['points']==107 and fic['actualStarts']==1,fic
+              assert not errors,errors
+              print('LIVE BROWSER PASS: two round clicks, 12 sectors, 117 actual starts, 59 histories, real winner and DNS; zero JS errors')
+              browser.close()
+          PY
