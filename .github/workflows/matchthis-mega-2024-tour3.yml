@@ -26,7 +26,7 @@ jobs:
           assert cycle['expectedTours']==6 and cycle['countedTours']==4
           assert len(cycle['tours'])==3 and [len(t['results']) for t in cycle['tours']]==[79,77,73]
           assert len({r['competitorId'] for r in cycle['tours'][2]['results']})==73
-          assert set(r['sector'] for r in cycle['tours'][2]['results'])==set('ABCDEFG')
+          assert set(r['sector'] for r in cycle['tours'][2]['results'])==set('ABCDEF')
           print('PREFLIGHT PASSED: 73 third-round results, first two rounds preserved; new profiles',len(new))
           PY
       - name: Install Chromium for real published browser regression
