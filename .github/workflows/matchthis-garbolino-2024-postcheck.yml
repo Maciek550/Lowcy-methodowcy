@@ -1,0 +1,44 @@
+name: Garbolino 2024 published state discrepancy read-only diagnosis
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-garbolino-2024-postcheck.yml]
+permissions: {contents: read}
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read actual production and compare persisted source without writes
+        run: |
+          set -euo pipefail
+          curl -fsS --retry 3 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/garbolino-after.json
+          python3 - <<'PY'
+          import json,runpy,hashlib
+          db=json.load(open('/tmp/garbolino-after.json'))['data']
+          src=runpy.run_path('matchthis/import-garbolino-2024.py')
+          got=[x for x in db['events'] if x['id']==src['EVENT_ID']]
+          print('EVENT MATCH',len(got),'PROFILES',len(db['players']))
+          assert len(got)==1
+          want,new=src['build'](db)
+          print('SOURCE BUILDER NEW COUNT',len(new),'NAMES',[(x['lastName'],x['firstName']) for x in new])
+          g=got[0]
+          print('EQUAL RECORD',g==want,'EVENT FIELDS',list(g),'SOURCE FIELDS',list(want))
+          for k in sorted(set(g)|set(want)):
+              if g.get(k)!=want.get(k):
+                  print('MISMATCH FIELD',k)
+                  if k=='rounds':
+                      for i,(a,b) in enumerate(zip(g['rounds'],want['rounds'])):
+                          for kk in sorted(set(a)|set(b)):
+                              if a.get(kk)!=b.get(kk):
+                                  print('ROUND FIELD',i,kk)
+                                  if kk=='results':
+                                      for j,(r,s) in enumerate(zip(a['results'],b['results'])):
+                                          if r!=s:
+                                              print('RESULT DIFFERENCE',i,j,'saved',r,'expected',s)
+                                              break
+                                  else: print('saved',str(a.get(kk))[:300],'wanted',str(b.get(kk))[:300])
+                  else: print('saved',str(g.get(k))[:300],'wanted',str(want.get(k))[:300])
+          print('READ-ONLY POST-CHECK COMPLETE')
+          PY
