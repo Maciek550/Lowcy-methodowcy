@@ -2,7 +2,7 @@ name: Import XII Puchar MatchThis.pl 2024 on SMALL2
 on:
   push:
     branches: [matchthis-mt23-independent-small2-20261106]
-    paths: [.github/workflows/matchthis-xii-puchar-2024.yml]
+    paths: [.github/workflows/matchthis-xii-puchar-2024.yml, matchthis/import-xii-puchar-2024.py]
 permissions: {contents: read, actions: read}
 concurrency:
   group: matchthis-small2-xii-2024-import
