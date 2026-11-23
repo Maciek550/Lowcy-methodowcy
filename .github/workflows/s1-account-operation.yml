@@ -7,6 +7,7 @@ permissions:
   contents: read
 jobs:
   verify:
+    if: github.run_attempt == 1
     runs-on: ubuntu-latest
     steps:
       - name: Run scoped operation on SMALL2
@@ -18,4 +19,37 @@ jobs:
           mkdir -p "$HOME/.ssh"
           ssh-keyscan -T 10 -t ed25519 s3.small.pl > "$HOME/.ssh/known_hosts" 2>/dev/null
           test "$(ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256 | awk '{print $2}')" = 'SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8'
-          sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no lowcymethodowcy@s3.small.pl 'cat "$HOME/.config/lowcy-small2/backup_x25519_public.pem"'
+          sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no lowcymethodowcy@s3.small.pl 'cd "$HOME/lowcy-small2-20261023" && node -' <<'NODE'
+          const fs=require('fs'),c=require('crypto'),bcrypt=require('bcryptjs'),{Client}=require('pg');
+          const dir=process.env.HOME+'/.config/lowcy-small2/';
+          const [peer,iv,data,tag]=["MCowBQYDK2VuAyEAjgAJ5qUJyCxWVf2h4tXjws3xl5HOy1TCNKobxI73ujE=","fY9n8iNod8TAtvzG","/LGgcFo9HNLMy0uS0MwHbF7YTZzWI2B/pgJKsItv6sKdKFJaI6alBtN8zl4QKvFFYlYF5aK76oubSRAqpBQxvfL004TzwYf9HS8=","XqpX537UyhgBowF1+5gU2Q=="].map(x=>Buffer.from(x,'base64'));
+          const secret=c.diffieHellman({privateKey:c.createPrivateKey(fs.readFileSync(dir+'backup_x25519_private.pem')),publicKey:c.createPublicKey({key:peer,format:'der',type:'spki'})});
+          const dec=c.createDecipheriv('aes-256-gcm',c.createHash('sha256').update(secret).digest(),iv);
+          dec.setAuthTag(tag);
+          const input=JSON.parse(Buffer.concat([dec.update(data),dec.final()]));
+          const url=JSON.parse(fs.readFileSync(dir+'runtime.json')).DATABASE_URL;
+          if(new URL(url).hostname!=='pgsql3.small.pl'||new URL(url).pathname!=='/p1828_lowcy_kop')throw Error('Wrong target');
+          const db=new Client({connectionString:url});
+          (async()=>{
+           await db.connect();
+           try {
+            await db.query('begin');
+            const ids=[];
+            for(const n of input.names){
+             const found=await db.query("select id from users where lower(trim(first_name))=lower($1) and lower(trim(last_name))=lower($2) and role='PLAYER' and archived_at is null for update",n);
+             if(found.rowCount!==1)throw Error('Account match '+(ids.length+1)+' count '+found.rowCount);
+             ids.push(found.rows[0].id);
+            }
+            if(new Set(ids).size!==2)throw Error('Target mismatch');
+            for(const id of ids){
+             const hash=await bcrypt.hash(input.password,12);
+             const q=await db.query("update users set password_hash=$1,password_must_change=true,password_temp_expires_at=now()+interval '24 hours',auth_version=auth_version+1 where id=$2 returning id",[hash,id]);
+             if(q.rowCount!==1)throw Error('Update mismatch');
+             await db.query("update password_reset_requests set status='PREPARED',prepared_at=now(),expires_at=now()+interval '24 hours' where user_id=$1 and status in ('PENDING','PREPARED')",[id]);
+            }
+            const check=async()=>{const q=await db.query("select password_hash from users where id=any($1::bigint[]) and password_must_change and password_temp_expires_at>now()",[ids]);if(q.rowCount!==2)throw Error('Readback count');for(const r of q.rows)if(!await bcrypt.compare(input.password,r.password_hash))throw Error('Readback failed');};
+            await check(); await db.query('commit');await check();
+            console.log('COMMITTED_AND_VERIFIED players=2');
+           }finally{await db.end();}
+          })().catch(e=>{console.error(e.message.replace(/postgres(?:ql)?:\/\/\S+/gi,'[db]'));process.exitCode=1;});
+          NODE
