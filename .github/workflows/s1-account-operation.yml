@@ -1,0 +1,21 @@
+name: S1 account maintenance
+on:
+  push:
+    branches: [ops-s1-20261123]
+    paths: ['.github/workflows/s1-account-operation.yml']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run scoped operation on SMALL2
+        env:
+          SSHPASS: ${{ secrets.SMALL2_SSH_PASSWORD }}
+        run: |
+          set -euo pipefail
+          command -v sshpass >/dev/null || (sudo apt-get -qq update && sudo apt-get -qq install -y sshpass)
+          mkdir -p "$HOME/.ssh"
+          ssh-keyscan -T 10 -t ed25519 s3.small.pl > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test "$(ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256 | awk '{print $2}')" = 'SHA256:mr4Xcr1WrWoINIWGI2KwI3c/KI94+L2hL4FVeCsphh8'
+          sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no lowcymethodowcy@s3.small.pl 'cat "$HOME/.config/lowcy-small2/backup_x25519_public.pem"'
