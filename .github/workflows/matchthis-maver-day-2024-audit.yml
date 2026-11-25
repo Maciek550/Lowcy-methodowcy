@@ -1,0 +1,65 @@
+name: MAVER DAY 2024 official and source-card read-only reconciliation
+on:
+  push:
+    branches: [matchthis-mt23-independent-small2-20261106]
+    paths: [.github/workflows/matchthis-maver-day-2024-audit.yml]
+permissions: {contents: read}
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check 60 printed competitors and all 56 authentic second tour records
+        run: |
+          set -euo pipefail
+          curl --fail --retry 3 -fsS 'https://matchthis.lowcymethodowcy.smallhost.pl/mt73-state.php?public=1' -o /tmp/maver-before.json
+          python3 - <<'PY'
+          import csv,collections,json,unicodedata
+          from pathlib import Path
+          def read(path):
+              with open(path,encoding='utf-8') as fp:return list(csv.DictReader(fp,delimiter=';'))
+          def key(s):
+              return ''.join(c for c in unicodedata.normalize('NFD',str(s).upper().replace('Ł','L')) if c.isalnum())
+          a=read('matchthis/maver-day-2024-official-60.csv')
+          b=read('matchthis/maver-day-2024-round2-verified.csv')
+          assert len(a)==60 and [int(x['rank']) for x in a]==list(range(1,61))
+          assert len(b)==56
+          x={key(z['name']):z for z in a};y={key(z['name']):z for z in b}
+          assert len(x)==60 and len(y)==56
+          assert set(y)<=set(x)
+          absent=[x[n]['name'] for n in sorted(set(x)-set(y))]
+          assert absent==sorted(['FIOŁEK KRZYSZTOF','MURK PIOTR','RZEPCZYŃSKI MARCIN','WRÓBLEWSKI ARTUR'])
+          assert all(not x[key(n)]['weight2'] for n in absent)
+          assert sum(int(r['weight1']) for r in a)==367470
+          assert sum(int(r['weight2']) for r in a if r['weight2'])==550450
+          assert sum(int(r['weight']) for r in b)==550450
+          assert {s:sum(r['sector']==s for r in b) for s in 'ABCDEF'}==dict(A=10,B=10,C=9,D=9,E=9,F=9)
+          assert {int(r['peg']) for r in b}==set(range(1,60))-{19,43,47}
+          assert len({r['peg'] for r in b})==56
+          for sec in 'ABCDEF':
+              g=[r for r in b if r['sector']==sec]
+              for r in g:
+                  w=int(r['weight'])
+                  calc=1+sum(int(o['weight'])>w for o in g)+sum(o is not r and int(o['weight'])==w for o in g)/2
+                  assert calc==int(r['place']),(sec,r,calc)
+          mismatches=[]
+          for n,r in y.items():
+              printed=x[n]
+              assert int(r['weight'])==int(printed['weight2']),(n,'WEIGHT',r,printed)
+              if int(r['place'])!=int(printed['place2']):
+                  mismatches.append((r['name'],int(printed['place2']),int(r['place'])))
+          assert sorted(mismatches)==sorted([('KOT BOGUMIŁ',2,6),('ZALEWSKI GRZEGORZ',5,7)]),mismatches
+          db=json.load(open('/tmp/maver-before.json'))['data']
+          events=[(z['name'],z['id']) for z in db['events'] if z.get('year')==2024]
+          c2023=[(z['name'],z['id']) for z in db['events'] if z.get('year')==2023]
+          maver=[z for z in events if 'MAVER DAY' in z[0].upper()]
+          assert not maver,('MAVER DAY already published, must reconcile rather than duplicate',maver)
+          print('SOURCE CHECK PASS: 60 official people, 56 round-II actual scores, 4 nonstarters')
+          print('TOTALS: round I 367470 g, round II 550450 g')
+          print('ALL SECTORS + PEGS CHECKED: 10/10/9/9/9/9; missing pegs 19, 43, 47')
+          print('SOURCE-PRINTED POINT DIFFERENCES (never overwrite original card):',mismatches)
+          print('ALREADY PUBLISHED 2024 EVENTS:',events)
+          print('ALREADY PUBLISHED 2023 EVENTS:',c2023)
+          print('MAVER I TOUR sector/draw source missing: NO DATABASE WRITE')
+          PY
